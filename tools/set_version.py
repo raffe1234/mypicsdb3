@@ -36,7 +36,8 @@ def main() -> int:
     source, count = re.subn(r'^VERSION\s*=\s*"[^"]+"$', 'VERSION = "%s"' % args.version, source, flags=re.MULTILINE)
     if count != 1:
         raise RuntimeError("Could not update VERSION in %s" % PACKAGE_INIT)
-    PACKAGE_INIT.write_text(source, encoding="utf-8", newline="\n")
+    with PACKAGE_INIT.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(source)
     print("Version updated to", args.version)
     print("Remember to update CHANGELOG.md before releasing.")
     return 0

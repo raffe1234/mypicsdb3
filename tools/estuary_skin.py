@@ -192,7 +192,8 @@ def patch_home_xml(home_path: Path, fragment_path: Path = FRAGMENT_PATH) -> None
     patched, count = pattern.subn(fragment, home, count=1)
     if count != 1:
         raise RuntimeError("Could not locate the Kodi 21 Omega Pictures home group")
-    home_path.write_text(patched, encoding="utf-8", newline="\n")
+    with home_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(patched)
 
 
 def patch_skin(source_dir: Path, output_dir: Path, config: EstuaryConfig, plugin_version: str) -> Path:
@@ -206,7 +207,8 @@ def patch_skin(source_dir: Path, output_dir: Path, config: EstuaryConfig, plugin
     patch_addon_xml(output_dir / "addon.xml", config, plugin_version)
     patch_home_xml(output_dir / "xml" / "Home.xml")
     notice = """# Estuary MyPicsDB 3\n\nThis package is generated from Kodi's Estuary source at `{ref}` and patched by\nthe MyPicsDB 3 project. Standard Estuary remains installed separately.\n\nUpstream source: https://github.com/xbmc/xbmc/tree/{ref}/addons/skin.estuary\nMyPicsDB 3 source: {project}\n""".format(ref=config.ref, project=config.project_url)
-    (output_dir / "MYPICSDB3_UPSTREAM.md").write_text(notice, encoding="utf-8", newline="\n")
+    with (output_dir / "MYPICSDB3_UPSTREAM.md").open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(notice)
     return output_dir
 
 
