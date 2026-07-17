@@ -52,14 +52,14 @@ Widget calls only read indexed database rows. They never scan picture sources.
 Installing the repository is the recommended method because Kodi can then find
 future MyPicsDB 3 updates automatically.
 
-1. Download
-   [`repository.mypicsdb3-0.1.0.zip`](https://raffe1234.github.io/mypicsdb3/repository/repository.mypicsdb3/repository.mypicsdb3-0.1.0.zip)
-   and copy it to a location that the Kodi device can access.
+1. Open the [latest MyPicsDB 3 release](https://github.com/raffe1234/mypicsdb3/releases/latest).
+   Under **Assets**, download `repository.mypicsdb3-<version>.zip` and copy it
+   to a location that the Kodi device can access.
 2. In Kodi, open **Settings > System > Add-ons** and enable **Unknown sources**.
    Kodi may display a security warning; review it and confirm only when you trust
    the repository being installed.
 3. Open **Add-ons > Install from zip file** and select
-   `repository.mypicsdb3-0.1.0.zip`.
+   `repository.mypicsdb3-<version>.zip`.
 4. Wait for the **MyPicsDB 3 Repository Add-on installed** notification.
 5. Open **Add-ons > Install from repository > MyPicsDB 3 Repository > Picture
    add-ons > MyPicsDB 3**.
@@ -74,8 +74,8 @@ add-on update settings under **Settings > System > Add-ons**.
 A direct installation is useful for testing a particular build, but it does not
 install the MyPicsDB 3 update repository.
 
-1. Download
-   [`plugin.image.mypicsdb3-0.1.0.zip`](https://raffe1234.github.io/mypicsdb3/repository/plugin.image.mypicsdb3/plugin.image.mypicsdb3-0.1.0.zip).
+1. Open the [latest MyPicsDB 3 release](https://github.com/raffe1234/mypicsdb3/releases/latest).
+   Under **Assets**, download `plugin.image.mypicsdb3-<version>.zip`.
 2. In Kodi, enable **Unknown sources** under **Settings > System > Add-ons**.
 3. Open **Add-ons > Install from zip file** and select the downloaded zip.
 4. Wait for the **MyPicsDB 3 Add-on installed** notification.
@@ -87,7 +87,7 @@ optional dependency; EXIF and XMP indexing continue if it is unavailable.
 ### Developer: install a locally built test package
 
 1. Run `python3 tools/build.py` in the project root.
-2. Copy `dist/plugin.image.mypicsdb3-0.1.0.zip` to the Kodi device.
+2. Copy `dist/plugin.image.mypicsdb3-<version>.zip` to the Kodi device.
 3. In Kodi, enable **Unknown sources** under **Settings > System > Add-ons**.
 4. Select **Add-ons > Install from zip file** and install the generated package.
 5. Open **Pictures > Picture add-ons > MyPicsDB 3**.
@@ -216,8 +216,6 @@ cannot silently alter standard Estuary. The repository includes an Omega
 Estuary replacement block and a patch helper for a separately named skin fork.
 See [docs/ESTUARY_INTEGRATION.md](docs/ESTUARY_INTEGRATION.md).
 
-For QNAP publication commands, see [docs/QNAP_GITHUB.md](docs/QNAP_GITHUB.md).
-
 ## Build and test
 
 ```bash
@@ -229,17 +227,17 @@ python3 tools/build.py
 Build output:
 
 ```text
-dist/plugin.image.mypicsdb3-0.1.0.zip
-dist/repository.mypicsdb3-0.1.0.zip
-dist/mypicsdb3-0.1.0-source.zip
-dist/mypicsdb3-0.1.0.tar.gz
+dist/plugin.image.mypicsdb3-<version>.zip
+dist/repository.mypicsdb3-<version>.zip
+dist/mypicsdb3-<version>-source.zip
+dist/mypicsdb3-<version>.tar.gz
 dist/SHA256SUMS.txt
 dist/repository/
 ```
 
 ## Updates for other users
 
-Install `repository.mypicsdb3-0.1.0.zip` once. When GitHub Pages is enabled for
+Install `repository.mypicsdb3-<version>.zip` once. When GitHub Pages is enabled for
 the repository and the included Pages workflow has deployed, Kodi can discover
 new versions from:
 
