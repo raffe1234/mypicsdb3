@@ -26,7 +26,7 @@ def test_general_numeric_settings_show_labels_and_values():
 
 def test_home_rows_show_current_or_default_selection():
     settings = settings_by_id()
-    defaults = ["recent_taken", "recent_added", "random_memories", "recent_albums", "random_albums", "on_this_day", "favorites", "rated", "geotagged"]
+    defaults = ["recent_taken", "recent_added", "random_memories", "recent_albums", "random_albums", "on_this_day", "none", "none", "none"]
     for number, expected in enumerate(defaults, start=1):
         setting = settings["home_row_%d" % number]
         assert setting.findtext("default") == expected

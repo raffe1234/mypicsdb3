@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.3
+
+- Keep nine configurable home-screen positions but enable only the first six by default.
+- Default Row 7 through Row 9 to None so new installations start with a compact Pictures screen.
+- Document safe replacement of a disposable test source with the real picture library.
+- Clarify that rows set to None and rows without matching results are not shown.
+
 ## 0.2.2
 
 - Fixed missing labels for the General item-limit settings.

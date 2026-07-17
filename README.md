@@ -4,7 +4,7 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega.
 
-> Status: 0.2.2 release candidate. The catalogue, SQLite backend, scanner,
+> Status: 0.2.3 release candidate. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. Real Kodi installations are still required for platform and
 > large-library testing before calling the project production-stable.
@@ -97,10 +97,15 @@ Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings > Home screen** to:
 - set a row to None;
 - arrange the rows in any order.
 
-The default order is the list above. Each row position is independent, so avoid
-selecting the same view in more than one position unless duplicate rows are
-intentional. The rows are shown only when MyPicsDB 3 is installed. Empty rows
-disappear until pictures have been indexed.
+The first six rows are enabled by default in the order shown above through
+**On this day**. Row 7 through Row 9 default to **None**, so the initial Pictures
+home screen stays compact. Set any position to Favorites, Rated pictures,
+Geotagged pictures or another view when you want to show more rows.
+
+Each row position is independent, so avoid selecting the same view in more than
+one position unless duplicate rows are intentional. A row set to **None** is not
+shown. Rows with no indexed results also disappear until matching pictures have
+been indexed.
 
 ### Alternative: install a package directly
 
@@ -152,6 +157,19 @@ Every newly discovered source is disabled by default.
   Kodi.
 
 Only enabled sources are included in normal manual and automatic scans.
+
+#### Replacing a test source with the real picture library
+
+Disable the test source in MyPicsDB 3 before removing it from Kodi. Add or verify
+the real Kodi picture source, select **Refresh Kodi sources**, and enable only
+the real source before scanning it.
+
+MyPicsDB 3 deliberately keeps indexed records when a source disappears, because
+a temporarily unavailable NAS must not be treated as mass deletion. If the
+SQLite catalogue contains only disposable test data, close Kodi, back up the
+add-on profile folder, and remove `mypicsdb3.sqlite` together with any
+`mypicsdb3.sqlite-wal` and `mypicsdb3.sqlite-shm` files before the first full
+production scan. Do not remove a shared MySQL/MariaDB catalogue this way.
 
 ### 3. Run the first scan
 

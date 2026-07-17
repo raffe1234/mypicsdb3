@@ -163,7 +163,7 @@
         </setting>
         <setting id="home_row_7" type="string" label="32078" help="32172">
           <level>0</level>
-          <default>favorites</default>
+          <default>none</default>
           <constraints>
             <options>
               <option label="32081">none</option>
@@ -184,7 +184,7 @@
         </setting>
         <setting id="home_row_8" type="string" label="32079" help="32172">
           <level>0</level>
-          <default>rated</default>
+          <default>none</default>
           <constraints>
             <options>
               <option label="32081">none</option>
@@ -205,7 +205,7 @@
         </setting>
         <setting id="home_row_9" type="string" label="32080" help="32172">
           <level>0</level>
-          <default>geotagged</default>
+          <default>none</default>
           <constraints>
             <options>
               <option label="32081">none</option>

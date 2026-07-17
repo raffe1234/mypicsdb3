@@ -25,9 +25,9 @@ DEFAULT_ROWS = [
     "recent_albums",
     "random_albums",
     "on_this_day",
-    "favorites",
-    "rated",
-    "geotagged",
+    "none",
+    "none",
+    "none",
 ]
 
 ROUTES = [
