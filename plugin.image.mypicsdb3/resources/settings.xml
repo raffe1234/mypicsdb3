@@ -18,7 +18,158 @@
         </setting>
       </group>
     </category>
-    <category id="scanning" label="32020" help="32120">
+    <category id="home_screen" label="32070" help="32170">
+  <group id="1">
+  <setting id="show_media_sources" type="boolean" label="32071" help="32171">
+   <level>0</level><default>true</default><control type="toggle" />
+  </setting>
+  <setting id="home_row_1" type="string" label="32072" help="32172">
+   <level>0</level><default>recent_taken</default>
+   <constraints><options>
+    <option label="32081">none</option>
+    <option label="30001">recent_taken</option>
+    <option label="30002">recent_added</option>
+    <option label="30003">random_memories</option>
+    <option label="30004">recent_albums</option>
+    <option label="30005">random_albums</option>
+    <option label="30006">on_this_day</option>
+    <option label="30010">favorites</option>
+    <option label="30011">rated</option>
+    <option label="30012">geotagged</option>
+   </options></constraints>
+   <control type="list" format="string"><heading>32072</heading></control>
+  </setting>
+  <setting id="home_row_2" type="string" label="32073" help="32172">
+   <level>0</level><default>recent_added</default>
+   <constraints><options>
+    <option label="32081">none</option>
+    <option label="30001">recent_taken</option>
+    <option label="30002">recent_added</option>
+    <option label="30003">random_memories</option>
+    <option label="30004">recent_albums</option>
+    <option label="30005">random_albums</option>
+    <option label="30006">on_this_day</option>
+    <option label="30010">favorites</option>
+    <option label="30011">rated</option>
+    <option label="30012">geotagged</option>
+   </options></constraints>
+   <control type="list" format="string"><heading>32073</heading></control>
+  </setting>
+  <setting id="home_row_3" type="string" label="32074" help="32172">
+   <level>0</level><default>random_memories</default>
+   <constraints><options>
+    <option label="32081">none</option>
+    <option label="30001">recent_taken</option>
+    <option label="30002">recent_added</option>
+    <option label="30003">random_memories</option>
+    <option label="30004">recent_albums</option>
+    <option label="30005">random_albums</option>
+    <option label="30006">on_this_day</option>
+    <option label="30010">favorites</option>
+    <option label="30011">rated</option>
+    <option label="30012">geotagged</option>
+   </options></constraints>
+   <control type="list" format="string"><heading>32074</heading></control>
+  </setting>
+  <setting id="home_row_4" type="string" label="32075" help="32172">
+   <level>0</level><default>recent_albums</default>
+   <constraints><options>
+    <option label="32081">none</option>
+    <option label="30001">recent_taken</option>
+    <option label="30002">recent_added</option>
+    <option label="30003">random_memories</option>
+    <option label="30004">recent_albums</option>
+    <option label="30005">random_albums</option>
+    <option label="30006">on_this_day</option>
+    <option label="30010">favorites</option>
+    <option label="30011">rated</option>
+    <option label="30012">geotagged</option>
+   </options></constraints>
+   <control type="list" format="string"><heading>32075</heading></control>
+  </setting>
+  <setting id="home_row_5" type="string" label="32076" help="32172">
+   <level>0</level><default>random_albums</default>
+   <constraints><options>
+    <option label="32081">none</option>
+    <option label="30001">recent_taken</option>
+    <option label="30002">recent_added</option>
+    <option label="30003">random_memories</option>
+    <option label="30004">recent_albums</option>
+    <option label="30005">random_albums</option>
+    <option label="30006">on_this_day</option>
+    <option label="30010">favorites</option>
+    <option label="30011">rated</option>
+    <option label="30012">geotagged</option>
+   </options></constraints>
+   <control type="list" format="string"><heading>32076</heading></control>
+  </setting>
+  <setting id="home_row_6" type="string" label="32077" help="32172">
+   <level>0</level><default>on_this_day</default>
+   <constraints><options>
+    <option label="32081">none</option>
+    <option label="30001">recent_taken</option>
+    <option label="30002">recent_added</option>
+    <option label="30003">random_memories</option>
+    <option label="30004">recent_albums</option>
+    <option label="30005">random_albums</option>
+    <option label="30006">on_this_day</option>
+    <option label="30010">favorites</option>
+    <option label="30011">rated</option>
+    <option label="30012">geotagged</option>
+   </options></constraints>
+   <control type="list" format="string"><heading>32077</heading></control>
+  </setting>
+  <setting id="home_row_7" type="string" label="32078" help="32172">
+   <level>0</level><default>favorites</default>
+   <constraints><options>
+    <option label="32081">none</option>
+    <option label="30001">recent_taken</option>
+    <option label="30002">recent_added</option>
+    <option label="30003">random_memories</option>
+    <option label="30004">recent_albums</option>
+    <option label="30005">random_albums</option>
+    <option label="30006">on_this_day</option>
+    <option label="30010">favorites</option>
+    <option label="30011">rated</option>
+    <option label="30012">geotagged</option>
+   </options></constraints>
+   <control type="list" format="string"><heading>32078</heading></control>
+  </setting>
+  <setting id="home_row_8" type="string" label="32079" help="32172">
+   <level>0</level><default>rated</default>
+   <constraints><options>
+    <option label="32081">none</option>
+    <option label="30001">recent_taken</option>
+    <option label="30002">recent_added</option>
+    <option label="30003">random_memories</option>
+    <option label="30004">recent_albums</option>
+    <option label="30005">random_albums</option>
+    <option label="30006">on_this_day</option>
+    <option label="30010">favorites</option>
+    <option label="30011">rated</option>
+    <option label="30012">geotagged</option>
+   </options></constraints>
+   <control type="list" format="string"><heading>32079</heading></control>
+  </setting>
+  <setting id="home_row_9" type="string" label="32080" help="32172">
+   <level>0</level><default>geotagged</default>
+   <constraints><options>
+    <option label="32081">none</option>
+    <option label="30001">recent_taken</option>
+    <option label="30002">recent_added</option>
+    <option label="30003">random_memories</option>
+    <option label="30004">recent_albums</option>
+    <option label="30005">random_albums</option>
+    <option label="30006">on_this_day</option>
+    <option label="30010">favorites</option>
+    <option label="30011">rated</option>
+    <option label="30012">geotagged</option>
+   </options></constraints>
+   <control type="list" format="string"><heading>32080</heading></control>
+  </setting>
+  </group>
+ </category>
+ <category id="scanning" label="32020" help="32120">
       <group id="1">
         <setting id="auto_scan" type="boolean" label="32021" help="32121">
           <level>0</level><default>false</default><control type="toggle" />

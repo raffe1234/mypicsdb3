@@ -35,7 +35,7 @@ The pinned source is defined in `contrib/estuary/upstream.json`:
 ```text
 Kodi tag: 21.3-Omega
 Target add-on: skin.estuary.mypicsdb3
-Skin version: 21.3.1
+Skin version: 21.3.2
 ```
 
 The build downloads the official Kodi source archive over HTTPS, extracts only
@@ -47,21 +47,25 @@ so installing the skin through the repository also installs the picture add-on.
 
 ## Home-screen rows
 
-The Pictures group contains:
+The Pictures group can show Media sources plus nine configurable MyPicsDB 3
+row positions. Each position can be set to None or one of:
 
-1. Media sources
-2. Recently taken
-3. Recently added
-4. Random memories
-5. Recent albums
-6. Random albums
-7. On this day
+1. Recently taken
+2. Recently added
+3. Random memories
+4. Recent albums
+5. Random albums
+6. On this day
+7. Favorites
+8. Rated pictures
+9. Geotagged pictures
 
-Every MyPicsDB 3 row is guarded by:
-
-```xml
-<visible>System.HasAddon(plugin.image.mypicsdb3)</visible>
-```
+The settings are stored by `plugin.image.mypicsdb3` as `home_row_1` through
+`home_row_9`; `show_media_sources` controls the Kodi source row. The skin reads
+these values with Kodi 20+ `Addon.SettingStr` and `Addon.SettingBool` labels.
+Widget IDs are in the 4100–5000 range and the scrollbar is 4010. Row headings
+are written directly by the skin so they do not depend on cross-add-on
+localization.
 
 The widget endpoints only query the indexed database. They never trigger a
 source scan when the home screen opens.

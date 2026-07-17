@@ -399,3 +399,63 @@ msgstr "Missing files remain visible to the catalogue for this many days before 
 msgctxt "#32162"
 msgid "Write detailed scanner information to kodi.log."
 msgstr "Write detailed scanner information to kodi.log."
+
+msgctxt "#32070"
+msgid "Home screen"
+msgstr "Home screen"
+
+msgctxt "#32071"
+msgid "Show Media sources"
+msgstr "Show Media sources"
+
+msgctxt "#32072"
+msgid "Row 1"
+msgstr "Row 1"
+
+msgctxt "#32073"
+msgid "Row 2"
+msgstr "Row 2"
+
+msgctxt "#32074"
+msgid "Row 3"
+msgstr "Row 3"
+
+msgctxt "#32075"
+msgid "Row 4"
+msgstr "Row 4"
+
+msgctxt "#32076"
+msgid "Row 5"
+msgstr "Row 5"
+
+msgctxt "#32077"
+msgid "Row 6"
+msgstr "Row 6"
+
+msgctxt "#32078"
+msgid "Row 7"
+msgstr "Row 7"
+
+msgctxt "#32079"
+msgid "Row 8"
+msgstr "Row 8"
+
+msgctxt "#32080"
+msgid "Row 9"
+msgstr "Row 9"
+
+msgctxt "#32081"
+msgid "None"
+msgstr "None"
+
+msgctxt "#32170"
+msgid "Choose which rows are shown on the Estuary MyPicsDB 3 Pictures home screen."
+msgstr "Choose which rows are shown on the Estuary MyPicsDB 3 Pictures home screen."
+
+msgctxt "#32171"
+msgid "Show Kodi picture sources and Picture add-ons above the MyPicsDB 3 rows."
+msgstr "Show Kodi picture sources and Picture add-ons above the MyPicsDB 3 rows."
+
+msgctxt "#32172"
+msgid "Choose the content for this position. Select None to hide the row."
+msgstr "Choose the content for this position. Select None to hide the row."

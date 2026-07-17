@@ -4,7 +4,7 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega.
 
-> Status: 0.2.0 release candidate. The catalogue, SQLite backend, scanner,
+> Status: 0.2.1 release candidate. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. Real Kodi installations are still required for platform and
 > large-library testing before calling the project production-stable.
@@ -78,18 +78,29 @@ After MyPicsDB 3 is installed:
    **Settings > Interface > Skin**.
 5. Keep the skin when Kodi displays its confirmation dialog.
 
-The skin adds these rows when **Pictures** is selected on the home screen:
+The skin can show **Media sources** plus nine configurable MyPicsDB 3 rows:
 
-- Media sources
 - Recently taken
 - Recently added
 - Random memories
 - Recent albums
 - Random albums
 - On this day
+- Favorites
+- Rated pictures
+- Geotagged pictures
 
-The rows are shown only when MyPicsDB 3 is installed. Empty rows disappear until
-pictures have been indexed.
+Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings > Home screen** to:
+
+- show or hide Media sources;
+- choose the content of Row 1 through Row 9;
+- set a row to None;
+- arrange the rows in any order.
+
+The default order is the list above. Each row position is independent, so avoid
+selecting the same view in more than one position unless duplicate rows are
+intentional. The rows are shown only when MyPicsDB 3 is installed. Empty rows
+disappear until pictures have been indexed.
 
 ### Alternative: install a package directly
 
@@ -295,6 +306,25 @@ https://raffe1234.github.io/mypicsdb3/repository/
 
 Change the URLs in `repository.mypicsdb3/addon.xml` and add-on metadata if the
 GitHub account or repository name differs.
+
+### If Check for updates remains at 0%
+
+The global **Check for updates** command refreshes every enabled Kodi repository,
+not only MyPicsDB 3. If updating MyPicsDB 3 directly from **My add-ons** works but
+the global command remains at 0%, another enabled repository or a stalled network
+request may be blocking the global refresh.
+
+1. Restart Kodi and reproduce the problem once.
+2. Inspect `kodi.log` for repository, checksum, HTTP, TLS or timeout errors.
+3. Confirm that the MyPicsDB 3 repository can open `addons.xml` and
+   `addons.xml.md5` from the published repository URL.
+4. Temporarily disable other third-party repositories one at a time and retry the
+   global update check.
+5. Re-enable every repository after the test.
+
+Do not repeatedly force-close Kodi while it is writing settings or databases. If
+the interface cannot exit, collect the relevant log section before ending the
+process.
 
 ## License and history
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.1 - 2026-07-17
+
+- Show visible headings for all MyPicsDB 3 Pictures home-screen rows.
+- Add nine configurable row positions and a Media sources visibility setting.
+- Add Favorites, Rated pictures and Geotagged pictures as home-screen choices.
+- Document row configuration and global Kodi repository-update diagnostics.
+- Bump the generated Estuary MyPicsDB 3 skin to 21.3.2.
+
 ## 0.2.0 - 2026-07-17
 
 - Add the separately installed `skin.estuary.mypicsdb3` skin for Kodi 21 Omega.
