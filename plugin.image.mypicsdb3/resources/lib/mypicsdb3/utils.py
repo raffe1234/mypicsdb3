@@ -106,7 +106,12 @@ def extension_of(name: str) -> str:
 
 def plugin_url(base_url: str, route: str, **params: Any) -> str:
     route = route.strip("/")
-    url = base_url.rstrip("/") + "/" + route if route else base_url.rstrip("/") + "/"
+    parts = urlsplit(base_url)
+    if parts.scheme and parts.netloc:
+        plugin_root = urlunsplit((parts.scheme, parts.netloc, "", "", "")).rstrip("/")
+    else:
+        plugin_root = base_url.split("?", 1)[0].rstrip("/")
+    url = plugin_root + "/" + route if route else plugin_root + "/"
     clean = {key: str(value) for key, value in params.items() if value is not None and value != ""}
     return url + ("?" + urlencode(clean, doseq=True) if clean else "")
 

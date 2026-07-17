@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.1 - 2026-07-17
+
+- Fix source activation from Picture sources.
+- Build every plugin link from the add-on root instead of the current nested route.
+- Show Enable source and Disable source actions in the source context menu.
+- Add regression tests for nested plugin URLs and source activation items.
+
 ## 0.1.0 - 2026-07-17
 
 - Initial Kodi 21 Omega release candidate.

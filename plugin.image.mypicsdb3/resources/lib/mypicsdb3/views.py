@@ -88,7 +88,8 @@ class PluginUI:
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (source.label, state)
             toggle = "RunPlugin(%s)" % self.url("action/toggle-source", id=source.id)
             scan = "RunPlugin(%s)" % self.url("action/scan", source=source.id)
-            context = [(state, toggle), (self.text(30021, "Scan selected source"), scan)]
+            toggle_label = self.text(30064, "Disable source") if source.enabled else self.text(30063, "Enable source")
+            context = [(toggle_label, toggle), (self.text(30021, "Scan selected source"), scan)]
             if source.enabled:
                 items.append(self.add_folder(label, "source", art=self.icon, context=context, id=source.id))
             else:

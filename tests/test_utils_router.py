@@ -23,6 +23,8 @@ def test_uri_helpers_support_local_and_network_paths() -> None:
 def test_plugin_url_and_setting_parsers() -> None:
     url = plugin_url("plugin://plugin.image.mypicsdb3", "camera", make="Canon", model="EOS R6")
     assert url == "plugin://plugin.image.mypicsdb3/camera?make=Canon&model=EOS+R6"
+    nested_url = plugin_url("plugin://plugin.image.mypicsdb3/sources", "action/toggle-source", id=7)
+    assert nested_url == "plugin://plugin.image.mypicsdb3/action/toggle-source?id=7"
     assert safe_limit("9999", 15) == 500
     assert split_csv(".JPG, png, JPG") == ("jpg", "png")
     assert split_pipe("@eaDir| #recycle |") == ("@eadir", "#recycle")

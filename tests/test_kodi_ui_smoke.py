@@ -69,8 +69,17 @@ class FakeKodi:
     def localize(self, string_id, fallback):
         return fallback
 
+    def kodi_picture_sources(self):
+        return []
+
 
 class FakeCatalog:
+    def sync_sources(self, sources):
+        return []
+
+    def get_sources(self):
+        return [types.SimpleNamespace(id=7, label="FotonTest", enabled=False)]
+
     def recent_taken(self, limit, offset=0):
         return [{
             "id": 1,
@@ -118,3 +127,20 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert item.art["thumb"] == url
     assert item.properties["MyPicsDB3.Camera"] == "Canon EOS R6"
     assert is_folder is False
+
+
+def test_source_toggle_uses_plugin_root_from_nested_route(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3/sources", 7)
+
+    ui.sources()
+
+    assert calls.ended is True
+    assert len(calls.items) == 2
+    url, item, is_folder = calls.items[1]
+    assert url == "plugin://plugin.image.mypicsdb3/action/toggle-source?id=7"
+    assert is_folder is False
+    assert item.context[0] == (
+        "Enable source",
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/toggle-source?id=7)",
+    )
