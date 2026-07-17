@@ -45,17 +45,53 @@ plugin://plugin.image.mypicsdb3/geotagged?limit=15
 
 Widget calls only read indexed database rows. They never scan picture sources.
 
-## Install a local test build
+## Installing MyPicsDB 3
 
-1. Run `python3 tools/build.py`.
-2. Copy `dist/plugin.image.mypicsdb3-0.1.0.zip` to the Kodi device.
-3. In Kodi, enable installation from unknown sources for this test.
-4. Select **Add-ons > Install from zip file**.
+### Recommended: install through the MyPicsDB 3 repository
+
+Installing the repository is the recommended method because Kodi can then find
+future MyPicsDB 3 updates automatically.
+
+1. Download
+   [`repository.mypicsdb3-0.1.0.zip`](https://raffe1234.github.io/mypicsdb3/repository/repository.mypicsdb3/repository.mypicsdb3-0.1.0.zip)
+   and copy it to a location that the Kodi device can access.
+2. In Kodi, open **Settings > System > Add-ons** and enable **Unknown sources**.
+   Kodi may display a security warning; review it and confirm only when you trust
+   the repository being installed.
+3. Open **Add-ons > Install from zip file** and select
+   `repository.mypicsdb3-0.1.0.zip`.
+4. Wait for the **MyPicsDB 3 Repository Add-on installed** notification.
+5. Open **Add-ons > Install from repository > MyPicsDB 3 Repository > Picture
+   add-ons > MyPicsDB 3**.
+6. Select **Install** and allow Kodi to install the required dependencies.
+7. Open **Pictures > Picture add-ons > MyPicsDB 3**.
+
+Kodi checks the installed repository for later releases according to the normal
+add-on update settings under **Settings > System > Add-ons**.
+
+### Alternative: install the add-on zip directly
+
+A direct installation is useful for testing a particular build, but it does not
+install the MyPicsDB 3 update repository.
+
+1. Download
+   [`plugin.image.mypicsdb3-0.1.0.zip`](https://raffe1234.github.io/mypicsdb3/repository/plugin.image.mypicsdb3/plugin.image.mypicsdb3-0.1.0.zip).
+2. In Kodi, enable **Unknown sources** under **Settings > System > Add-ons**.
+3. Open **Add-ons > Install from zip file** and select the downloaded zip.
+4. Wait for the **MyPicsDB 3 Add-on installed** notification.
 5. Open **Pictures > Picture add-ons > MyPicsDB 3**.
-6. Open **Picture sources**, enable one or more sources, then run **Scan now**.
 
 Kodi resolves ExifRead and PyMySQL from its add-on repositories. IPTCInfo3 is an
 optional dependency; EXIF and XMP indexing continue if it is unavailable.
+
+### Developer: install a locally built test package
+
+1. Run `python3 tools/build.py` in the project root.
+2. Copy `dist/plugin.image.mypicsdb3-0.1.0.zip` to the Kodi device.
+3. In Kodi, enable **Unknown sources** under **Settings > System > Add-ons**.
+4. Select **Add-ons > Install from zip file** and install the generated package.
+5. Open **Pictures > Picture add-ons > MyPicsDB 3**.
+6. Open **Picture sources**, enable one or more sources, then run **Scan now**.
 
 ## Using MyPicsDB 3 in Kodi
 
