@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.0 - 2026-07-17
+
+- Add the separately installed `skin.estuary.mypicsdb3` skin for Kodi 21 Omega.
+- Build the skin reproducibly from Kodi's official `21.3-Omega` Estuary source.
+- Add Pictures home-screen rows for media sources, recent pictures, random memories, albums and On this day.
+- Keep standard Estuary installed and untouched so Kodi updates cannot overwrite the custom skin.
+- Publish the generated skin through the MyPicsDB 3 repository with its own independent version.
+- Document automatic scan intervals and installation, update and fallback procedures.
+- Update GitHub Actions to current Node.js 24-compatible action releases.
+
 ## 0.1.1 - 2026-07-17
 
 - Fix source activation from Picture sources.

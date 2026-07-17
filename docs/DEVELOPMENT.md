@@ -8,6 +8,8 @@
 - `db/catalog.py` contains catalogue writes and read models.
 - `scanner.py` never runs from a widget route.
 - `views.py` is the Kodi-specific browser and action layer.
+- `tools/estuary_skin.py` creates the separate skin from a pinned official
+  Estuary source tree; generated upstream files are not committed.
 
 ## Scanner safety
 
@@ -18,7 +20,35 @@ Cleanup removes old missing rows after the configured retention period.
 ## Schema changes
 
 Increment `SCHEMA_VERSION`, add a deterministic migration, and test upgrades
-from every supported schema. Version 0.1.0 contains schema version 1 only.
+from every supported schema. Version 0.2.0 still uses schema version 1.
+
+## Building the Estuary skin
+
+The default full build downloads the official Kodi archive pinned by
+`contrib/estuary/upstream.json`, extracts only `addons/skin.estuary`, changes the
+add-on id to `skin.estuary.mypicsdb3`, adds the MyPicsDB 3 dependency and patches
+the Pictures group in `xml/Home.xml`.
+
+```bash
+python3 tools/build.py
+```
+
+For offline development, point the builder at a local copy of the official
+`skin.estuary` directory:
+
+```bash
+python3 tools/build.py --estuary-source /path/to/xbmc/addons/skin.estuary
+```
+
+To test only the plug-in and repository without downloading Estuary:
+
+```bash
+python3 tools/build.py --skip-skin
+```
+
+Do not commit `build/`, `.cache/` or generated skin source. When moving to a new
+Kodi/Estuary release, update `contrib/estuary/upstream.json`, review the new
+`Home.xml`, run the full test suite and assign a new independent skin version.
 
 ## MariaDB integration test
 
@@ -36,11 +66,16 @@ python3 -m pytest tests/test_mysql_integration.py
 
 ```bash
 python3 tools/set_version.py 0.2.0
-python3 tools/verify.py
 python3 -m pytest
+python3 tools/verify.py
 python3 tools/build.py
 git add -A
 git commit -m "Release MyPicsDB 3 0.2.0"
+git push
 git tag -a v0.2.0 -m "MyPicsDB 3 0.2.0"
-git push origin main --follow-tags
+git push origin v0.2.0
 ```
+
+The GitHub workflows repeat the tests, generate the pinned skin, run Kodi's
+add-on checker and publish the packages. Create the release tag only after the
+`main` workflows are green.

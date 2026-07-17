@@ -1,0 +1,10 @@
+{
+  "kodi_branch": "omega",
+  "ref": "21.3-Omega",
+  "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/21.3-Omega.zip",
+  "source_addon_id": "skin.estuary",
+  "target_addon_id": "skin.estuary.mypicsdb3",
+  "target_name": "Estuary MyPicsDB 3",
+  "skin_version": "21.3.1",
+  "project_url": "https://github.com/raffe1234/mypicsdb3"
+}

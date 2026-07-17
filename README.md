@@ -1,29 +1,29 @@
 # MyPicsDB 3
 
 MyPicsDB 3 is an independent, community-maintained successor inspired by
-MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue and fast
-skin widgets for Kodi 21 Omega and later.
+MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
+indexing and fast home-screen widgets for Kodi 21 Omega.
 
-> Status: 0.1.0 release candidate. The core catalogue, SQLite backend, scanner,
-> browser routes and package builder are covered by automated tests. A real Kodi
-> installation is still required for final platform testing before calling the
-> release production-stable.
+> Status: 0.2.0 release candidate. The catalogue, SQLite backend, scanner,
+> browser routes, Estuary fork builder and package builder are covered by
+> automated tests. Real Kodi installations are still required for platform and
+> large-library testing before calling the project production-stable.
 
 ## Features
 
 - Select one or more existing Kodi picture sources.
-- Incremental manual or background scanning.
+- Incremental manual or scheduled background scanning.
 - SQLite by default, using WAL mode and a local add-on profile database.
 - Optional shared MySQL/MariaDB catalogue through PyMySQL.
-- EXIF capture date, camera, orientation, dimensions, rating and GPS.
+- EXIF capture date, camera, orientation, dimensions, rating and optional GPS.
 - Basic embedded XMP keywords, rating, location and capture date.
 - IPTC keywords, caption and location through IPTCInfo3 when available.
-- GPS storage is disabled by default.
 - Missing-source safety: an unavailable SMB/NFS source is never interpreted as
   deletion of every picture.
 - Lazy Kodi thumbnail caching; no duplicate thumbnail tree is generated.
 - Favorites, ratings, keywords, cameras, years and geotagged views.
-- Stable widget endpoints for Estuary mods and configurable skins.
+- Stable widget endpoints for configurable skins.
+- Optional **Estuary MyPicsDB 3** skin with picture rows on the home screen.
 - GitHub Actions, Kodi repository generation and GitHub Pages deployment.
 
 ## Widget endpoints
@@ -49,61 +49,77 @@ Widget calls only read indexed database rows. They never scan picture sources.
 
 ### Recommended: install through the MyPicsDB 3 repository
 
-Installing the repository is the recommended method because Kodi can then find
-future MyPicsDB 3 updates automatically.
+Installing the repository is recommended because Kodi can then discover future
+updates for the picture add-on and the optional Estuary fork.
 
 1. Open the [latest MyPicsDB 3 release](https://github.com/raffe1234/mypicsdb3/releases/latest).
-   Under **Assets**, download `repository.mypicsdb3-<version>.zip` and copy it
+2. Under **Assets**, download `repository.mypicsdb3-<version>.zip` and copy it
    to a location that the Kodi device can access.
-2. In Kodi, open **Settings > System > Add-ons** and enable **Unknown sources**.
-   Kodi may display a security warning; review it and confirm only when you trust
-   the repository being installed.
-3. Open **Add-ons > Install from zip file** and select
-   `repository.mypicsdb3-<version>.zip`.
-4. Wait for the **MyPicsDB 3 Repository Add-on installed** notification.
-5. Open **Add-ons > Install from repository > MyPicsDB 3 Repository > Picture
+3. In Kodi, open **Settings > System > Add-ons** and enable **Unknown sources**.
+4. Open **Add-ons > Install from zip file** and select the repository zip.
+5. Wait for the **MyPicsDB 3 Repository Add-on installed** notification.
+6. Open **Add-ons > Install from repository > MyPicsDB 3 Repository > Picture
    add-ons > MyPicsDB 3**.
-6. Select **Install** and allow Kodi to install the required dependencies.
-7. Open **Pictures > Picture add-ons > MyPicsDB 3**.
+7. Select **Install** and allow Kodi to install the required dependencies.
+8. Open **Pictures > Picture add-ons > MyPicsDB 3**.
 
-Kodi checks the installed repository for later releases according to the normal
-add-on update settings under **Settings > System > Add-ons**.
+Kodi checks the installed repository for later releases according to the update
+policy under **Settings > System > Add-ons > Updates**. To force an immediate
+check, open the Add-on browser's left-side menu and select **Check for updates**.
 
-### Alternative: install the add-on zip directly
+### Optional: install Estuary MyPicsDB 3
 
-A direct installation is useful for testing a particular build, but it does not
-install the MyPicsDB 3 update repository.
+After MyPicsDB 3 is installed:
+
+1. Open **Add-ons > Install from repository > MyPicsDB 3 Repository**.
+2. Open **Look and feel > Skin**.
+3. Select **Estuary MyPicsDB 3** and choose **Install**.
+4. Accept Kodi's prompt to switch to the new skin, or select it later under
+   **Settings > Interface > Skin**.
+5. Keep the skin when Kodi displays its confirmation dialog.
+
+The skin adds these rows when **Pictures** is selected on the home screen:
+
+- Media sources
+- Recently taken
+- Recently added
+- Random memories
+- Recent albums
+- Random albums
+- On this day
+
+The rows are shown only when MyPicsDB 3 is installed. Empty rows disappear until
+pictures have been indexed.
+
+### Alternative: install a package directly
+
+A direct installation is useful for testing a particular release, but it does
+not install the update repository.
 
 1. Open the [latest MyPicsDB 3 release](https://github.com/raffe1234/mypicsdb3/releases/latest).
-   Under **Assets**, download `plugin.image.mypicsdb3-<version>.zip`.
-2. In Kodi, enable **Unknown sources** under **Settings > System > Add-ons**.
-3. Open **Add-ons > Install from zip file** and select the downloaded zip.
-4. Wait for the **MyPicsDB 3 Add-on installed** notification.
-5. Open **Pictures > Picture add-ons > MyPicsDB 3**.
+2. Under **Assets**, download either:
+   - `plugin.image.mypicsdb3-<version>.zip`; or
+   - `skin.estuary.mypicsdb3-<version>.zip`.
+3. Enable **Unknown sources** under **Settings > System > Add-ons**.
+4. Open **Add-ons > Install from zip file** and select the downloaded package.
+
+Installing the skin package directly also installs or updates its required
+MyPicsDB 3 dependency when Kodi can resolve that dependency from an enabled
+repository.
 
 Kodi resolves ExifRead and PyMySQL from its add-on repositories. IPTCInfo3 is an
 optional dependency; EXIF and XMP indexing continue if it is unavailable.
-
-### Developer: install a locally built test package
-
-1. Run `python3 tools/build.py` in the project root.
-2. Copy `dist/plugin.image.mypicsdb3-<version>.zip` to the Kodi device.
-3. In Kodi, enable **Unknown sources** under **Settings > System > Add-ons**.
-4. Select **Add-ons > Install from zip file** and install the generated package.
-5. Open **Pictures > Picture add-ons > MyPicsDB 3**.
-6. Open **Picture sources**, enable one or more sources, then run **Scan now**.
 
 ## Using MyPicsDB 3 in Kodi
 
 ### 1. Add picture sources to Kodi
 
-MyPicsDB 3 reads the picture sources that already exist in Kodi. If the source
-you want is not visible in Kodi yet, add it first from the Pictures section by
-using **Add pictures...**. Local folders, SMB shares, NFS shares and other
-locations supported by Kodi can be used.
+MyPicsDB 3 reads picture sources that already exist in Kodi. If a source is not
+visible in Kodi yet, add it from **Pictures > Add pictures...**. Local folders,
+SMB shares, NFS shares and other locations supported by Kodi can be used.
 
 Make sure Kodi can open the source and display its pictures before indexing it.
-For a first test, use a small folder rather than an entire photo archive.
+For the first test, use a small folder rather than an entire photo archive.
 
 ### 2. Enable sources in MyPicsDB 3
 
@@ -116,12 +132,11 @@ Pictures
   > Picture sources
 ```
 
-MyPicsDB 3 imports Kodi's current picture-source list. Every newly discovered
-source is disabled by default.
+Every newly discovered source is disabled by default.
 
 - Select a disabled source to enable it.
 - The source label changes from **Disabled** to **Enabled**.
-- Use the context menu to toggle a source or scan only that source.
+- Use the context menu to enable, disable or scan only that source.
 - Select **Refresh Kodi sources** after adding, removing or renaming a source in
   Kodi.
 
@@ -130,16 +145,16 @@ Only enabled sources are included in normal manual and automatic scans.
 ### 3. Run the first scan
 
 Return to the MyPicsDB 3 main menu and select **Scan now**. The scan is
-recursive. It visits the enabled sources, indexes supported picture files and
+recursive. It visits enabled sources, indexes supported picture files and
 stores the catalogue in the selected database.
 
 The first scan can take time on a large local collection or NAS. It is safe to
-cancel the progress dialog and continue later. Subsequent scans are
-incremental: unchanged files are not read and indexed again.
+cancel the progress dialog and continue later. Subsequent scans are incremental:
+unchanged files are not read and indexed again.
 
 Open **Scan status** after a scan to see:
 
-- the active database backend;
+- active database backend;
 - indexed and missing-picture counts;
 - indexed-album count;
 - last scan time and status;
@@ -172,34 +187,53 @@ The Keywords and Rated pictures views depend on metadata embedded in the source
 files. Geotagged pictures requires **Store GPS coordinates** to be enabled
 before the relevant pictures are scanned again.
 
-### 5. Enable automatic scans when the first test works
+### 5. Configure automatic scanning
 
-Open **Settings > Scanning** and enable **Enable automatic scanning**. The
-background service waits for the configured startup delay and then scans at the
-configured interval. By default, automatic scanning is disabled and scans are
-paused while Kodi is playing media.
+Open **MyPicsDB 3 > Settings > Scanning** and enable **Enable automatic
+scanning**. Set **Automatic scan interval (hours)** to any whole number from 1
+to 720. Common choices are:
+
+- `2` hours for frequently changing local folders;
+- `6` hours for a regularly updated NAS library;
+- `12` hours for a lower-impact schedule;
+- `24` hours for a daily scan.
+
+The background service waits for the configured startup delay and then runs an
+incremental scan. By default, automatic scanning is disabled and scans are
+paused while Kodi is playing media. **Scan now** remains available at any time.
 
 For one Kodi device, keep the default SQLite backend. Configure MySQL/MariaDB
-only when multiple Kodi devices need to share the same catalogue and all
-clients can access the same picture URIs.
+only when multiple Kodi devices need to share the same catalogue and all clients
+can access the same picture URIs.
 
-### Standard Estuary home screen
+## Does the separate Estuary skin survive updates?
 
-Installing MyPicsDB 3 does not by itself add rows to standard Estuary's Pictures
-home screen. Kodi add-ons must not modify another installed add-on, and an
-Estuary update could overwrite such changes.
-
-Until a separate Estuary fork is installed, use MyPicsDB 3 from:
+Yes. Standard Estuary and Estuary MyPicsDB 3 have different add-on IDs and live
+in different directories:
 
 ```text
-Pictures > Picture add-ons > MyPicsDB 3
+skin.estuary
+skin.estuary.mypicsdb3
 ```
 
-The project contains stable `plugin://` widget endpoints and an Omega Estuary
-patch helper for creating the separately named **Estuary MyPicsDB 3** skin. See
-[docs/ESTUARY_INTEGRATION.md](docs/ESTUARY_INTEGRATION.md). Configurable skins
-can use the endpoints listed under [Widget endpoints](#widget-endpoints)
-directly.
+A Kodi update or standard Estuary update therefore does not overwrite the
+MyPicsDB 3 skin. The selected MyPicsDB 3 skin remains installed and receives its
+own updates through the MyPicsDB 3 repository.
+
+Two limitations remain:
+
+1. Upstream Estuary fixes are not inherited automatically. Each MyPicsDB 3 skin
+   release is rebuilt from a pinned official Kodi Estuary source tag and then
+   patched. The current build is based on `21.3-Omega`.
+2. A future Kodi major version can introduce a new skin API. Kodi may disable an
+   incompatible skin and fall back to standard Estuary until a compatible
+   MyPicsDB 3 skin release is installed.
+
+Standard Estuary is never removed and can always be selected again under
+**Settings > Interface > Skin**.
+
+See [docs/ESTUARY_INTEGRATION.md](docs/ESTUARY_INTEGRATION.md) for the build and
+maintenance model.
 
 ## Database choice
 
@@ -209,13 +243,6 @@ add-on profile directory and must not be moved to SMB/NFS.
 MySQL/MariaDB is useful when several Kodi devices see identical picture URIs.
 See [docs/MYSQL_MARIADB.md](docs/MYSQL_MARIADB.md).
 
-## Estuary
-
-Kodi add-ons are not allowed to edit another add-on's files. MyPicsDB 3 therefore
-cannot silently alter standard Estuary. The repository includes an Omega
-Estuary replacement block and a patch helper for a separately named skin fork.
-See [docs/ESTUARY_INTEGRATION.md](docs/ESTUARY_INTEGRATION.md).
-
 ## Build and test
 
 ```bash
@@ -224,22 +251,43 @@ python3 tools/verify.py
 python3 tools/build.py
 ```
 
+`tools/build.py` downloads the official Kodi source archive pinned in
+`contrib/estuary/upstream.json`, extracts only `skin.estuary`, applies the
+MyPicsDB 3 home-screen patch and packages the independent skin.
+
+For an offline or local-source build:
+
+```bash
+python3 tools/build.py --estuary-source /path/to/skin.estuary
+```
+
 Build output:
 
 ```text
 dist/plugin.image.mypicsdb3-<version>.zip
 dist/repository.mypicsdb3-<version>.zip
+dist/skin.estuary.mypicsdb3-<skin-version>.zip
 dist/mypicsdb3-<version>-source.zip
 dist/mypicsdb3-<version>.tar.gz
 dist/SHA256SUMS.txt
 dist/repository/
 ```
 
+The generated skin source is placed temporarily under:
+
+```text
+build/skin.estuary.mypicsdb3/
+```
+
+Generated upstream skin files are deliberately excluded from the source archive
+and Git history. The official Estuary source is fetched again for reproducible
+CI, Pages and release builds.
+
 ## Updates for other users
 
-Install `repository.mypicsdb3-<version>.zip` once. When GitHub Pages is enabled for
-the repository and the included Pages workflow has deployed, Kodi can discover
-new versions from:
+Install `repository.mypicsdb3-<version>.zip` once. When GitHub Pages is enabled
+and the included Pages workflow has deployed, Kodi can discover picture add-on
+and skin updates from:
 
 ```text
 https://raffe1234.github.io/mypicsdb3/repository/
@@ -250,19 +298,25 @@ GitHub account or repository name differs.
 
 ## License and history
 
-GNU GPL version 2. See `LICENSE.txt` and `NOTICE.md`.
+MyPicsDB 3 code is licensed under GNU GPL version 2. See `LICENSE.txt` and
+`NOTICE.md`.
+
+The generated Estuary MyPicsDB 3 package retains the upstream Estuary license,
+assets and attribution. It is built from Kodi's official Estuary source and is
+not an official Kodi release.
 
 MyPicsDB 3 is not an official release by the original MyPicsDB/MyPicsDB2
 authors. Contributions and issue reports are welcome.
 
 ## Versioning and releases
 
-Update all package version fields with:
+Update the MyPicsDB 3 plug-in and repository versions with:
 
 ```bash
-python3 tools/set_version.py 0.2.0
+python3 tools/set_version.py 0.3.0
 ```
 
-Update `CHANGELOG.md`, commit the change, and tag the same version with a `v`
-prefix. The release workflow verifies, tests and attaches the built archives to
-the GitHub release.
+The skin version and pinned upstream Kodi tag are maintained separately in
+`contrib/estuary/upstream.json`. Update `CHANGELOG.md`, commit the changes, and
+tag the project version with a `v` prefix. The release workflow verifies, tests,
+builds all three Kodi packages and attaches the archives to the GitHub release.
