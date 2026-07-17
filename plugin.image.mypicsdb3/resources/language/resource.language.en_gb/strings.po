@@ -10,195 +10,259 @@ msgstr ""
 msgctxt "#30000"
 msgid "Picture sources"
 msgstr "Picture sources"
+
 msgctxt "#30001"
 msgid "Recently taken"
 msgstr "Recently taken"
+
 msgctxt "#30002"
 msgid "Recently added"
 msgstr "Recently added"
+
 msgctxt "#30003"
 msgid "Random memories"
 msgstr "Random memories"
+
 msgctxt "#30004"
 msgid "Recent albums"
 msgstr "Recent albums"
+
 msgctxt "#30005"
 msgid "Random albums"
 msgstr "Random albums"
+
 msgctxt "#30006"
 msgid "On this day"
 msgstr "On this day"
+
 msgctxt "#30007"
 msgid "Years"
 msgstr "Years"
+
 msgctxt "#30008"
 msgid "Cameras"
 msgstr "Cameras"
+
 msgctxt "#30009"
 msgid "Keywords"
 msgstr "Keywords"
+
 msgctxt "#30010"
 msgid "Favorites"
 msgstr "Favorites"
+
 msgctxt "#30011"
 msgid "Rated pictures"
 msgstr "Rated pictures"
+
 msgctxt "#30012"
 msgid "Geotagged pictures"
 msgstr "Geotagged pictures"
+
 msgctxt "#30013"
 msgid "Scan now"
 msgstr "Scan now"
+
 msgctxt "#30014"
 msgid "Scan status"
 msgstr "Scan status"
+
 msgctxt "#30015"
 msgid "Settings"
 msgstr "Settings"
+
 msgctxt "#30016"
 msgid "No picture sources are enabled"
 msgstr "No picture sources are enabled"
+
 msgctxt "#30017"
 msgid "Open Picture sources and enable at least one Kodi picture source."
 msgstr "Open Picture sources and enable at least one Kodi picture source."
+
 msgctxt "#30018"
 msgid "Enabled"
 msgstr "Enabled"
+
 msgctxt "#30019"
 msgid "Disabled"
 msgstr "Disabled"
+
 msgctxt "#30020"
 msgid "Refresh Kodi sources"
 msgstr "Refresh Kodi sources"
+
 msgctxt "#30021"
 msgid "Scan selected source"
 msgstr "Scan selected source"
+
 msgctxt "#30022"
 msgid "Toggle favorite"
 msgstr "Toggle favorite"
+
 msgctxt "#30023"
 msgid "Open containing album"
 msgstr "Open containing album"
+
 msgctxt "#30024"
 msgid "Next page"
 msgstr "Next page"
+
 msgctxt "#30025"
 msgid "Database is empty"
 msgstr "Database is empty"
+
 msgctxt "#30026"
 msgid "Scanning started"
 msgstr "Scanning started"
+
 msgctxt "#30027"
 msgid "Scanning completed"
 msgstr "Scanning completed"
+
 msgctxt "#30028"
 msgid "Scanning failed"
 msgstr "Scanning failed"
+
 msgctxt "#30029"
 msgid "Source unavailable"
 msgstr "Source unavailable"
+
 msgctxt "#30030"
 msgid "Another scan is already running"
 msgstr "Another scan is already running"
+
 msgctxt "#30031"
 msgid "Pictures"
 msgstr "Pictures"
+
 msgctxt "#30032"
 msgid "Albums"
 msgstr "Albums"
+
 msgctxt "#30033"
 msgid "Unknown camera"
 msgstr "Unknown camera"
+
 msgctxt "#30034"
 msgid "No date"
 msgstr "No date"
+
 msgctxt "#30035"
 msgid "No results"
 msgstr "No results"
+
 msgctxt "#30036"
 msgid "Last scan"
 msgstr "Last scan"
+
 msgctxt "#30037"
 msgid "Never"
 msgstr "Never"
+
 msgctxt "#30038"
 msgid "Indexed pictures"
 msgstr "Indexed pictures"
+
 msgctxt "#30039"
 msgid "Missing pictures"
 msgstr "Missing pictures"
+
 msgctxt "#30040"
 msgid "Indexed albums"
 msgstr "Indexed albums"
+
 msgctxt "#30041"
 msgid "Database backend"
 msgstr "Database backend"
+
 msgctxt "#30042"
 msgid "Scan cancelled"
 msgstr "Scan cancelled"
+
 msgctxt "#30043"
 msgid "Source enabled"
 msgstr "Source enabled"
+
 msgctxt "#30044"
 msgid "Source disabled"
 msgstr "Source disabled"
+
 msgctxt "#30045"
 msgid "Database error"
 msgstr "Database error"
+
 msgctxt "#30046"
 msgid "Metadata error"
 msgstr "Metadata error"
+
 msgctxt "#30047"
 msgid "Pictures found"
 msgstr "Pictures found"
+
 msgctxt "#30048"
 msgid "Pictures updated"
 msgstr "Pictures updated"
+
 msgctxt "#30049"
 msgid "Pictures unchanged"
 msgstr "Pictures unchanged"
+
 msgctxt "#30050"
 msgid "Errors"
 msgstr "Errors"
+
 msgctxt "#30051"
 msgid "Duration"
 msgstr "Duration"
+
 msgctxt "#30052"
 msgid "seconds"
 msgstr "seconds"
+
 msgctxt "#30053"
 msgid "All pictures"
 msgstr "All pictures"
+
 msgctxt "#30054"
 msgid "Root album"
 msgstr "Root album"
+
 msgctxt "#30055"
 msgid "Unavailable sources are never treated as deleted."
 msgstr "Unavailable sources are never treated as deleted."
+
 msgctxt "#30056"
 msgid "MyPicsDB 3"
 msgstr "MyPicsDB 3"
+
 msgctxt "#30057"
 msgid "Open add-on settings"
 msgstr "Open add-on settings"
+
 msgctxt "#30058"
 msgid "Database connection succeeded"
 msgstr "Database connection succeeded"
+
 msgctxt "#30059"
 msgid "Database connection failed"
 msgstr "Database connection failed"
+
 msgctxt "#30060"
 msgid "Test database connection"
 msgstr "Test database connection"
+
 msgctxt "#30061"
 msgid "Clean missing records"
 msgstr "Clean missing records"
+
 msgctxt "#30062"
 msgid "Missing records cleaned"
 msgstr "Missing records cleaned"
+
 msgctxt "#30063"
 msgid "Enable source"
 msgstr "Enable source"
+
 msgctxt "#30064"
 msgid "Disable source"
 msgstr "Disable source"
@@ -206,102 +270,135 @@ msgstr "Disable source"
 msgctxt "#32010"
 msgid "General"
 msgstr "General"
+
 msgctxt "#32011"
-msgid "Default widget item limit"
-msgstr "Default widget item limit"
+msgid "Default items per home-screen row"
+msgstr "Default items per home-screen row"
+
 msgctxt "#32012"
-msgid "Browser page size"
-msgstr "Browser page size"
+msgid "Pictures per browser page"
+msgstr "Pictures per browser page"
+
 msgctxt "#32013"
 msgid "Show notifications"
 msgstr "Show notifications"
+
 msgctxt "#32020"
 msgid "Scanning"
 msgstr "Scanning"
+
 msgctxt "#32021"
 msgid "Enable automatic scanning"
 msgstr "Enable automatic scanning"
+
 msgctxt "#32022"
 msgid "Automatic scan interval (hours)"
 msgstr "Automatic scan interval (hours)"
+
 msgctxt "#32023"
 msgid "Startup delay (seconds)"
 msgstr "Startup delay (seconds)"
+
 msgctxt "#32024"
 msgid "Pause scans during media playback"
 msgstr "Pause scans during media playback"
+
 msgctxt "#32025"
 msgid "Picture file extensions"
 msgstr "Picture file extensions"
+
 msgctxt "#32026"
 msgid "Excluded path fragments"
 msgstr "Excluded path fragments"
+
 msgctxt "#32027"
 msgid "Exclude hidden files and folders"
 msgstr "Exclude hidden files and folders"
+
 msgctxt "#32028"
 msgid "Commit batch size"
 msgstr "Commit batch size"
+
 msgctxt "#32030"
 msgid "Metadata"
 msgstr "Metadata"
+
 msgctxt "#32031"
 msgid "Read embedded XMP metadata"
 msgstr "Read embedded XMP metadata"
+
 msgctxt "#32032"
 msgid "Read IPTC metadata when available"
 msgstr "Read IPTC metadata when available"
+
 msgctxt "#32033"
 msgid "Store GPS coordinates"
 msgstr "Store GPS coordinates"
+
 msgctxt "#32034"
 msgid "Metadata prefix to inspect (MiB)"
 msgstr "Metadata prefix to inspect (MiB)"
+
 msgctxt "#32035"
 msgid "Maximum file size for deep metadata (MiB)"
 msgstr "Maximum file size for deep metadata (MiB)"
+
 msgctxt "#32040"
 msgid "Database"
 msgstr "Database"
+
 msgctxt "#32041"
 msgid "Database backend"
 msgstr "Database backend"
+
 msgctxt "#32042"
 msgid "SQLite (local)"
 msgstr "SQLite (local)"
+
 msgctxt "#32043"
 msgid "MySQL or MariaDB (shared)"
 msgstr "MySQL or MariaDB (shared)"
+
 msgctxt "#32044"
 msgid "MySQL / MariaDB connection"
 msgstr "MySQL / MariaDB connection"
+
 msgctxt "#32045"
 msgid "Host"
 msgstr "Host"
+
 msgctxt "#32046"
 msgid "Port"
 msgstr "Port"
+
 msgctxt "#32047"
 msgid "Database name"
 msgstr "Database name"
+
 msgctxt "#32048"
 msgid "Username"
 msgstr "Username"
+
 msgctxt "#32049"
 msgid "Password"
 msgstr "Password"
+
 msgctxt "#32050"
 msgid "Create database when permitted"
 msgstr "Create database when permitted"
+
 msgctxt "#32051"
 msgid "Connection timeout (seconds)"
 msgstr "Connection timeout (seconds)"
+
 msgctxt "#32060"
 msgid "Maintenance"
 msgstr "Maintenance"
+
 msgctxt "#32061"
 msgid "Keep missing records for days"
 msgstr "Keep missing records for days"
+
 msgctxt "#32062"
 msgid "Debug logging"
 msgstr "Debug logging"
@@ -309,93 +406,123 @@ msgstr "Debug logging"
 msgctxt "#32110"
 msgid "Controls list sizes and user interface behaviour."
 msgstr "Controls list sizes and user interface behaviour."
+
 msgctxt "#32111"
 msgid "Used when a skin widget URL does not specify a limit."
 msgstr "Used when a skin widget URL does not specify a limit."
+
 msgctxt "#32112"
 msgid "Maximum pictures shown on one interactive browser page."
 msgstr "Maximum pictures shown on one interactive browser page."
+
 msgctxt "#32113"
 msgid "Show short scan and error notifications in Kodi."
 msgstr "Show short scan and error notifications in Kodi."
+
 msgctxt "#32120"
 msgid "Configure background and manual catalogue scans."
 msgstr "Configure background and manual catalogue scans."
+
 msgctxt "#32121"
 msgid "Run an incremental scan in the background at the selected interval."
 msgstr "Run an incremental scan in the background at the selected interval."
+
 msgctxt "#32122"
 msgid "Time between automatic scans."
 msgstr "Time between automatic scans."
+
 msgctxt "#32123"
 msgid "Delay before the service performs its first automatic scan after Kodi starts."
 msgstr "Delay before the service performs its first automatic scan after Kodi starts."
+
 msgctxt "#32124"
 msgid "Do not begin a background scan while audio or video is playing."
 msgstr "Do not begin a background scan while audio or video is playing."
+
 msgctxt "#32125"
 msgid "Comma-separated extensions without leading dots."
 msgstr "Comma-separated extensions without leading dots."
+
 msgctxt "#32126"
 msgid "Pipe-separated, case-insensitive fragments. Matching paths are skipped."
 msgstr "Pipe-separated, case-insensitive fragments. Matching paths are skipped."
+
 msgctxt "#32127"
 msgid "Skip names beginning with a dot."
 msgstr "Skip names beginning with a dot."
+
 msgctxt "#32128"
 msgid "Number of changed records committed together during a scan."
 msgstr "Number of changed records committed together during a scan."
+
 msgctxt "#32130"
 msgid "Choose which embedded metadata is indexed."
 msgstr "Choose which embedded metadata is indexed."
+
 msgctxt "#32131"
 msgid "Read common XMP keywords, rating and location fields from the beginning of a file."
 msgstr "Read common XMP keywords, rating and location fields from the beginning of a file."
+
 msgctxt "#32132"
 msgid "Use IPTCInfo3 for IPTC keywords and location fields. Network files may be copied temporarily."
 msgstr "Use IPTCInfo3 for IPTC keywords and location fields. Network files may be copied temporarily."
+
 msgctxt "#32133"
 msgid "GPS is disabled by default for privacy. Enable only when coordinates should be stored."
 msgstr "GPS is disabled by default for privacy. Enable only when coordinates should be stored."
+
 msgctxt "#32134"
 msgid "Maximum prefix read for basic XMP and image header detection."
 msgstr "Maximum prefix read for basic XMP and image header detection."
+
 msgctxt "#32135"
 msgid "IPTC deep reading is skipped for larger files."
 msgstr "IPTC deep reading is skipped for larger files."
+
 msgctxt "#32140"
 msgid "SQLite requires no setup. MySQL/MariaDB allows several Kodi devices to share the catalogue."
 msgstr "SQLite requires no setup. MySQL/MariaDB allows several Kodi devices to share the catalogue."
+
 msgctxt "#32141"
 msgid "Changing backend does not migrate existing data automatically."
 msgstr "Changing backend does not migrate existing data automatically."
+
 msgctxt "#32145"
 msgid "Server hostname or IP address."
 msgstr "Server hostname or IP address."
+
 msgctxt "#32146"
 msgid "Usually 3306."
 msgstr "Usually 3306."
+
 msgctxt "#32147"
 msgid "Use letters, numbers and underscores."
 msgstr "Use letters, numbers and underscores."
+
 msgctxt "#32148"
 msgid "Database user with permissions for the selected database."
 msgstr "Database user with permissions for the selected database."
+
 msgctxt "#32149"
 msgid "Stored by Kodi in the add-on settings file."
 msgstr "Stored by Kodi in the add-on settings file."
+
 msgctxt "#32150"
 msgid "Requires permission to create databases. Otherwise create it manually first."
 msgstr "Requires permission to create databases. Otherwise create it manually first."
+
 msgctxt "#32151"
 msgid "Fail quickly when a server or network is unavailable."
 msgstr "Fail quickly when a server or network is unavailable."
+
 msgctxt "#32160"
 msgid "Controls retention and diagnostics."
 msgstr "Controls retention and diagnostics."
+
 msgctxt "#32161"
 msgid "Missing files remain visible to the catalogue for this many days before cleanup. Zero removes them immediately when cleanup is run."
 msgstr "Missing files remain visible to the catalogue for this many days before cleanup. Zero removes them immediately when cleanup is run."
+
 msgctxt "#32162"
 msgid "Write detailed scanner information to kodi.log."
 msgstr "Write detailed scanner information to kodi.log."
@@ -409,40 +536,40 @@ msgid "Show Media sources"
 msgstr "Show Media sources"
 
 msgctxt "#32072"
-msgid "Row 1"
-msgstr "Row 1"
+msgid "Row 1 content"
+msgstr "Row 1 content"
 
 msgctxt "#32073"
-msgid "Row 2"
-msgstr "Row 2"
+msgid "Row 2 content"
+msgstr "Row 2 content"
 
 msgctxt "#32074"
-msgid "Row 3"
-msgstr "Row 3"
+msgid "Row 3 content"
+msgstr "Row 3 content"
 
 msgctxt "#32075"
-msgid "Row 4"
-msgstr "Row 4"
+msgid "Row 4 content"
+msgstr "Row 4 content"
 
 msgctxt "#32076"
-msgid "Row 5"
-msgstr "Row 5"
+msgid "Row 5 content"
+msgstr "Row 5 content"
 
 msgctxt "#32077"
-msgid "Row 6"
-msgstr "Row 6"
+msgid "Row 6 content"
+msgstr "Row 6 content"
 
 msgctxt "#32078"
-msgid "Row 7"
-msgstr "Row 7"
+msgid "Row 7 content"
+msgstr "Row 7 content"
 
 msgctxt "#32079"
-msgid "Row 8"
-msgstr "Row 8"
+msgid "Row 8 content"
+msgstr "Row 8 content"
 
 msgctxt "#32080"
-msgid "Row 9"
-msgstr "Row 9"
+msgid "Row 9 content"
+msgstr "Row 9 content"
 
 msgctxt "#32081"
 msgid "None"

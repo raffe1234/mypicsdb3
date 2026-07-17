@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.2
+
+- Fixed missing labels for the General item-limit settings.
+- Home screen Row 1 through Row 9 now show their selected or default content.
+- Normalized the English gettext catalogue.
+- Published skin artwork and screenshots at the paths declared in addon.xml.
+- Added a short retry for the transient Kodi add-on registration race during updates.
+- Updated Estuary MyPicsDB 3 to 21.3.3.
+
 ## 0.2.1 - 2026-07-17
 
 - Show visible headings for all MyPicsDB 3 Pictures home-screen rows.

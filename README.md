@@ -4,7 +4,7 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega.
 
-> Status: 0.2.1 release candidate. The catalogue, SQLite backend, scanner,
+> Status: 0.2.2 release candidate. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. Real Kodi installations are still required for platform and
 > large-library testing before calling the project production-stable.
@@ -350,3 +350,20 @@ The skin version and pinned upstream Kodi tag are maintained separately in
 `contrib/estuary/upstream.json`. Update `CHANGELOG.md`, commit the changes, and
 tag the project version with a `v` prefix. The release workflow verifies, tests,
 builds all three Kodi packages and attaches the archives to the GitHub release.
+
+## Settings display
+
+In **Settings > General**, the numeric values are shown with descriptive labels:
+
+- **Default items per home-screen row**
+- **Pictures per browser page**
+
+In **Settings > Home screen**, each of the nine positions shows both its row
+number and the currently selected content. The default selections are visible
+without first opening each setting.
+
+### Repository artwork paths
+
+The repository builder preserves every asset path declared in an add-on's
+`addon.xml`, including `resources/icon.png`, `resources/fanart.jpg` and skin
+screenshots. This prevents 404 responses when Kodi loads generated skin artwork.

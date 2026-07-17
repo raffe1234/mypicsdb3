@@ -127,3 +127,18 @@ Settings > Interface > Skin > Estuary
 
 Standard Estuary remains installed throughout. Removing
 `skin.estuary.mypicsdb3` does not remove MyPicsDB 3 or its picture database.
+
+## Settings presentation
+
+MyPicsDB 3 uses spinner controls for the nine configurable home-screen
+positions. Estuary therefore displays the selected or default view beside
+**Row 1 content** through **Row 9 content**.
+
+The two General list-size settings use Kodi's string-formatted integer spinner
+presentation so both their labels and values remain visible.
+
+## Repository assets
+
+The repository build copies generated skin assets using their exact `addon.xml`
+paths. Do not flatten `resources/icon.png`, `resources/fanart.jpg` or
+`resources/screenshots/*` into the add-on root.

@@ -35,20 +35,42 @@ def zip_addon(addon_dir: Path, output: Path) -> None:
 
 
 
-def addon_asset_paths(addon_dir: Path) -> tuple[Path, Path]:
+def addon_asset_paths(addon_dir: Path) -> list[tuple[Path, Path]]:
+    """Return every declared metadata asset and its repository-relative path."""
     root = ET.parse(addon_dir / "addon.xml").getroot()
     metadata = next(
-        (extension for extension in root.findall("extension") if extension.attrib.get("point") == "xbmc.addon.metadata"),
+        (
+            extension
+            for extension in root.findall("extension")
+            if extension.attrib.get("point") == "xbmc.addon.metadata"
+        ),
         None,
     )
-    if metadata is None or metadata.find("assets") is None:
+    assets = metadata.find("assets") if metadata is not None else None
+    if assets is None:
         raise RuntimeError("Missing metadata assets in %s" % addon_dir.name)
-    assets = metadata.find("assets")
-    icon = assets.findtext("icon")
-    fanart = assets.findtext("fanart")
-    if not icon or not fanart:
-        raise RuntimeError("Missing icon or fanart declaration in %s" % addon_dir.name)
-    return addon_dir / icon, addon_dir / fanart
+
+    result: list[tuple[Path, Path]] = []
+    for asset in assets:
+        value = (asset.text or "").strip()
+        if not value:
+            continue
+        relative = Path(value)
+        if relative.is_absolute() or ".." in relative.parts:
+            raise RuntimeError(
+                "Unsafe metadata asset path in %s: %s" % (addon_dir.name, value)
+            )
+        source = addon_dir / relative
+        if not source.is_file():
+            raise RuntimeError(
+                "Declared metadata asset is missing in %s: %s"
+                % (addon_dir.name, value)
+            )
+        result.append((source, relative))
+
+    if not result:
+        raise RuntimeError("No metadata assets declared in %s" % addon_dir.name)
+    return result
 
 
 def copy_repository_entry(addon_dir: Path, zip_path: Path, repo_root: Path) -> None:
@@ -56,11 +78,18 @@ def copy_repository_entry(addon_dir: Path, zip_path: Path, repo_root: Path) -> N
     target.mkdir(parents=True, exist_ok=True)
     shutil.copy2(zip_path, target / zip_path.name)
     shutil.copy2(addon_dir / "addon.xml", target / "addon.xml")
-    icon_path, fanart_path = addon_asset_paths(addon_dir)
-    shutil.copy2(icon_path, target / "icon.png")
-    shutil.copy2(fanart_path, target / "fanart.jpg")
+
+    # Preserve resources/icon.png, resources/fanart.jpg and screenshots instead
+    # of flattening them and causing 404 responses in Kodi.
+    for source, relative in addon_asset_paths(addon_dir):
+        destination = target / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(source, destination)
+
     digest = hashlib.sha256(zip_path.read_bytes()).hexdigest()
-    (target / (zip_path.name + ".sha256")).write_text(digest + "\n", encoding="ascii")
+    (target / (zip_path.name + ".sha256")).write_text(
+        digest + "\n", encoding="ascii"
+    )
 
 
 def build_addons_xml(repo_root: Path, addon_dirs: Sequence[Path]) -> None:
