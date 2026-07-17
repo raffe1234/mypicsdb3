@@ -257,6 +257,10 @@ class PluginUI:
             return
 
     def _manual_scan(self, source_id: Optional[str]):
+        if source_id:
+            self._background_source_scan(int(source_id))
+            return
+
         dialog = xbmcgui.DialogProgress()
         dialog.create(self.text(30056, "MyPicsDB 3"), self.text(30026, "Scanning started"))
 
@@ -268,11 +272,79 @@ class PluginUI:
 
         scanner = Scanner(self.catalog, self.runtime.filesystem, self.kodi.settings, self.kodi.log, cancelled=cancelled, progress=progress)
         try:
-            stats = scanner.scan_sources([int(source_id)] if source_id else None)
+            stats = scanner.scan_sources()
             if stats.cancelled:
                 self.kodi.notify(self.text(30042, "Scan cancelled"))
             else:
                 message = "%s: %d, %s: %d" % (self.text(30047, "Pictures found"), stats.pictures_seen, self.text(30050, "Errors"), stats.errors)
+                self.kodi.notify(message, error=stats.errors > 0, milliseconds=6000)
+        except RuntimeError as exc:
+            self.kodi.notify(str(exc), error=True)
+        finally:
+            dialog.close()
+            xbmc.executebuiltin("Container.Refresh")
+
+    def _background_source_scan(self, source_id: int):
+        heading = self.text(30056, "MyPicsDB 3")
+        scanning_message = self.text(30026, "Scanning started")
+        paused_message = self.text(30065, "Scan paused during playback")
+        resumed_message = self.text(30066, "Scan resumed")
+        dialog = xbmcgui.DialogProgressBG()
+        dialog.create(heading, scanning_message)
+
+        monitor = self.kodi.abort_monitor()
+        settings = self.kodi.refresh_settings()
+        paused = False
+
+        def cancelled() -> bool:
+            nonlocal paused
+            while (
+                not monitor.abortRequested()
+                and settings.pause_during_playback
+                and self.kodi.is_playing()
+            ):
+                if not paused:
+                    paused = True
+                    dialog.update(0, heading, paused_message)
+                    self.kodi.log.info("Selected source scan paused during playback")
+                if monitor.waitForAbort(1):
+                    return True
+
+            if paused:
+                paused = False
+                dialog.update(0, heading, resumed_message)
+                self.kodi.log.info("Selected source scan resumed after playback")
+
+            return monitor.abortRequested()
+
+        def progress(source, path, stats):
+            message = "%s\n%s\n%s: %d" % (
+                source.label,
+                path,
+                self.text(30047, "Pictures found"),
+                stats.pictures_seen,
+            )
+            dialog.update(0, heading, message)
+
+        scanner = Scanner(
+            self.catalog,
+            self.runtime.filesystem,
+            settings,
+            self.kodi.log,
+            cancelled=cancelled,
+            progress=progress,
+        )
+        try:
+            stats = scanner.scan_sources([source_id])
+            if stats.cancelled:
+                self.kodi.notify(self.text(30042, "Scan cancelled"))
+            else:
+                message = "%s: %d, %s: %d" % (
+                    self.text(30047, "Pictures found"),
+                    stats.pictures_seen,
+                    self.text(30050, "Errors"),
+                    stats.errors,
+                )
                 self.kodi.notify(message, error=stats.errors > 0, milliseconds=6000)
         except RuntimeError as exc:
             self.kodi.notify(str(exc), error=True)

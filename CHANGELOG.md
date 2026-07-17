@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.4
+
+- Run **Scan selected source** with Kodi's non-modal background progress indicator.
+- Pause selected-source scans during media playback and resume them automatically.
+- Keep **Scan now** as the existing foreground, user-cancellable scan.
+
 ## 0.2.3
 
 - Keep nine configurable home-screen positions but enable only the first six by default.

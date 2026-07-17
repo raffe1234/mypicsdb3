@@ -267,6 +267,14 @@ msgctxt "#30064"
 msgid "Disable source"
 msgstr "Disable source"
 
+msgctxt "#30065"
+msgid "Scan paused during playback"
+msgstr "Scan paused during playback"
+
+msgctxt "#30066"
+msgid "Scan resumed"
+msgstr "Scan resumed"
+
 msgctxt "#32010"
 msgid "General"
 msgstr "General"
