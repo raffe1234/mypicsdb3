@@ -57,6 +57,114 @@ Widget calls only read indexed database rows. They never scan picture sources.
 Kodi resolves ExifRead and PyMySQL from its add-on repositories. IPTCInfo3 is an
 optional dependency; EXIF and XMP indexing continue if it is unavailable.
 
+## Using MyPicsDB 3 in Kodi
+
+### 1. Add picture sources to Kodi
+
+MyPicsDB 3 reads the picture sources that already exist in Kodi. If the source
+you want is not visible in Kodi yet, add it first from the Pictures section by
+using **Add pictures...**. Local folders, SMB shares, NFS shares and other
+locations supported by Kodi can be used.
+
+Make sure Kodi can open the source and display its pictures before indexing it.
+For a first test, use a small folder rather than an entire photo archive.
+
+### 2. Enable sources in MyPicsDB 3
+
+Open:
+
+```text
+Pictures
+  > Picture add-ons
+  > MyPicsDB 3
+  > Picture sources
+```
+
+MyPicsDB 3 imports Kodi's current picture-source list. Every newly discovered
+source is disabled by default.
+
+- Select a disabled source to enable it.
+- The source label changes from **Disabled** to **Enabled**.
+- Use the context menu to toggle a source or scan only that source.
+- Select **Refresh Kodi sources** after adding, removing or renaming a source in
+  Kodi.
+
+Only enabled sources are included in normal manual and automatic scans.
+
+### 3. Run the first scan
+
+Return to the MyPicsDB 3 main menu and select **Scan now**. The scan is
+recursive. It visits the enabled sources, indexes supported picture files and
+stores the catalogue in the selected database.
+
+The first scan can take time on a large local collection or NAS. It is safe to
+cancel the progress dialog and continue later. Subsequent scans are
+incremental: unchanged files are not read and indexed again.
+
+Open **Scan status** after a scan to see:
+
+- the active database backend;
+- indexed and missing-picture counts;
+- indexed-album count;
+- last scan time and status;
+- found, updated and unchanged-picture counts;
+- scan errors.
+
+**Test database connection** and **Clean missing records** are also available
+from the Scan status screen.
+
+### 4. Browse the catalogue
+
+After the first successful scan, the add-on main menu provides:
+
+- **Recently taken** — pictures sorted by embedded capture date when available;
+- **Recently added** — pictures most recently discovered by MyPicsDB 3;
+- **Random memories** — a random selection from the catalogue;
+- **Recent albums** and **Random albums** — folders represented by indexed
+  pictures;
+- **On this day** — pictures captured on today's month and day in earlier years;
+- **Years**, **Cameras** and **Keywords** — metadata-based navigation;
+- **Favorites** — pictures marked through the Kodi context menu;
+- **Rated pictures** — pictures with an embedded metadata rating;
+- **Geotagged pictures** — pictures with stored GPS coordinates.
+
+Open the context menu on a picture and select **Toggle favorite** to add or
+remove it from Favorites. **Open containing album** opens the indexed folder.
+Album context menus can also start a recursive Kodi slideshow.
+
+The Keywords and Rated pictures views depend on metadata embedded in the source
+files. Geotagged pictures requires **Store GPS coordinates** to be enabled
+before the relevant pictures are scanned again.
+
+### 5. Enable automatic scans when the first test works
+
+Open **Settings > Scanning** and enable **Enable automatic scanning**. The
+background service waits for the configured startup delay and then scans at the
+configured interval. By default, automatic scanning is disabled and scans are
+paused while Kodi is playing media.
+
+For one Kodi device, keep the default SQLite backend. Configure MySQL/MariaDB
+only when multiple Kodi devices need to share the same catalogue and all
+clients can access the same picture URIs.
+
+### Standard Estuary home screen
+
+Installing MyPicsDB 3 does not by itself add rows to standard Estuary's Pictures
+home screen. Kodi add-ons must not modify another installed add-on, and an
+Estuary update could overwrite such changes.
+
+Until a separate Estuary fork is installed, use MyPicsDB 3 from:
+
+```text
+Pictures > Picture add-ons > MyPicsDB 3
+```
+
+The project contains stable `plugin://` widget endpoints and an Omega Estuary
+patch helper for creating the separately named **Estuary MyPicsDB 3** skin. See
+[docs/ESTUARY_INTEGRATION.md](docs/ESTUARY_INTEGRATION.md). Configurable skins
+can use the endpoints listed under [Widget endpoints](#widget-endpoints)
+directly.
+
 ## Database choice
 
 SQLite is recommended for one Kodi device. The database is stored under the
