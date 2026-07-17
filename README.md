@@ -181,6 +181,11 @@ The first scan can take time on a large local collection or NAS. It is safe to
 cancel the progress dialog and continue later. Subsequent scans are incremental:
 unchanged files are not read and indexed again.
 
+If Scan status reports directory-listing or other traversal errors, investigate
+them before using **Clean missing records**. A source whose root is completely
+unavailable is protected from mass deletion, but a partially unreadable folder
+tree must be treated as an incomplete scan.
+
 Open **Scan status** after a scan to see:
 
 - active database backend;
@@ -215,6 +220,10 @@ Album context menus can also start a recursive Kodi slideshow.
 The Keywords and Rated pictures views depend on metadata embedded in the source
 files. Geotagged pictures requires **Store GPS coordinates** to be enabled
 before the relevant pictures are scanned again.
+
+The configurable extension list includes formats such as HEIC, HEIF and AVIF.
+Indexing an extension does not guarantee that every Kodi platform or installed
+image decoder can display that format.
 
 ### 5. Configure automatic scanning
 
@@ -262,12 +271,19 @@ Standard Estuary is never removed and can always be selected again under
 **Settings > Interface > Skin**.
 
 See [docs/ESTUARY_INTEGRATION.md](docs/ESTUARY_INTEGRATION.md) for the build and
-maintenance model.
+maintenance model. For integration with user-configurable, Estuary-derived and
+non-Estuary skins, see [docs/SKIN_INTEGRATION.md](docs/SKIN_INTEGRATION.md).
+Only the separately packaged Estuary MyPicsDB 3 skin is currently built and
+tested by this project.
 
 ## Database choice
 
 SQLite is recommended for one Kodi device. The database is stored under the
 add-on profile directory and must not be moved to SMB/NFS.
+
+The current release records a schema version but does not yet implement database
+migrations between schema versions. Back up the add-on profile before testing a
+development build that changes the catalogue schema.
 
 MySQL/MariaDB is useful when several Kodi devices see identical picture URIs.
 See [docs/MYSQL_MARIADB.md](docs/MYSQL_MARIADB.md).

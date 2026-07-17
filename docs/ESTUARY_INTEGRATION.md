@@ -4,6 +4,9 @@
 the official Estuary source for Kodi 21 Omega. It keeps standard Estuary intact
 and changes only the Pictures home-screen group.
 
+For general integration with user-configurable, Estuary-derived and
+non-Estuary skins, see [SKIN_INTEGRATION.md](SKIN_INTEGRATION.md).
+
 ## Why a separate skin survives updates
 
 Kodi identifies add-ons by ID. Standard Estuary uses:
@@ -35,7 +38,7 @@ The pinned source is defined in `contrib/estuary/upstream.json`:
 ```text
 Kodi tag: 21.3-Omega
 Target add-on: skin.estuary.mypicsdb3
-Skin version: 21.3.2
+Skin version: 21.3.3
 ```
 
 The build downloads the official Kodi source archive over HTTPS, extracts only
