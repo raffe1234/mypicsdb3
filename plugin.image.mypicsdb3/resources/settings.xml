@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<settings version="1">
+  <section id="plugin.image.mypicsdb3">
+    <category id="general" label="32010" help="32110">
+      <group id="1">
+        <setting id="widget_limit" type="integer" label="32011" help="32111">
+          <level>0</level><default>15</default>
+          <constraints><minimum>1</minimum><maximum>100</maximum></constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="browser_page_size" type="integer" label="32012" help="32112">
+          <level>1</level><default>100</default>
+          <constraints><minimum>10</minimum><maximum>500</maximum></constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="show_notifications" type="boolean" label="32013" help="32113">
+          <level>0</level><default>true</default><control type="toggle" />
+        </setting>
+      </group>
+    </category>
+    <category id="scanning" label="32020" help="32120">
+      <group id="1">
+        <setting id="auto_scan" type="boolean" label="32021" help="32121">
+          <level>0</level><default>false</default><control type="toggle" />
+        </setting>
+        <setting id="scan_interval_hours" type="integer" label="32022" help="32122">
+          <level>1</level><default>24</default>
+          <constraints><minimum>1</minimum><maximum>720</maximum></constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="startup_delay_seconds" type="integer" label="32023" help="32123">
+          <level>1</level><default>60</default>
+          <constraints><minimum>0</minimum><maximum>3600</maximum></constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="pause_during_playback" type="boolean" label="32024" help="32124">
+          <level>0</level><default>true</default><control type="toggle" />
+        </setting>
+        <setting id="extensions" type="string" label="32025" help="32125">
+          <level>2</level><default>jpg,jpeg,png,gif,bmp,tif,tiff,webp,heic,heif,avif</default>
+          <constraints><allowempty>false</allowempty></constraints>
+          <control type="edit" format="string"><heading>32025</heading></control>
+        </setting>
+        <setting id="exclude_fragments" type="string" label="32026" help="32126">
+          <level>1</level><default>@eaDir|.thumbnails|#recycle|@Recycle</default>
+          <constraints><allowempty>true</allowempty></constraints>
+          <control type="edit" format="string"><heading>32026</heading></control>
+        </setting>
+        <setting id="exclude_hidden" type="boolean" label="32027" help="32127">
+          <level>1</level><default>true</default><control type="toggle" />
+        </setting>
+        <setting id="batch_size" type="integer" label="32028" help="32128">
+          <level>2</level><default>100</default>
+          <constraints><minimum>10</minimum><maximum>2000</maximum></constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+      </group>
+    </category>
+    <category id="metadata" label="32030" help="32130">
+      <group id="1">
+        <setting id="read_xmp" type="boolean" label="32031" help="32131">
+          <level>0</level><default>true</default><control type="toggle" />
+        </setting>
+        <setting id="read_iptc" type="boolean" label="32032" help="32132">
+          <level>1</level><default>true</default><control type="toggle" />
+        </setting>
+        <setting id="store_gps" type="boolean" label="32033" help="32133">
+          <level>1</level><default>false</default><control type="toggle" />
+        </setting>
+        <setting id="metadata_prefix_mb" type="integer" label="32034" help="32134">
+          <level>2</level><default>4</default>
+          <constraints><minimum>1</minimum><maximum>32</maximum></constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="deep_metadata_max_mb" type="integer" label="32035" help="32135">
+          <level>2</level><default>64</default>
+          <constraints><minimum>1</minimum><maximum>1024</maximum></constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+      </group>
+    </category>
+    <category id="database" label="32040" help="32140">
+      <group id="1">
+        <setting id="database_backend" type="string" label="32041" help="32141">
+          <level>1</level><default>sqlite</default>
+          <constraints><options><option label="32042">sqlite</option><option label="32043">mysql</option></options></constraints>
+          <control type="list" format="string"><heading>32041</heading></control>
+        </setting>
+      </group>
+      <group id="2" label="32044">
+        <setting id="mysql_host" type="string" label="32045" help="32145">
+          <level>1</level><default>127.0.0.1</default><constraints><allowempty>false</allowempty></constraints>
+          <control type="edit" format="string"><heading>32045</heading></control>
+        </setting>
+        <setting id="mysql_port" type="integer" label="32046" help="32146">
+          <level>1</level><default>3306</default><constraints><minimum>1</minimum><maximum>65535</maximum></constraints>
+          <control type="edit" format="integer"><heading>32046</heading></control>
+        </setting>
+        <setting id="mysql_database" type="string" label="32047" help="32147">
+          <level>1</level><default>mypicsdb3</default><constraints><allowempty>false</allowempty></constraints>
+          <control type="edit" format="string"><heading>32047</heading></control>
+        </setting>
+        <setting id="mysql_username" type="string" label="32048" help="32148">
+          <level>1</level><default>kodi</default><constraints><allowempty>false</allowempty></constraints>
+          <control type="edit" format="string"><heading>32048</heading></control>
+        </setting>
+        <setting id="mysql_password" type="string" label="32049" help="32149">
+          <level>1</level><default/><constraints><allowempty>true</allowempty></constraints>
+          <control type="edit" format="string"><heading>32049</heading><hidden>true</hidden></control>
+        </setting>
+        <setting id="mysql_auto_create" type="boolean" label="32050" help="32150">
+          <level>2</level><default>false</default><control type="toggle" />
+        </setting>
+        <setting id="mysql_connect_timeout" type="integer" label="32051" help="32151">
+          <level>2</level><default>5</default><constraints><minimum>1</minimum><maximum>60</maximum></constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+      </group>
+    </category>
+    <category id="maintenance" label="32060" help="32160">
+      <group id="1">
+        <setting id="missing_retention_days" type="integer" label="32061" help="32161">
+          <level>2</level><default>30</default><constraints><minimum>0</minimum><maximum>3650</maximum></constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="debug_logging" type="boolean" label="32062" help="32162">
+          <level>2</level><default>false</default><control type="toggle" />
+        </setting>
+      </group>
+    </category>
+  </section>
+</settings>

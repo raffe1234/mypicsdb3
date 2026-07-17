@@ -1,0 +1,11 @@
+[tool.pytest.ini_options]
+addopts = "-ra -q"
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["plugin.image.mypicsdb3/resources/lib/mypicsdb3"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

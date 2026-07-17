@@ -1,0 +1,58 @@
+		<control type="group" id="4000">
+			<visible>String.IsEqual(Container(9000).ListItem.Property(id),pictures)</visible>
+			<include content="Visible_Right_Delayed">
+				<param name="id" value="pictures"/>
+			</include>
+			<control type="grouplist" id="4001">
+				<include>WidgetGroupListCommon</include>
+				<pagecontrol>4010</pagecontrol>
+				<include content="WidgetListCategories" condition="!Skin.HasSetting(HomeMenuNoPicturesButton)">
+					<param name="content_path" value="sources://pictures/"/>
+					<param name="widget_header" value="$LOCALIZE[20094]"/>
+					<param name="widget_target" value="pictures"/>
+					<param name="list_id" value="4100"/>
+					<param name="icon_height" value="110"/>
+				</include>
+				<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3)">
+					<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+					<param name="widget_header" value="$ADDON[plugin.image.mypicsdb3 30001]"/>
+					<param name="widget_target" value="pictures"/>
+					<param name="list_id" value="4200"/>
+				</include>
+				<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3)">
+					<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+					<param name="widget_header" value="$ADDON[plugin.image.mypicsdb3 30002]"/>
+					<param name="widget_target" value="pictures"/>
+					<param name="list_id" value="4300"/>
+				</include>
+				<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3)">
+					<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+					<param name="widget_header" value="$ADDON[plugin.image.mypicsdb3 30003]"/>
+					<param name="widget_target" value="pictures"/>
+					<param name="browse_mode" value="never"/>
+					<param name="list_id" value="4400"/>
+				</include>
+				<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3)">
+					<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+					<param name="widget_header" value="$ADDON[plugin.image.mypicsdb3 30004]"/>
+					<param name="widget_target" value="pictures"/>
+					<param name="list_id" value="4500"/>
+				</include>
+				<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3)">
+					<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+					<param name="widget_header" value="$ADDON[plugin.image.mypicsdb3 30005]"/>
+					<param name="widget_target" value="pictures"/>
+					<param name="browse_mode" value="never"/>
+					<param name="list_id" value="4600"/>
+				</include>
+				<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3)">
+					<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+					<param name="widget_header" value="$ADDON[plugin.image.mypicsdb3 30006]"/>
+					<param name="widget_target" value="pictures"/>
+					<param name="list_id" value="4700"/>
+				</include>
+			</control>
+			<include content="WidgetScrollbar" condition="Skin.HasSetting(touchmode)">
+				<param name="scrollbar_id" value="4010"/>
+			</include>
+		</control>
