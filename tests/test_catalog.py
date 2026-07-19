@@ -5,7 +5,7 @@ from pathlib import Path
 from mypicsdb3.config import Settings
 from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
-from mypicsdb3.utils import utc_now
+from mypicsdb3.utils import sha256_text, utc_now
 
 
 def make_catalog(tmp_path: Path) -> Catalog:
@@ -102,3 +102,23 @@ def test_delete_source_removes_its_catalogue_rows(tmp_path: Path) -> None:
     assert catalog.overview()["folders"] == 0
     assert catalog.tags() == []
     assert catalog.delete_source(source.id) is False
+
+
+def test_sync_sources_removes_kodi_picture_addons_virtual_source(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    virtual_uri = "addons://sources/image/"
+    now = utc_now()
+    with catalog.engine.transaction() as connection:
+        catalog.engine.execute(
+            connection,
+            "INSERT INTO sources (label, uri, uri_hash, enabled, available, created_at, updated_at) "
+            "VALUES (?, ?, ?, 0, 1, ?, ?)",
+            ("Picture add-ons", virtual_uri, sha256_text(virtual_uri), now, now),
+        ).close()
+
+    sources = catalog.sync_sources([
+        {"label": "Photos", "uri": str(tmp_path / "photos")},
+        {"label": "Picture add-ons", "uri": virtual_uri},
+    ])
+
+    assert [source.label for source in sources] == ["Photos"]

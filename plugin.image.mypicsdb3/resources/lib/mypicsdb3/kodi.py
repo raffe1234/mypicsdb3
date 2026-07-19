@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 
 from .config import Settings, from_getter
 from .log import Logger
-from .utils import normalize_uri
+from .utils import is_indexable_picture_source_uri, normalize_uri
 
 try:
     import xbmc  # type: ignore
@@ -70,7 +70,7 @@ class KodiContext:
         sources: List[Dict[str, str]] = []
         for source in result.get("sources", []):
             uri = normalize_uri(str(source.get("file", "")), directory=True)
-            if uri:
+            if is_indexable_picture_source_uri(uri):
                 sources.append({"label": str(source.get("label") or uri), "uri": uri})
         return sources
 

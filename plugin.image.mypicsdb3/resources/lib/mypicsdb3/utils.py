@@ -9,6 +9,11 @@ from typing import Any, Iterable, List, Optional, Sequence, Tuple
 from urllib.parse import quote, urlencode, urlsplit, urlunsplit
 
 
+NON_INDEXABLE_PICTURE_SOURCE_URIS = frozenset({
+    "addons://sources/image/",
+})
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f")
 
@@ -73,6 +78,12 @@ def normalize_uri(uri: str, directory: bool = False) -> str:
     if directory:
         value = value.rstrip("/") + "/"
     return value
+
+
+def is_indexable_picture_source_uri(uri: str) -> bool:
+    """Return whether a Kodi picture source points to indexable files."""
+    normalized = normalize_uri(uri, directory=True)
+    return bool(normalized) and normalized not in NON_INDEXABLE_PICTURE_SOURCE_URIS
 
 
 def join_uri(base: str, name: str, directory: bool = False) -> str:

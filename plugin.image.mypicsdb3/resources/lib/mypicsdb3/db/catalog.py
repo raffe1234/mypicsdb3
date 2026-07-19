@@ -5,7 +5,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ..models import Source
-from ..utils import normalize_uri, sha256_text, utc_now
+from ..utils import (
+    NON_INDEXABLE_PICTURE_SOURCE_URIS,
+    is_indexable_picture_source_uri,
+    normalize_uri,
+    sha256_text,
+    utc_now,
+)
 from .engine import DatabaseEngine
 from .schema import initialise_schema
 
@@ -37,8 +43,27 @@ class Catalog:
         now = utc_now()
         hashes = []
         with self.engine.transaction() as connection:
+            ignored_hashes = tuple(sha256_text(uri) for uri in NON_INDEXABLE_PICTURE_SOURCE_URIS)
+            if ignored_hashes:
+                placeholders = ",".join("?" for _ in ignored_hashes)
+                cursor = self.engine.execute(
+                    connection,
+                    "DELETE FROM sources WHERE uri_hash IN (%s)" % placeholders,
+                    ignored_hashes,
+                )
+                try:
+                    removed_ignored_sources = int(cursor.rowcount or 0) > 0
+                finally:
+                    cursor.close()
+                if removed_ignored_sources:
+                    self.engine.execute(
+                        connection,
+                        "DELETE FROM tags WHERE NOT EXISTS (SELECT 1 FROM picture_tags WHERE picture_tags.tag_id=tags.id)",
+                    ).close()
             for source in kodi_sources:
                 uri = normalize_uri(source["uri"], directory=True)
+                if not is_indexable_picture_source_uri(uri):
+                    continue
                 uri_hash = sha256_text(uri)
                 hashes.append(uri_hash)
                 existing = self.engine.fetchone(connection, "SELECT id FROM sources WHERE uri_hash=?", (uri_hash,))

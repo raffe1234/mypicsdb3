@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.6 - 2026-07-19
+
+- Hide Kodi's virtual **Picture add-ons** entry from MyPicsDB 3 picture sources.
+- Remove any previously stored copy of that virtual source automatically.
+
 ## 0.2.5 - 2026-07-19
 
 - Refresh date-sensitive views automatically after the local date changes so
