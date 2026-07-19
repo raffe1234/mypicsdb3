@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="repository.mypicsdb3" name="MyPicsDB 3 Repository" version="0.2.4" provider-name="MyPicsDB 3 contributors">
+<addon id="repository.mypicsdb3" name="MyPicsDB 3 Repository" version="0.2.5" provider-name="MyPicsDB 3 contributors">
   <extension point="xbmc.addon.repository" name="MyPicsDB 3 Repository">
     <dir>
       <info compressed="false">https://raffe1234.github.io/mypicsdb3/repository/addons.xml</info>
@@ -19,6 +19,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Publishes MyPicsDB 3 0.2.4 with background selected-source scanning.</news>
+    <news>Publishes MyPicsDB 3 0.2.5 with automatic date refresh and removed-source confirmation.</news>
   </extension>
 </addon>
