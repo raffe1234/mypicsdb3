@@ -5,6 +5,11 @@
 - Run **Scan selected source** with Kodi's non-modal background progress indicator.
 - Pause selected-source scans during media playback and resume them automatically.
 - Keep **Scan now** as the existing foreground, user-cancellable scan.
+- Refresh date-sensitive views automatically after the local date changes so
+  **On this day** does not remain on the previous day.
+- Ask before removing MyPicsDB 3 sources that no longer exist in Kodi, and keep
+  declined removals available for the next manual source refresh.
+- Add quick installation and setup instructions to the README.
 
 ## 0.2.3
 

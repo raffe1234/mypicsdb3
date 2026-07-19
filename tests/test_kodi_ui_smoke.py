@@ -28,6 +28,13 @@ class FakeListItem:
         self.info[media_type] = info
 
 
+class FakeDialog:
+    responses = []
+
+    def yesno(self, heading, message):
+        return self.__class__.responses.pop(0)
+
+
 @dataclass
 class Calls:
     category: str | None = None
@@ -42,6 +49,7 @@ def load_views(monkeypatch):
     xbmc.executebuiltin = lambda command: None
     xbmcgui = types.ModuleType("xbmcgui")
     xbmcgui.ListItem = FakeListItem
+    xbmcgui.Dialog = FakeDialog
     xbmcgui.DialogProgress = object
     xbmcplugin = types.ModuleType("xbmcplugin")
     xbmcplugin.setPluginCategory = lambda handle, category: setattr(calls, "category", category)
@@ -74,11 +82,18 @@ class FakeKodi:
 
 
 class FakeCatalog:
+    def __init__(self):
+        self.deleted_sources = []
+
     def sync_sources(self, sources):
         return []
 
     def get_sources(self):
         return [types.SimpleNamespace(id=7, label="FotonTest", enabled=False)]
+
+    def delete_source(self, source_id):
+        self.deleted_sources.append(source_id)
+        return True
 
     def recent_taken(self, limit, offset=0):
         return [{
@@ -144,3 +159,20 @@ def test_source_toggle_uses_plugin_root_from_nested_route(monkeypatch) -> None:
         "Enable source",
         "RunPlugin(plugin://plugin.image.mypicsdb3/action/toggle-source?id=7)",
     )
+
+
+def test_refresh_sources_asks_before_deleting_missing_source(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.sync_sources = lambda _sources: [
+        types.SimpleNamespace(id=9, label="Old photos", available=False)
+    ]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    FakeDialog.responses = [False]
+    ui.action("action/refresh-sources", {})
+    assert runtime.catalog.deleted_sources == []
+
+    FakeDialog.responses = [True]
+    ui.action("action/refresh-sources", {})
+    assert runtime.catalog.deleted_sources == [9]

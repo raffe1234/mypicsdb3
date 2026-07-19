@@ -87,6 +87,26 @@ class Catalog:
         with self.engine.transaction() as connection:
             self.engine.execute(connection, "UPDATE sources SET enabled=?, updated_at=? WHERE id=?", (1 if enabled else 0, utc_now(), source_id)).close()
 
+    def delete_source(self, source_id: int) -> bool:
+        """Delete a source and the catalogue rows that belong to it.
+
+        Folder and picture rows are removed by the database's foreign-key
+        cascades. Orphaned tags are then cleaned up explicitly because tags can
+        be shared by pictures from several sources.
+        """
+        with self.engine.transaction() as connection:
+            cursor = self.engine.execute(connection, "DELETE FROM sources WHERE id=?", (source_id,))
+            try:
+                deleted = int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
+            if deleted:
+                self.engine.execute(
+                    connection,
+                    "DELETE FROM tags WHERE NOT EXISTS (SELECT 1 FROM picture_tags WHERE picture_tags.tag_id=tags.id)",
+                ).close()
+        return deleted
+
     def set_source_scan_state(self, source_id: int, available: bool, status: str, error: Optional[str] = None) -> None:
         with self.engine.transaction() as connection:
             self.engine.execute(

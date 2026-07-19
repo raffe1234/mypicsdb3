@@ -226,7 +226,16 @@ class PluginUI:
             self.kodi.open_settings()
             return
         if route == "action/refresh-sources":
-            self.catalog.sync_sources(self.kodi.kodi_picture_sources())
+            sources = self.catalog.sync_sources(self.kodi.kodi_picture_sources())
+            missing_sources = [source for source in sources if not source.available]
+            dialog = xbmcgui.Dialog()
+            for source in missing_sources:
+                message = self.text(
+                    30068,
+                    "This source is no longer configured in Kodi. Remove it and all of its indexed pictures from MyPicsDB 3?",
+                )
+                if dialog.yesno(self.text(30067, "Remove missing source?"), "%s\n\n%s" % (source.label, message)):
+                    self.catalog.delete_source(source.id)
             xbmc.executebuiltin("Container.Refresh")
             return
         if route == "action/toggle-source":

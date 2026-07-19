@@ -45,6 +45,58 @@ plugin://plugin.image.mypicsdb3/geotagged?limit=15
 
 Widget calls only read indexed database rows. They never scan picture sources.
 
+## Quick install and setup
+
+The steps below are enough to get started. See [Installing MyPicsDB 3](#installing-mypicsdb-3)
+and [Using MyPicsDB 3 in Kodi](#using-mypicsdb-3-in-kodi) for explanations,
+alternatives and troubleshooting.
+
+### Quick install with the MyPicsDB 3 Repository
+
+Use this method if you want Kodi to discover future MyPicsDB 3 and Estuary
+MyPicsDB 3 updates.
+
+1. Download `repository.mypicsdb3-<version>.zip` from the
+   [latest release](https://github.com/raffe1234/mypicsdb3/releases/latest).
+   In Kodi, enable **Unknown sources**, open **Add-ons > Install from zip file**
+   and select the downloaded repository zip.
+2. Open **Add-ons > Install from repository > MyPicsDB 3 Repository > Picture
+   add-ons > MyPicsDB 3** and select **Install**.
+3. Optional: to show MyPicsDB 3 rows directly on the Pictures home screen, open
+   **MyPicsDB 3 Repository > Look and feel > Skin > Estuary MyPicsDB 3** and
+   select **Install**.
+
+### Quick install without the MyPicsDB 3 Repository
+
+Kodi cannot discover MyPicsDB 3 updates through this method. Check the GitHub
+releases yourself and install newer packages manually.
+
+1. Download `plugin.image.mypicsdb3-<version>.zip` from the
+   [latest release](https://github.com/raffe1234/mypicsdb3/releases/latest).
+   In Kodi, enable **Unknown sources**, open **Add-ons > Install from zip file**
+   and select the downloaded add-on zip.
+2. Optional: if you use Estuary and want MyPicsDB 3 rows on the Pictures home
+   screen, download and install `skin.estuary.mypicsdb3-<version>.zip` in the
+   same way, after installing MyPicsDB 3.
+
+### Quick setup
+
+1. Add each photo location under **Pictures > Add pictures...** and verify that
+   Kodi can open it.
+2. Open **Pictures > Picture add-ons > MyPicsDB 3 > Picture sources**. Select
+   **Refresh Kodi sources**, then enable the sources that MyPicsDB 3 should
+   index.
+3. Return to the MyPicsDB 3 main menu and select **Scan now**.
+4. Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings** to adjust:
+   - **General** — widget size, browser page size and notifications;
+   - **Home screen** — Media sources and the content and order of the Estuary
+     MyPicsDB 3 rows;
+   - **Scanning** — automatic scans, scan timing, playback pauses, file types,
+     exclusions and batch size;
+   - **Metadata** — XMP, IPTC, GPS storage and metadata read limits;
+   - **Database** — local SQLite or a shared MySQL/MariaDB catalogue;
+   - **Maintenance** — missing-record retention and debug logging.
+
 ## Installing MyPicsDB 3
 
 ### Recommended: install through the MyPicsDB 3 repository
@@ -154,15 +206,18 @@ Every newly discovered source is disabled by default.
 - The source label changes from **Disabled** to **Enabled**.
 - Use the context menu to enable, disable or start a background scan of only that source.
 - Select **Refresh Kodi sources** after adding, removing or renaming a source in
-  Kodi.
+  Kodi. If a saved MyPicsDB 3 source no longer exists in Kodi, MyPicsDB 3 asks
+  whether to remove it and its indexed pictures. Select **No** to keep it; the
+  question is shown again the next time you refresh Kodi sources.
 
 Only enabled sources are included in normal manual and automatic scans.
 
 #### Replacing a test source with the real picture library
 
 Disable the test source in MyPicsDB 3 before removing it from Kodi. Add or verify
-the real Kodi picture source, select **Refresh Kodi sources**, and enable only
-the real source before scanning it.
+the real Kodi picture source, select **Refresh Kodi sources**, remove the old
+test source from MyPicsDB 3 when prompted, and enable only the real source before
+scanning it.
 
 MyPicsDB 3 deliberately keeps indexed records when a source disappears, because
 a temporarily unavailable NAS must not be treated as mass deletion. If the
@@ -225,6 +280,10 @@ before the relevant pictures are scanned again.
 The configurable extension list includes formats such as HEIC, HEIF and AVIF.
 Indexing an extension does not guarantee that every Kodi platform or installed
 image decoder can display that format.
+
+The background service detects a local date change while Kodi is running and
+refreshes date-sensitive views. On the Estuary MyPicsDB 3 home screen, the skin
+is reloaded once after midnight so **On this day** changes without manual action.
 
 ### 5. Configure automatic scanning
 

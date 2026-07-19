@@ -89,3 +89,16 @@ def test_scan_lock_is_exclusive(tmp_path: Path) -> None:
     assert not catalog.acquire_lock("catalogue-scan", "second", ttl_seconds=60)
     catalog.release_lock("catalogue-scan", "first")
     assert catalog.acquire_lock("catalogue-scan", "second", ttl_seconds=60)
+
+
+def test_delete_source_removes_its_catalogue_rows(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    add_picture(catalog, tmp_path / "photos")
+    source = catalog.get_sources()[0]
+
+    assert catalog.delete_source(source.id) is True
+    assert catalog.get_sources() == []
+    assert catalog.overview()["pictures"] == 0
+    assert catalog.overview()["folders"] == 0
+    assert catalog.tags() == []
+    assert catalog.delete_source(source.id) is False

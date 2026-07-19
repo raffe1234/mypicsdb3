@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import time
+from datetime import date
+from typing import Callable
 
 from .db import Catalog, DatabaseEngine
 from .filesystem import KodiFilesystem
@@ -8,10 +10,25 @@ from .scanner import Scanner
 
 
 class ServiceLoop:
-    def __init__(self, kodi_context):
+    def __init__(self, kodi_context, date_provider: Callable[[], date] = date.today):
         self.kodi = kodi_context
         self.monitor = self.kodi.abort_monitor()
         self.next_scan_at = 0.0
+        self.date_provider = date_provider
+        self.current_date = self.date_provider()
+
+    def _refresh_after_date_change(self) -> None:
+        today = self.date_provider()
+        if today == self.current_date:
+            return
+        previous_date = self.current_date
+        self.current_date = today
+        self.kodi.log.info(
+            "Local date changed from %s to %s; refreshing date-sensitive views",
+            previous_date.isoformat(),
+            today.isoformat(),
+        )
+        self.kodi.refresh_date_sensitive_views()
 
     def _runtime_parts(self):
         settings = self.kodi.refresh_settings()
@@ -29,6 +46,7 @@ class ServiceLoop:
             self.kodi.log.warning("Initial source synchronization failed: %s", exc)
         self.next_scan_at = time.monotonic() + settings.startup_delay_seconds
         while not self.monitor.abortRequested():
+            self._refresh_after_date_change()
             settings = self.kodi.refresh_settings()
             now = time.monotonic()
             if settings.auto_scan and now >= self.next_scan_at:

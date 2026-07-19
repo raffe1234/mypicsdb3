@@ -275,6 +275,14 @@ msgctxt "#30066"
 msgid "Scan resumed"
 msgstr "Scan resumed"
 
+msgctxt "#30067"
+msgid "Remove missing source?"
+msgstr "Remove missing source?"
+
+msgctxt "#30068"
+msgid "This source is no longer configured in Kodi. Remove it and all of its indexed pictures from MyPicsDB 3?"
+msgstr "This source is no longer configured in Kodi. Remove it and all of its indexed pictures from MyPicsDB 3?"
+
 msgctxt "#32010"
 msgid "General"
 msgstr "General"

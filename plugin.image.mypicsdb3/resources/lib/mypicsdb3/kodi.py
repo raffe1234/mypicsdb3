@@ -78,6 +78,23 @@ class KodiContext:
         self.addon.openSettings()
 
     @staticmethod
+    def refresh_date_sensitive_views() -> None:
+        """Refresh views whose contents depend on the local calendar date.
+
+        Estuary home-screen widgets keep their directory contents until the
+        skin is rebuilt. Reloading the custom skin once at midnight refreshes
+        all rows; elsewhere a normal container refresh is sufficient.
+        """
+        if xbmc is None:
+            return
+        current_window = xbmcgui.getCurrentWindowId() if xbmcgui and hasattr(xbmcgui, "getCurrentWindowId") else None
+        skin_id = xbmc.getSkinDir() if hasattr(xbmc, "getSkinDir") else ""
+        if current_window == 10000 and skin_id == "skin.estuary.mypicsdb3":
+            xbmc.executebuiltin("ReloadSkin()")
+        else:
+            xbmc.executebuiltin("Container.Refresh")
+
+    @staticmethod
     def is_playing() -> bool:
         return bool(xbmc and xbmc.Player().isPlaying())
 
