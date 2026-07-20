@@ -1,16 +1,22 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="repository.mypicsdb3" name="MyPicsDB 3 Repository" version="0.2.6" provider-name="MyPicsDB 3 contributors">
+<addon id="repository.mypicsdb3" name="MyPicsDB 3 Repository" version="0.2.7" provider-name="MyPicsDB 3 contributors">
   <extension point="xbmc.addon.repository" name="MyPicsDB 3 Repository">
-    <dir>
-      <info compressed="false">https://raffe1234.github.io/mypicsdb3/repository/addons.xml</info>
-      <checksum>https://raffe1234.github.io/mypicsdb3/repository/addons.xml.md5</checksum>
-      <datadir zip="true">https://raffe1234.github.io/mypicsdb3/repository/</datadir>
+    <dir minversion="21.0.0" maxversion="21.89.999">
+      <info compressed="false">https://raffe1234.github.io/mypicsdb3/repository/omega/addons.xml</info>
+      <checksum>https://raffe1234.github.io/mypicsdb3/repository/omega/addons.xml.md5</checksum>
+      <datadir zip="true">https://raffe1234.github.io/mypicsdb3/repository/omega/</datadir>
+      <hashes>sha256</hashes>
+    </dir>
+    <dir minversion="21.90.0" maxversion="22.99.99">
+      <info compressed="false">https://raffe1234.github.io/mypicsdb3/repository/piers/addons.xml</info>
+      <checksum>https://raffe1234.github.io/mypicsdb3/repository/piers/addons.xml.md5</checksum>
+      <datadir zip="true">https://raffe1234.github.io/mypicsdb3/repository/piers/</datadir>
       <hashes>sha256</hashes>
     </dir>
   </extension>
   <extension point="xbmc.addon.metadata">
     <summary lang="en_GB">Updates for MyPicsDB 3 and Estuary MyPicsDB 3</summary>
-    <description lang="en_GB">Installs and updates the MyPicsDB 3 picture database and its optional Estuary MyPicsDB 3 skin.</description>
+    <description lang="en_GB">Installs and updates the MyPicsDB 3 picture database and selects a matching Estuary MyPicsDB 3 skin channel for Kodi 21 Omega or Kodi 22 Piers.</description>
     <platform>all</platform>
     <license>GPL-2.0-only</license>
     <source>https://github.com/raffe1234/mypicsdb3</source>
@@ -19,6 +25,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Publishes MyPicsDB 3 0.2.6 with filtering for Kodi's virtual Picture add-ons source.</news>
+    <news>Publishes MyPicsDB 3 0.2.7 with automatic Omega and Piers Estuary channels.</news>
   </extension>
 </addon>

@@ -12,8 +12,6 @@ from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 STATIC_ADDONS = [ROOT / "plugin.image.mypicsdb3", ROOT / "repository.mypicsdb3"]
-GENERATED_SKIN = ROOT / "build" / "skin.estuary.mypicsdb3"
-
 
 def fail(message: str) -> None:
     raise SystemExit("ERROR: " + message)
@@ -21,8 +19,6 @@ def fail(message: str) -> None:
 
 def addon_dirs(extra_addons: Iterable[Path] = ()) -> list[Path]:
     result = list(STATIC_ADDONS)
-    if GENERATED_SKIN.is_dir() and GENERATED_SKIN not in result:
-        result.append(GENERATED_SKIN)
     for addon in extra_addons:
         addon = Path(addon)
         if addon not in result:
@@ -79,7 +75,7 @@ def verify_addon(addon: Path) -> None:
 
 def verify_text_and_xml() -> None:
     for path in ROOT.rglob("*"):
-        if not path.is_file() or any(part in {"dist", ".git", "__pycache__", ".cache"} for part in path.parts):
+        if not path.is_file() or any(part in {"dist", "build", ".git", "__pycache__", ".cache"} for part in path.parts):
             continue
         data = path.read_bytes()
         if path.suffix.lower() in {".xml", ".txt", ".py", ".md", ".po", ".yml", ".yaml", ".json"}:

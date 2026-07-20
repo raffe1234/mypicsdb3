@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -21,7 +21,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
+      - name: Check out source repository
         uses: actions/checkout@v5
 
       - name: Set up Python
@@ -30,11 +30,62 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Cache official Estuary archives
+        uses: actions/cache@v6
+        with:
+          path: .cache/estuary
+          key: estuary-${{ runner.os }}-${{ hashFiles('contrib/estuary/upstream.json') }}
+          restore-keys: |
+            estuary-${{ runner.os }}-
+
       - name: Install build dependencies
         run: python -m pip install --upgrade pip && python -m pip install Pillow
 
-      - name: Build add-ons and repository index
-        run: python tools/build.py
+      - name: Check out retained repository data
+        id: repo-data
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          REMOTE="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$REMOTE" repo-data >/dev/null 2>&1; then
+            echo "existing=true" >> "$GITHUB_OUTPUT"
+            git clone --depth 1 --branch repo-data "$REMOTE" ../repo-data
+          else
+            echo "existing=false" >> "$GITHUB_OUTPUT"
+            mkdir ../repo-data
+            git -C ../repo-data init
+            git -C ../repo-data checkout --orphan repo-data
+            git -C ../repo-data remote add origin "$REMOTE"
+          fi
+
+      - name: Build add-ons and retained skin archives
+        run: |
+          if [ "${{ steps.repo-data.outputs.existing }}" = "true" ]; then
+            python tools/build.py --previous-repository ../repo-data/repository
+          else
+            # Seed the first published repository with all currently pinned
+            # releases; later deployments build only the newest release and
+            # merge the retained archives from repo-data.
+            python tools/build.py --history-limit 5
+          fi
+
+      - name: Save repository history
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          find ../repo-data -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp -a dist/. ../repo-data/
+          touch ../repo-data/.nojekyll
+          git -C ../repo-data config user.name "github-actions[bot]"
+          git -C ../repo-data config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git -C ../repo-data add -A
+          if ! git -C ../repo-data diff --cached --quiet; then
+            git -C ../repo-data reset
+            git -C ../repo-data checkout --orphan repo-data-snapshot
+            git -C ../repo-data add -A
+            git -C ../repo-data commit -m "Update published Kodi repository"
+            git -C ../repo-data push --force origin HEAD:repo-data
+          fi
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v6

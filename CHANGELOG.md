@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.7 - 2026-07-20
+
+- Add independent repository channels for Kodi 21 Omega and Kodi 22 Piers.
+- Check the official Kodi releases daily and update pinned Estuary sources only
+  after the patch, unit tests, package build and Kodi add-on checker succeed.
+- Retain up to five patched Estuary archives per Kodi channel while advertising
+  only the newest compatible version to Kodi.
+- Preserve the old repository root long enough for installed 0.2.6 repository
+  add-ons to update to the new multi-channel configuration.
+- Keep the previously published repository history in the generated `repo-data`
+  branch used by GitHub Pages.
+
 ## 0.2.6 - 2026-07-19
 
 - Hide Kodi's virtual **Picture add-ons** entry from MyPicsDB 3 picture sources.

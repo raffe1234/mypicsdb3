@@ -24,10 +24,10 @@ from every supported schema. Version 0.2.0 still uses schema version 1.
 
 ## Building the Estuary skin
 
-The default full build downloads the official Kodi archive pinned by
-`contrib/estuary/upstream.json`, extracts only `addons/skin.estuary`, changes the
-add-on id to `skin.estuary.mypicsdb3`, adds the MyPicsDB 3 dependency and patches
-the Pictures group in `xml/Home.xml`.
+The default full build downloads the newest official Kodi archive pinned for
+each channel in `contrib/estuary/upstream.json`, extracts only
+`addons/skin.estuary`, changes the add-on id to `skin.estuary.mypicsdb3`, adds
+the MyPicsDB 3 dependency and patches the Pictures group in `xml/Home.xml`.
 
 ```bash
 python3 tools/build.py
@@ -37,7 +37,7 @@ For offline development, point the builder at a local copy of the official
 `skin.estuary` directory:
 
 ```bash
-python3 tools/build.py --estuary-source /path/to/xbmc/addons/skin.estuary
+python3 tools/build.py --channel omega --estuary-source /path/to/xbmc/addons/skin.estuary
 ```
 
 To test only the plug-in and repository without downloading Estuary:
@@ -46,9 +46,10 @@ To test only the plug-in and repository without downloading Estuary:
 python3 tools/build.py --skip-skin
 ```
 
-Do not commit `build/`, `.cache/` or generated skin source. When moving to a new
-Kodi/Estuary release, update `contrib/estuary/upstream.json`, review the new
-`Home.xml`, run the full test suite and assign a new independent skin version.
+Do not commit `build/`, `.cache/` or generated skin source. The scheduled
+updater normally refreshes release pins. For a manual refresh run
+`python3 tools/update_estuary_upstreams.py`, review the new `Home.xml`, run the
+full test suite and confirm the independent skin versions.
 
 ## MariaDB integration test
 

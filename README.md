@@ -2,9 +2,9 @@
 
 MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
-indexing and fast home-screen widgets for Kodi 21 Omega.
+indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.6 release candidate. The catalogue, SQLite backend, scanner,
+> Status: 0.2.7 release candidate. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. Real Kodi installations are still required for platform and
 > large-library testing before calling the project production-stable.
@@ -325,14 +325,15 @@ A Kodi update or standard Estuary update therefore does not overwrite the
 MyPicsDB 3 skin. The selected MyPicsDB 3 skin remains installed and receives its
 own updates through the MyPicsDB 3 repository.
 
-Two limitations remain:
+The repository maintains separate Estuary channels for Kodi 21 Omega and Kodi
+22 Piers. Kodi selects the matching channel from the repository add-on's
+`minversion` and `maxversion` ranges. A scheduled GitHub Actions workflow checks
+the official Kodi releases once per day, patches and validates a new Estuary
+source, and publishes it only if every test succeeds.
 
-1. Upstream Estuary fixes are not inherited automatically. Each MyPicsDB 3 skin
-   release is rebuilt from a pinned official Kodi Estuary source tag and then
-   patched. The current build is based on `21.3-Omega`.
-2. A future Kodi major version can introduce a new skin API. Kodi may disable an
-   incompatible skin and fall back to standard Estuary until a compatible
-   MyPicsDB 3 skin release is installed.
+A future Kodi major version can still introduce a new skin API. Until a matching
+channel is configured and validated, Kodi can disable the custom skin and fall
+back to standard Estuary.
 
 Standard Estuary is never removed and can always be selected again under
 **Settings > Interface > Skin**.
@@ -363,15 +364,25 @@ python3 tools/verify.py
 python3 tools/build.py
 ```
 
-`tools/build.py` downloads the official Kodi source archive pinned in
-`contrib/estuary/upstream.json`, extracts only `skin.estuary`, applies the
-MyPicsDB 3 home-screen patch and packages the independent skin.
+`tools/build.py` downloads the latest pinned official Estuary source for each
+configured Kodi channel, extracts only `skin.estuary`, applies the MyPicsDB 3
+home-screen patch and builds separate Omega and Piers repository indexes.
 
-For an offline or local-source build:
+For an offline or local-source build, select exactly one channel:
 
 ```bash
-python3 tools/build.py --estuary-source /path/to/skin.estuary
+python3 tools/build.py --channel omega --estuary-source /path/to/skin.estuary
 ```
+
+To refresh the release pins manually from the official Kodi GitHub releases:
+
+```bash
+python3 tools/update_estuary_upstreams.py
+```
+
+GitHub Pages passes the previous published `repository/` tree back to the
+builder. The builder adds the new patched skin, retains at most five archives
+per channel and lists only the newest compatible skin in `addons.xml`.
 
 Build output:
 
@@ -388,7 +399,7 @@ dist/repository/
 The generated skin source is placed temporarily under:
 
 ```text
-build/skin.estuary.mypicsdb3/
+build/estuary/<channel>/<skin-version>/skin.estuary.mypicsdb3/
 ```
 
 Generated upstream skin files are deliberately excluded from the source archive
@@ -402,7 +413,8 @@ and the included Pages workflow has deployed, Kodi can discover picture add-on
 and skin updates from:
 
 ```text
-https://raffe1234.github.io/mypicsdb3/repository/
+https://raffe1234.github.io/mypicsdb3/repository/omega/
+https://raffe1234.github.io/mypicsdb3/repository/piers/
 ```
 
 Change the URLs in `repository.mypicsdb3/addon.xml` and add-on metadata if the

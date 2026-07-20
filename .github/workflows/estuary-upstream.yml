@@ -1,0 +1,114 @@
+name: Refresh Estuary upstream
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+  issues: write
+
+concurrency:
+  group: estuary-upstream
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install development dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
+
+      - name: Refresh official Kodi release pins
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python tools/update_estuary_upstreams.py
+
+      - name: Detect changes
+        id: changes
+        run: |
+          if git diff --quiet -- contrib/estuary/upstream.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Cache official Estuary archives
+        if: steps.changes.outputs.changed == 'true'
+        uses: actions/cache@v6
+        with:
+          path: .cache/estuary
+          key: estuary-${{ runner.os }}-${{ hashFiles('contrib/estuary/upstream.json') }}
+          restore-keys: |
+            estuary-${{ runner.os }}-
+
+      - name: Verify refreshed sources and patches
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          python tools/verify.py
+          python -m pytest
+          python tools/build.py
+
+      - name: Run Kodi add-on checker
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          python -m pip install kodi-addon-checker
+          OMEGA_SKIN=$(find build/estuary/omega -type d -name skin.estuary.mypicsdb3 -print -quit)
+          PIERS_SKIN=$(find build/estuary/piers -type d -name skin.estuary.mypicsdb3 -print -quit)
+          test -n "$OMEGA_SKIN"
+          test -n "$PIERS_SKIN"
+          kodi-addon-checker --branch omega \
+            plugin.image.mypicsdb3 \
+            repository.mypicsdb3 \
+            "$OMEGA_SKIN"
+          kodi-addon-checker --branch piers "$PIERS_SKIN"
+
+      - name: Commit verified upstream pins
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add contrib/estuary/upstream.json
+          git commit -m "Update patched Estuary upstream versions"
+          git push
+
+      - name: Deploy refreshed repository
+        if: steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref main
+
+      - name: Close resolved failure issue
+        if: success() && steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          NUMBER=$(gh issue list --state open --search '"Automatic Estuary patch failed" in:title' --json number --jq '.[0].number')
+          if [ -n "$NUMBER" ] && [ "$NUMBER" != "null" ]; then
+            gh issue close "$NUMBER" --comment "The latest official Estuary sources now patch, test and build successfully."
+          fi
+
+      - name: Report failed automatic patch
+        if: failure() && steps.changes.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE="Automatic Estuary patch failed"
+          BODY="The scheduled Estuary refresh found a new official Kodi release, but the patch or validation failed. No upstream pin was committed and the previously published repository remains active. See workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          NUMBER=$(gh issue list --state open --search "\"${TITLE}\" in:title" --json number --jq '.[0].number')
+          if [ -n "$NUMBER" ] && [ "$NUMBER" != "null" ]; then
+            gh issue comment "$NUMBER" --body "$BODY"
+          else
+            gh issue create --title "$TITLE" --body "$BODY"
+          fi

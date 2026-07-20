@@ -21,6 +21,14 @@ jobs:
           python-version: "3.11"
           cache: pip
 
+      - name: Cache official Estuary archives
+        uses: actions/cache@v6
+        with:
+          path: .cache/estuary
+          key: estuary-${{ runner.os }}-${{ hashFiles('contrib/estuary/upstream.json') }}
+          restore-keys: |
+            estuary-${{ runner.os }}-
+
       - name: Install development dependencies
         run: python -m pip install --upgrade pip && python -m pip install -r requirements-dev.txt
 
@@ -33,10 +41,15 @@ jobs:
       - name: Run Kodi add-on checker
         run: |
           python -m pip install kodi-addon-checker
+          OMEGA_SKIN=$(find build/estuary/omega -type d -name skin.estuary.mypicsdb3 -print -quit)
+          PIERS_SKIN=$(find build/estuary/piers -type d -name skin.estuary.mypicsdb3 -print -quit)
+          test -n "$OMEGA_SKIN"
+          test -n "$PIERS_SKIN"
           kodi-addon-checker --branch omega \
             plugin.image.mypicsdb3 \
             repository.mypicsdb3 \
-            build/skin.estuary.mypicsdb3
+            "$OMEGA_SKIN"
+          kodi-addon-checker --branch piers "$PIERS_SKIN"
 
       - name: Create GitHub release
         env:
