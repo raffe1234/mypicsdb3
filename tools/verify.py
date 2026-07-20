@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import py_compile
 import tempfile
 import xml.etree.ElementTree as ET
@@ -25,6 +26,85 @@ def addon_dirs(extra_addons: Iterable[Path] = ()) -> list[Path]:
             result.append(addon)
     return result
 
+
+
+def parse_numeric_version(value: str, label: str) -> tuple[int, ...]:
+    parts = value.split(".")
+    if not parts or any(not part.isdigit() for part in parts):
+        fail("%s must be a dotted numeric version, got %r" % (label, value))
+    return tuple(int(part) for part in parts)
+
+
+def verify_repository_manifest(addon: Path, root: ET.Element) -> None:
+    extension = None
+    for candidate in root.findall("extension"):
+        if candidate.attrib.get("point") == "xbmc.addon.repository":
+            extension = candidate
+            break
+    if extension is None:
+        fail("Missing xbmc.addon.repository extension in %s" % addon.name)
+
+    config_path = ROOT / "contrib" / "estuary" / "upstream.json"
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    channels = list(config.get("channels", {}).items())
+    directories = extension.findall("dir")
+    if len(directories) != len(channels):
+        fail(
+            "%s must declare one repository <dir> per Estuary channel"
+            % addon.name
+        )
+
+    base_url = "https://raffe1234.github.io/mypicsdb3/repository"
+    previous_max: tuple[int, ...] | None = None
+    for directory, (channel_name, channel) in zip(directories, channels):
+        unknown = set(directory.attrib) - {"minversion", "maxversion"}
+        if unknown:
+            fail(
+                "Unsupported attributes on repository channel %s: %s"
+                % (channel_name, ", ".join(sorted(unknown)))
+            )
+
+        minversion = directory.attrib.get("minversion")
+        maxversion = directory.attrib.get("maxversion")
+        if minversion != channel.get("minversion"):
+            fail(
+                "Repository channel %s minversion differs from upstream.json"
+                % channel_name
+            )
+        if maxversion != channel.get("maxversion"):
+            fail(
+                "Repository channel %s maxversion differs from upstream.json"
+                % channel_name
+            )
+
+        minimum = parse_numeric_version(minversion, "%s minversion" % channel_name)
+        maximum = parse_numeric_version(maxversion, "%s maxversion" % channel_name)
+        if minimum > maximum:
+            fail("Repository channel %s has an inverted version range" % channel_name)
+        if previous_max is not None and minimum <= previous_max:
+            fail("Repository channel version ranges overlap at %s" % channel_name)
+        previous_max = maximum
+
+        expected = {
+            "info": "%s/%s/addons.xml" % (base_url, channel_name),
+            "checksum": "%s/%s/addons.xml.md5" % (base_url, channel_name),
+            "datadir": "%s/%s/" % (base_url, channel_name),
+            "hashes": "sha256",
+        }
+        for element_name, expected_value in expected.items():
+            actual = directory.findtext(element_name)
+            if actual != expected_value:
+                fail(
+                    "Repository channel %s has unexpected <%s>: %r"
+                    % (channel_name, element_name, actual)
+                )
+
+        info = directory.find("info")
+        datadir = directory.find("datadir")
+        if info is None or info.attrib.get("compressed") != "false":
+            fail("Repository channel %s must use uncompressed addons.xml" % channel_name)
+        if datadir is None or datadir.attrib.get("zip") != "true":
+            fail("Repository channel %s must serve zipped add-ons" % channel_name)
 
 def verify_addon(addon: Path) -> None:
     if not addon.is_dir():
@@ -57,6 +137,9 @@ def verify_addon(addon: Path) -> None:
     fanart = Image.open(fanart_path)
     if fanart.size not in {(1280, 720), (1920, 1080), (3840, 2160)}:
         fail("fanart.jpg has an unsupported size")
+
+    if addon.name == "repository.mypicsdb3":
+        verify_repository_manifest(addon, root)
 
     if addon.name == "skin.estuary.mypicsdb3":
         home = addon / "xml" / "Home.xml"

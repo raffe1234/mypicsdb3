@@ -80,3 +80,11 @@ git push origin v0.2.0
 The GitHub workflows repeat the tests, generate the pinned skin, run Kodi's
 add-on checker and publish the packages. Create the release tag only after the
 `main` workflows are green.
+
+### Repository manifest check
+
+Kodi supports `minversion` and `maxversion` on repository `<dir>` elements, but
+`kodi-addon-checker` 0.0.36 rejects those attributes in its bundled XML schema.
+The workflows therefore run Kodi's checker for the picture add-on and generated
+skins, while `tools/verify.py` validates the repository add-on, channel ranges
+and URLs directly.

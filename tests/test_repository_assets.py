@@ -108,3 +108,20 @@ def test_repository_history_keeps_newest_and_preserves_previous_archives(tmp_pat
     ]
     assert (current_addon / (addon_id + "-21.2.3.zip")).is_file()
     assert not (current_addon / (addon_id + "-21.0.3.zip")).exists()
+
+
+def load_verify_module():
+    path = ROOT / "tools" / "verify.py"
+    spec = importlib.util.spec_from_file_location("mypicsdb3_verify", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_repository_manifest_channels_match_upstream_config():
+    verify = load_verify_module()
+    addon = ROOT / "repository.mypicsdb3"
+    root = verify.ET.parse(addon / "addon.xml").getroot()
+    verify.verify_repository_manifest(addon, root)
