@@ -401,61 +401,102 @@ class PluginUI:
             self._background_source_scan(int(source_id))
             return
 
+        monitor = self.kodi.abort_monitor()
+
+        def abort_requested() -> bool:
+            return bool(monitor and monitor.abortRequested())
+
+        if abort_requested():
+            return
+
         dialog = xbmcgui.DialogProgress()
         dialog.create(self.text(30056, "MyPicsDB 3"), self.text(30026, "Scanning started"))
 
         def cancelled() -> bool:
-            return dialog.iscanceled()
+            if abort_requested():
+                return True
+            try:
+                return dialog.iscanceled()
+            except Exception:
+                if abort_requested():
+                    return True
+                raise
 
         def progress(source, path, stats):
-            dialog.update(0, "%s\n%s\n%s: %d" % (source.label, path, self.text(30047, "Pictures found"), stats.pictures_seen))
+            if abort_requested():
+                return
+            try:
+                dialog.update(0, "%s\n%s\n%s: %d" % (source.label, path, self.text(30047, "Pictures found"), stats.pictures_seen))
+            except Exception:
+                if not abort_requested():
+                    raise
 
         scanner = Scanner(self.catalog, self.runtime.filesystem, self.kodi.settings, self.kodi.log, cancelled=cancelled, progress=progress)
         try:
             stats = scanner.scan_sources()
+            if abort_requested():
+                return
             if stats.cancelled:
                 self.kodi.notify(self.text(30042, "Scan cancelled"))
             else:
                 message = "%s: %d, %s: %d" % (self.text(30047, "Pictures found"), stats.pictures_seen, self.text(30050, "Errors"), stats.errors)
                 self.kodi.notify(message, error=stats.errors > 0, milliseconds=6000)
         except RuntimeError as exc:
-            self.kodi.notify(str(exc), error=True)
+            if not abort_requested():
+                self.kodi.notify(str(exc), error=True)
         finally:
-            dialog.close()
-            xbmc.executebuiltin("Container.Refresh")
+            if not abort_requested():
+                dialog.close()
+                xbmc.executebuiltin("Container.Refresh")
 
     def _background_source_scan(self, source_id: int):
         heading = self.text(30056, "MyPicsDB 3")
         scanning_message = self.text(30026, "Scanning started")
         paused_message = self.text(30065, "Scan paused during playback")
         resumed_message = self.text(30066, "Scan resumed")
+        monitor = self.kodi.abort_monitor()
+
+        def abort_requested() -> bool:
+            return bool(monitor and monitor.abortRequested())
+
+        if abort_requested():
+            return
+
         dialog = xbmcgui.DialogProgressBG()
         dialog.create(heading, scanning_message)
 
-        monitor = self.kodi.abort_monitor()
         settings = self.kodi.refresh_settings()
         paused = False
+
+        def update_dialog(percent: int, message: str) -> None:
+            if abort_requested():
+                return
+            try:
+                dialog.update(percent, heading, message)
+            except Exception:
+                if not abort_requested():
+                    raise
 
         def cancelled() -> bool:
             nonlocal paused
             while (
-                not monitor.abortRequested()
+                not abort_requested()
                 and settings.pause_during_playback
                 and self.kodi.is_playing()
             ):
                 if not paused:
                     paused = True
-                    dialog.update(0, heading, paused_message)
+                    update_dialog(0, paused_message)
                     self.kodi.log.info("Selected source scan paused during playback")
                 if monitor.waitForAbort(1):
                     return True
 
-            if paused:
+            if paused and not abort_requested():
                 paused = False
-                dialog.update(0, heading, resumed_message)
+                update_dialog(0, resumed_message)
                 self.kodi.log.info("Selected source scan resumed after playback")
 
-            return monitor.abortRequested()
+            return abort_requested()
 
         def progress(source, path, stats):
             message = "%s\n%s\n%s: %d" % (
@@ -464,7 +505,7 @@ class PluginUI:
                 self.text(30047, "Pictures found"),
                 stats.pictures_seen,
             )
-            dialog.update(0, heading, message)
+            update_dialog(0, message)
 
         scanner = Scanner(
             self.catalog,
@@ -476,6 +517,8 @@ class PluginUI:
         )
         try:
             stats = scanner.scan_sources([source_id])
+            if abort_requested():
+                return
             if stats.cancelled:
                 self.kodi.notify(self.text(30042, "Scan cancelled"))
             else:
@@ -487,10 +530,12 @@ class PluginUI:
                 )
                 self.kodi.notify(message, error=stats.errors > 0, milliseconds=6000)
         except RuntimeError as exc:
-            self.kodi.notify(str(exc), error=True)
+            if not abort_requested():
+                self.kodi.notify(str(exc), error=True)
         finally:
-            dialog.close()
-            xbmc.executebuiltin("Container.Refresh")
+            if not abort_requested():
+                dialog.close()
+                xbmc.executebuiltin("Container.Refresh")
 
     def dispatch(self, request: Request):
         route = request.route

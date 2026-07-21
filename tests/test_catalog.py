@@ -91,6 +91,23 @@ def test_scan_lock_is_exclusive(tmp_path: Path) -> None:
     assert catalog.acquire_lock("catalogue-scan", "second", ttl_seconds=60)
 
 
+def test_scan_lock_can_be_refreshed_but_expired_lock_is_not_revived(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    assert catalog.acquire_lock("catalogue-scan", "first", ttl_seconds=60)
+    assert not catalog.refresh_lock("catalogue-scan", "second", ttl_seconds=120)
+    assert catalog.refresh_lock("catalogue-scan", "first", ttl_seconds=120)
+
+    with catalog.engine.transaction() as connection:
+        catalog.engine.execute(
+            connection,
+            "UPDATE locks SET expires_at=? WHERE name=?",
+            ("2000-01-01 00:00:00", "catalogue-scan"),
+        ).close()
+
+    assert not catalog.refresh_lock("catalogue-scan", "first", ttl_seconds=120)
+    assert catalog.acquire_lock("catalogue-scan", "second", ttl_seconds=60)
+
+
 def test_delete_source_removes_its_catalogue_rows(tmp_path: Path) -> None:
     catalog = make_catalog(tmp_path)
     add_picture(catalog, tmp_path / "photos")

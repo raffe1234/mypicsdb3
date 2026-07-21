@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.11 - 2026-07-21
+
+- Stop full foreground scans when Kodi requests shutdown, rather than checking
+  only the progress dialog's Cancel button.
+- Avoid progress updates, notifications and container refreshes after Kodi has
+  begun shutting down for both foreground and selected-source scans.
+- Check for cancellation before and after Kodi VFS directory, stat, stream and
+  metadata-materialisation operations so a scan stops as soon as a blocked SMB
+  call returns.
+- Replace the six-hour scan lock with a renewable 30-minute lock. Active scans
+  refresh it every minute, while expired locks are never revived.
+
 ## 0.2.10 - 2026-07-21
 
 - Replace the failing programmatic home-screen editor with a packaged XML dialog

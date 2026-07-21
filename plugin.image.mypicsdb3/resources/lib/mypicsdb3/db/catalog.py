@@ -140,7 +140,7 @@ class Catalog:
                 (1 if available else 0, utc_now(), status, error, utc_now(), source_id),
             ).close()
 
-    def acquire_lock(self, name: str, owner: str, ttl_seconds: int = 21600) -> bool:
+    def acquire_lock(self, name: str, owner: str, ttl_seconds: int = 1800) -> bool:
         now_dt = datetime.now(timezone.utc)
         now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
         expires = (now_dt + timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%d %H:%M:%S")
@@ -151,6 +151,40 @@ class Catalog:
             return True
         except self.engine.integrity_errors:
             return False
+
+    def refresh_lock(self, name: str, owner: str, ttl_seconds: int = 1800, connection=None) -> bool:
+        """Extend a live lock owned by this scanner.
+
+        Expired locks are not revived. If a scan has been blocked for longer
+        than the TTL, it must stop rather than continue without exclusivity.
+        """
+        now_dt = datetime.now(timezone.utc)
+        now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
+        expires = (now_dt + timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%d %H:%M:%S")
+
+        def update(active_connection) -> bool:
+            cursor = self.engine.execute(
+                active_connection,
+                "UPDATE locks SET expires_at=? WHERE name=? AND owner=? AND expires_at>?",
+                (expires, name, owner, now),
+            )
+            try:
+                updated = int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
+            if updated:
+                return True
+            current = self.engine.fetchone(
+                active_connection,
+                "SELECT owner, expires_at FROM locks WHERE name=?",
+                (name,),
+            )
+            return bool(current and current.get("owner") == owner and current.get("expires_at", "") > now)
+
+        if connection is not None:
+            return update(connection)
+        with self.engine.transaction(immediate=True) as active_connection:
+            return update(active_connection)
 
     def release_lock(self, name: str, owner: str) -> None:
         with self.engine.transaction() as connection:

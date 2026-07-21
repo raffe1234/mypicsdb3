@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+import mypicsdb3.scanner as scanner_module
 from mypicsdb3.config import Settings
 from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
@@ -106,3 +107,93 @@ def test_scanner_honours_excluded_fragments(tmp_path: Path) -> None:
     result = scanner.scan_sources()
     assert result.pictures_seen == 1
     assert catalog.recent_added(10)[0]["filename"] == "kept.jpg"
+
+
+def test_scan_stops_as_soon_as_a_blocking_listdir_returns(tmp_path: Path) -> None:
+    root = tmp_path / "photos"
+    root.mkdir()
+    (root / "image.jpg").write_bytes(b"image")
+    catalog, _, original_scanner = setup_scanner(tmp_path, root)
+    state = {"cancelled": False}
+
+    class CancelAfterListdirFilesystem(LocalFilesystem):
+        def listdir(self, path):
+            value = super().listdir(path)
+            state["cancelled"] = True
+            return value
+
+    scanner = Scanner(
+        catalog,
+        CancelAfterListdirFilesystem(),
+        original_scanner.settings,
+        metadata_reader=fake_metadata,
+        cancelled=lambda: state["cancelled"],
+    )
+
+    result = scanner.scan_sources()
+
+    assert result.cancelled is True
+    assert catalog.overview()["pictures"] == 0
+    assert catalog.latest_scan()["status"] == "cancelled"
+
+
+def test_scan_stops_after_stat_before_reading_metadata(tmp_path: Path) -> None:
+    root = tmp_path / "photos"
+    root.mkdir()
+    (root / "image.jpg").write_bytes(b"image")
+    catalog, _, original_scanner = setup_scanner(tmp_path, root)
+    state = {"cancelled": False}
+    metadata_calls = []
+
+    class CancelAfterStatFilesystem(LocalFilesystem):
+        def stat(self, path):
+            value = super().stat(path)
+            state["cancelled"] = True
+            return value
+
+    def metadata_reader(*args):
+        metadata_calls.append(args)
+        return fake_metadata(*args)
+
+    scanner = Scanner(
+        catalog,
+        CancelAfterStatFilesystem(),
+        original_scanner.settings,
+        metadata_reader=metadata_reader,
+        cancelled=lambda: state["cancelled"],
+    )
+
+    result = scanner.scan_sources()
+
+    assert result.cancelled is True
+    assert metadata_calls == []
+    assert catalog.overview()["pictures"] == 0
+
+
+def test_active_scan_refreshes_its_shorter_lock(monkeypatch, tmp_path: Path) -> None:
+    root = tmp_path / "photos"
+    root.mkdir()
+    (root / "image.jpg").write_bytes(b"image")
+    catalog, _, original_scanner = setup_scanner(tmp_path, root)
+    refresh_calls = []
+    original_refresh = catalog.refresh_lock
+
+    def refresh_lock(name, owner, ttl_seconds, connection=None):
+        refresh_calls.append((name, owner, ttl_seconds))
+        return original_refresh(name, owner, ttl_seconds, connection=connection)
+
+    monkeypatch.setattr(catalog, "refresh_lock", refresh_lock)
+    monkeypatch.setattr(scanner_module, "SCAN_LOCK_REFRESH_SECONDS", 0)
+    scanner = Scanner(
+        catalog,
+        LocalFilesystem(),
+        original_scanner.settings,
+        metadata_reader=fake_metadata,
+    )
+
+    result = scanner.scan_sources()
+
+    assert result.cancelled is False
+    assert refresh_calls
+    assert all(call[0] == "catalogue-scan" for call in refresh_calls)
+    assert all(call[2] == 1800 for call in refresh_calls)

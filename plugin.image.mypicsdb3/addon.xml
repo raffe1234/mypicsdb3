@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.10" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.11" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -30,6 +30,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Fix the home-screen row editor and add the album-default action to the Estuary picture side menu.</news>
+    <news>Stop picture scans promptly during Kodi shutdown and recover stale scan locks sooner.</news>
   </extension>
 </addon>

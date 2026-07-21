@@ -24,13 +24,38 @@ class FakeBackgroundDialog:
         self.closed = True
 
 
+class FakeForegroundDialog:
+    instances = []
+
+    def __init__(self):
+        self.created = []
+        self.updates = []
+        self.closed = False
+        self.iscancelled_calls = 0
+        self.__class__.instances.append(self)
+
+    def create(self, heading, message=""):
+        self.created.append((heading, message))
+
+    def update(self, percent=0, message=""):
+        self.updates.append((percent, message))
+
+    def iscancelled(self):
+        self.iscancelled_calls += 1
+        return False
+
+    def close(self):
+        self.closed = True
+
+
 class FakeMonitor:
     def __init__(self, kodi):
         self.kodi = kodi
         self.wait_calls = 0
+        self.abort_requested = False
 
     def abortRequested(self):
-        return False
+        return self.abort_requested
 
     def waitForAbort(self, timeout):
         self.wait_calls += 1
@@ -93,7 +118,7 @@ def load_views(monkeypatch):
 
     xbmcgui = types.ModuleType("xbmcgui")
     xbmcgui.ListItem = object
-    xbmcgui.DialogProgress = object
+    xbmcgui.DialogProgress = FakeForegroundDialog
     xbmcgui.DialogProgressBG = FakeBackgroundDialog
 
     xbmcplugin = types.ModuleType("xbmcplugin")
@@ -158,3 +183,104 @@ def test_selected_source_scan_runs_in_background_and_pauses(monkeypatch):
     assert dialog.closed is True
     assert executed[-1] == "Container.Refresh"
     assert runtime.kodi.notifications[-1][0] == "Pictures found: 1, Errors: 0"
+
+
+def test_full_scan_stops_without_gui_calls_when_kodi_aborts(monkeypatch):
+    FakeForegroundDialog.instances.clear()
+    views, executed = load_views(monkeypatch)
+    captured = {}
+    runtime = FakeRuntime()
+    runtime.kodi.playing = False
+
+    class FakeScanner:
+        def __init__(
+            self,
+            catalog,
+            filesystem,
+            settings,
+            logger,
+            cancelled,
+            progress,
+        ):
+            captured["cancelled"] = cancelled
+            captured["progress"] = progress
+
+        def scan_sources(self, source_ids=None):
+            runtime.kodi.monitor.abort_requested = True
+            assert captured["cancelled"]() is True
+            captured["progress"](
+                types.SimpleNamespace(label="Photographs"),
+                "smb://nas/photos/image.jpg",
+                types.SimpleNamespace(pictures_seen=1),
+            )
+            return types.SimpleNamespace(
+                cancelled=True,
+                pictures_seen=1,
+                errors=0,
+            )
+
+    monkeypatch.setattr(views, "Scanner", FakeScanner)
+
+    ui = views.PluginUI(
+        runtime,
+        "plugin://plugin.image.mypicsdb3",
+        7,
+    )
+    ui._manual_scan(None)
+
+    dialog = FakeForegroundDialog.instances[-1]
+    assert dialog.iscancelled_calls == 0
+    assert dialog.updates == []
+    assert dialog.closed is False
+    assert executed == []
+    assert runtime.kodi.notifications == []
+
+
+def test_selected_source_scan_stops_without_gui_calls_when_kodi_aborts(monkeypatch):
+    FakeBackgroundDialog.instances.clear()
+    views, executed = load_views(monkeypatch)
+    captured = {}
+    runtime = FakeRuntime()
+    runtime.kodi.playing = False
+
+    class FakeScanner:
+        def __init__(
+            self,
+            catalog,
+            filesystem,
+            settings,
+            logger,
+            cancelled,
+            progress,
+        ):
+            captured["cancelled"] = cancelled
+            captured["progress"] = progress
+
+        def scan_sources(self, source_ids=None):
+            runtime.kodi.monitor.abort_requested = True
+            assert captured["cancelled"]() is True
+            captured["progress"](
+                types.SimpleNamespace(label="Photographs"),
+                "smb://nas/photos/image.jpg",
+                types.SimpleNamespace(pictures_seen=1),
+            )
+            return types.SimpleNamespace(
+                cancelled=True,
+                pictures_seen=1,
+                errors=0,
+            )
+
+    monkeypatch.setattr(views, "Scanner", FakeScanner)
+
+    ui = views.PluginUI(
+        runtime,
+        "plugin://plugin.image.mypicsdb3",
+        7,
+    )
+    ui._manual_scan("12")
+
+    dialog = FakeBackgroundDialog.instances[-1]
+    assert dialog.updates == []
+    assert dialog.closed is False
+    assert executed == []
+    assert runtime.kodi.notifications == []

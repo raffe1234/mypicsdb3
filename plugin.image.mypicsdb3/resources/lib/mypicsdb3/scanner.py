@@ -8,7 +8,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from .config import Settings
 from .db.catalog import Catalog
-from .filesystem import Filesystem
+from .filesystem import CancellationAwareFilesystem, Filesystem
 from .metadata import extract_metadata
 from .models import MetadataResult, ScanStats, Source
 from .utils import basename_uri, extension_of, join_uri, local_datetime_from_timestamp, normalize_uri, utc_now
@@ -16,6 +16,15 @@ from .utils import basename_uri, extension_of, join_uri, local_datetime_from_tim
 
 class ScanCancelled(Exception):
     pass
+
+
+class ScanLockLost(RuntimeError):
+    pass
+
+
+SCAN_LOCK_NAME = "catalogue-scan"
+SCAN_LOCK_TTL_SECONDS = 1800
+SCAN_LOCK_REFRESH_SECONDS = 60
 
 
 class Scanner:
@@ -30,13 +39,16 @@ class Scanner:
         progress: Optional[Callable[[Source, str, ScanStats], None]] = None,
     ):
         self.catalog = catalog
-        self.filesystem = filesystem
         self.settings = settings
         self.logger = logger
         self.metadata_reader = metadata_reader
         self.cancelled = cancelled or (lambda: False)
         self.progress = progress
         self.owner = "%s:%s:%s" % (socket.gethostname(), os.getpid(), uuid.uuid4().hex[:12])
+        self._scan_lock_active = False
+        self._scan_lock_refreshed_at = 0.0
+        self._scan_connection = None
+        self.filesystem = CancellationAwareFilesystem(filesystem, self._check_cancelled)
 
     def _is_excluded(self, path: str, name: str) -> bool:
         if self.settings.exclude_hidden and name.startswith("."):
@@ -47,10 +59,33 @@ class Scanner:
     def _check_cancelled(self) -> None:
         if self.cancelled():
             raise ScanCancelled()
+        self._refresh_scan_lock()
+
+    def _refresh_scan_lock(self, force: bool = False) -> None:
+        if not self._scan_lock_active:
+            return
+        now = time.monotonic()
+        if not force and now - self._scan_lock_refreshed_at < SCAN_LOCK_REFRESH_SECONDS:
+            return
+        try:
+            refreshed = self.catalog.refresh_lock(
+                SCAN_LOCK_NAME,
+                self.owner,
+                SCAN_LOCK_TTL_SECONDS,
+                connection=self._scan_connection,
+            )
+        except Exception as exc:
+            raise ScanLockLost("The catalogue scan lock could not be refreshed") from exc
+        if not refreshed:
+            raise ScanLockLost("The catalogue scan lock expired or was taken over")
+        if self._scan_connection is not None:
+            self._scan_connection.commit()
+        self._scan_lock_refreshed_at = now
 
     def scan_sources(self, source_ids: Optional[Sequence[int]] = None) -> ScanStats:
         overall = ScanStats(started_at=utc_now())
         started_monotonic = time.monotonic()
+        self._check_cancelled()
         sources = self.catalog.get_sources(enabled_only=True)
         if source_ids is not None:
             wanted = {int(value) for value in source_ids}
@@ -59,9 +94,12 @@ class Scanner:
             overall.finished_at = utc_now()
             overall.duration_seconds = time.monotonic() - started_monotonic
             return overall
-        if not self.catalog.acquire_lock("catalogue-scan", self.owner):
+        if not self.catalog.acquire_lock(SCAN_LOCK_NAME, self.owner, SCAN_LOCK_TTL_SECONDS):
             raise RuntimeError("Another scan is already running")
+        self._scan_lock_active = True
+        self._scan_lock_refreshed_at = time.monotonic()
         try:
+            self._check_cancelled()
             for source in sources:
                 self._check_cancelled()
                 source_stats = self.scan_source(source)
@@ -69,7 +107,10 @@ class Scanner:
         except ScanCancelled:
             overall.cancelled = True
         finally:
-            self.catalog.release_lock("catalogue-scan", self.owner)
+            try:
+                self.catalog.release_lock(SCAN_LOCK_NAME, self.owner)
+            finally:
+                self._scan_lock_active = False
         overall.finished_at = utc_now()
         overall.duration_seconds = time.monotonic() - started_monotonic
         return overall
@@ -92,6 +133,7 @@ class Scanner:
             return stats
 
         connection = self.catalog.open_scan_connection()
+        self._scan_connection = connection
         scan_started_at = utc_now()
         changed_since_commit = 0
         try:
@@ -142,6 +184,7 @@ class Scanner:
                             stats.pictures_unchanged += 1
                         else:
                             metadata = self.metadata_reader(picture_uri, self.filesystem, self.settings, file_stat.size)
+                            self._check_cancelled()
                             if not metadata.taken_at:
                                 metadata.taken_at = local_datetime_from_timestamp(file_stat.mtime)
                                 metadata.taken_source = "File mtime fallback"
@@ -186,7 +229,7 @@ class Scanner:
                         if changed_since_commit >= self.settings.batch_size:
                             connection.commit()
                             changed_since_commit = 0
-                    except ScanCancelled:
+                    except (ScanCancelled, ScanLockLost):
                         raise
                     except Exception as exc:
                         stats.errors += 1
@@ -208,6 +251,15 @@ class Scanner:
             self.catalog.set_source_scan_state(source.id, True, "cancelled")
             self.catalog.finish_scan_run(scan_id, "cancelled", stats)
             raise
+        except ScanLockLost as exc:
+            connection.rollback()
+            stats.errors += 1
+            stats.error_messages.append(str(exc))
+            self.catalog.set_source_scan_state(source.id, True, "failed", str(exc))
+            self.catalog.finish_scan_run(scan_id, "failed", stats, str(exc))
+            if self.logger:
+                self.logger.error("Source scan lost its lock for %s: %s", root, exc)
+            raise
         except Exception as exc:
             connection.rollback()
             stats.errors += 1
@@ -217,6 +269,7 @@ class Scanner:
             if self.logger:
                 self.logger.error("Source scan failed for %s: %s", root, exc)
         finally:
+            self._scan_connection = None
             connection.close()
             stats.finished_at = utc_now()
             stats.duration_seconds = time.monotonic() - started_monotonic

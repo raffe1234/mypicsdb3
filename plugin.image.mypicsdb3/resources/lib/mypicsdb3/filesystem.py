@@ -5,7 +5,7 @@ import os
 import shutil
 import tempfile
 from pathlib import Path
-from typing import BinaryIO, Iterator, List, Optional, Tuple
+from typing import BinaryIO, Callable, Iterator, List, Optional, Tuple
 
 from .models import FileStat
 from .utils import basename_uri, join_uri, sha256_text
@@ -80,6 +80,97 @@ class Filesystem:
     @contextlib.contextmanager
     def materialized(self, path: str, max_bytes: Optional[int] = None) -> Iterator[Optional[str]]:
         raise NotImplementedError
+
+
+class CheckedBinaryStream:
+    """Run a cancellation check around potentially blocking stream calls."""
+
+    def __init__(self, stream, check: Callable[[], None]):
+        self._stream = stream
+        self._check = check
+
+    def read(self, size: int = -1):
+        self._check()
+        value = self._stream.read(size)
+        self._check()
+        return value
+
+    def seek(self, offset: int, whence: int = 0):
+        self._check()
+        value = self._stream.seek(offset, whence)
+        self._check()
+        return value
+
+    def tell(self):
+        return self._stream.tell()
+
+    def size(self):
+        self._check()
+        value = self._stream.size()
+        self._check()
+        return value
+
+    def close(self) -> None:
+        self._stream.close()
+
+    def __enter__(self) -> "CheckedBinaryStream":
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.close()
+
+    def __getattr__(self, name):
+        return getattr(self._stream, name)
+
+
+class CancellationAwareFilesystem(Filesystem):
+    """Filesystem proxy that checks for cancellation between VFS operations.
+
+    Kodi's xbmcvfs calls do not expose a per-call timeout or abort callback. This
+    proxy therefore cannot interrupt an SMB call while it is blocked, but it
+    makes the scanner stop immediately before the next operation and as soon as
+    the current operation returns.
+    """
+
+    def __init__(self, filesystem: Filesystem, check: Callable[[], None]):
+        self._filesystem = filesystem
+        self._check = check
+
+    def exists(self, path: str) -> bool:
+        self._check()
+        value = self._filesystem.exists(path)
+        self._check()
+        return value
+
+    def listdir(self, path: str) -> Tuple[List[str], List[str]]:
+        self._check()
+        value = self._filesystem.listdir(path)
+        self._check()
+        return value
+
+    def stat(self, path: str) -> FileStat:
+        self._check()
+        value = self._filesystem.stat(path)
+        self._check()
+        return value
+
+    def open_binary(self, path: str):
+        self._check()
+        stream = self._filesystem.open_binary(path)
+        try:
+            self._check()
+        except Exception:
+            stream.close()
+            raise
+        return CheckedBinaryStream(stream, self._check)
+
+    @contextlib.contextmanager
+    def materialized(self, path: str, max_bytes: Optional[int] = None) -> Iterator[Optional[str]]:
+        self._check()
+        with self._filesystem.materialized(path, max_bytes) as local_path:
+            self._check()
+            yield local_path
+            self._check()
 
 
 class KodiFilesystem(Filesystem):
