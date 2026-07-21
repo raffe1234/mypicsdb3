@@ -218,7 +218,7 @@ def test_refresh_sources_asks_before_deleting_missing_source(monkeypatch) -> Non
     assert runtime.catalog.deleted_sources == [9]
 
 
-def test_album_uses_default_view_and_offers_save_action(monkeypatch) -> None:
+def test_album_uses_default_view(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
     runtime.kodi.settings.album_view_mode = 54
@@ -227,11 +227,7 @@ def test_album_uses_default_view_and_offers_save_action(monkeypatch) -> None:
     ui.folder(3, {})
 
     assert "Container.SetViewMode(54)" in calls.builtins
-    _url, item, _is_folder = calls.items[0]
-    assert (
-        "Save current view as album default",
-        "RunPlugin(plugin://plugin.image.mypicsdb3/action/save-album-view)",
-    ) in item.context
+    assert len(calls.items) == 1
 
 
 def test_current_album_view_can_be_saved(monkeypatch) -> None:
@@ -252,7 +248,11 @@ def test_home_screen_editor_enables_a_hidden_row(monkeypatch) -> None:
     runtime = FakeRuntime()
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
-    FakeDialog.select_responses = [6, 0, 9]
+    monkeypatch.setattr(
+        views,
+        "show_home_layout_editor",
+        lambda order, enabled, labels, text: (tuple(order), frozenset(set(enabled) | {"favorites"})),
+    )
     ui.action("action/configure-home", {})
 
     assert runtime.kodi.addon.settings["home_row_7"] == "favorites"

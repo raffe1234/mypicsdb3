@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.8" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.9" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -10,6 +10,14 @@
     <provides>image</provides>
   </extension>
   <extension point="xbmc.service" library="service.py" />
+  <extension point="kodi.context.item">
+    <menu id="kodi.core.main">
+      <item library="context.py">
+        <label>32215</label>
+        <visible>String.StartsWith(Container.FolderPath,plugin://plugin.image.mypicsdb3/folder)</visible>
+      </item>
+    </menu>
+  </extension>
   <extension point="xbmc.addon.metadata">
     <summary lang="en_GB">A searchable picture database and widget provider for Kodi</summary>
     <description lang="en_GB">MyPicsDB 3 indexes selected Kodi picture sources into SQLite or MySQL/MariaDB. Browse pictures by date, year, camera, keywords and folders, or use its fast widget endpoints in a compatible skin.</description>
@@ -22,6 +30,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Add ordered home-screen row controls and configurable default album views.</news>
+    <news>Add a visual home-screen row editor and a reliable album-view context action.</news>
   </extension>
 </addon>

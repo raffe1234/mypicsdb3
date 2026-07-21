@@ -150,8 +150,9 @@ Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings > Home screen** to:
 - enable or disable each available view;
 - move a view up or down to change the order.
 
-The editor lists every view once in the same order used on the Pictures home
-screen. The first six views are enabled by default through **On this day**.
+The visual editor lists every view once in the same order used on the Pictures
+home screen. Every row has its own **On/Off**, **Move up** and **Move down**
+controls. The first six views are enabled by default through **On this day**.
 Favorites, Rated pictures and Geotagged pictures are disabled by default, so the
 initial home screen stays compact. Existing Row 1 through Row 9 choices are
 migrated automatically the first time the editor is opened.
@@ -164,7 +165,7 @@ indexed.
 Choose the view used when an album opens under **Settings > General > Default
 album view**. The default remains **Wide list**. You can also open an album,
 switch to another view and use **Save current view as album default** from the
-context menu of a picture or child album.
+context menu while browsing that album.
 
 ### Alternative: install a package directly
 
@@ -479,9 +480,9 @@ In **Settings > General**, the numeric values are shown with descriptive labels:
 - **Pictures per browser page**
 - **Default album view**
 
-In **Settings > Home screen**, **Configure home-screen rows** opens one ordered
-list containing every available view. Each view can be enabled, disabled, moved
-up or moved down.
+In **Settings > Home screen**, **Configure home-screen rows** opens a visual
+nine-row editor. Each row has an **On/Off** control plus buttons for moving the
+view up or down.
 
 ### Repository artwork paths
 

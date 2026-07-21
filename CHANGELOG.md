@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.9 - 2026-07-21
+
+- Replace the nested home-screen configuration menus with a visual nine-row
+  editor that shows an On/Off control and move-up/move-down buttons for every
+  view.
+- Register **Save current view as album default** as a Kodi context-menu item
+  while browsing MyPicsDB 3 albums.
+- Fall back to a view selector when Kodi cannot report the currently focused
+  album view.
+
 ## 0.2.8 - 2026-07-21
 
 - Replace the nine separate home-screen row selectors with one ordered editor

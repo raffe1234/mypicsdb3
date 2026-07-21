@@ -57,7 +57,7 @@
           <level>0</level>
           <data>RunPlugin(plugin://plugin.image.mypicsdb3/action/configure-home)</data>
           <control type="button" format="action">
-            <close>true</close>
+            <close>false</close>
           </control>
         </setting>
         <setting id="home_layout" type="string" label="32208" help="32301">

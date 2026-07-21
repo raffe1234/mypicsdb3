@@ -8,8 +8,9 @@ import xbmc  # type: ignore
 import xbmcgui  # type: ignore
 import xbmcplugin  # type: ignore
 
+from .album_view import save_current_album_view
+from .home_layout_editor import HomeLayoutEditorText, show_home_layout_editor
 from .preferences import (
-    ALBUM_VIEW_MODE_BY_ID,
     DEFAULT_HOME_ROWS,
     HOME_VIEW_BY_KEY,
     normalize_home_layout,
@@ -197,14 +198,8 @@ class PluginUI:
         limit = safe_limit(params.get("limit"), self.kodi.settings.browser_page_size)
         offset = int(params.get("offset", "0") or 0)
         pictures = self.catalog.pictures_in_folder(folder_id, limit, offset)
-        save_view_context = [
-            (
-                self.text(32215, "Save current view as album default"),
-                "RunPlugin(%s)" % self.url("action/save-album-view"),
-            )
-        ]
-        items = [self._folder_item(row, save_view_context) for row in child_folders]
-        items.extend(self._picture_item(row, save_view_context) for row in pictures)
+        items = [self._folder_item(row) for row in child_folders]
+        items.extend(self._picture_item(row) for row in pictures)
         if len(pictures) == limit:
             items.append(self._next_page_item("folder", offset, limit, id=folder_id))
         self.finish(
@@ -249,130 +244,49 @@ class PluginUI:
                 or DEFAULT_HOME_ROWS[position - 1]
                 for position in range(1, 10)
             ]
-            order, enabled_values = normalize_home_layout(saved_rows)
+            order, enabled = normalize_home_layout(saved_rows)
         else:
-            order, enabled_values = persisted_layout
-        order = list(order)
-        enabled = set(enabled_values)
-        dialog = xbmcgui.Dialog()
-        changed = False
-        preselect = 0
+            order, enabled = persisted_layout
 
-        while True:
-            labels = []
-            for key in order:
-                view = HOME_VIEW_BY_KEY[key]
-                state = (
-                    self.text(32218, "Enabled")
-                    if key in enabled
-                    else self.text(32219, "Disabled")
-                )
-                labels.append("%s: %s" % (state, self.text(view.string_id, view.fallback)))
-            labels.append(self.text(32213, "Done"))
+        result = show_home_layout_editor(
+            order,
+            enabled,
+            {
+                key: self.text(view.string_id, view.fallback)
+                for key, view in HOME_VIEW_BY_KEY.items()
+            },
+            HomeLayoutEditorText(
+                heading=self.text(32208, "Configure home-screen rows"),
+                view_heading=self.text(32220, "View"),
+                visible_heading=self.text(32221, "Shown"),
+                order_heading=self.text(32222, "Order"),
+                on=self.text(32223, "On"),
+                off=self.text(32224, "Off"),
+                move_up=self.text(32211, "Move up"),
+                move_down=self.text(32212, "Move down"),
+                save=self.text(32225, "Save"),
+                cancel=self.text(32226, "Cancel"),
+                defaults=self.text(32227, "Defaults"),
+            ),
+        )
+        if result is None:
+            return
 
-            selected = dialog.select(
-                self.text(32208, "Configure home-screen rows"),
-                labels,
-                preselect=min(preselect, len(order)),
-            )
-            if selected < 0 or selected == len(order):
-                break
-
-            key = order[selected]
-            view = HOME_VIEW_BY_KEY[key]
-            actions = [
-                (
-                    self.text(32210, "Disable row")
-                    if key in enabled
-                    else self.text(32209, "Enable row"),
-                    "toggle",
-                )
-            ]
-            if selected > 0:
-                actions.append((self.text(32211, "Move up"), "up"))
-            if selected < len(order) - 1:
-                actions.append((self.text(32212, "Move down"), "down"))
-            actions.append((self.text(32213, "Done"), "done"))
-
-            action_index = dialog.select(
-                self.text(view.string_id, view.fallback),
-                [label for label, _command in actions],
-            )
-            if action_index < 0:
-                continue
-            command = actions[action_index][1]
-            if command == "done":
-                continue
-            if command == "toggle":
-                if key in enabled:
-                    enabled.remove(key)
-                else:
-                    enabled.add(key)
-            elif command == "up":
-                order[selected - 1], order[selected] = order[selected], order[selected - 1]
-                selected -= 1
-            elif command == "down":
-                order[selected + 1], order[selected] = order[selected], order[selected + 1]
-                selected += 1
-
-            for position, value in enumerate(
-                serialize_home_layout(order, enabled),
-                start=1,
-            ):
-                self.kodi.addon.setSetting("home_row_%d" % position, value)
-            self.kodi.addon.setSetting(
-                "home_layout",
-                serialize_persisted_home_layout(order, enabled),
-            )
-            changed = True
-            preselect = selected
-
-        if changed:
-            self.kodi.notify(self.text(32214, "Home-screen layout saved"))
-            xbmc.executebuiltin("ReloadSkin()")
-
-    @staticmethod
-    def _current_view_mode() -> Optional[int]:
-        try:
-            window = xbmcgui.Window(xbmcgui.getCurrentWindowId())
-            focus_id = int(window.getFocusId())
-            if focus_id in ALBUM_VIEW_MODE_BY_ID and focus_id != 0:
-                return focus_id
-        except Exception:
-            pass
-
-        try:
-            view_name = str(xbmc.getInfoLabel("Container.Viewmode") or "")
-        except Exception:
-            view_name = ""
-        compact_name = "".join(character for character in view_name.casefold() if character.isalnum())
-        return {
-            "list": 50,
-            "iconwall": 52,
-            "shift": 53,
-            "infowall": 54,
-            "widelist": 55,
-            "wall": 500,
-        }.get(compact_name)
+        order, enabled = result
+        for position, value in enumerate(
+            serialize_home_layout(order, enabled),
+            start=1,
+        ):
+            self.kodi.addon.setSetting("home_row_%d" % position, value)
+        self.kodi.addon.setSetting(
+            "home_layout",
+            serialize_persisted_home_layout(order, enabled),
+        )
+        self.kodi.notify(self.text(32214, "Home-screen layout saved"))
+        xbmc.executebuiltin("ReloadSkin()")
 
     def _save_current_album_view(self) -> None:
-        mode_id = self._current_view_mode()
-        if mode_id is None:
-            self.kodi.notify(
-                self.text(32217, "Could not detect the current view"),
-                error=True,
-            )
-            return
-        self.kodi.addon.setSetting("album_view_mode", str(mode_id))
-        self.kodi.refresh_settings()
-        mode = ALBUM_VIEW_MODE_BY_ID[mode_id]
-        self.kodi.notify(
-            "%s: %s"
-            % (
-                self.text(32216, "Album default view saved"),
-                self.text(mode.string_id, mode.fallback),
-            )
-        )
+        save_current_album_view(self.kodi, self.text, xbmc, xbmcgui)
 
     def status(self):
         overview = self.catalog.overview()

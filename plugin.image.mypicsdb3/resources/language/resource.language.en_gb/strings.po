@@ -688,5 +688,37 @@ msgid "Choose the view used when an album is opened. The available view IDs matc
 msgstr "Choose the view used when an album is opened. The available view IDs match Estuary and Estuary MyPicsDB 3."
 
 msgctxt "#32301"
-msgid "Open a list where every home-screen row can be enabled, disabled, moved up or moved down."
-msgstr "Open a list where every home-screen row can be enabled, disabled, moved up or moved down."
+msgid "Open a visual editor where every home-screen row has an On/Off control and Move up/Move down buttons."
+msgstr "Open a visual editor where every home-screen row has an On/Off control and Move up/Move down buttons."
+
+msgctxt "#32220"
+msgid "View"
+msgstr "View"
+
+msgctxt "#32221"
+msgid "Shown"
+msgstr "Shown"
+
+msgctxt "#32222"
+msgid "Order"
+msgstr "Order"
+
+msgctxt "#32223"
+msgid "On"
+msgstr "On"
+
+msgctxt "#32224"
+msgid "Off"
+msgstr "Off"
+
+msgctxt "#32225"
+msgid "Save"
+msgstr "Save"
+
+msgctxt "#32226"
+msgid "Cancel"
+msgstr "Cancel"
+
+msgctxt "#32227"
+msgid "Defaults"
+msgstr "Defaults"
