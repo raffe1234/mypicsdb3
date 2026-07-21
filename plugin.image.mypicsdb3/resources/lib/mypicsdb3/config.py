@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Tuple
 
+from .preferences import DEFAULT_ALBUM_VIEW_MODE, normalize_album_view_mode
 from .utils import parse_bool, parse_int, split_csv, split_pipe
 
 
@@ -13,6 +14,7 @@ class Settings:
     widget_limit: int = 15
     browser_page_size: int = 100
     show_notifications: bool = True
+    album_view_mode: int = DEFAULT_ALBUM_VIEW_MODE
     auto_scan: bool = False
     scan_interval_hours: int = 24
     startup_delay_seconds: int = 60
@@ -51,6 +53,7 @@ def from_getter(getter: Callable[[str], Any], profile_path: str) -> Settings:
         widget_limit=parse_int(getter("widget_limit"), 15, 1, 100),
         browser_page_size=parse_int(getter("browser_page_size"), 100, 10, 500),
         show_notifications=parse_bool(getter("show_notifications"), True),
+        album_view_mode=normalize_album_view_mode(getter("album_view_mode")),
         auto_scan=parse_bool(getter("auto_scan"), False),
         scan_interval_hours=parse_int(getter("scan_interval_hours"), 24, 1, 720),
         startup_delay_seconds=parse_int(getter("startup_delay_seconds"), 60, 0, 3600),

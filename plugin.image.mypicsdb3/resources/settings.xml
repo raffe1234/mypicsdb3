@@ -21,6 +21,24 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="album_view_mode" type="integer" label="32200" help="32300">
+          <level>0</level>
+          <default>55</default>
+          <constraints>
+            <options>
+              <option label="32201">0</option>
+              <option label="32202">50</option>
+              <option label="32203">52</option>
+              <option label="32204">53</option>
+              <option label="32205">54</option>
+              <option label="32206">55</option>
+              <option label="32207">500</option>
+            </options>
+          </constraints>
+          <control type="list" format="integer">
+            <heading>32200</heading>
+          </control>
+        </setting>
         <setting id="show_notifications" type="boolean" label="32013" help="32113">
           <level>0</level>
           <default>true</default>
@@ -35,8 +53,25 @@
           <default>true</default>
           <control type="toggle" />
         </setting>
-        <setting id="home_row_1" type="string" label="32072" help="32172">
+        <setting id="configure_home_screen" type="action" label="32208" help="32301">
           <level>0</level>
+          <data>RunPlugin(plugin://plugin.image.mypicsdb3/action/configure-home)</data>
+          <control type="button" format="action">
+            <close>true</close>
+          </control>
+        </setting>
+        <setting id="home_layout" type="string" label="32208" help="32301">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
+        <setting id="home_row_1" type="string" label="32072" help="32172">
+          <level>4</level>
+          <visible>false</visible>
           <default>recent_taken</default>
           <constraints>
             <options>
@@ -57,7 +92,8 @@
           </control>
         </setting>
         <setting id="home_row_2" type="string" label="32073" help="32172">
-          <level>0</level>
+          <level>4</level>
+          <visible>false</visible>
           <default>recent_added</default>
           <constraints>
             <options>
@@ -78,7 +114,8 @@
           </control>
         </setting>
         <setting id="home_row_3" type="string" label="32074" help="32172">
-          <level>0</level>
+          <level>4</level>
+          <visible>false</visible>
           <default>random_memories</default>
           <constraints>
             <options>
@@ -99,7 +136,8 @@
           </control>
         </setting>
         <setting id="home_row_4" type="string" label="32075" help="32172">
-          <level>0</level>
+          <level>4</level>
+          <visible>false</visible>
           <default>recent_albums</default>
           <constraints>
             <options>
@@ -120,7 +158,8 @@
           </control>
         </setting>
         <setting id="home_row_5" type="string" label="32076" help="32172">
-          <level>0</level>
+          <level>4</level>
+          <visible>false</visible>
           <default>random_albums</default>
           <constraints>
             <options>
@@ -141,7 +180,8 @@
           </control>
         </setting>
         <setting id="home_row_6" type="string" label="32077" help="32172">
-          <level>0</level>
+          <level>4</level>
+          <visible>false</visible>
           <default>on_this_day</default>
           <constraints>
             <options>
@@ -162,7 +202,8 @@
           </control>
         </setting>
         <setting id="home_row_7" type="string" label="32078" help="32172">
-          <level>0</level>
+          <level>4</level>
+          <visible>false</visible>
           <default>none</default>
           <constraints>
             <options>
@@ -183,7 +224,8 @@
           </control>
         </setting>
         <setting id="home_row_8" type="string" label="32079" help="32172">
-          <level>0</level>
+          <level>4</level>
+          <visible>false</visible>
           <default>none</default>
           <constraints>
             <options>
@@ -204,7 +246,8 @@
           </control>
         </setting>
         <setting id="home_row_9" type="string" label="32080" help="32172">
-          <level>0</level>
+          <level>4</level>
+          <visible>false</visible>
           <default>none</default>
           <constraints>
             <options>

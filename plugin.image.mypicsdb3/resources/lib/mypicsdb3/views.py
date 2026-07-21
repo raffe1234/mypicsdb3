@@ -8,6 +8,15 @@ import xbmc  # type: ignore
 import xbmcgui  # type: ignore
 import xbmcplugin  # type: ignore
 
+from .preferences import (
+    ALBUM_VIEW_MODE_BY_ID,
+    DEFAULT_HOME_ROWS,
+    HOME_VIEW_BY_KEY,
+    normalize_home_layout,
+    parse_persisted_home_layout,
+    serialize_home_layout,
+    serialize_persisted_home_layout,
+)
 from .router import Request
 from .scanner import Scanner
 from .utils import plugin_url, safe_limit
@@ -48,12 +57,21 @@ class PluginUI:
             item.addContextMenuItems(context)
         return (self.url(route, **params), item, False)
 
-    def finish(self, items: Sequence[Tuple[str, xbmcgui.ListItem, bool]], content: str = "images", cache: bool = False, category: Optional[str] = None):
+    def finish(
+        self,
+        items: Sequence[Tuple[str, xbmcgui.ListItem, bool]],
+        content: str = "images",
+        cache: bool = False,
+        category: Optional[str] = None,
+        view_mode: int = 0,
+    ):
         if category:
             xbmcplugin.setPluginCategory(self.handle, category)
         xbmcplugin.setContent(self.handle, content)
         xbmcplugin.addDirectoryItems(self.handle, list(items), len(items))
         xbmcplugin.endOfDirectory(self.handle, succeeded=True, cacheToDisc=cache)
+        if view_mode:
+            xbmc.executebuiltin("Container.SetViewMode(%d)" % view_mode)
 
     def root(self):
         items = [
@@ -105,7 +123,11 @@ class PluginUI:
         items = [self._folder_item(folder) for folder in folders]
         self.finish(items, content="images", category=source.label)
 
-    def _picture_item(self, row: Dict[str, Any]) -> Tuple[str, xbmcgui.ListItem, bool]:
+    def _picture_item(
+        self,
+        row: Dict[str, Any],
+        extra_context: Optional[List[Tuple[str, str]]] = None,
+    ) -> Tuple[str, xbmcgui.ListItem, bool]:
         date_text = str(row.get("taken_at") or row.get("discovered_at") or "")
         label = row.get("filename") or date_text or self.text(30031, "Picture")
         item = self._item(label, row.get("thumb_uri") or row.get("uri"), row.get("uri"))
@@ -133,16 +155,24 @@ class PluginUI:
         context = [(self.text(30022, "Toggle favorite"), toggle)]
         if row.get("folder_id"):
             context.append((self.text(30023, "Open containing album"), "ActivateWindow(Pictures,%s,return)" % self.url("folder", id=row["folder_id"])))
+        if extra_context:
+            context.extend(extra_context)
         item.addContextMenuItems(context)
         return (str(row.get("uri") or ""), item, False)
 
-    def _folder_item(self, row: Dict[str, Any]) -> Tuple[str, xbmcgui.ListItem, bool]:
+    def _folder_item(
+        self,
+        row: Dict[str, Any],
+        extra_context: Optional[List[Tuple[str, str]]] = None,
+    ) -> Tuple[str, xbmcgui.ListItem, bool]:
         count = int(row.get("picture_count") or 0)
         label = "%s  [COLOR=grey](%d)[/COLOR]" % (row.get("name") or self.text(30032, "Album"), count)
         art = row.get("representative_thumb") or row.get("representative_uri") or self.icon
         context = [(self.text(30021, "Scan selected source"), "RunPlugin(%s)" % self.url("action/scan", source=row.get("source_id")))]
         if row.get("uri"):
             context.append(("Slideshow", "SlideShow(%s,recursive)" % row["uri"]))
+        if extra_context:
+            context.extend(extra_context)
         return self.add_folder(label, "folder", art=art, context=context, id=row["id"])
 
     def _next_page_item(self, route: str, offset: int, limit: int, **params: Any):
@@ -167,11 +197,22 @@ class PluginUI:
         limit = safe_limit(params.get("limit"), self.kodi.settings.browser_page_size)
         offset = int(params.get("offset", "0") or 0)
         pictures = self.catalog.pictures_in_folder(folder_id, limit, offset)
-        items = [self._folder_item(row) for row in child_folders]
-        items.extend(self._picture_item(row) for row in pictures)
+        save_view_context = [
+            (
+                self.text(32215, "Save current view as album default"),
+                "RunPlugin(%s)" % self.url("action/save-album-view"),
+            )
+        ]
+        items = [self._folder_item(row, save_view_context) for row in child_folders]
+        items.extend(self._picture_item(row, save_view_context) for row in pictures)
         if len(pictures) == limit:
             items.append(self._next_page_item("folder", offset, limit, id=folder_id))
-        self.finish(items, content="images", category=folder.get("name") or self.text(30032, "Albums"))
+        self.finish(
+            items,
+            content="images",
+            category=folder.get("name") or self.text(30032, "Albums"),
+            view_mode=self.kodi.settings.album_view_mode,
+        )
 
     def folders(self, route: str, rows: List[Dict[str, Any]], category: str):
         self.finish([self._folder_item(row) for row in rows], content="images", category=category)
@@ -197,6 +238,141 @@ class PluginUI:
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (row["name"], row["picture_count"])
             items.append(self.add_folder(label, "tag", art=row.get("thumb_uri") or row.get("uri"), id=row["id"]))
         self.finish(items, content="images", category=self.text(30009, "Keywords"))
+
+    def _configure_home_screen(self) -> None:
+        persisted_layout = parse_persisted_home_layout(
+            self.kodi.addon.getSetting("home_layout")
+        )
+        if persisted_layout is None:
+            saved_rows = [
+                self.kodi.addon.getSetting("home_row_%d" % position)
+                or DEFAULT_HOME_ROWS[position - 1]
+                for position in range(1, 10)
+            ]
+            order, enabled_values = normalize_home_layout(saved_rows)
+        else:
+            order, enabled_values = persisted_layout
+        order = list(order)
+        enabled = set(enabled_values)
+        dialog = xbmcgui.Dialog()
+        changed = False
+        preselect = 0
+
+        while True:
+            labels = []
+            for key in order:
+                view = HOME_VIEW_BY_KEY[key]
+                state = (
+                    self.text(32218, "Enabled")
+                    if key in enabled
+                    else self.text(32219, "Disabled")
+                )
+                labels.append("%s: %s" % (state, self.text(view.string_id, view.fallback)))
+            labels.append(self.text(32213, "Done"))
+
+            selected = dialog.select(
+                self.text(32208, "Configure home-screen rows"),
+                labels,
+                preselect=min(preselect, len(order)),
+            )
+            if selected < 0 or selected == len(order):
+                break
+
+            key = order[selected]
+            view = HOME_VIEW_BY_KEY[key]
+            actions = [
+                (
+                    self.text(32210, "Disable row")
+                    if key in enabled
+                    else self.text(32209, "Enable row"),
+                    "toggle",
+                )
+            ]
+            if selected > 0:
+                actions.append((self.text(32211, "Move up"), "up"))
+            if selected < len(order) - 1:
+                actions.append((self.text(32212, "Move down"), "down"))
+            actions.append((self.text(32213, "Done"), "done"))
+
+            action_index = dialog.select(
+                self.text(view.string_id, view.fallback),
+                [label for label, _command in actions],
+            )
+            if action_index < 0:
+                continue
+            command = actions[action_index][1]
+            if command == "done":
+                continue
+            if command == "toggle":
+                if key in enabled:
+                    enabled.remove(key)
+                else:
+                    enabled.add(key)
+            elif command == "up":
+                order[selected - 1], order[selected] = order[selected], order[selected - 1]
+                selected -= 1
+            elif command == "down":
+                order[selected + 1], order[selected] = order[selected], order[selected + 1]
+                selected += 1
+
+            for position, value in enumerate(
+                serialize_home_layout(order, enabled),
+                start=1,
+            ):
+                self.kodi.addon.setSetting("home_row_%d" % position, value)
+            self.kodi.addon.setSetting(
+                "home_layout",
+                serialize_persisted_home_layout(order, enabled),
+            )
+            changed = True
+            preselect = selected
+
+        if changed:
+            self.kodi.notify(self.text(32214, "Home-screen layout saved"))
+            xbmc.executebuiltin("ReloadSkin()")
+
+    @staticmethod
+    def _current_view_mode() -> Optional[int]:
+        try:
+            window = xbmcgui.Window(xbmcgui.getCurrentWindowId())
+            focus_id = int(window.getFocusId())
+            if focus_id in ALBUM_VIEW_MODE_BY_ID and focus_id != 0:
+                return focus_id
+        except Exception:
+            pass
+
+        try:
+            view_name = str(xbmc.getInfoLabel("Container.Viewmode") or "")
+        except Exception:
+            view_name = ""
+        compact_name = "".join(character for character in view_name.casefold() if character.isalnum())
+        return {
+            "list": 50,
+            "iconwall": 52,
+            "shift": 53,
+            "infowall": 54,
+            "widelist": 55,
+            "wall": 500,
+        }.get(compact_name)
+
+    def _save_current_album_view(self) -> None:
+        mode_id = self._current_view_mode()
+        if mode_id is None:
+            self.kodi.notify(
+                self.text(32217, "Could not detect the current view"),
+                error=True,
+            )
+            return
+        self.kodi.addon.setSetting("album_view_mode", str(mode_id))
+        self.kodi.refresh_settings()
+        mode = ALBUM_VIEW_MODE_BY_ID[mode_id]
+        self.kodi.notify(
+            "%s: %s"
+            % (
+                self.text(32216, "Album default view saved"),
+                self.text(mode.string_id, mode.fallback),
+            )
+        )
 
     def status(self):
         overview = self.catalog.overview()
@@ -224,6 +400,12 @@ class PluginUI:
     def action(self, route: str, params: Dict[str, str]):
         if route == "action/settings":
             self.kodi.open_settings()
+            return
+        if route == "action/configure-home":
+            self._configure_home_screen()
+            return
+        if route == "action/save-album-view":
+            self._save_current_album_view()
             return
         if route == "action/refresh-sources":
             sources = self.catalog.sync_sources(self.kodi.kodi_picture_sources())

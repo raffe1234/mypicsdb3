@@ -61,11 +61,40 @@ def test_home_screen_settings_offer_nine_ordered_slots() -> None:
     settings = {node.attrib["id"]: node for node in root.findall(".//setting")}
 
     assert settings["show_media_sources"].findtext("default") == "true"
+    configure = settings["configure_home_screen"]
+    assert configure.attrib["type"] == "action"
+    assert configure.findtext("data") == (
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/configure-home)"
+    )
+    assert configure.find("control").attrib == {"type": "button", "format": "action"}
+    assert settings["home_layout"].findtext("level") == "4"
+    assert settings["home_layout"].findtext("visible") == "false"
     for position, expected_default in enumerate(DEFAULT_ROWS, start=1):
         setting = settings[f"home_row_{position}"]
         assert setting.findtext("default") == expected_default
+        assert setting.findtext("level") == "4"
+        assert setting.findtext("visible") == "false"
         values = {option.text for option in setting.findall("./constraints/options/option")}
         assert values == VIEW_VALUES
+
+
+def test_general_settings_offer_estuary_album_views() -> None:
+    root = ET.parse(
+        ROOT / "plugin.image.mypicsdb3" / "resources" / "settings.xml"
+    ).getroot()
+    settings = {node.attrib["id"]: node for node in root.findall(".//setting")}
+
+    setting = settings["album_view_mode"]
+    assert setting.findtext("default") == "55"
+    assert {option.text for option in setting.findall("./constraints/options/option")} == {
+        "0",
+        "50",
+        "52",
+        "53",
+        "54",
+        "55",
+        "500",
+    }
 
 def test_home_fragment_has_visible_titles_and_all_routes() -> None:
     home = (ROOT / "contrib" / "estuary" / "Home-pictures-group.xml").read_text(

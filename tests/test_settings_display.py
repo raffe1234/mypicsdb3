@@ -24,20 +24,33 @@ def test_general_numeric_settings_show_labels_and_values():
         assert control.attrib == {"type": "spinner", "format": "string"}
 
 
-def test_home_rows_show_current_or_default_selection():
+def test_home_screen_uses_editor_and_internal_legacy_slots():
     settings = settings_by_id()
+    editor = settings["configure_home_screen"]
+    assert editor.attrib["type"] == "action"
+    assert editor.find("control").attrib == {"type": "button", "format": "action"}
     defaults = ["recent_taken", "recent_added", "random_memories", "recent_albums", "random_albums", "on_this_day", "none", "none", "none"]
     for number, expected in enumerate(defaults, start=1):
         setting = settings["home_row_%d" % number]
         assert setting.findtext("default") == expected
-        control = setting.find("control")
-        assert control is not None
-        assert control.attrib == {"type": "spinner", "format": "string"}
+        assert setting.findtext("level") == "4"
+        assert setting.findtext("visible") == "false"
+
+
+def test_album_view_setting_shows_named_choices():
+    setting = settings_by_id()["album_view_mode"]
+    assert setting.findtext("default") == "55"
+    assert setting.find("control").attrib == {"type": "list", "format": "integer"}
 
 
 def test_english_catalogue_is_separated_and_has_clear_labels():
     text = STRINGS.read_text(encoding="utf-8")
-    for label in ("Default items per home-screen row", "Pictures per browser page", "Row 1 content", "Row 9 content"):
+    for label in (
+        "Default items per home-screen row",
+        "Pictures per browser page",
+        "Default album view",
+        "Configure home-screen rows",
+    ):
         assert ('msgid "%s"' % label) in text
         assert ('msgstr "%s"' % label) in text
     assert not re.search(r'msgstr "[^"]*"\nmsgctxt "#', text)

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.7" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.8" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -22,6 +22,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Hide Kodi's virtual Picture add-ons entry from MyPicsDB 3 picture sources.</news>
+    <news>Add ordered home-screen row controls and configurable default album views.</news>
   </extension>
 </addon>

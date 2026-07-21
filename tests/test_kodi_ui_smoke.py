@@ -3,7 +3,7 @@ from __future__ import annotations
 import importlib
 import sys
 import types
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 class FakeListItem:
@@ -30,9 +30,13 @@ class FakeListItem:
 
 class FakeDialog:
     responses = []
+    select_responses = []
 
     def yesno(self, heading, message):
         return self.__class__.responses.pop(0)
+
+    def select(self, heading, options, preselect=-1):
+        return self.__class__.select_responses.pop(0)
 
 
 @dataclass
@@ -41,16 +45,20 @@ class Calls:
     content: str | None = None
     items: list | None = None
     ended: bool = False
+    builtins: list[str] = field(default_factory=list)
 
 
 def load_views(monkeypatch):
     calls = Calls()
     xbmc = types.ModuleType("xbmc")
-    xbmc.executebuiltin = lambda command: None
+    xbmc.executebuiltin = calls.builtins.append
+    xbmc.getInfoLabel = lambda label: ""
     xbmcgui = types.ModuleType("xbmcgui")
     xbmcgui.ListItem = FakeListItem
     xbmcgui.Dialog = FakeDialog
     xbmcgui.DialogProgress = object
+    xbmcgui.getCurrentWindowId = lambda: 10002
+    xbmcgui.Window = lambda window_id: types.SimpleNamespace(getFocusId=lambda: 55)
     xbmcplugin = types.ModuleType("xbmcplugin")
     xbmcplugin.setPluginCategory = lambda handle, category: setattr(calls, "category", category)
     xbmcplugin.setContent = lambda handle, content: setattr(calls, "content", content)
@@ -64,21 +72,44 @@ def load_views(monkeypatch):
 
 
 class FakeAddon:
+    def __init__(self):
+        self.settings = {}
+
     def getAddonInfo(self, key):
         return {"icon": "icon.png", "fanart": "fanart.jpg"}[key]
+
+    def getSetting(self, key):
+        return self.settings.get(key, "")
+
+    def setSetting(self, key, value):
+        self.settings[key] = value
 
 
 class FakeKodi:
     def __init__(self):
         self.addon = FakeAddon()
-        self.settings = types.SimpleNamespace(widget_limit=15, browser_page_size=100)
+        self.settings = types.SimpleNamespace(
+            widget_limit=15,
+            browser_page_size=100,
+            album_view_mode=55,
+        )
         self.log = types.SimpleNamespace(warning=lambda *args: None)
+        self.notifications = []
 
     def localize(self, string_id, fallback):
         return fallback
 
     def kodi_picture_sources(self):
         return []
+
+    def notify(self, message, error=False, milliseconds=4000):
+        self.notifications.append((message, error))
+
+    def refresh_settings(self):
+        value = self.addon.getSetting("album_view_mode")
+        if value:
+            self.settings.album_view_mode = int(value)
+        return self.settings
 
 
 class FakeCatalog:
@@ -112,6 +143,15 @@ class FakeCatalog:
             "source_label": "Photos",
             "rating": 5,
         }]
+
+    def get_folder(self, folder_id):
+        return {"id": folder_id, "source_id": 4, "uri": "smb://server/photos/Summer/", "name": "Summer"}
+
+    def child_folders(self, source_id, uri):
+        return []
+
+    def pictures_in_folder(self, folder_id, limit, offset):
+        return self.recent_taken(limit, offset)
 
 
 class FakeRuntime:
@@ -176,3 +216,45 @@ def test_refresh_sources_asks_before_deleting_missing_source(monkeypatch) -> Non
     FakeDialog.responses = [True]
     ui.action("action/refresh-sources", {})
     assert runtime.catalog.deleted_sources == [9]
+
+
+def test_album_uses_default_view_and_offers_save_action(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.album_view_mode = 54
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.folder(3, {})
+
+    assert "Container.SetViewMode(54)" in calls.builtins
+    _url, item, _is_folder = calls.items[0]
+    assert (
+        "Save current view as album default",
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/save-album-view)",
+    ) in item.context
+
+
+def test_current_album_view_can_be_saved(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    views.xbmcgui.Window = lambda window_id: types.SimpleNamespace(getFocusId=lambda: 500)
+    ui.action("action/save-album-view", {})
+
+    assert runtime.kodi.addon.settings["album_view_mode"] == "500"
+    assert runtime.kodi.settings.album_view_mode == 500
+    assert runtime.kodi.notifications[-1] == ("Album default view saved: Wall", False)
+
+
+def test_home_screen_editor_enables_a_hidden_row(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    FakeDialog.select_responses = [6, 0, 9]
+    ui.action("action/configure-home", {})
+
+    assert runtime.kodi.addon.settings["home_row_7"] == "favorites"
+    assert "favorites" in runtime.kodi.addon.settings["home_layout"]
+    assert "ReloadSkin()" in calls.builtins

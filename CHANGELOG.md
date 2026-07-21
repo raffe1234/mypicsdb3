@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.8 - 2026-07-21
+
+- Replace the nine separate home-screen row selectors with one ordered editor
+  where every view can be enabled, disabled, moved up or moved down.
+- Preserve existing home-screen choices and continue writing the legacy row
+  settings used by Estuary MyPicsDB 3.
+- Add a configurable default view for albums under General settings.
+- Add an album context-menu action that saves the currently active view as the
+  new album default.
+
 ## 0.2.7 - 2026-07-20
 
 - Add independent repository channels for Kodi 21 Omega and Kodi 22 Piers.

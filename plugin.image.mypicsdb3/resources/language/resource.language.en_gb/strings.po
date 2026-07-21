@@ -602,3 +602,91 @@ msgstr "Show Kodi picture sources and Picture add-ons above the MyPicsDB 3 rows.
 msgctxt "#32172"
 msgid "Choose the content for this position. Select None to hide the row."
 msgstr "Choose the content for this position. Select None to hide the row."
+
+msgctxt "#32200"
+msgid "Default album view"
+msgstr "Default album view"
+
+msgctxt "#32201"
+msgid "Use skin default"
+msgstr "Use skin default"
+
+msgctxt "#32202"
+msgid "List"
+msgstr "List"
+
+msgctxt "#32203"
+msgid "Icon wall"
+msgstr "Icon wall"
+
+msgctxt "#32204"
+msgid "Shift"
+msgstr "Shift"
+
+msgctxt "#32205"
+msgid "Info wall"
+msgstr "Info wall"
+
+msgctxt "#32206"
+msgid "Wide list"
+msgstr "Wide list"
+
+msgctxt "#32207"
+msgid "Wall"
+msgstr "Wall"
+
+msgctxt "#32208"
+msgid "Configure home-screen rows"
+msgstr "Configure home-screen rows"
+
+msgctxt "#32209"
+msgid "Enable row"
+msgstr "Enable row"
+
+msgctxt "#32210"
+msgid "Disable row"
+msgstr "Disable row"
+
+msgctxt "#32211"
+msgid "Move up"
+msgstr "Move up"
+
+msgctxt "#32212"
+msgid "Move down"
+msgstr "Move down"
+
+msgctxt "#32213"
+msgid "Done"
+msgstr "Done"
+
+msgctxt "#32214"
+msgid "Home-screen layout saved"
+msgstr "Home-screen layout saved"
+
+msgctxt "#32215"
+msgid "Save current view as album default"
+msgstr "Save current view as album default"
+
+msgctxt "#32216"
+msgid "Album default view saved"
+msgstr "Album default view saved"
+
+msgctxt "#32217"
+msgid "Could not detect the current view"
+msgstr "Could not detect the current view"
+
+msgctxt "#32218"
+msgid "Enabled"
+msgstr "Enabled"
+
+msgctxt "#32219"
+msgid "Disabled"
+msgstr "Disabled"
+
+msgctxt "#32300"
+msgid "Choose the view used when an album is opened. The available view IDs match Estuary and Estuary MyPicsDB 3."
+msgstr "Choose the view used when an album is opened. The available view IDs match Estuary and Estuary MyPicsDB 3."
+
+msgctxt "#32301"
+msgid "Open a list where every home-screen row can be enabled, disabled, moved up or moved down."
+msgstr "Open a list where every home-screen row can be enabled, disabled, moved up or moved down."
