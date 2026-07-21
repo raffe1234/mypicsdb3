@@ -80,7 +80,7 @@ def test_repository_history_keeps_newest_and_preserves_previous_archives(tmp_pat
     current = tmp_path / "current"
     current_addon = current / addon_id
     current_addon.mkdir(parents=True)
-    newest_filename = "%s-21.3.3.zip" % addon_id
+    newest_filename = "%s-21.3.4.zip" % addon_id
     (current_addon / newest_filename).write_bytes(b"new")
     (current_addon / (newest_filename + ".sha256")).write_text(
         "new-hash\n",
@@ -93,7 +93,7 @@ def test_repository_history_keeps_newest_and_preserves_previous_archives(tmp_pat
         addon_id=addon_id,
         current_entries=[
             {
-                "version": "21.3.3",
+                "version": "21.3.4",
                 "filename": newest_filename,
                 "source_ref": "21.3-Omega",
             }
@@ -102,7 +102,7 @@ def test_repository_history_keeps_newest_and_preserves_previous_archives(tmp_pat
     )
 
     assert [entry["version"] for entry in history] == [
-        "21.3.3",
+        "21.3.4",
         "21.2.3",
         "21.1.3",
     ]

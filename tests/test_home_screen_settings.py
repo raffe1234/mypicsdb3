@@ -67,6 +67,7 @@ def test_home_screen_settings_offer_nine_ordered_slots() -> None:
         "RunPlugin(plugin://plugin.image.mypicsdb3/action/configure-home)"
     )
     assert configure.find("control").attrib == {"type": "button", "format": "action"}
+    assert configure.findtext("./control/close") == "true"
     assert settings["home_layout"].findtext("level") == "4"
     assert settings["home_layout"].findtext("visible") == "false"
     for position, expected_default in enumerate(DEFAULT_ROWS, start=1):

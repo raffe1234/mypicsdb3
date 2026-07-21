@@ -4,7 +4,7 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.7 release candidate. The catalogue, SQLite backend, scanner,
+> Status: 0.2.10 release candidate. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. Real Kodi installations are still required for platform and
 > large-library testing before calling the project production-stable.
@@ -165,7 +165,8 @@ indexed.
 Choose the view used when an album opens under **Settings > General > Default
 album view**. The default remains **Wide list**. You can also open an album,
 switch to another view and use **Save current view as album default** from the
-context menu while browsing that album.
+left-side **View options** menu in Estuary MyPicsDB 3. The same action is also
+available from the context menu of each picture or subalbum.
 
 ### Alternative: install a package directly
 

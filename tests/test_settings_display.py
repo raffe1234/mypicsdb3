@@ -30,7 +30,7 @@ def test_home_screen_uses_editor_and_internal_legacy_slots():
     assert editor.attrib["type"] == "action"
     control = editor.find("control")
     assert control.attrib == {"type": "button", "format": "action"}
-    assert control.findtext("close") == "false"
+    assert control.findtext("close") == "true"
     defaults = ["recent_taken", "recent_added", "random_memories", "recent_albums", "random_albums", "on_this_day", "none", "none", "none"]
     for number, expected in enumerate(defaults, start=1):
         setting = settings["home_row_%d" % number]

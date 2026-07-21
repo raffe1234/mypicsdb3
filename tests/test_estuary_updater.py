@@ -31,14 +31,14 @@ def config_data() -> dict[str, object]:
                 "kodi_major": 21,
                 "codename": "Omega",
                 "include_prereleases": False,
-                "patch_revision": 3,
+                "patch_revision": 4,
                 "releases": [],
             },
             "piers": {
                 "kodi_major": 22,
                 "codename": "Piers",
                 "include_prereleases": True,
-                "patch_revision": 1,
+                "patch_revision": 2,
                 "releases": [],
             },
         },
@@ -48,7 +48,7 @@ def config_data() -> dict[str, object]:
 def test_parse_and_skin_versions():
     assert parse_tag("22.0b1-Piers")["stage"] == "b"
     assert parse_tag("v22.0b1-Piers")["major"] == 22
-    assert skin_version_for_tag("21.3-Omega", 3) == "21.3.3"
+    assert skin_version_for_tag("21.3-Omega", 4) == "21.3.4"
     assert skin_version_for_tag("22.0a3-Piers", 1) == "22.0.0~alpha3.1"
     assert skin_version_for_tag("22.0b1-Piers", 1) == "22.0.0~beta1.1"
     assert skin_version_for_tag("22.0rc2-Piers", 1) == "22.0.0~rc2.1"

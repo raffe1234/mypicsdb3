@@ -16,6 +16,7 @@ from typing import Iterable, Optional
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "contrib" / "estuary" / "upstream.json"
 FRAGMENT_PATH = ROOT / "contrib" / "estuary" / "Home-pictures-group.xml"
+PICTURES_FRAGMENT_PATH = ROOT / "contrib" / "estuary" / "MyPics-save-album-view.xml"
 DEFAULT_CACHE = ROOT / ".cache" / "estuary"
 DEFAULT_OUTPUT = ROOT / "build" / "skin.estuary.mypicsdb3"
 
@@ -208,6 +209,7 @@ def extract_skin_from_archive(archive_path: Path, output_dir: Path, source_addon
         extracted == 0
         or not (output_dir / "addon.xml").is_file()
         or not (output_dir / "xml" / "Home.xml").is_file()
+        or not (output_dir / "xml" / "MyPics.xml").is_file()
     ):
         raise RuntimeError("The downloaded archive did not contain a usable Estuary skin")
     return output_dir
@@ -341,6 +343,33 @@ def patch_home_xml(home_path: Path, fragment_path: Path = FRAGMENT_PATH) -> None
         handle.write(patched)
 
 
+def patch_pictures_xml(
+    pictures_path: Path,
+    fragment_path: Path = PICTURES_FRAGMENT_PATH,
+) -> None:
+    fragment_lines = fragment_path.read_text(encoding="utf-8").strip().splitlines()
+    pictures = pictures_path.read_text(encoding="utf-8-sig")
+    pattern = re.compile(
+        r'(?m)^(?P<indent>\s*)<control type="button" id="624">'
+    )
+
+    def replacement(match: re.Match[str]) -> str:
+        indent = match.group("indent")
+        fragment = "\n".join(
+            indent + line if line else line
+            for line in fragment_lines
+        )
+        return fragment + "\n" + match.group(0)
+
+    patched, count = pattern.subn(replacement, pictures, count=1)
+    if count != 1:
+        raise RuntimeError(
+            "Could not locate the Estuary picture sideblade Add-on settings button id 624"
+        )
+    with pictures_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(patched)
+
+
 def patch_skin(
     source_dir: Path,
     output_dir: Path,
@@ -348,7 +377,11 @@ def patch_skin(
     plugin_version: str,
 ) -> Path:
     source_dir = source_dir.resolve()
-    if not (source_dir / "addon.xml").is_file() or not (source_dir / "xml" / "Home.xml").is_file():
+    if (
+        not (source_dir / "addon.xml").is_file()
+        or not (source_dir / "xml" / "Home.xml").is_file()
+        or not (source_dir / "xml" / "MyPics.xml").is_file()
+    ):
         raise RuntimeError("The input directory is not a usable Estuary source directory: %s" % source_dir)
     if output_dir.exists():
         shutil.rmtree(output_dir)
@@ -356,6 +389,7 @@ def patch_skin(
 
     patch_addon_xml(output_dir / "addon.xml", config, plugin_version)
     patch_home_xml(output_dir / "xml" / "Home.xml")
+    patch_pictures_xml(output_dir / "xml" / "MyPics.xml")
     notice = """# Estuary MyPicsDB 3
 
 This package is generated from Kodi's Estuary source at `{ref}` and patched by

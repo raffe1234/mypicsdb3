@@ -52,6 +52,8 @@ def test_home_layout_editor_media_is_packaged() -> None:
         Path(__file__).resolve().parents[1]
         / "plugin.image.mypicsdb3"
         / "resources"
+        / "skins"
+        / "Default"
         / "media"
     )
     expected = {
@@ -64,3 +66,29 @@ def test_home_layout_editor_media_is_packaged() -> None:
         "home-editor-toggle-off-focus.png",
     }
     assert expected <= {path.name for path in media.glob("*.png")}
+
+
+def test_home_layout_xml_contains_nine_toggle_and_arrow_rows() -> None:
+    import xml.etree.ElementTree as ET
+
+    xml_path = (
+        Path(__file__).resolve().parents[1]
+        / "plugin.image.mypicsdb3"
+        / "resources"
+        / "skins"
+        / "Default"
+        / "1080i"
+        / "home_layout_editor.xml"
+    )
+    root = ET.parse(xml_path).getroot()
+    controls = {
+        int(node.attrib["id"]): node
+        for node in root.findall("./controls/control")
+        if "id" in node.attrib
+    }
+
+    assert all(1001 + index in controls for index in range(9))
+    assert all(controls[1101 + index].attrib["type"] == "radiobutton" for index in range(9))
+    assert all(controls[1201 + index].findtext("label") == "▲" for index in range(9))
+    assert all(controls[1301 + index].findtext("label") == "▼" for index in range(9))
+    assert {1401, 1402, 1403} <= controls.keys()

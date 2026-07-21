@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="repository.mypicsdb3" name="MyPicsDB 3 Repository" version="0.2.9" provider-name="MyPicsDB 3 contributors">
+<addon id="repository.mypicsdb3" name="MyPicsDB 3 Repository" version="0.2.10" provider-name="MyPicsDB 3 contributors">
   <extension point="xbmc.addon.repository" name="MyPicsDB 3 Repository">
     <dir minversion="21.0.0" maxversion="21.89.999">
       <info compressed="false">https://raffe1234.github.io/mypicsdb3/repository/omega/addons.xml</info>
@@ -25,6 +25,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Publishes MyPicsDB 3 0.2.9 with a visual home-screen editor and album-view context action.</news>
+    <news>Publishes MyPicsDB 3 0.2.10 with a fixed home-screen editor and Estuary album-view side-menu action.</news>
   </extension>
 </addon>

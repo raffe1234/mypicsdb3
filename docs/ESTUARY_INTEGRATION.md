@@ -69,7 +69,7 @@ After that update Kodi uses the versioned channel paths.
 Stable skin packages use the Kodi release plus an independent patch revision:
 
 ```text
-21.3-Omega -> 21.3.3
+21.3-Omega -> 21.3.4
 ```
 
 Preview packages use Kodi's supported pre-release ordering:

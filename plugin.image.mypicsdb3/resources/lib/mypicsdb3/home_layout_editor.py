@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import os
+import traceback
 from dataclasses import dataclass
 from typing import Dict, FrozenSet, Iterable, List, Optional, Sequence, Set, Tuple
 
@@ -58,11 +58,45 @@ class HomeLayoutState:
         return tuple(self.order), frozenset(self.enabled)
 
 
-def _media_path(filename: str) -> str:
-    resources_dir = os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
-    )
-    return os.path.join(resources_dir, "media", filename)
+def _show_fallback_editor(
+    state: HomeLayoutState,
+    labels: Dict[str, str],
+    text: HomeLayoutEditorText,
+    xbmcgui_module,
+) -> Optional[Tuple[Tuple[str, ...], FrozenSet[str]]]:
+    """Use ordinary Kodi select dialogs if the XML dialog cannot be loaded."""
+    dialog = xbmcgui_module.Dialog()
+    while True:
+        rows = [
+            "%s  %s" % (
+                text.on if key in state.enabled else text.off,
+                labels.get(key, key),
+            )
+            for key in state.order
+        ]
+        actions = [text.save, text.defaults, text.cancel]
+        selected = dialog.select(text.heading, rows + actions)
+        if selected < 0 or selected == len(rows) + 2:
+            return None
+        if selected == len(rows):
+            return state.snapshot()
+        if selected == len(rows) + 1:
+            state.reset()
+            continue
+
+        row_index = selected
+        row_actions = [
+            text.off if state.order[row_index] in state.enabled else text.on,
+            text.move_up,
+            text.move_down,
+        ]
+        action = dialog.select(labels.get(state.order[row_index], state.order[row_index]), row_actions)
+        if action == 0:
+            state.toggle(row_index)
+        elif action == 1:
+            state.move(row_index, -1)
+        elif action == 2:
+            state.move(row_index, 1)
 
 
 def show_home_layout_editor(
@@ -71,219 +105,112 @@ def show_home_layout_editor(
     labels: Dict[str, str],
     text: HomeLayoutEditorText,
 ) -> Optional[Tuple[Tuple[str, ...], FrozenSet[str]]]:
-    """Show a nine-row editor with an on/off button and move arrows per row."""
+    """Show the XML-based nine-row editor, with a safe dialog fallback."""
+    import xbmc  # type: ignore
+    import xbmcaddon  # type: ignore
     import xbmcgui  # type: ignore
 
-    alignment_left_center = 0x00000004
-    alignment_center = 0x00000002 | 0x00000004
+    state = HomeLayoutState(order, enabled)
     back_actions = {9, 10, 92}
+    row_count = len(HOME_VIEW_KEYS)
 
-    class HomeLayoutDialog(xbmcgui.WindowDialog):
-        def __init__(self):
-            super().__init__()
-            self.state = HomeLayoutState(order, enabled)
+    class HomeLayoutDialog(xbmcgui.WindowXMLDialog):
+        def configure(self) -> None:
+            self.state = state
+            self.labels = labels
+            self.editor_text = text
             self.result = None
-            self.row_label_controls = []
-            self.toggle_controls = []
-            self.up_controls = []
-            self.down_controls = []
-            self.save_control = None
-            self.cancel_control = None
-            self.defaults_control = None
+            self._ready = False
 
-            width = max(int(self.getWidth()), 1)
-            height = max(int(self.getHeight()), 1)
-            sx = width / 1920.0
-            sy = height / 1080.0
-
-            def x(value: int) -> int:
-                return int(round(value * sx))
-
-            def y(value: int) -> int:
-                return int(round(value * sy))
-
-            background = _media_path("home-editor-background.png")
-            panel = _media_path("home-editor-panel.png")
-            focus = _media_path("home-editor-focus.png")
-            toggle_on = _media_path("home-editor-toggle-on.png")
-            toggle_on_focus = _media_path("home-editor-toggle-on-focus.png")
-            toggle_off = _media_path("home-editor-toggle-off.png")
-            toggle_off_focus = _media_path("home-editor-toggle-off-focus.png")
-
-            controls = [
-                xbmcgui.ControlImage(0, 0, width, height, background),
-                xbmcgui.ControlImage(0, 0, width, y(86), focus),
-                xbmcgui.ControlImage(x(430), y(115), x(1120), y(835), panel),
-                xbmcgui.ControlLabel(
-                    x(42), y(18), x(1000), y(54), text.heading,
-                    font="font20", textColor="0xFFFFFFFF",
-                    alignment=alignment_left_center,
-                ),
-                xbmcgui.ControlLabel(
-                    x(500), y(130), x(680), y(48), text.view_heading,
-                    font="font13", textColor="0xFFB8C1C4",
-                    alignment=alignment_left_center,
-                ),
-                xbmcgui.ControlLabel(
-                    x(1190), y(130), x(150), y(48), text.visible_heading,
-                    font="font13", textColor="0xFFB8C1C4",
-                    alignment=alignment_center,
-                ),
-                xbmcgui.ControlLabel(
-                    x(1360), y(130), x(150), y(48), text.order_heading,
-                    font="font13", textColor="0xFFB8C1C4",
-                    alignment=alignment_center,
-                ),
-            ]
-
-            row_top = 180
-            row_step = 78
-            row_height = 58
-            for index in range(len(HOME_VIEW_KEYS)):
-                top = row_top + index * row_step
-                label_control = xbmcgui.ControlLabel(
-                    x(500), y(top), x(660), y(row_height), "",
-                    font="font13", textColor="0xFFD8DDDF",
-                    alignment=alignment_left_center,
+        def onInit(self) -> None:  # noqa: N802 - Kodi callback name
+            try:
+                self.getControl(100).setLabel(self.editor_text.heading)
+                self.getControl(101).setLabel(self.editor_text.view_heading)
+                self.getControl(102).setLabel(self.editor_text.visible_heading)
+                self.getControl(103).setLabel(self.editor_text.order_heading)
+                self.getControl(1401).setLabel(self.editor_text.save)
+                self.getControl(1402).setLabel(self.editor_text.cancel)
+                self.getControl(1403).setLabel(self.editor_text.defaults)
+                for index in range(row_count):
+                    self.getControl(1201 + index).setLabel("▲")
+                    self.getControl(1301 + index).setLabel("▼")
+                self._refresh_rows()
+                self._ready = True
+                self.setFocusId(1101)
+            except Exception:
+                xbmc.log(
+                    "MyPicsDB 3 home editor onInit failed:\n%s" % traceback.format_exc(),
+                    xbmc.LOGERROR,
                 )
-                toggle_control = xbmcgui.ControlRadioButton(
-                    x(1180), y(top), x(170), y(row_height), "",
-                    focusOnTexture=toggle_on_focus,
-                    noFocusOnTexture=toggle_on,
-                    focusOffTexture=toggle_off_focus,
-                    noFocusOffTexture=toggle_off,
-                    focusTexture=focus, noFocusTexture=panel,
-                    alignment=alignment_left_center, font="font13",
-                    textColor="0xFFD8DDDF", disabledColor="0xFF6B7376",
-                )
-                toggle_control.setRadioDimension(
-                    x(100), y(8), x(58), y(42)
-                )
-                up_control = xbmcgui.ControlButton(
-                    x(1370), y(top), x(65), y(row_height), "▲",
-                    focusTexture=focus, noFocusTexture=panel,
-                    alignment=alignment_center, font="font13",
-                    textColor="0xFFD8DDDF", disabledColor="0xFF596164",
-                    focusedColor="0xFFFFFFFF",
-                )
-                down_control = xbmcgui.ControlButton(
-                    x(1445), y(top), x(65), y(row_height), "▼",
-                    focusTexture=focus, noFocusTexture=panel,
-                    alignment=alignment_center, font="font13",
-                    textColor="0xFFD8DDDF", disabledColor="0xFF596164",
-                    focusedColor="0xFFFFFFFF",
-                )
-                self.row_label_controls.append(label_control)
-                self.toggle_controls.append(toggle_control)
-                self.up_controls.append(up_control)
-                self.down_controls.append(down_control)
-                controls.extend((label_control, toggle_control, up_control, down_control))
-
-            self.save_control = xbmcgui.ControlButton(
-                x(1590), y(180), x(260), y(72), text.save,
-                focusTexture=focus, noFocusTexture=panel,
-                alignment=alignment_center, font="font13",
-                textColor="0xFFD8DDDF", focusedColor="0xFFFFFFFF",
-            )
-            self.cancel_control = xbmcgui.ControlButton(
-                x(1590), y(270), x(260), y(72), text.cancel,
-                focusTexture=focus, noFocusTexture=panel,
-                alignment=alignment_center, font="font13",
-                textColor="0xFFD8DDDF", focusedColor="0xFFFFFFFF",
-            )
-            self.defaults_control = xbmcgui.ControlButton(
-                x(1590), y(360), x(260), y(72), text.defaults,
-                focusTexture=focus, noFocusTexture=panel,
-                alignment=alignment_center, font="font13",
-                textColor="0xFFD8DDDF", focusedColor="0xFFFFFFFF",
-            )
-            controls.extend((self.save_control, self.cancel_control, self.defaults_control))
-            self.addControls(controls)
-            self._refresh_rows()
-            self._set_navigation()
-            self.setFocus(self.toggle_controls[0])
+                self.close()
 
         def _refresh_rows(self) -> None:
             for index, key in enumerate(self.state.order):
-                self.row_label_controls[index].setLabel(labels.get(key, key))
+                self.getControl(1001 + index).setLabel(self.labels.get(key, key))
+                toggle = self.getControl(1101 + index)
                 selected = key in self.state.enabled
-                self.toggle_controls[index].setLabel(text.on if selected else text.off)
-                self.toggle_controls[index].setSelected(selected)
-                self.up_controls[index].setEnabled(index > 0)
-                self.down_controls[index].setEnabled(index < len(self.state.order) - 1)
+                toggle.setLabel(self.editor_text.on if selected else self.editor_text.off)
+                toggle.setSelected(selected)
+                self.getControl(1201 + index).setEnabled(index > 0)
+                self.getControl(1301 + index).setEnabled(index < row_count - 1)
 
-        def _set_navigation(self) -> None:
-            last_index = len(self.toggle_controls) - 1
-            for index in range(len(self.toggle_controls)):
-                upper = max(0, index - 1)
-                lower = min(last_index, index + 1)
-                toggle = self.toggle_controls[index]
-                up_button = self.up_controls[index]
-                down_button = self.down_controls[index]
-                toggle.setNavigation(
-                    self.toggle_controls[upper], self.toggle_controls[lower],
-                    toggle, up_button,
-                )
-                up_button.setNavigation(
-                    self.up_controls[upper], self.up_controls[lower],
-                    toggle, down_button,
-                )
-                down_button.setNavigation(
-                    self.down_controls[upper], self.down_controls[lower],
-                    up_button, self.save_control,
-                )
-
-            self.save_control.setNavigation(
-                self.defaults_control, self.cancel_control,
-                self.down_controls[0], self.save_control,
-            )
-            self.cancel_control.setNavigation(
-                self.save_control, self.defaults_control,
-                self.down_controls[1], self.cancel_control,
-            )
-            self.defaults_control.setNavigation(
-                self.cancel_control, self.save_control,
-                self.down_controls[2], self.defaults_control,
-            )
-
-        def onControl(self, control) -> None:  # noqa: N802 - Kodi callback name
-            if control == self.save_control:
+        def onClick(self, control_id: int) -> None:  # noqa: N802 - Kodi callback name
+            if control_id == 1401:
                 self.result = self.state.snapshot()
                 self.close()
                 return
-            if control == self.cancel_control:
+            if control_id == 1402:
                 self.close()
                 return
-            if control == self.defaults_control:
+            if control_id == 1403:
                 self.state.reset()
                 self._refresh_rows()
-                self.setFocus(self.toggle_controls[0])
+                self.setFocusId(1101)
                 return
 
-            for index, toggle_control in enumerate(self.toggle_controls):
-                if control == toggle_control:
-                    self.state.toggle(index)
-                    self._refresh_rows()
-                    self.setFocus(self.toggle_controls[index])
-                    return
-                if control == self.up_controls[index]:
-                    target = self.state.move(index, -1)
-                    self._refresh_rows()
-                    self.setFocus(self.up_controls[target])
-                    return
-                if control == self.down_controls[index]:
-                    target = self.state.move(index, 1)
-                    self._refresh_rows()
-                    self.setFocus(self.down_controls[target])
-                    return
+            if 1101 <= control_id < 1101 + row_count:
+                index = control_id - 1101
+                self.state.toggle(index)
+                self._refresh_rows()
+                self.setFocusId(control_id)
+                return
+            if 1201 <= control_id < 1201 + row_count:
+                index = control_id - 1201
+                target = self.state.move(index, -1)
+                self._refresh_rows()
+                self.setFocusId(1201 + target)
+                return
+            if 1301 <= control_id < 1301 + row_count:
+                index = control_id - 1301
+                target = self.state.move(index, 1)
+                self._refresh_rows()
+                self.setFocusId(1301 + target)
 
         def onAction(self, action) -> None:  # noqa: N802 - Kodi callback name
             if action.getId() in back_actions:
                 self.close()
 
-    dialog = HomeLayoutDialog()
+    dialog = None
     try:
+        addon_path = xbmcaddon.Addon().getAddonInfo("path")
+        dialog = HomeLayoutDialog(
+            "home_layout_editor.xml",
+            addon_path,
+            "Default",
+            "1080i",
+        )
+        dialog.configure()
         dialog.doModal()
-        return dialog.result
+        if getattr(dialog, "_ready", False):
+            return dialog.result
+    except Exception:
+        xbmc.log(
+            "MyPicsDB 3 XML home editor failed; using fallback:\n%s"
+            % traceback.format_exc(),
+            xbmc.LOGERROR,
+        )
     finally:
-        del dialog
+        if dialog is not None:
+            del dialog
+
+    return _show_fallback_editor(state, labels, text, xbmcgui)

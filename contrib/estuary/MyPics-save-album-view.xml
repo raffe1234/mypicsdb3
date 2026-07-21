@@ -1,0 +1,6 @@
+<control type="button" id="625">
+  <include>MediaMenuItemsCommon</include>
+  <label>$ADDON[plugin.image.mypicsdb3 32215]</label>
+  <onclick>RunPlugin(plugin://plugin.image.mypicsdb3/action/save-album-view)</onclick>
+  <visible>String.StartsWith(Container.FolderPath,plugin://plugin.image.mypicsdb3/folder)</visible>
+</control>

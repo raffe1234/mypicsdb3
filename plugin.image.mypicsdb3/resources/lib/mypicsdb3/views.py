@@ -176,8 +176,28 @@ class PluginUI:
             context.extend(extra_context)
         return self.add_folder(label, "folder", art=art, context=context, id=row["id"])
 
-    def _next_page_item(self, route: str, offset: int, limit: int, **params: Any):
-        return self.add_folder(self.text(30024, "Next page"), route, offset=offset + limit, limit=limit, **params)
+    def _album_view_context(self) -> List[Tuple[str, str]]:
+        return [(
+            self.text(32215, "Save current view as album default"),
+            "RunPlugin(%s)" % self.url("action/save-album-view"),
+        )]
+
+    def _next_page_item(
+        self,
+        route: str,
+        offset: int,
+        limit: int,
+        context: Optional[List[Tuple[str, str]]] = None,
+        **params: Any,
+    ):
+        return self.add_folder(
+            self.text(30024, "Next page"),
+            route,
+            context=context,
+            offset=offset + limit,
+            limit=limit,
+            **params,
+        )
 
     def pictures(self, route: str, getter: Callable[[int, int], List[Dict[str, Any]]], params: Dict[str, str], category: str, random_view: bool = False):
         default_limit = self.kodi.settings.widget_limit if "limit" in params else self.kodi.settings.browser_page_size
@@ -198,10 +218,25 @@ class PluginUI:
         limit = safe_limit(params.get("limit"), self.kodi.settings.browser_page_size)
         offset = int(params.get("offset", "0") or 0)
         pictures = self.catalog.pictures_in_folder(folder_id, limit, offset)
-        items = [self._folder_item(row) for row in child_folders]
-        items.extend(self._picture_item(row) for row in pictures)
+        album_view_context = self._album_view_context()
+        items = [
+            self._folder_item(row, extra_context=album_view_context)
+            for row in child_folders
+        ]
+        items.extend(
+            self._picture_item(row, extra_context=album_view_context)
+            for row in pictures
+        )
         if len(pictures) == limit:
-            items.append(self._next_page_item("folder", offset, limit, id=folder_id))
+            items.append(
+                self._next_page_item(
+                    "folder",
+                    offset,
+                    limit,
+                    context=album_view_context,
+                    id=folder_id,
+                )
+            )
         self.finish(
             items,
             content="images",

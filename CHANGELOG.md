@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.10 - 2026-07-21
+
+- Replace the failing programmatic home-screen editor with a packaged XML dialog
+  and close add-on settings before opening it.
+- Fall back to standard Kodi selection dialogs if the visual editor cannot load,
+  instead of showing a fatal add-on error.
+- Add **Save current view as album default** to the Pictures side menu in the
+  generated Estuary MyPicsDB 3 skin and to every item inside an album.
+- Bump the patched Estuary skin revisions so Kodi receives the side-menu change.
+
 ## 0.2.9 - 2026-07-21
 
 - Replace the nested home-screen configuration menus with a visual nine-row
