@@ -209,6 +209,7 @@ def extract_skin_from_archive(archive_path: Path, output_dir: Path, source_addon
         extracted == 0
         or not (output_dir / "addon.xml").is_file()
         or not (output_dir / "xml" / "Home.xml").is_file()
+        or not (output_dir / "xml" / "Includes_Home.xml").is_file()
         or not (output_dir / "xml" / "MyPics.xml").is_file()
     ):
         raise RuntimeError("The downloaded archive did not contain a usable Estuary skin")
@@ -343,6 +344,53 @@ def patch_home_xml(home_path: Path, fragment_path: Path = FRAGMENT_PATH) -> None
         handle.write(patched)
 
 
+def patch_widget_poster_limit(includes_home_path: Path) -> None:
+    """Let MyPicsDB rows opt into a larger limit without changing Estuary defaults."""
+    includes = includes_home_path.read_text(encoding="utf-8-sig")
+    pattern = re.compile(
+        r'(?ms)^(?P<indent>[ \t]*)<include name="WidgetListPoster">.*?'
+        r'(?=^(?P=indent)<include name="[^"]+">)'
+    )
+    match = pattern.search(includes)
+    if match is None:
+        raise RuntimeError("Could not locate Estuary WidgetListPoster include")
+
+    section = match.group(0)
+    browse_pattern = re.compile(
+        r'(?m)^(?P<indent>[ \t]*)<param name="browse_mode">auto</param>[ \t]*$'
+    )
+    section, browse_count = browse_pattern.subn(
+        lambda item: (
+            item.group(0)
+            + "\n"
+            + item.group("indent")
+            + '<param name="widget_limit">15</param>'
+        ),
+        section,
+        count=1,
+    )
+    if browse_count != 1:
+        raise RuntimeError(
+            "Could not add a limit parameter to Estuary WidgetListPoster"
+        )
+
+    section, limit_count = re.subn(
+        r'(<content\b[^>]*\blimit=")15('
+        r'"[^>]*>\$PARAM\[content_path\]</content>)',
+        r'\1$PARAM[widget_limit]\2',
+        section,
+        count=1,
+    )
+    if limit_count != 1:
+        raise RuntimeError(
+            "Could not parameterize the Estuary WidgetListPoster limit"
+        )
+
+    patched = includes[: match.start()] + section + includes[match.end() :]
+    with includes_home_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(patched)
+
+
 def patch_pictures_xml(
     pictures_path: Path,
     fragment_path: Path = PICTURES_FRAGMENT_PATH,
@@ -380,6 +428,7 @@ def patch_skin(
     if (
         not (source_dir / "addon.xml").is_file()
         or not (source_dir / "xml" / "Home.xml").is_file()
+        or not (source_dir / "xml" / "Includes_Home.xml").is_file()
         or not (source_dir / "xml" / "MyPics.xml").is_file()
     ):
         raise RuntimeError("The input directory is not a usable Estuary source directory: %s" % source_dir)
@@ -389,6 +438,7 @@ def patch_skin(
 
     patch_addon_xml(output_dir / "addon.xml", config, plugin_version)
     patch_home_xml(output_dir / "xml" / "Home.xml")
+    patch_widget_poster_limit(output_dir / "xml" / "Includes_Home.xml")
     patch_pictures_xml(output_dir / "xml" / "MyPics.xml")
     notice = """# Estuary MyPicsDB 3
 

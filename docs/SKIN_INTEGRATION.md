@@ -63,7 +63,7 @@ The skin is responsible for:
 | Cameras | `plugin://plugin.image.mypicsdb3/cameras` | Folders |
 | Keywords | `plugin://plugin.image.mypicsdb3/keywords` | Folders |
 
-Keep home-screen limits small. Fifteen items is the project default.
+Keep home-screen limits small. Fifteen items is the project default. The Estuary MyPicsDB 3 integration supports 1–50 items per row.
 
 Random endpoints should normally disable Kodi 21's synthetic "more" item by
 using `browse="never"` or the equivalent parameter in the skin's widget

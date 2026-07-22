@@ -14,505 +14,586 @@
 						<param name="icon_height" value="110"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently taken"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently added"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random memories"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recent albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="On this day"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Favorites"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Rated pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Geotagged pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently taken"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently added"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random memories"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recent albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="On this day"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Favorites"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Rated pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Geotagged pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently taken"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently added"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random memories"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recent albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="On this day"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Favorites"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Rated pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Geotagged pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently taken"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently added"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random memories"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recent albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="On this day"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Favorites"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Rated pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Geotagged pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently taken"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently added"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random memories"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recent albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="On this day"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Favorites"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Rated pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Geotagged pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently taken"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently added"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random memories"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recent albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="On this day"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Favorites"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Rated pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Geotagged pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently taken"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently added"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random memories"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recent albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="On this day"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Favorites"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Rated pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Geotagged pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently taken"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently added"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random memories"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recent albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="On this day"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Favorites"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Rated pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Geotagged pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently taken"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recently added"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random memories"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="5000"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Recent albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Random albums"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="browse_mode" value="never"/>
 						<param name="list_id" value="5000"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="On this day"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Favorites"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Rated pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?limit=15"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1"/>
+						<param name="widget_limit" value="50"/>
 						<param name="widget_header" value="Geotagged pictures"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>

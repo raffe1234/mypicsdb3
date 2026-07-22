@@ -50,7 +50,7 @@ def from_getter(getter: Callable[[str], Any], profile_path: str) -> Settings:
     return Settings(
         profile_path=profile_path,
         database_backend=backend,
-        widget_limit=parse_int(getter("widget_limit"), 15, 1, 100),
+        widget_limit=parse_int(getter("widget_limit"), 15, 1, 50),
         browser_page_size=parse_int(getter("browser_page_size"), 100, 10, 500),
         show_notifications=parse_bool(getter("show_notifications"), True),
         album_view_mode=normalize_album_view_mode(getter("album_view_mode")),

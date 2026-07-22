@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="repository.mypicsdb3" name="MyPicsDB 3 Repository" version="0.2.11" provider-name="MyPicsDB 3 contributors">
+<addon id="repository.mypicsdb3" name="MyPicsDB 3 Repository" version="0.2.12" provider-name="MyPicsDB 3 contributors">
   <extension point="xbmc.addon.repository" name="MyPicsDB 3 Repository">
     <dir minversion="21.0.0" maxversion="21.89.999">
       <info compressed="false">https://raffe1234.github.io/mypicsdb3/repository/omega/addons.xml</info>
@@ -25,6 +25,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Publishes MyPicsDB 3 0.2.11 with safer scan shutdown handling and renewable scan locks.</news>
+    <news>Publishes MyPicsDB 3 0.2.12 with configurable Estuary home-row sizes up to 50 items.</news>
   </extension>
 </addon>

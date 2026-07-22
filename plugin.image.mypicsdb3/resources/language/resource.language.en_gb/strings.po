@@ -424,8 +424,8 @@ msgid "Controls list sizes and user interface behaviour."
 msgstr "Controls list sizes and user interface behaviour."
 
 msgctxt "#32111"
-msgid "Used when a skin widget URL does not specify a limit."
-msgstr "Used when a skin widget URL does not specify a limit."
+msgid "Number of items loaded in each MyPicsDB 3 home-screen row. Maximum 50."
+msgstr "Number of items loaded in each MyPicsDB 3 home-screen row. Maximum 50."
 
 msgctxt "#32112"
 msgid "Maximum pictures shown on one interactive browser page."

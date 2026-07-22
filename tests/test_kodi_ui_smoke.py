@@ -184,6 +184,26 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert is_folder is False
 
 
+def test_home_widget_uses_configured_limit_without_browser_pagination(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.widget_limit = 37
+    requested = []
+
+    def recent_taken(limit, offset=0):
+        requested.append((limit, offset))
+        return []
+
+    runtime.catalog.recent_taken = recent_taken
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("recent-taken", {"widget": "1"}))
+
+    assert requested == [(37, 0)]
+    assert calls.items == []
+    assert calls.ended is True
+
+
 def test_source_toggle_uses_plugin_root_from_nested_route(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3/sources", 7)

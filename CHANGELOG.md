@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.12 - 2026-07-22
+
+- Let the Estuary MyPicsDB 3 home rows load the configured number of items
+  instead of always stopping at 15.
+- Keep 15 as the default and cap the home-row setting at 50 to limit database,
+  artwork and memory overhead.
+- Parameterize Estuary's poster widget limit while preserving the standard
+  Estuary limit of 15 for every non-MyPicsDB widget.
+
 ## 0.2.11 - 2026-07-21
 
 - Stop full foreground scans when Kodi requests shutdown, rather than checking

@@ -20,7 +20,7 @@ from .preferences import (
 )
 from .router import Request
 from .scanner import Scanner
-from .utils import plugin_url, safe_limit
+from .utils import parse_bool, plugin_url, safe_limit
 
 
 class PluginUI:
@@ -200,12 +200,17 @@ class PluginUI:
         )
 
     def pictures(self, route: str, getter: Callable[[int, int], List[Dict[str, Any]]], params: Dict[str, str], category: str, random_view: bool = False):
-        default_limit = self.kodi.settings.widget_limit if "limit" in params else self.kodi.settings.browser_page_size
+        is_widget = parse_bool(params.get("widget"), False)
+        default_limit = (
+            self.kodi.settings.widget_limit
+            if is_widget
+            else self.kodi.settings.browser_page_size
+        )
         limit = safe_limit(params.get("limit"), default_limit)
         offset = int(params.get("offset", "0") or 0)
         rows = getter(limit, offset)
         items = [self._picture_item(row) for row in rows]
-        if not random_view and len(rows) == limit and "limit" not in params:
+        if not random_view and len(rows) == limit and not is_widget and "limit" not in params:
             items.append(self._next_page_item(route, offset, limit))
         self.finish(items, content="images", cache=False, category=category)
 
@@ -558,7 +563,12 @@ class PluginUI:
             limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit)
             return self.finish([self._picture_item(row) for row in self.catalog.random_pictures(limit)], category=self.text(30003, "Random memories"))
         if route == "recent-folders":
-            limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit if "limit" in params else self.kodi.settings.browser_page_size)
+            default_limit = (
+                self.kodi.settings.widget_limit
+                if parse_bool(params.get("widget"), False)
+                else self.kodi.settings.browser_page_size
+            )
+            limit = safe_limit(params.get("limit"), default_limit)
             return self.folders(route, self.catalog.recent_folders(limit), self.text(30004, "Recent albums"))
         if route == "random-folders":
             limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit)

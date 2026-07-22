@@ -67,6 +67,26 @@ def create_estuary_fixture(path: Path) -> Path:
 """,
         encoding="utf-8",
     )
+    (path / "xml" / "Includes_Home.xml").write_text(
+        """<includes>
+  <include name="WidgetListPoster">
+    <param name="browse_mode">auto</param>
+    <definition>
+      <include content="CategoryLabel">
+        <param name="label">$PARAM[widget_header]</param>
+      </include>
+      <control type="panel" id="$PARAM[list_id]">
+        <content target="$PARAM[widget_target]" limit="15" browse="$PARAM[browse_mode]">$PARAM[content_path]</content>
+      </control>
+    </definition>
+  </include>
+  <include name="ImageWidget">
+    <definition />
+  </include>
+</includes>
+""",
+        encoding="utf-8",
+    )
     (path / "xml" / "MyPics.xml").write_text(
         """<window>
   <controls>
@@ -104,8 +124,11 @@ def test_patch_skin_creates_separate_addon_and_widgets(tmp_path: Path):
     assert dependencies["plugin.image.mypicsdb3"] == "0.2.7"
 
     home = (output / "xml" / "Home.xml").read_text(encoding="utf-8")
-    assert "plugin://plugin.image.mypicsdb3/recent-taken?limit=15" in home
+    assert "plugin://plugin.image.mypicsdb3/recent-taken?widget=1" in home
     assert 'id="17000"' in home
+    includes_home = (output / "xml" / "Includes_Home.xml").read_text(encoding="utf-8")
+    assert '<param name="widget_limit">15</param>' in includes_home
+    assert 'limit="$PARAM[widget_limit]"' in includes_home
     pictures = (output / "xml" / "MyPics.xml").read_text(encoding="utf-8")
     assert "$ADDON[plugin.image.mypicsdb3 32215]" in pictures
     assert "plugin://plugin.image.mypicsdb3/action/save-album-view" in pictures
@@ -148,6 +171,22 @@ def test_patch_skin_fails_closed_when_picture_sideblade_changes(tmp_path: Path):
         raise AssertionError("Changed upstream MyPics.xml should stop the build")
 
 
+def test_patch_skin_fails_closed_when_widget_poster_changes(tmp_path: Path):
+    source = create_estuary_fixture(tmp_path / "skin.estuary")
+    (source / "xml" / "Includes_Home.xml").write_text(
+        '<includes><include name="OtherWidget" /></includes>\n',
+        encoding="utf-8",
+    )
+    output = tmp_path / "skin.estuary.mypicsdb3"
+
+    try:
+        patch_skin(source, output, config(), "0.2.12")
+    except RuntimeError as exc:
+        assert "WidgetListPoster" in str(exc)
+    else:
+        raise AssertionError("Changed upstream Includes_Home.xml should stop the build")
+
+
 def test_extract_skin_from_official_archive_layout(tmp_path: Path):
     archive_path = tmp_path / "xbmc.zip"
     with zipfile.ZipFile(archive_path, "w") as archive:
@@ -158,6 +197,10 @@ def test_extract_skin_from_official_archive_layout(tmp_path: Path):
         archive.writestr(
             "xbmc-21.3-Omega/addons/skin.estuary/xml/Home.xml",
             "<window />",
+        )
+        archive.writestr(
+            "xbmc-21.3-Omega/addons/skin.estuary/xml/Includes_Home.xml",
+            "<includes />",
         )
         archive.writestr(
             "xbmc-21.3-Omega/addons/skin.estuary/xml/MyPics.xml",
@@ -171,6 +214,7 @@ def test_extract_skin_from_official_archive_layout(tmp_path: Path):
     extract_skin_from_archive(archive_path, output, "skin.estuary")
     assert (output / "addon.xml").read_text(encoding="utf-8") == "<addon />"
     assert (output / "xml" / "Home.xml").is_file()
+    assert (output / "xml" / "Includes_Home.xml").is_file()
     assert (output / "xml" / "MyPics.xml").is_file()
     assert not (output / "other.addon").exists()
 
@@ -181,9 +225,9 @@ def test_upstream_config_has_versioned_channels_and_history():
     assert project.retain_versions == 5
     assert set(project.channels) == {"omega", "piers"}
     assert project.channels["omega"].releases[0].ref == "21.3-Omega"
-    assert project.channels["omega"].patch_revision == 4
-    assert project.channels["omega"].releases[0].skin_version == "21.3.4"
-    assert project.channels["piers"].patch_revision == 2
+    assert project.channels["omega"].patch_revision == 5
+    assert project.channels["omega"].releases[0].skin_version == "21.3.5"
+    assert project.channels["piers"].patch_revision == 3
     assert project.channels["piers"].releases[0].ref == "22.0b1-Piers"
     assert all(
         len(channel.releases) <= project.retain_versions

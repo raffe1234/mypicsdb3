@@ -31,15 +31,15 @@ DEFAULT_ROWS = [
 ]
 
 ROUTES = [
-    "recent-taken?limit=15",
-    "recent-added?limit=15",
-    "random?limit=15",
-    "recent-folders?limit=15",
-    "random-folders?limit=15",
-    "on-this-day?limit=15",
-    "favorites?limit=15",
-    "rated?limit=15",
-    "geotagged?limit=15",
+    "recent-taken?widget=1",
+    "recent-added?widget=1",
+    "random?widget=1",
+    "recent-folders?widget=1",
+    "random-folders?widget=1",
+    "on-this-day?widget=1",
+    "favorites?widget=1",
+    "rated?widget=1",
+    "geotagged?widget=1",
 ]
 
 HEADINGS = [
@@ -61,6 +61,7 @@ def test_home_screen_settings_offer_nine_ordered_slots() -> None:
     settings = {node.attrib["id"]: node for node in root.findall(".//setting")}
 
     assert settings["show_media_sources"].findtext("default") == "true"
+    assert settings["widget_limit"].findtext("./constraints/maximum") == "50"
     configure = settings["configure_home_screen"]
     assert configure.attrib["type"] == "action"
     assert configure.findtext("data") == (
@@ -109,4 +110,5 @@ def test_home_fragment_has_visible_titles_and_all_routes() -> None:
         assert f"plugin://plugin.image.mypicsdb3/{route}" in home
     for heading in HEADINGS:
         assert f'value="{heading}"' in home
+    assert home.count('<param name="widget_limit" value="50"/>') == 81
     assert "$ADDON[plugin.image.mypicsdb3" not in home

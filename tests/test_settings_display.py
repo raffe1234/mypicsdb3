@@ -4,6 +4,8 @@ import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
+from mypicsdb3.config import from_getter
+
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS = ROOT / "plugin.image.mypicsdb3" / "resources" / "settings.xml"
 STRINGS = ROOT / "plugin.image.mypicsdb3" / "resources" / "language" / "resource.language.en_gb" / "strings.po"
@@ -22,6 +24,14 @@ def test_general_numeric_settings_show_labels_and_values():
         control = setting.find("control")
         assert control is not None
         assert control.attrib == {"type": "spinner", "format": "string"}
+    assert settings["widget_limit"].findtext("./constraints/maximum") == "50"
+
+
+def test_home_widget_limit_clamps_legacy_values_to_50():
+    values = {"widget_limit": "100"}
+    settings = from_getter(lambda key: values.get(key, ""), "/tmp/mypicsdb3")
+
+    assert settings.widget_limit == 50
 
 
 def test_home_screen_uses_editor_and_internal_legacy_slots():
