@@ -1,8 +1,8 @@
 # Database migrations
 
 MyPicsDB 3 uses a versioned migration runner for both SQLite and
-MySQL/MariaDB. Add-on version 0.2.13 introduces the framework while the
-catalogue remains on schema version 1.
+MySQL/MariaDB. Add-on version 0.2.13 introduced the framework. Version 0.2.15
+raises the catalogue to schema version 2 with the first real migration.
 
 ## Startup sequence
 
@@ -23,6 +23,19 @@ catalogue remains on schema version 1.
    record where the backend permits transactional DDL.
 
 The add-on never attempts a downgrade.
+
+## Schema 2: date browsing
+
+Schema 2 adds `idx_pictures_date_browse` on:
+
+```text
+(is_missing, taken_year, taken_month, taken_day, taken_at)
+```
+
+The index supports the Years browser's year → month → day hierarchy. The
+migration checks whether the index already exists before creating it, which
+makes the MySQL/MariaDB DDL step safe to retry after an interrupted run. No
+picture rows or metadata columns are rewritten.
 
 ## SQLite backups
 

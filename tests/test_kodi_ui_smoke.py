@@ -153,6 +153,51 @@ class FakeCatalog:
     def pictures_in_folder(self, folder_id, limit, offset):
         return self.recent_taken(limit, offset)
 
+    def years(self):
+        return [{
+            "year": 2020,
+            "picture_count": 1,
+            "uri": "smb://server/photos/image.jpg",
+            "thumb_uri": "smb://server/photos/image.jpg",
+        }]
+
+    def undated_summary(self):
+        return {
+            "picture_count": 1,
+            "uri": "smb://server/photos/undated.jpg",
+            "thumb_uri": "smb://server/photos/undated.jpg",
+        }
+
+    def months_for_year(self, year):
+        assert year == 2020
+        return [{
+            "month": 7,
+            "picture_count": 1,
+            "uri": "smb://server/photos/image.jpg",
+            "thumb_uri": "smb://server/photos/image.jpg",
+        }]
+
+    def days_for_month(self, year, month):
+        assert (year, month) == (2020, 7)
+        return [{
+            "day": 17,
+            "picture_count": 1,
+            "uri": "smb://server/photos/image.jpg",
+            "thumb_uri": "smb://server/photos/image.jpg",
+        }]
+
+    def pictures_for_day(self, year, month, day, limit, offset):
+        assert (year, month, day) == (2020, 7, 17)
+        return self.recent_taken(limit, offset)
+
+    def pictures_without_date(self, limit, offset=0):
+        row = dict(self.recent_taken(limit, offset)[0])
+        row["taken_at"] = None
+        row["filename"] = "undated.jpg"
+        row["uri"] = "smb://server/photos/undated.jpg"
+        row["thumb_uri"] = row["uri"]
+        return [row]
+
 
 class FakeRuntime:
     def __init__(self):
@@ -202,6 +247,43 @@ def test_home_widget_uses_configured_limit_without_browser_pagination(monkeypatc
     assert requested == [(37, 0)]
     assert calls.items == []
     assert calls.ended is True
+
+
+def test_date_browser_drills_from_year_to_day_and_preserves_pagination(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.browser_page_size = 1
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("years", {}))
+    assert [item[0] for item in calls.items] == [
+        "plugin://plugin.image.mypicsdb3/year?year=2020",
+        "plugin://plugin.image.mypicsdb3/no-date",
+    ]
+
+    ui.dispatch(views.Request("year", {"year": "2020"}))
+    assert calls.category == "2020"
+    assert calls.items[0][0] == "plugin://plugin.image.mypicsdb3/month?year=2020&month=7"
+
+    ui.dispatch(views.Request("month", {"year": "2020", "month": "7"}))
+    assert calls.category == "July 2020"
+    assert calls.items[0][0] == "plugin://plugin.image.mypicsdb3/day?year=2020&month=7&day=17"
+
+    ui.dispatch(
+        views.Request(
+            "day",
+            {"year": "2020", "month": "7", "day": "17"},
+        )
+    )
+    assert calls.category == "2020-07-17"
+    assert len(calls.items) == 2
+    assert calls.items[1][0] == (
+        "plugin://plugin.image.mypicsdb3/day?offset=1&limit=1&year=2020&month=7&day=17"
+    )
+
+    ui.dispatch(views.Request("no-date", {}))
+    assert calls.category == "No date"
+    assert calls.items[0][1].label == "undated.jpg"
 
 
 def test_source_toggle_uses_plugin_root_from_nested_route(monkeypatch) -> None:

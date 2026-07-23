@@ -64,6 +64,10 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
         create_schema(engine, connection)
         engine.execute(
             connection,
+            "DROP INDEX idx_pictures_date_browse ON pictures",
+        ).close()
+        engine.execute(
+            connection,
             "INSERT INTO meta (`key`, value) VALUES (?, ?)",
             ("schema_version", "1"),
         ).close()
@@ -87,7 +91,8 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     second = catalog.initialize()
 
     assert first.bootstrapped_history is True
-    assert first.current_version == 1
+    assert first.current_version == 2
+    assert first.applied_versions == (2,)
     assert second.bootstrapped_history is False
     assert second.applied_versions == ()
     with engine.transaction() as connection:
@@ -96,17 +101,23 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
             "SELECT label, uri FROM sources WHERE uri_hash=?",
             ("existing-schema-one-source",),
         )
-        history = engine.fetchone(
+        history = engine.fetchall(
             connection,
-            "SELECT version, addon_version FROM schema_migrations WHERE version=1",
+            "SELECT version, addon_version FROM schema_migrations ORDER BY version",
         )
         count = engine.fetchone(
             connection,
             "SELECT COUNT(*) AS total FROM schema_migrations",
         )
+        index = engine.fetchone(
+            connection,
+            "SELECT INDEX_NAME AS name FROM information_schema.STATISTICS "
+            "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='pictures' "
+            "AND INDEX_NAME='idx_pictures_date_browse'",
+        )
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
-    assert history is not None
-    assert history["version"] == 1
-    assert history["addon_version"] == "0.2.14"
-    assert count["total"] == 1
+    assert [row["version"] for row in history] == [1, 2]
+    assert {row["addon_version"] for row in history} == {"0.2.15"}
+    assert count["total"] == 2
+    assert index is not None

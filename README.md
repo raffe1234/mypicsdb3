@@ -4,7 +4,7 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.14 release candidate. The catalogue, SQLite backend, scanner,
+> Status: 0.2.15 development release candidate. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. Real Kodi installations are still required for platform and
 > large-library testing before calling the project production-stable.
@@ -21,7 +21,7 @@ indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 - Missing-source safety: an unavailable SMB/NFS source is never interpreted as
   deletion of every picture.
 - Lazy Kodi thumbnail caching; no duplicate thumbnail tree is generated.
-- Favorites, ratings, keywords, cameras, years and geotagged views.
+- Favorites, ratings, keywords, cameras, year/month/day and geotagged views.
 - Stable widget endpoints for configurable skins.
 - Optional **Estuary MyPicsDB 3** skin with picture rows on the home screen.
 - GitHub Actions, Kodi repository generation and GitHub Pages deployment.
@@ -273,7 +273,8 @@ After the first successful scan, the add-on main menu provides:
 - **Recent albums** and **Random albums** — folders represented by indexed
   pictures;
 - **On this day** — pictures captured on today's month and day in earlier years;
-- **Years**, **Cameras** and **Keywords** — metadata-based navigation;
+- **Years** — browse by year, then month and day, with a separate **No date** folder;
+- **Cameras** and **Keywords** — metadata-based navigation;
 - **Favorites** — pictures marked through the Kodi context menu;
 - **Rated pictures** — pictures with an embedded metadata rating;
 - **Geotagged pictures** — pictures with stored GPS coordinates.
@@ -358,10 +359,10 @@ tested by this project.
 SQLite is recommended for one Kodi device. The database is stored under the
 add-on profile directory and must not be moved to SMB/NFS.
 
-The current release uses a versioned migration runner for both SQLite and
-MySQL/MariaDB while the catalogue remains on schema version 1. Existing SQLite
-schema-1 databases receive an atomic, integrity-checked backup before migration
-history is registered. See
+The current development release uses schema version 2 for both SQLite and
+MySQL/MariaDB. Schema 2 adds a year-first date-browsing index. Existing SQLite
+schema-1 databases receive an atomic, integrity-checked backup before the index
+is added; MySQL/MariaDB operators must keep an external backup. See
 [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before testing a
 development build that changes the catalogue schema.
 

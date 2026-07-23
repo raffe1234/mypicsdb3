@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.15 - 2026-07-23
+
+- Add schema version 2 with an idempotent year-first date-browsing index for
+  SQLite and MySQL/MariaDB.
+- Change the Years browser to drill down through year, month and day before
+  showing pictures.
+- Add a No date folder for pictures without an embedded capture date.
+- Preserve route parameters on paginated date, camera and keyword views.
+- Extend fresh-database, schema-1 upgrade, catalogue, Kodi UI and MariaDB tests.
+
 ## 0.2.14 - 2026-07-23
 
 - Align the add-on, repository and core package release versions and update the

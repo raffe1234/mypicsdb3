@@ -341,7 +341,32 @@ class Catalog:
         return self._pictures("p.taken_month=? AND p.taken_day=? AND p.taken_year<?", (month, day, current_year), "p.taken_year DESC, p.taken_at DESC", limit, offset)
 
     def pictures_for_year(self, year: int, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
-        return self._pictures("p.taken_year=?", (year,), "p.taken_at DESC", limit, offset)
+        return self._pictures("p.taken_year=?", (year,), "p.taken_at DESC, p.id DESC", limit, offset)
+
+    def pictures_for_day(
+        self,
+        year: int,
+        month: int,
+        day: int,
+        limit: int,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        return self._pictures(
+            "p.taken_year=? AND p.taken_month=? AND p.taken_day=?",
+            (year, month, day),
+            "p.taken_at DESC, p.id DESC",
+            limit,
+            offset,
+        )
+
+    def pictures_without_date(self, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
+        return self._pictures(
+            "p.taken_at IS NULL",
+            (),
+            "p.discovered_at DESC, p.id DESC",
+            limit,
+            offset,
+        )
 
     def pictures_for_camera(self, camera_make: str, camera_model: str, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("COALESCE(p.camera_make,'')=? AND COALESCE(p.camera_model,'')=?", (camera_make, camera_model), "COALESCE(p.taken_at, p.discovered_at) DESC", limit, offset)
@@ -397,11 +422,92 @@ class Catalog:
 
     def years(self) -> List[Dict[str, Any]]:
         with self.engine.transaction() as connection:
-            groups = self.engine.fetchall(connection, "SELECT taken_year AS year, COUNT(*) AS picture_count FROM pictures WHERE is_missing=0 AND taken_year IS NOT NULL GROUP BY taken_year ORDER BY taken_year DESC")
+            groups = self.engine.fetchall(
+                connection,
+                "SELECT taken_year AS year, COUNT(*) AS picture_count "
+                "FROM pictures WHERE is_missing=0 AND taken_year IS NOT NULL "
+                "GROUP BY taken_year ORDER BY taken_year DESC",
+            )
             for group in groups:
-                rep = self.engine.fetchone(connection, "SELECT uri, thumb_uri FROM pictures WHERE is_missing=0 AND taken_year=? ORDER BY taken_at DESC LIMIT 1", (group["year"],))
+                rep = self.engine.fetchone(
+                    connection,
+                    "SELECT uri, thumb_uri FROM pictures "
+                    "WHERE is_missing=0 AND taken_year=? "
+                    "ORDER BY taken_at DESC, id DESC LIMIT 1",
+                    (group["year"],),
+                )
                 group.update(rep or {})
             return groups
+
+    def months_for_year(self, year: int) -> List[Dict[str, Any]]:
+        with self.engine.transaction() as connection:
+            groups = self.engine.fetchall(
+                connection,
+                "SELECT taken_month AS date_value, COUNT(*) AS picture_count "
+                "FROM pictures WHERE is_missing=0 AND taken_year=? "
+                "AND taken_month IS NOT NULL "
+                "GROUP BY taken_month ORDER BY taken_month",
+                (year,),
+            )
+            result = []
+            for group in groups:
+                month = int(group["date_value"])
+                rep = self.engine.fetchone(
+                    connection,
+                    "SELECT uri, thumb_uri FROM pictures "
+                    "WHERE is_missing=0 AND taken_year=? AND taken_month=? "
+                    "ORDER BY taken_at DESC, id DESC LIMIT 1",
+                    (year, month),
+                )
+                row = {"month": month, "picture_count": int(group["picture_count"])}
+                row.update(rep or {})
+                result.append(row)
+            return result
+
+    def days_for_month(self, year: int, month: int) -> List[Dict[str, Any]]:
+        with self.engine.transaction() as connection:
+            groups = self.engine.fetchall(
+                connection,
+                "SELECT taken_day AS date_value, COUNT(*) AS picture_count "
+                "FROM pictures WHERE is_missing=0 AND taken_year=? AND taken_month=? "
+                "AND taken_day IS NOT NULL "
+                "GROUP BY taken_day ORDER BY taken_day",
+                (year, month),
+            )
+            result = []
+            for group in groups:
+                day = int(group["date_value"])
+                rep = self.engine.fetchone(
+                    connection,
+                    "SELECT uri, thumb_uri FROM pictures "
+                    "WHERE is_missing=0 AND taken_year=? AND taken_month=? AND taken_day=? "
+                    "ORDER BY taken_at DESC, id DESC LIMIT 1",
+                    (year, month, day),
+                )
+                row = {"day": day, "picture_count": int(group["picture_count"])}
+                row.update(rep or {})
+                result.append(row)
+            return result
+
+    def undated_summary(self) -> Optional[Dict[str, Any]]:
+        with self.engine.transaction() as connection:
+            count = self.engine.fetchone(
+                connection,
+                "SELECT COUNT(*) AS picture_count FROM pictures "
+                "WHERE is_missing=0 AND taken_at IS NULL",
+            )
+            total = int((count or {}).get("picture_count") or 0)
+            if total == 0:
+                return None
+            rep = self.engine.fetchone(
+                connection,
+                "SELECT uri, thumb_uri FROM pictures "
+                "WHERE is_missing=0 AND taken_at IS NULL "
+                "ORDER BY discovered_at DESC, id DESC LIMIT 1",
+            )
+            row: Dict[str, Any] = {"picture_count": total}
+            row.update(rep or {})
+            return row
 
     def cameras(self) -> List[Dict[str, Any]]:
         with self.engine.transaction() as connection:

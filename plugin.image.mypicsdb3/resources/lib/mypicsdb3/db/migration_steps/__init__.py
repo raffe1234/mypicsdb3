@@ -1,7 +1,7 @@
 """Versioned database migration steps.
 
-A future schema change should live in a module named ``vNNNN_description.py``
-and export a ``MIGRATION`` object. The central registry is intentionally kept
+Each schema change lives in a module named ``vNNNN_description.py`` and exports
+a ``MIGRATION`` object. The central registry in ``db/migrations.py`` remains
 explicit so packaging and review cannot silently omit a migration.
 """
 
