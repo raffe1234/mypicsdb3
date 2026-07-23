@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.13 - 2026-07-23
+
+- Add a versioned, checksummed migration runner while retaining schema version 1.
+- Register existing schema-1 databases as a baseline only after creating an
+  atomic, integrity-checked SQLite backup.
+- Refuse newer database schemas before structural writes and coordinate schema
+  work with catalogue scans through mutually exclusive locks.
+- Add MySQL/MariaDB migration preflight plus read-only current and legacy schema
+  inspection tools.
+- Document migration design, backup and recovery, and the requirements for the
+  first real schema-2 change.
+
 ## 0.2.12 - 2026-07-22
 
 - Let the Estuary MyPicsDB 3 home rows load the configured number of items

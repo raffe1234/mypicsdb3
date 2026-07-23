@@ -244,7 +244,13 @@ MYSQL_SCHEMA = [
 ]
 
 
-def initialise_schema(engine, connection) -> None:
+def create_schema(engine, connection) -> None:
+    """Create the current schema objects without deciding migration policy.
+
+    Version checks, backups and migration history belong to MigrationRunner.
+    Keeping this function deterministic also makes fresh-database creation and
+    schema inspection straightforward.
+    """
     statements: List[str] = MYSQL_SCHEMA if engine.backend == "mysql" else SQLITE_SCHEMA
     for statement in statements:
         try:
@@ -256,10 +262,25 @@ def initialise_schema(engine, connection) -> None:
             if engine.backend == "mysql" and ("duplicate key name" in message or "already exists" in message):
                 continue
             raise
-    row = engine.fetchone(connection, "SELECT value FROM meta WHERE `key`=?" if engine.backend == "mysql" else "SELECT value FROM meta WHERE key=?", ("schema_version",))
+
+
+def initialise_schema(engine, connection) -> None:
+    """Compatibility wrapper for callers that still initialise a fresh schema.
+
+    Production startup uses MigrationRunner so existing databases are backed up
+    and version-checked before any structural change.
+    """
+    create_schema(engine, connection)
+    row = engine.fetchone(
+        connection,
+        "SELECT value FROM meta WHERE `key`=?" if engine.backend == "mysql" else "SELECT value FROM meta WHERE key=?",
+        ("schema_version",),
+    )
     if row is None:
-        engine.execute(connection, "INSERT INTO meta (`key`, value) VALUES (?, ?)" if engine.backend == "mysql" else "INSERT INTO meta (key, value) VALUES (?, ?)", ("schema_version", str(SCHEMA_VERSION))).close()
-    elif int(row["value"]) > SCHEMA_VERSION:
-        raise RuntimeError("The database schema is newer than this add-on")
-    elif int(row["value"]) < SCHEMA_VERSION:
-        raise RuntimeError("A database migration is required but is not implemented")
+        engine.execute(
+            connection,
+            "INSERT INTO meta (`key`, value) VALUES (?, ?)" if engine.backend == "mysql" else "INSERT INTO meta (key, value) VALUES (?, ?)",
+            ("schema_version", str(SCHEMA_VERSION)),
+        ).close()
+    elif int(row["value"]) != SCHEMA_VERSION:
+        raise RuntimeError("Use MigrationRunner for an existing database schema")

@@ -4,6 +4,7 @@ import contextlib
 import os
 import re
 import sqlite3
+from pathlib import Path
 from typing import Any, Dict, Iterator, Optional, Sequence
 
 from ..config import Settings
@@ -75,6 +76,23 @@ class DatabaseEngine:
     def connect(self):
         return self._connect_mysql() if self.backend == "mysql" else self._connect_sqlite()
 
+    def connect_readonly(self):
+        if self.backend == "mysql":
+            # MySQL permissions are controlled by the configured account. The
+            # migration inspector performs SELECT statements only.
+            return self._connect_mysql()
+        uri = Path(self.settings.sqlite_path).expanduser().resolve().as_uri() + "?mode=ro"
+        connection = sqlite3.connect(
+            uri,
+            uri=True,
+            timeout=30,
+            check_same_thread=False,
+        )
+        connection.row_factory = sqlite3.Row
+        connection.execute("PRAGMA foreign_keys=ON")
+        connection.execute("PRAGMA busy_timeout=30000")
+        return connection
+
     def sql(self, statement: str) -> str:
         return statement.replace("?", "%s") if self.backend == "mysql" else statement
 
@@ -116,6 +134,37 @@ class DatabaseEngine:
             raise
         finally:
             connection.close()
+
+    def table_exists(self, connection, table_name: str) -> bool:
+        if self.backend == "mysql":
+            row = self.fetchone(
+                connection,
+                "SELECT TABLE_NAME AS name FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=?",
+                (table_name,),
+            )
+        else:
+            row = self.fetchone(
+                connection,
+                "SELECT name FROM sqlite_master WHERE type='table' AND name=?",
+                (table_name,),
+            )
+        return row is not None
+
+    def list_tables(self, connection):
+        if self.backend == "mysql":
+            rows = self.fetchall(
+                connection,
+                "SELECT TABLE_NAME AS name FROM information_schema.TABLES "
+                "WHERE TABLE_SCHEMA=DATABASE() ORDER BY TABLE_NAME",
+            )
+        else:
+            rows = self.fetchall(
+                connection,
+                "SELECT name FROM sqlite_master WHERE type='table' "
+                "AND name NOT LIKE 'sqlite_%' ORDER BY name",
+            )
+        return [str(row["name"]) for row in rows]
 
     def test_connection(self) -> None:
         connection = self.connect()

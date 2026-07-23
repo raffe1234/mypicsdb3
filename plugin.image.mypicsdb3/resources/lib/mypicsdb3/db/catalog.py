@@ -13,7 +13,10 @@ from ..utils import (
     utc_now,
 )
 from .engine import DatabaseEngine
-from .schema import initialise_schema
+from .locks import acquire_lock as acquire_catalog_lock
+from .locks import refresh_lock as refresh_catalog_lock
+from .locks import release_lock as release_catalog_lock
+from .migrations import MigrationRunner
 
 
 PICTURE_COLUMNS = """
@@ -32,9 +35,8 @@ class Catalog:
         self.engine = engine
         self.logger = logger
 
-    def initialize(self) -> None:
-        with self.engine.transaction() as connection:
-            initialise_schema(self.engine, connection)
+    def initialize(self):
+        return MigrationRunner(self.engine, logger=self.logger).initialize()
 
     def test_connection(self) -> None:
         self.engine.test_connection()
@@ -141,54 +143,19 @@ class Catalog:
             ).close()
 
     def acquire_lock(self, name: str, owner: str, ttl_seconds: int = 1800) -> bool:
-        now_dt = datetime.now(timezone.utc)
-        now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
-        expires = (now_dt + timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%d %H:%M:%S")
-        try:
-            with self.engine.transaction(immediate=True) as connection:
-                self.engine.execute(connection, "DELETE FROM locks WHERE expires_at<=?", (now,)).close()
-                self.engine.execute(connection, "INSERT INTO locks (name, owner, acquired_at, expires_at) VALUES (?, ?, ?, ?)", (name, owner, now, expires)).close()
-            return True
-        except self.engine.integrity_errors:
-            return False
+        return acquire_catalog_lock(self.engine, name, owner, ttl_seconds)
 
     def refresh_lock(self, name: str, owner: str, ttl_seconds: int = 1800, connection=None) -> bool:
-        """Extend a live lock owned by this scanner.
-
-        Expired locks are not revived. If a scan has been blocked for longer
-        than the TTL, it must stop rather than continue without exclusivity.
-        """
-        now_dt = datetime.now(timezone.utc)
-        now = now_dt.strftime("%Y-%m-%d %H:%M:%S")
-        expires = (now_dt + timedelta(seconds=ttl_seconds)).strftime("%Y-%m-%d %H:%M:%S")
-
-        def update(active_connection) -> bool:
-            cursor = self.engine.execute(
-                active_connection,
-                "UPDATE locks SET expires_at=? WHERE name=? AND owner=? AND expires_at>?",
-                (expires, name, owner, now),
-            )
-            try:
-                updated = int(cursor.rowcount or 0) > 0
-            finally:
-                cursor.close()
-            if updated:
-                return True
-            current = self.engine.fetchone(
-                active_connection,
-                "SELECT owner, expires_at FROM locks WHERE name=?",
-                (name,),
-            )
-            return bool(current and current.get("owner") == owner and current.get("expires_at", "") > now)
-
-        if connection is not None:
-            return update(connection)
-        with self.engine.transaction(immediate=True) as active_connection:
-            return update(active_connection)
+        return refresh_catalog_lock(
+            self.engine,
+            name,
+            owner,
+            ttl_seconds,
+            connection=connection,
+        )
 
     def release_lock(self, name: str, owner: str) -> None:
-        with self.engine.transaction() as connection:
-            self.engine.execute(connection, "DELETE FROM locks WHERE name=? AND owner=?", (name, owner)).close()
+        release_catalog_lock(self.engine, name, owner)
 
     def begin_scan_run(self, source_id: Optional[int]) -> int:
         with self.engine.transaction() as connection:
