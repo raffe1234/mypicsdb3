@@ -73,10 +73,10 @@ jobs:
           # kodi-addon-checker 0.0.36 rejects the officially supported
           # minversion/maxversion attributes on repository <dir> nodes.
           # tools/verify.py validates repository.mypicsdb3 instead.
-          kodi-addon-checker --branch omega \
+          python tools/run_kodi_addon_checker.py --branch omega \
             plugin.image.mypicsdb3 \
             "$OMEGA_SKIN"
-          kodi-addon-checker --branch piers "$PIERS_SKIN"
+          python tools/run_kodi_addon_checker.py --branch piers "$PIERS_SKIN"
 
       - name: Commit verified upstream pins
         if: steps.changes.outputs.changed == 'true'

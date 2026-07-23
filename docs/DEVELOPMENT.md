@@ -92,3 +92,9 @@ Kodi supports `minversion` and `maxversion` on repository `<dir>` elements, but
 The workflows therefore run Kodi's checker for the picture add-on and generated
 skins, while `tools/verify.py` validates the repository add-on, channel ranges
 and URLs directly.
+
+`kodi-addon-checker` 0.0.36 can also crash if an external Kodi repository
+cannot be loaded and its internal `Repository` object is left without an
+`addons` attribute. `tools/run_kodi_addon_checker.py` handles only that known
+upstream failure by treating the unavailable repository as empty. All local
+validation errors and other checker failures still fail the workflow.
