@@ -8,10 +8,11 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Callable, Dict, Iterable, Optional, Sequence, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 from .. import SCHEMA_VERSION, VERSION
 from .locks import MIGRATION_LOCK_NAME, acquire_lock, refresh_lock, release_lock
+from .migration_step import MigrationStep
 from .migration_steps import BASELINE_CHECKSUM, BASELINE_NAME
 from .schema import create_schema
 
@@ -32,15 +33,7 @@ class MigrationChecksumError(MigrationError):
     pass
 
 
-MigrationAction = Callable[[object, object], None]
-
-
-@dataclass(frozen=True)
-class MigrationStep:
-    version: int
-    name: str
-    checksum: str
-    apply: MigrationAction
+from .migration_steps.v0002_date_browsing import MIGRATION as DATE_BROWSING_MIGRATION
 
 
 @dataclass(frozen=True)
@@ -77,7 +70,7 @@ MYSQL_MIGRATION_TABLE = """CREATE TABLE IF NOT EXISTS schema_migrations (
     addon_version VARCHAR(32) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin"""
 
-DEFAULT_MIGRATIONS: Tuple[MigrationStep, ...] = ()
+DEFAULT_MIGRATIONS: Tuple[MigrationStep, ...] = (DATE_BROWSING_MIGRATION,)
 MIGRATION_LOCK_TTL_SECONDS = 7200
 
 

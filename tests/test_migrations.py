@@ -28,6 +28,7 @@ def make_engine(tmp_path: Path) -> DatabaseEngine:
 def create_schema_one_without_history(engine: DatabaseEngine) -> None:
     with engine.transaction(immediate=True) as connection:
         create_schema(engine, connection)
+        engine.execute(connection, "DROP INDEX IF EXISTS idx_pictures_date_browse").close()
         engine.execute(
             connection,
             "INSERT INTO meta (key, value) VALUES (?, ?)",
@@ -50,22 +51,41 @@ def migration_two() -> MigrationStep:
     )
 
 
-def test_new_database_records_schema_one_without_backup(tmp_path: Path) -> None:
+def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> None:
     engine = make_engine(tmp_path)
     result = MigrationRunner(engine).initialize()
 
     assert result.created_database is True
-    assert result.current_version == 1
+    assert result.current_version == 2
     assert result.backup_path is None
     assert not (tmp_path / "backups").exists()
     with engine.transaction() as connection:
-        row = engine.fetchone(
+        rows = engine.fetchall(
             connection,
-            "SELECT version, name, checksum FROM schema_migrations WHERE version=1",
+            "SELECT version, name, checksum FROM schema_migrations ORDER BY version",
         )
-    assert row is not None
-    assert row["name"] == "initial catalogue schema"
-    assert len(row["checksum"]) == 64
+        index = engine.fetchone(
+            connection,
+            "SELECT name FROM sqlite_master WHERE type='index' "
+            "AND name='idx_pictures_date_browse'",
+        )
+    assert [row["version"] for row in rows] == [1, 2]
+    assert rows[0]["name"] == "initial catalogue schema"
+    assert rows[1]["name"] == "year-first date browsing index"
+    assert all(len(row["checksum"]) == 64 for row in rows)
+    assert index is not None
+    with engine.transaction() as connection:
+        plan = engine.fetchall(
+            connection,
+            "EXPLAIN QUERY PLAN SELECT id FROM pictures "
+            "WHERE is_missing=0 AND taken_year=? AND taken_month=? AND taken_day=? "
+            "ORDER BY taken_at DESC",
+            (2020, 7, 17),
+        )
+    assert any(
+        "idx_pictures_date_browse" in str(row.get("detail", ""))
+        for row in plan
+    )
 
 
 def test_existing_schema_one_is_backed_up_and_registered(tmp_path: Path) -> None:
@@ -82,6 +102,8 @@ def test_existing_schema_one_is_backed_up_and_registered(tmp_path: Path) -> None
     result = MigrationRunner(engine).initialize()
 
     assert result.bootstrapped_history is True
+    assert result.current_version == 2
+    assert result.applied_versions == (2,)
     assert result.backup_path is not None
     backup_path = Path(result.backup_path)
     assert backup_path.is_file()
@@ -94,6 +116,23 @@ def test_existing_schema_one_is_backed_up_and_registered(tmp_path: Path) -> None
         assert backup.execute(
             "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='schema_migrations'"
         ).fetchone()[0] == 0
+        assert backup.execute(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type='index' "
+            "AND name='idx_pictures_date_browse'"
+        ).fetchone()[0] == 0
+    with engine.transaction() as connection:
+        assert engine.fetchone(
+            connection, "SELECT value FROM meta WHERE key='schema_version'"
+        )["value"] == "2"
+        assert engine.fetchone(
+            connection,
+            "SELECT COUNT(*) AS total FROM schema_migrations",
+        )["total"] == 2
+        assert engine.fetchone(
+            connection,
+            "SELECT name FROM sqlite_master WHERE type='index' "
+            "AND name='idx_pictures_date_browse'",
+        ) is not None
 
 
 def test_newer_schema_is_rejected_before_any_schema_write(tmp_path: Path) -> None:

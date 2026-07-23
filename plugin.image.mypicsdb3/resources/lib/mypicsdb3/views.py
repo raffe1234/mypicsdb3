@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import calendar
 import sys
 from datetime import datetime
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -211,7 +212,12 @@ class PluginUI:
         rows = getter(limit, offset)
         items = [self._picture_item(row) for row in rows]
         if not random_view and len(rows) == limit and not is_widget and "limit" not in params:
-            items.append(self._next_page_item(route, offset, limit))
+            page_params = {
+                key: value
+                for key, value in params.items()
+                if key not in {"offset", "limit", "widget"}
+            }
+            items.append(self._next_page_item(route, offset, limit, **page_params))
         self.finish(items, content="images", cache=False, category=category)
 
     def folder(self, folder_id: int, params: Dict[str, str]):
@@ -256,8 +262,63 @@ class PluginUI:
         items = []
         for row in self.catalog.years():
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (row["year"], row["picture_count"])
-            items.append(self.add_folder(label, "year", art=row.get("thumb_uri") or row.get("uri"), year=row["year"]))
+            items.append(
+                self.add_folder(
+                    label,
+                    "year",
+                    art=row.get("thumb_uri") or row.get("uri"),
+                    year=row["year"],
+                )
+            )
+        undated = self.catalog.undated_summary()
+        if undated:
+            label = "%s  [COLOR=grey](%s)[/COLOR]" % (
+                self.text(30034, "No date"),
+                undated["picture_count"],
+            )
+            items.append(
+                self.add_folder(
+                    label,
+                    "no-date",
+                    art=undated.get("thumb_uri") or undated.get("uri"),
+                )
+            )
         self.finish(items, content="images", category=self.text(30007, "Years"))
+
+    def months(self, year: int):
+        items = []
+        for row in self.catalog.months_for_year(year):
+            month = int(row["month"])
+            name = calendar.month_name[month] if 1 <= month <= 12 else str(month)
+            label = "%s  [COLOR=grey](%s)[/COLOR]" % (name, row["picture_count"])
+            items.append(
+                self.add_folder(
+                    label,
+                    "month",
+                    art=row.get("thumb_uri") or row.get("uri"),
+                    year=year,
+                    month=month,
+                )
+            )
+        self.finish(items, content="images", category=str(year))
+
+    def days(self, year: int, month: int):
+        items = []
+        month_name = calendar.month_name[month] if 1 <= month <= 12 else str(month)
+        for row in self.catalog.days_for_month(year, month):
+            day = int(row["day"])
+            label = "%d  [COLOR=grey](%s)[/COLOR]" % (day, row["picture_count"])
+            items.append(
+                self.add_folder(
+                    label,
+                    "day",
+                    art=row.get("thumb_uri") or row.get("uri"),
+                    year=year,
+                    month=month,
+                    day=day,
+                )
+            )
+        self.finish(items, content="images", category="%s %d" % (month_name, year))
 
     def cameras(self):
         items = []
@@ -580,8 +641,25 @@ class PluginUI:
         if route == "years":
             return self.years()
         if route == "year":
+            return self.months(int(params["year"]))
+        if route == "month":
+            return self.days(int(params["year"]), int(params["month"]))
+        if route == "day":
             year = int(params["year"])
-            return self.pictures(route, lambda limit, offset: self.catalog.pictures_for_year(year, limit, offset), params, str(year))
+            month = int(params["month"])
+            day = int(params["day"])
+            category = "%04d-%02d-%02d" % (year, month, day)
+            getter = lambda limit, offset: self.catalog.pictures_for_day(
+                year, month, day, limit, offset
+            )
+            return self.pictures(route, getter, params, category)
+        if route == "no-date":
+            return self.pictures(
+                route,
+                self.catalog.pictures_without_date,
+                params,
+                self.text(30034, "No date"),
+            )
         if route == "cameras":
             return self.cameras()
         if route == "camera":

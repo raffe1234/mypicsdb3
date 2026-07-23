@@ -116,6 +116,7 @@ SQLITE_SCHEMA = [
     "CREATE INDEX IF NOT EXISTS idx_pictures_added ON pictures(is_missing, discovered_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_pictures_random ON pictures(is_missing, random_key)",
     "CREATE INDEX IF NOT EXISTS idx_pictures_date_parts ON pictures(is_missing, taken_month, taken_day, taken_year)",
+    "CREATE INDEX IF NOT EXISTS idx_pictures_date_browse ON pictures(is_missing, taken_year, taken_month, taken_day, taken_at)",
     "CREATE INDEX IF NOT EXISTS idx_pictures_folder ON pictures(folder_id, is_missing)",
     "CREATE INDEX IF NOT EXISTS idx_pictures_camera ON pictures(is_missing, camera_make, camera_model)",
     "CREATE INDEX IF NOT EXISTS idx_pictures_favorite ON pictures(is_missing, favorite)",
@@ -202,6 +203,7 @@ MYSQL_SCHEMA = [
         INDEX idx_pictures_added (is_missing, discovered_at),
         INDEX idx_pictures_random (is_missing, random_key),
         INDEX idx_pictures_date_parts (is_missing, taken_month, taken_day, taken_year),
+        INDEX idx_pictures_date_browse (is_missing, taken_year, taken_month, taken_day, taken_at),
         INDEX idx_pictures_folder (folder_id, is_missing),
         INDEX idx_pictures_camera (is_missing, camera_make, camera_model),
         INDEX idx_pictures_favorite (is_missing, favorite)

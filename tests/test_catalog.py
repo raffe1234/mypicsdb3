@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 from mypicsdb3.config import Settings
 from mypicsdb3.db.catalog import Catalog
@@ -15,7 +16,13 @@ def make_catalog(tmp_path: Path) -> Catalog:
     return catalog
 
 
-def add_picture(catalog: Catalog, root: Path, name: str = "image.jpg") -> int:
+def add_picture(
+    catalog: Catalog,
+    root: Path,
+    name: str = "image.jpg",
+    taken_at: Optional[str] = "2020-07-17 14:15:16",
+    discovered_at: str = "2026-07-17 09:00:00",
+) -> int:
     source = catalog.sync_sources([{"label": "Photos", "uri": str(root)}])[0]
     catalog.set_source_enabled(source.id, True)
     now = utc_now()
@@ -31,9 +38,9 @@ def add_picture(catalog: Catalog, root: Path, name: str = "image.jpg") -> int:
                 "extension": "jpg",
                 "file_size": 123,
                 "file_mtime": 1000.0,
-                "discovered_at": "2026-07-17 09:00:00",
+                "discovered_at": discovered_at,
                 "last_seen_at": now,
-                "taken_at": "2020-07-17 14:15:16",
+                "taken_at": taken_at,
                 "taken_source": "EXIF DateTimeOriginal",
                 "width": 1920,
                 "height": 1080,
@@ -81,6 +88,38 @@ def test_catalog_queries_and_favorites(tmp_path: Path) -> None:
     assert catalog.favorites(10)[0]["id"] == picture_id
     assert catalog.rated(10)[0]["rating"] == 5
     assert catalog.geotagged(10)[0]["city"] == "Stockholm"
+
+
+def test_date_hierarchy_and_undated_queries(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "photos"
+    first = add_picture(catalog, root, "first.jpg", "2020-07-17 14:15:16")
+    second = add_picture(catalog, root, "second.jpg", "2020-07-18 09:00:00")
+    third = add_picture(catalog, root, "third.jpg", "2021-12-25 18:30:00")
+    undated = add_picture(
+        catalog,
+        root,
+        "undated.jpg",
+        None,
+        discovered_at="2026-07-20 11:00:00",
+    )
+
+    assert [(row["year"], row["picture_count"]) for row in catalog.years()] == [
+        (2021, 1),
+        (2020, 2),
+    ]
+    assert [(row["month"], row["picture_count"]) for row in catalog.months_for_year(2020)] == [
+        (7, 2),
+    ]
+    assert [(row["day"], row["picture_count"]) for row in catalog.days_for_month(2020, 7)] == [
+        (17, 1),
+        (18, 1),
+    ]
+    assert [row["id"] for row in catalog.pictures_for_day(2020, 7, 17, 10)] == [first]
+    assert [row["id"] for row in catalog.pictures_for_day(2020, 7, 18, 10)] == [second]
+    assert [row["id"] for row in catalog.pictures_for_day(2021, 12, 25, 10)] == [third]
+    assert catalog.undated_summary()["picture_count"] == 1
+    assert [row["id"] for row in catalog.pictures_without_date(10)] == [undated]
 
 
 def test_scan_lock_is_exclusive(tmp_path: Path) -> None:
