@@ -8,6 +8,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from .config import Settings
 from .db.catalog import Catalog
+from .db.locks import SCAN_LOCK_NAME
 from .filesystem import CancellationAwareFilesystem, Filesystem
 from .metadata import extract_metadata
 from .models import MetadataResult, ScanStats, Source
@@ -22,7 +23,6 @@ class ScanLockLost(RuntimeError):
     pass
 
 
-SCAN_LOCK_NAME = "catalogue-scan"
 SCAN_LOCK_TTL_SECONDS = 1800
 SCAN_LOCK_REFRESH_SECONDS = 60
 
