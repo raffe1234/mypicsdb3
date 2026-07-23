@@ -4,7 +4,7 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.12 release candidate. The catalogue, SQLite backend, scanner,
+> Status: 0.2.14 release candidate. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. Real Kodi installations are still required for platform and
 > large-library testing before calling the project production-stable.
@@ -358,8 +358,11 @@ tested by this project.
 SQLite is recommended for one Kodi device. The database is stored under the
 add-on profile directory and must not be moved to SMB/NFS.
 
-The current release records a schema version but does not yet implement database
-migrations between schema versions. Back up the add-on profile before testing a
+The current release uses a versioned migration runner for both SQLite and
+MySQL/MariaDB while the catalogue remains on schema version 1. Existing SQLite
+schema-1 databases receive an atomic, integrity-checked backup before migration
+history is registered. See
+[docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before testing a
 development build that changes the catalogue schema.
 
 MySQL/MariaDB is useful when several Kodi devices see identical picture URIs.

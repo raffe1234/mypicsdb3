@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.14 - 2026-07-23
+
+- Align the add-on, repository and core package release versions and update the
+  published release notes for the migration foundation.
+- Make source verification fail when the add-on, repository and Python package
+  versions differ.
+- Extend the MariaDB integration test to bootstrap migration history for an
+  existing schema-1 catalogue, preserve its data and verify an idempotent rerun.
+
 ## 0.2.13 - 2026-07-23
 
 - Add a versioned, checksummed migration runner while retaining schema version 1.

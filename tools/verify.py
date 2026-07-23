@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import py_compile
@@ -33,6 +34,44 @@ def parse_numeric_version(value: str, label: str) -> tuple[int, ...]:
     if not parts or any(not part.isdigit() for part in parts):
         fail("%s must be a dotted numeric version, got %r" % (label, value))
     return tuple(int(part) for part in parts)
+
+
+def read_python_package_version() -> str:
+    init_path = (
+        ROOT
+        / "plugin.image.mypicsdb3"
+        / "resources"
+        / "lib"
+        / "mypicsdb3"
+        / "__init__.py"
+    )
+    module = ast.parse(init_path.read_text(encoding="utf-8"), filename=str(init_path))
+    versions = []
+    for node in module.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == "VERSION" for target in node.targets):
+            continue
+        if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+            versions.append(node.value.value)
+    if len(versions) != 1:
+        fail("mypicsdb3.__init__ must define VERSION exactly once as a string")
+    return versions[0]
+
+
+def verify_release_versions() -> None:
+    versions = {
+        addon.name: ET.parse(addon / "addon.xml").getroot().attrib.get("version", "")
+        for addon in STATIC_ADDONS
+    }
+    versions["mypicsdb3 package"] = read_python_package_version()
+    for label, version in versions.items():
+        parse_numeric_version(version, "%s version" % label)
+    if len(set(versions.values())) != 1:
+        fail(
+            "Release versions differ: %s"
+            % ", ".join("%s=%s" % item for item in sorted(versions.items()))
+        )
 
 
 def verify_repository_manifest(addon: Path, root: ET.Element) -> None:
@@ -194,6 +233,7 @@ def compile_python() -> None:
 
 
 def main(extra_addons: Sequence[Path] = ()) -> int:
+    verify_release_versions()
     for addon in addon_dirs(extra_addons):
         verify_addon(addon)
     verify_text_and_xml()
