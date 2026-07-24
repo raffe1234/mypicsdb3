@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ..models import Source
+from ..rating_policy import RATING_POLICY_ALL, normalize_rating_policy, rating_sql_predicate
 from ..utils import (
     NON_INDEXABLE_PICTURE_SOURCE_URIS,
     is_indexable_picture_source_uri,
@@ -31,9 +32,27 @@ s.label AS source_label
 
 
 class Catalog:
-    def __init__(self, engine: DatabaseEngine, logger=None):
+    def __init__(self, engine: DatabaseEngine, logger=None, rating_policy: str = RATING_POLICY_ALL):
         self.engine = engine
         self.logger = logger
+        self.rating_policy = normalize_rating_policy(rating_policy)
+
+    def set_rating_policy(self, rating_policy: str) -> None:
+        self.rating_policy = normalize_rating_policy(rating_policy)
+
+    def _rating_predicate(self, column: str = "p.rating") -> Tuple[str, Sequence[Any]]:
+        return rating_sql_predicate(self.rating_policy, column)
+
+    def _apply_rating_policy(
+        self,
+        where: str,
+        params: Sequence[Any],
+        column: str = "p.rating",
+    ) -> Tuple[str, Tuple[Any, ...]]:
+        predicate, policy_params = self._rating_predicate(column)
+        if predicate:
+            where = "(%s) AND %s" % (where, predicate) if where else predicate
+        return where, (*params, *policy_params)
 
     def initialize(self):
         return MigrationRunner(self.engine, logger=self.logger).initialize()
@@ -315,6 +334,7 @@ class Catalog:
     # Browser and widget queries --------------------------------------------
 
     def _pictures(self, where: str, params: Sequence[Any], order: str, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
+        where, params = self._apply_rating_policy(where, params)
         query = "SELECT %s FROM pictures p JOIN folders f ON f.id=p.folder_id JOIN sources s ON s.id=p.source_id WHERE p.is_missing=0" % PICTURE_COLUMNS
         if where:
             query += " AND " + where
@@ -387,27 +407,39 @@ class Catalog:
         return first
 
     def _folder_rows(self, where: str, params: Sequence[Any], order: str, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
+        count_predicate, count_params = self._rating_predicate("pc.rating")
+        representative_predicate, representative_params = self._rating_predicate("pr.rating")
+        count_filter = " AND " + count_predicate if count_predicate else ""
+        representative_filter = " AND " + representative_predicate if representative_predicate else ""
         query = """SELECT f.*, p.uri AS representative_uri, p.thumb_uri AS representative_thumb,
-                   (SELECT COUNT(*) FROM pictures pc WHERE pc.folder_id=f.id AND pc.is_missing=0) AS picture_count,
+                   (SELECT COUNT(*) FROM pictures pc WHERE pc.folder_id=f.id AND pc.is_missing=0%s) AS picture_count,
                    s.label AS source_label
                    FROM folders f
                    JOIN sources s ON s.id=f.source_id
-                   LEFT JOIN pictures p ON p.id=f.representative_picture_id
-                   WHERE f.is_missing=0"""
+                   LEFT JOIN pictures p ON p.id=(
+                       SELECT pr.id FROM pictures pr
+                       WHERE pr.folder_id=f.id AND pr.is_missing=0%s
+                       ORDER BY COALESCE(pr.taken_at, pr.discovered_at) DESC, pr.id DESC LIMIT 1
+                   )
+                   WHERE f.is_missing=0""" % (count_filter, representative_filter)
         if where:
             query += " AND " + where
         query += " ORDER BY " + order + " LIMIT ? OFFSET ?"
         with self.engine.transaction() as connection:
-            return self.engine.fetchall(connection, query, (*params, limit, offset))
+            return self.engine.fetchall(
+                connection,
+                query,
+                (*count_params, *representative_params, *params, limit, offset),
+            )
 
     def recent_folders(self, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
-        return self._folder_rows("f.representative_picture_id IS NOT NULL", (), "f.latest_discovered_at DESC, f.id DESC", limit, offset)
+        return self._folder_rows("p.id IS NOT NULL", (), "f.latest_discovered_at DESC, f.id DESC", limit, offset)
 
     def random_folders(self, limit: int) -> List[Dict[str, Any]]:
         seed = random.random()
-        first = self._folder_rows("f.representative_picture_id IS NOT NULL AND f.random_key>=?", (seed,), "f.random_key", limit)
+        first = self._folder_rows("p.id IS NOT NULL AND f.random_key>=?", (seed,), "f.random_key", limit)
         if len(first) < limit:
-            first.extend(self._folder_rows("f.representative_picture_id IS NOT NULL AND f.random_key<?", (seed,), "f.random_key", limit - len(first)))
+            first.extend(self._folder_rows("p.id IS NOT NULL AND f.random_key<?", (seed,), "f.random_key", limit - len(first)))
         return first
 
     def source_root_folders(self, source_id: int) -> List[Dict[str, Any]]:
@@ -421,33 +453,40 @@ class Catalog:
             return self.engine.fetchone(connection, "SELECT f.*, s.label AS source_label FROM folders f JOIN sources s ON s.id=f.source_id WHERE f.id=?", (folder_id,))
 
     def years(self) -> List[Dict[str, Any]]:
+        predicate, policy_params = self._rating_predicate("rating")
+        policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(
                 connection,
-                "SELECT taken_year AS year, COUNT(*) AS picture_count "
-                "FROM pictures WHERE is_missing=0 AND taken_year IS NOT NULL "
-                "GROUP BY taken_year ORDER BY taken_year DESC",
+                (
+                    "SELECT taken_year AS year, COUNT(*) AS picture_count "
+                    "FROM pictures WHERE is_missing=0 AND taken_year IS NOT NULL%s "
+                    "GROUP BY taken_year ORDER BY taken_year DESC"
+                ) % policy_sql,
+                policy_params,
             )
             for group in groups:
                 rep = self.engine.fetchone(
                     connection,
                     "SELECT uri, thumb_uri FROM pictures "
-                    "WHERE is_missing=0 AND taken_year=? "
-                    "ORDER BY taken_at DESC, id DESC LIMIT 1",
-                    (group["year"],),
+                    "WHERE is_missing=0 AND taken_year=?%s "
+                    "ORDER BY taken_at DESC, id DESC LIMIT 1" % policy_sql,
+                    (group["year"], *policy_params),
                 )
                 group.update(rep or {})
             return groups
 
     def months_for_year(self, year: int) -> List[Dict[str, Any]]:
+        predicate, policy_params = self._rating_predicate("rating")
+        policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(
                 connection,
                 "SELECT taken_month AS date_value, COUNT(*) AS picture_count "
                 "FROM pictures WHERE is_missing=0 AND taken_year=? "
-                "AND taken_month IS NOT NULL "
-                "GROUP BY taken_month ORDER BY taken_month",
-                (year,),
+                "AND taken_month IS NOT NULL%s "
+                "GROUP BY taken_month ORDER BY taken_month" % policy_sql,
+                (year, *policy_params),
             )
             result = []
             for group in groups:
@@ -455,9 +494,9 @@ class Catalog:
                 rep = self.engine.fetchone(
                     connection,
                     "SELECT uri, thumb_uri FROM pictures "
-                    "WHERE is_missing=0 AND taken_year=? AND taken_month=? "
-                    "ORDER BY taken_at DESC, id DESC LIMIT 1",
-                    (year, month),
+                    "WHERE is_missing=0 AND taken_year=? AND taken_month=?%s "
+                    "ORDER BY taken_at DESC, id DESC LIMIT 1" % policy_sql,
+                    (year, month, *policy_params),
                 )
                 row = {"month": month, "picture_count": int(group["picture_count"])}
                 row.update(rep or {})
@@ -465,14 +504,16 @@ class Catalog:
             return result
 
     def days_for_month(self, year: int, month: int) -> List[Dict[str, Any]]:
+        predicate, policy_params = self._rating_predicate("rating")
+        policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(
                 connection,
                 "SELECT taken_day AS date_value, COUNT(*) AS picture_count "
                 "FROM pictures WHERE is_missing=0 AND taken_year=? AND taken_month=? "
-                "AND taken_day IS NOT NULL "
-                "GROUP BY taken_day ORDER BY taken_day",
-                (year, month),
+                "AND taken_day IS NOT NULL%s "
+                "GROUP BY taken_day ORDER BY taken_day" % policy_sql,
+                (year, month, *policy_params),
             )
             result = []
             for group in groups:
@@ -480,9 +521,9 @@ class Catalog:
                 rep = self.engine.fetchone(
                     connection,
                     "SELECT uri, thumb_uri FROM pictures "
-                    "WHERE is_missing=0 AND taken_year=? AND taken_month=? AND taken_day=? "
-                    "ORDER BY taken_at DESC, id DESC LIMIT 1",
-                    (year, month, day),
+                    "WHERE is_missing=0 AND taken_year=? AND taken_month=? AND taken_day=?%s "
+                    "ORDER BY taken_at DESC, id DESC LIMIT 1" % policy_sql,
+                    (year, month, day, *policy_params),
                 )
                 row = {"day": day, "picture_count": int(group["picture_count"])}
                 row.update(rep or {})
@@ -490,11 +531,14 @@ class Catalog:
             return result
 
     def undated_summary(self) -> Optional[Dict[str, Any]]:
+        predicate, policy_params = self._rating_predicate("rating")
+        policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             count = self.engine.fetchone(
                 connection,
                 "SELECT COUNT(*) AS picture_count FROM pictures "
-                "WHERE is_missing=0 AND taken_at IS NULL",
+                "WHERE is_missing=0 AND taken_at IS NULL%s" % policy_sql,
+                policy_params,
             )
             total = int((count or {}).get("picture_count") or 0)
             if total == 0:
@@ -502,31 +546,36 @@ class Catalog:
             rep = self.engine.fetchone(
                 connection,
                 "SELECT uri, thumb_uri FROM pictures "
-                "WHERE is_missing=0 AND taken_at IS NULL "
-                "ORDER BY discovered_at DESC, id DESC LIMIT 1",
+                "WHERE is_missing=0 AND taken_at IS NULL%s "
+                "ORDER BY discovered_at DESC, id DESC LIMIT 1" % policy_sql,
+                policy_params,
             )
             row: Dict[str, Any] = {"picture_count": total}
             row.update(rep or {})
             return row
 
     def cameras(self) -> List[Dict[str, Any]]:
+        predicate, policy_params = self._rating_predicate("rating")
+        policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(connection, """SELECT COALESCE(camera_make,'') AS camera_make, COALESCE(camera_model,'') AS camera_model, COUNT(*) AS picture_count
                 FROM pictures WHERE is_missing=0 AND (camera_make IS NOT NULL OR camera_model IS NOT NULL)
-                GROUP BY COALESCE(camera_make,''), COALESCE(camera_model,'') ORDER BY picture_count DESC, camera_make, camera_model""")
+                %s GROUP BY COALESCE(camera_make,''), COALESCE(camera_model,'') ORDER BY picture_count DESC, camera_make, camera_model""" % policy_sql, policy_params)
             for group in groups:
-                rep = self.engine.fetchone(connection, "SELECT uri, thumb_uri FROM pictures WHERE is_missing=0 AND COALESCE(camera_make,'')=? AND COALESCE(camera_model,'')=? ORDER BY COALESCE(taken_at, discovered_at) DESC LIMIT 1", (group["camera_make"], group["camera_model"]))
+                rep = self.engine.fetchone(connection, "SELECT uri, thumb_uri FROM pictures WHERE is_missing=0 AND COALESCE(camera_make,'')=? AND COALESCE(camera_model,'')=?%s ORDER BY COALESCE(taken_at, discovered_at) DESC LIMIT 1" % policy_sql, (group["camera_make"], group["camera_model"], *policy_params))
                 group.update(rep or {})
             return groups
 
     def tags(self) -> List[Dict[str, Any]]:
+        predicate, policy_params = self._rating_predicate("p.rating")
+        policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(connection, """SELECT t.id, t.name, COUNT(*) AS picture_count
                 FROM tags t JOIN picture_tags pt ON pt.tag_id=t.id JOIN pictures p ON p.id=pt.picture_id
-                WHERE p.is_missing=0 GROUP BY t.id, t.name ORDER BY picture_count DESC, t.name""")
+                WHERE p.is_missing=0%s GROUP BY t.id, t.name ORDER BY picture_count DESC, t.name""" % policy_sql, policy_params)
             for group in groups:
                 rep = self.engine.fetchone(connection, """SELECT p.uri, p.thumb_uri FROM pictures p JOIN picture_tags pt ON pt.picture_id=p.id
-                    WHERE p.is_missing=0 AND pt.tag_id=? ORDER BY COALESCE(p.taken_at, p.discovered_at) DESC LIMIT 1""", (group["id"],))
+                    WHERE p.is_missing=0 AND pt.tag_id=?%s ORDER BY COALESCE(p.taken_at, p.discovered_at) DESC LIMIT 1""" % policy_sql, (group["id"], *policy_params))
                 group.update(rep or {})
             return groups
 

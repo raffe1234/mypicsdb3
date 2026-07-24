@@ -19,6 +19,11 @@ from .preferences import (
     serialize_home_layout,
     serialize_persisted_home_layout,
 )
+from .rating_policy import (
+    RATING_POLICY_ALL,
+    normalize_rating_policy,
+    rating_policy_label,
+)
 from .router import Request
 from .scanner import Scanner
 from .utils import parse_bool, plugin_url, safe_limit
@@ -39,6 +44,42 @@ class PluginUI:
 
     def url(self, route: str, **params: Any) -> str:
         return plugin_url(self.base_url, route, **params)
+
+    def _configured_rating_policy(self) -> str:
+        return normalize_rating_policy(
+            getattr(self.kodi.settings, "minimum_rating_policy", RATING_POLICY_ALL)
+        )
+
+    def _effective_rating_policy(self, params: Optional[Dict[str, str]] = None) -> str:
+        configured = self._configured_rating_policy()
+        if configured != RATING_POLICY_ALL and (params or {}).get("rating_policy") == RATING_POLICY_ALL:
+            return RATING_POLICY_ALL
+        return configured
+
+    def _rating_route_params(self, params: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+        configured = self._configured_rating_policy()
+        if configured != RATING_POLICY_ALL and self._effective_rating_policy(params) == RATING_POLICY_ALL:
+            return {"rating_policy": RATING_POLICY_ALL}
+        return {}
+
+    def _rating_label(self, policy: str) -> str:
+        normalized = normalize_rating_policy(policy)
+        if normalized == RATING_POLICY_ALL:
+            return self.text(30053, "All pictures")
+        if normalized == "rated_and_unrated":
+            return self.text(32401, "Rated and unrated (exclude rating 0)")
+        return rating_policy_label(normalized)
+
+    def _rating_category(self, category: str, params: Optional[Dict[str, str]] = None) -> str:
+        configured = self._configured_rating_policy()
+        if configured == RATING_POLICY_ALL:
+            return category
+        effective = self._effective_rating_policy(params)
+        if effective == RATING_POLICY_ALL:
+            policy = self.text(30072, "Temporary: all pictures")
+        else:
+            policy = self.text(30069, "Minimum rating: %s") % self._rating_label(effective)
+        return "%s  [COLOR=grey](%s)[/COLOR]" % (category, policy)
 
     def _item(self, label: str, art: Optional[str] = None, path: Optional[str] = None) -> xbmcgui.ListItem:
         item = xbmcgui.ListItem(label=label, path=path or "")
@@ -75,28 +116,48 @@ class PluginUI:
         if view_mode:
             xbmc.executebuiltin("Container.SetViewMode(%d)" % view_mode)
 
-    def root(self):
+    def root(self, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
         items = [
-            self.add_folder(self.text(30000, "Picture sources"), "sources"),
-            self.add_folder(self.text(30001, "Recently taken"), "recent-taken"),
-            self.add_folder(self.text(30002, "Recently added"), "recent-added"),
-            self.add_folder(self.text(30003, "Random memories"), "random"),
-            self.add_folder(self.text(30004, "Recent albums"), "recent-folders"),
-            self.add_folder(self.text(30005, "Random albums"), "random-folders"),
-            self.add_folder(self.text(30006, "On this day"), "on-this-day"),
-            self.add_folder(self.text(30007, "Years"), "years"),
-            self.add_folder(self.text(30008, "Cameras"), "cameras"),
-            self.add_folder(self.text(30009, "Keywords"), "keywords"),
-            self.add_folder(self.text(30010, "Favorites"), "favorites"),
-            self.add_folder(self.text(30011, "Rated pictures"), "rated"),
-            self.add_folder(self.text(30012, "Geotagged pictures"), "geotagged"),
+            self.add_folder(self.text(30000, "Picture sources"), "sources", **rating_params),
+            self.add_folder(self.text(30001, "Recently taken"), "recent-taken", **rating_params),
+            self.add_folder(self.text(30002, "Recently added"), "recent-added", **rating_params),
+            self.add_folder(self.text(30003, "Random memories"), "random", **rating_params),
+            self.add_folder(self.text(30004, "Recent albums"), "recent-folders", **rating_params),
+            self.add_folder(self.text(30005, "Random albums"), "random-folders", **rating_params),
+            self.add_folder(self.text(30006, "On this day"), "on-this-day", **rating_params),
+            self.add_folder(self.text(30007, "Years"), "years", **rating_params),
+            self.add_folder(self.text(30008, "Cameras"), "cameras", **rating_params),
+            self.add_folder(self.text(30009, "Keywords"), "keywords", **rating_params),
+            self.add_folder(self.text(30010, "Favorites"), "favorites", **rating_params),
+            self.add_folder(self.text(30011, "Rated pictures"), "rated", **rating_params),
+            self.add_folder(self.text(30012, "Geotagged pictures"), "geotagged", **rating_params),
             self.add_action(self.text(30013, "Scan now"), "action/scan"),
             self.add_folder(self.text(30014, "Scan status"), "status"),
             self.add_action(self.text(30015, "Settings"), "action/settings"),
         ]
+        configured = self._configured_rating_policy()
+        if configured != RATING_POLICY_ALL:
+            effective = self._effective_rating_policy(params)
+            status = self.text(30069, "Minimum rating: %s") % self._rating_label(configured)
+            items.insert(0, self.add_action(status, "action/settings"))
+            if effective == RATING_POLICY_ALL:
+                items.insert(1, self.add_folder(self.text(30071, "Use configured rating filter"), ""))
+            else:
+                items.insert(
+                    1,
+                    self.add_folder(
+                        self.text(30070, "Show all pictures temporarily"),
+                        "",
+                        rating_policy=RATING_POLICY_ALL,
+                    ),
+                )
         self.finish(items, content="files", category=self.text(30056, "MyPicsDB 3"))
 
-    def sources(self):
+    def sources(self, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
         try:
             self.catalog.sync_sources(self.kodi.kodi_picture_sources())
         except Exception as exc:
@@ -111,24 +172,26 @@ class PluginUI:
             toggle_label = self.text(30064, "Disable source") if source.enabled else self.text(30063, "Enable source")
             context = [(toggle_label, toggle), (self.text(30021, "Scan selected source"), scan)]
             if source.enabled:
-                items.append(self.add_folder(label, "source", art=self.icon, context=context, id=source.id))
+                items.append(self.add_folder(label, "source", art=self.icon, context=context, id=source.id, **rating_params))
             else:
                 items.append(self.add_action(label, "action/toggle-source", context=context, id=source.id))
-        self.finish(items, content="files", category=self.text(30000, "Picture sources"))
+        self.finish(items, content="files", category=self._rating_category(self.text(30000, "Picture sources"), params))
 
-    def source(self, source_id: int):
+    def source(self, source_id: int, params: Optional[Dict[str, str]] = None):
+        params = params or {}
         source = self.catalog.get_source(source_id)
         if not source:
             self.finish([], category=self.text(30000, "Picture sources"))
             return
         folders = self.catalog.source_root_folders(source_id)
-        items = [self._folder_item(folder) for folder in folders]
-        self.finish(items, content="images", category=source.label)
+        items = [self._folder_item(folder, browse_params=params) for folder in folders]
+        self.finish(items, content="images", category=self._rating_category(source.label, params))
 
     def _picture_item(
         self,
         row: Dict[str, Any],
         extra_context: Optional[List[Tuple[str, str]]] = None,
+        browse_params: Optional[Dict[str, str]] = None,
     ) -> Tuple[str, xbmcgui.ListItem, bool]:
         date_text = str(row.get("taken_at") or row.get("discovered_at") or "")
         label = row.get("filename") or date_text or self.text(30031, "Picture")
@@ -156,7 +219,7 @@ class PluginUI:
         toggle = "RunPlugin(%s)" % self.url("action/toggle-favorite", id=row.get("id"))
         context = [(self.text(30022, "Toggle favorite"), toggle)]
         if row.get("folder_id"):
-            context.append((self.text(30023, "Open containing album"), "ActivateWindow(Pictures,%s,return)" % self.url("folder", id=row["folder_id"])))
+            context.append((self.text(30023, "Open containing album"), "ActivateWindow(Pictures,%s,return)" % self.url("folder", id=row["folder_id"], **self._rating_route_params(browse_params))))
         if extra_context:
             context.extend(extra_context)
         item.addContextMenuItems(context)
@@ -166,6 +229,7 @@ class PluginUI:
         self,
         row: Dict[str, Any],
         extra_context: Optional[List[Tuple[str, str]]] = None,
+        browse_params: Optional[Dict[str, str]] = None,
     ) -> Tuple[str, xbmcgui.ListItem, bool]:
         count = int(row.get("picture_count") or 0)
         label = "%s  [COLOR=grey](%d)[/COLOR]" % (row.get("name") or self.text(30032, "Album"), count)
@@ -175,7 +239,14 @@ class PluginUI:
             context.append(("Slideshow", "SlideShow(%s,recursive)" % row["uri"]))
         if extra_context:
             context.extend(extra_context)
-        return self.add_folder(label, "folder", art=art, context=context, id=row["id"])
+        return self.add_folder(
+            label,
+            "folder",
+            art=art,
+            context=context,
+            id=row["id"],
+            **self._rating_route_params(browse_params),
+        )
 
     def _album_view_context(self) -> List[Tuple[str, str]]:
         return [(
@@ -210,7 +281,7 @@ class PluginUI:
         limit = safe_limit(params.get("limit"), default_limit)
         offset = int(params.get("offset", "0") or 0)
         rows = getter(limit, offset)
-        items = [self._picture_item(row) for row in rows]
+        items = [self._picture_item(row, browse_params=params) for row in rows]
         if not random_view and len(rows) == limit and not is_widget and "limit" not in params:
             page_params = {
                 key: value
@@ -218,7 +289,12 @@ class PluginUI:
                 if key not in {"offset", "limit", "widget"}
             }
             items.append(self._next_page_item(route, offset, limit, **page_params))
-        self.finish(items, content="images", cache=False, category=category)
+        self.finish(
+            items,
+            content="images",
+            cache=False,
+            category=self._rating_category(category, params),
+        )
 
     def folder(self, folder_id: int, params: Dict[str, str]):
         folder = self.catalog.get_folder(folder_id)
@@ -231,11 +307,11 @@ class PluginUI:
         pictures = self.catalog.pictures_in_folder(folder_id, limit, offset)
         album_view_context = self._album_view_context()
         items = [
-            self._folder_item(row, extra_context=album_view_context)
+            self._folder_item(row, extra_context=album_view_context, browse_params=params)
             for row in child_folders
         ]
         items.extend(
-            self._picture_item(row, extra_context=album_view_context)
+            self._picture_item(row, extra_context=album_view_context, browse_params=params)
             for row in pictures
         )
         if len(pictures) == limit:
@@ -251,14 +327,24 @@ class PluginUI:
         self.finish(
             items,
             content="images",
-            category=folder.get("name") or self.text(30032, "Albums"),
+            category=self._rating_category(
+                folder.get("name") or self.text(30032, "Albums"),
+                params,
+            ),
             view_mode=self.kodi.settings.album_view_mode,
         )
 
-    def folders(self, route: str, rows: List[Dict[str, Any]], category: str):
-        self.finish([self._folder_item(row) for row in rows], content="images", category=category)
+    def folders(self, route: str, rows: List[Dict[str, Any]], category: str, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        self.finish(
+            [self._folder_item(row, browse_params=params) for row in rows],
+            content="images",
+            category=self._rating_category(category, params),
+        )
 
-    def years(self):
+    def years(self, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
         items = []
         for row in self.catalog.years():
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (row["year"], row["picture_count"])
@@ -268,6 +354,7 @@ class PluginUI:
                     "year",
                     art=row.get("thumb_uri") or row.get("uri"),
                     year=row["year"],
+                    **rating_params,
                 )
             )
         undated = self.catalog.undated_summary()
@@ -281,11 +368,14 @@ class PluginUI:
                     label,
                     "no-date",
                     art=undated.get("thumb_uri") or undated.get("uri"),
+                    **rating_params,
                 )
             )
-        self.finish(items, content="images", category=self.text(30007, "Years"))
+        self.finish(items, content="images", category=self._rating_category(self.text(30007, "Years"), params))
 
-    def months(self, year: int):
+    def months(self, year: int, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
         items = []
         for row in self.catalog.months_for_year(year):
             month = int(row["month"])
@@ -298,11 +388,14 @@ class PluginUI:
                     art=row.get("thumb_uri") or row.get("uri"),
                     year=year,
                     month=month,
+                    **rating_params,
                 )
             )
-        self.finish(items, content="images", category=str(year))
+        self.finish(items, content="images", category=self._rating_category(str(year), params))
 
-    def days(self, year: int, month: int):
+    def days(self, year: int, month: int, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
         items = []
         month_name = calendar.month_name[month] if 1 <= month <= 12 else str(month)
         for row in self.catalog.days_for_month(year, month):
@@ -316,24 +409,33 @@ class PluginUI:
                     year=year,
                     month=month,
                     day=day,
+                    **rating_params,
                 )
             )
-        self.finish(items, content="images", category="%s %d" % (month_name, year))
+        self.finish(
+            items,
+            content="images",
+            category=self._rating_category("%s %d" % (month_name, year), params),
+        )
 
-    def cameras(self):
+    def cameras(self, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
         items = []
         for row in self.catalog.cameras():
             name = " ".join(filter(None, [row.get("camera_make"), row.get("camera_model")])) or self.text(30033, "Unknown camera")
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (name, row["picture_count"])
-            items.append(self.add_folder(label, "camera", art=row.get("thumb_uri") or row.get("uri"), make=row.get("camera_make", ""), model=row.get("camera_model", "")))
-        self.finish(items, content="images", category=self.text(30008, "Cameras"))
+            items.append(self.add_folder(label, "camera", art=row.get("thumb_uri") or row.get("uri"), make=row.get("camera_make", ""), model=row.get("camera_model", ""), **rating_params))
+        self.finish(items, content="images", category=self._rating_category(self.text(30008, "Cameras"), params))
 
-    def keywords(self):
+    def keywords(self, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
         items = []
         for row in self.catalog.tags():
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (row["name"], row["picture_count"])
-            items.append(self.add_folder(label, "tag", art=row.get("thumb_uri") or row.get("uri"), id=row["id"]))
-        self.finish(items, content="images", category=self.text(30009, "Keywords"))
+            items.append(self.add_folder(label, "tag", art=row.get("thumb_uri") or row.get("uri"), id=row["id"], **rating_params))
+        self.finish(items, content="images", category=self._rating_category(self.text(30009, "Keywords"), params))
 
     def _configure_home_screen(self) -> None:
         persisted_layout = parse_persisted_home_layout(
@@ -606,14 +708,16 @@ class PluginUI:
     def dispatch(self, request: Request):
         route = request.route
         params = request.params
+        if hasattr(self.catalog, "set_rating_policy"):
+            self.catalog.set_rating_policy(self._effective_rating_policy(params))
         if not route:
-            return self.root()
+            return self.root(params)
         if route.startswith("action/"):
             return self.action(route, params)
         if route == "sources":
-            return self.sources()
+            return self.sources(params)
         if route == "source":
-            return self.source(int(params["id"]))
+            return self.source(int(params["id"]), params)
         if route == "folder":
             return self.folder(int(params["id"]), params)
         if route == "recent-taken":
@@ -622,7 +726,10 @@ class PluginUI:
             return self.pictures(route, self.catalog.recent_added, params, self.text(30002, "Recently added"))
         if route == "random":
             limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit)
-            return self.finish([self._picture_item(row) for row in self.catalog.random_pictures(limit)], category=self.text(30003, "Random memories"))
+            return self.finish(
+                [self._picture_item(row, browse_params=params) for row in self.catalog.random_pictures(limit)],
+                category=self._rating_category(self.text(30003, "Random memories"), params),
+            )
         if route == "recent-folders":
             default_limit = (
                 self.kodi.settings.widget_limit
@@ -630,20 +737,20 @@ class PluginUI:
                 else self.kodi.settings.browser_page_size
             )
             limit = safe_limit(params.get("limit"), default_limit)
-            return self.folders(route, self.catalog.recent_folders(limit), self.text(30004, "Recent albums"))
+            return self.folders(route, self.catalog.recent_folders(limit), self.text(30004, "Recent albums"), params)
         if route == "random-folders":
             limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit)
-            return self.folders(route, self.catalog.random_folders(limit), self.text(30005, "Random albums"))
+            return self.folders(route, self.catalog.random_folders(limit), self.text(30005, "Random albums"), params)
         if route == "on-this-day":
             now = datetime.now()
             getter = lambda limit, offset: self.catalog.on_this_day(now.month, now.day, now.year, limit, offset)
             return self.pictures(route, getter, params, self.text(30006, "On this day"))
         if route == "years":
-            return self.years()
+            return self.years(params)
         if route == "year":
-            return self.months(int(params["year"]))
+            return self.months(int(params["year"]), params)
         if route == "month":
-            return self.days(int(params["year"]), int(params["month"]))
+            return self.days(int(params["year"]), int(params["month"]), params)
         if route == "day":
             year = int(params["year"])
             month = int(params["month"])
@@ -661,13 +768,13 @@ class PluginUI:
                 self.text(30034, "No date"),
             )
         if route == "cameras":
-            return self.cameras()
+            return self.cameras(params)
         if route == "camera":
             make, model = params.get("make", ""), params.get("model", "")
             title = " ".join(filter(None, [make, model])) or self.text(30033, "Unknown camera")
             return self.pictures(route, lambda limit, offset: self.catalog.pictures_for_camera(make, model, limit, offset), params, title)
         if route == "keywords":
-            return self.keywords()
+            return self.keywords(params)
         if route == "tag":
             tag_id = int(params["id"])
             return self.pictures(route, lambda limit, offset: self.catalog.pictures_for_tag(tag_id, limit, offset), params, self.text(30009, "Keywords"))
@@ -680,4 +787,4 @@ class PluginUI:
         if route == "status":
             return self.status()
         self.kodi.log.warning("Unknown route: %s", route)
-        return self.root()
+        return self.root(params)

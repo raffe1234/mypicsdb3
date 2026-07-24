@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.16 - 2026-07-24
+
+- Add a local minimum-rating display policy without changing database schema 2.
+- Distinguish pictures without a stored rating from pictures with explicit rating 0.
+- Apply the policy consistently to picture lists, widgets, album counts and artwork,
+  date groups, cameras and keywords while leaving scans and stored metadata unchanged.
+- Show the active policy in Kodi and allow a temporary all-pictures browsing session.
+- Add SQLite coverage and an opt-in MySQL/MariaDB parity test.
+
 ## 0.2.15 - 2026-07-23
 
 - Add schema version 2 with an idempotent year-first date-browsing index for

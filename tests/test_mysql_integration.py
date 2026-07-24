@@ -8,6 +8,7 @@ from mypicsdb3.config import Settings
 from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
 from mypicsdb3.db.schema import create_schema
+from mypicsdb3.utils import utc_now
 
 
 pytestmark = pytest.mark.skipif(
@@ -118,6 +119,53 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
     assert [row["version"] for row in history] == [1, 2]
-    assert {row["addon_version"] for row in history} == {"0.2.15"}
+    assert {row["addon_version"] for row in history} == {"0.2.16"}
     assert count["total"] == 2
     assert index is not None
+
+
+def test_mysql_rating_policy_matches_group_counts_and_picture_results(tmp_path) -> None:
+    catalog = Catalog(DatabaseEngine(mysql_settings(tmp_path)))
+    catalog.initialize()
+    source = catalog.sync_sources([{"label": "Photos", "uri": "/srv/photos"}])[0]
+    now = utc_now()
+    with catalog.engine.transaction() as connection:
+        folder_id = catalog.upsert_folder(
+            connection,
+            source.id,
+            "/srv/photos/",
+            "",
+            "Photos",
+            now,
+        )
+        for index, rating in enumerate((None, 0, 3), start=1):
+            catalog.insert_picture(
+                connection,
+                {
+                    "source_id": source.id,
+                    "folder_id": folder_id,
+                    "uri": "/srv/photos/image-%d.jpg" % index,
+                    "filename": "image-%d.jpg" % index,
+                    "extension": "jpg",
+                    "file_size": 100,
+                    "file_mtime": float(index),
+                    "discovered_at": "2026-07-24 0%d:00:00" % index,
+                    "last_seen_at": now,
+                    "taken_at": "2020-07-17 0%d:00:00" % index,
+                    "taken_source": "XMP",
+                    "rating": rating,
+                    "metadata_hash": "rating-%d" % index,
+                    "thumb_uri": "/srv/photos/image-%d.jpg" % index,
+                },
+                ["Shared"],
+            )
+        catalog.update_folder_summaries(connection, source.id)
+
+    catalog.set_rating_policy("rated_and_unrated")
+    assert {row["rating"] for row in catalog.recent_added(10)} == {None, 3}
+
+    catalog.set_rating_policy("3")
+    assert [row["rating"] for row in catalog.recent_added(10)] == [3]
+    assert catalog.years()[0]["picture_count"] == 1
+    assert catalog.recent_folders(10)[0]["picture_count"] == 1
+    assert catalog.tags()[0]["picture_count"] == 1

@@ -4,7 +4,7 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.15 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.16 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-2 migration, backup and restore, date
 > browsing and large-library behaviour still require documented validation on
@@ -23,6 +23,8 @@ indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
   deletion of every picture.
 - Lazy Kodi thumbnail caching; no duplicate thumbnail tree is generated.
 - Favorites, ratings, keywords, cameras, year/month/day and geotagged views.
+- Optional global minimum-rating display policy for normal browser and widget
+  views, with a temporary all-pictures override.
 - Stable widget endpoints for configurable skins.
 - Optional **Estuary MyPicsDB 3** skin with picture rows on the home screen.
 - GitHub Actions, Kodi repository generation and GitHub Pages deployment.
@@ -45,6 +47,7 @@ plugin://plugin.image.mypicsdb3/geotagged?limit=15
 ```
 
 Widget calls only read indexed database rows. They never scan picture sources.
+They use the local **Minimum picture rating** display policy.
 
 ## Quick install and setup
 
@@ -296,7 +299,25 @@ The background service detects a local date change while Kodi is running and
 refreshes date-sensitive views. On the Estuary MyPicsDB 3 home screen, the skin
 is reloaded once after midnight so **On this day** changes without manual action.
 
-### 5. Configure automatic scanning
+### 5. Configure the minimum-rating display policy
+
+Open **MyPicsDB 3 > Settings > General > Minimum picture rating** to choose
+which pictures normal browser and widget views should show:
+
+- **All pictures** includes pictures with no stored rating, explicit rating 0,
+  and ratings 1 through 5.
+- **Rated and unrated (exclude rating 0)** includes pictures with no stored
+  rating and ratings 1 through 5, but hides explicit rating 0.
+- **Rating 1 or higher** through **Rating 5** show only pictures at or above
+  the selected threshold.
+
+The policy applies to picture lists, album counts and representative artwork,
+date groups, cameras, keywords and home-screen widgets. It does not change
+scanning, metadata extraction or stored database values. The active policy is
+shown in the browser category. Open **Show all pictures temporarily** from the
+add-on main menu to bypass the configured policy for that browsing session.
+
+### 6. Configure automatic scanning
 
 Open **MyPicsDB 3 > Settings > Scanning** and enable **Enable automatic
 scanning**. Set **Automatic scan interval (hours)** to any whole number from 1

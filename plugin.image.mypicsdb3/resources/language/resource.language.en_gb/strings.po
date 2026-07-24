@@ -722,3 +722,51 @@ msgstr "Cancel"
 msgctxt "#32227"
 msgid "Defaults"
 msgstr "Defaults"
+
+msgctxt "#30069"
+msgid "Minimum rating: %s"
+msgstr "Minimum rating: %s"
+
+msgctxt "#30070"
+msgid "Show all pictures temporarily"
+msgstr "Show all pictures temporarily"
+
+msgctxt "#30071"
+msgid "Use configured rating filter"
+msgstr "Use configured rating filter"
+
+msgctxt "#30072"
+msgid "Temporary: all pictures"
+msgstr "Temporary: all pictures"
+
+msgctxt "#32400"
+msgid "Minimum picture rating"
+msgstr "Minimum picture rating"
+
+msgctxt "#32401"
+msgid "Rated and unrated (exclude rating 0)"
+msgstr "Rated and unrated (exclude rating 0)"
+
+msgctxt "#32402"
+msgid "Rating 1 or higher"
+msgstr "Rating 1 or higher"
+
+msgctxt "#32403"
+msgid "Rating 2 or higher"
+msgstr "Rating 2 or higher"
+
+msgctxt "#32404"
+msgid "Rating 3 or higher"
+msgstr "Rating 3 or higher"
+
+msgctxt "#32405"
+msgid "Rating 4 or higher"
+msgstr "Rating 4 or higher"
+
+msgctxt "#32406"
+msgid "Rating 5"
+msgstr "Rating 5"
+
+msgctxt "#32407"
+msgid "Filters normal picture, album, date, camera, keyword and widget views. Unrated pictures have no stored rating; rating 0 is an explicit zero rating. Scanning and stored metadata are not changed."
+msgstr "Filters normal picture, album, date, camera, keyword and widget views. Unrated pictures have no stored rating; rating 0 is an explicit zero rating. Scanning and stored metadata are not changed."
