@@ -170,3 +170,99 @@ def test_mysql_rating_policy_matches_group_counts_and_picture_results(tmp_path) 
     assert catalog.years()[0]["picture_count"] == 1
     assert catalog.recent_folders(10)[0]["picture_count"] == 1
     assert catalog.tags()[0]["picture_count"] == 1
+
+
+def test_mysql_query_model_matches_page_count_and_minimum_rating_policy(tmp_path) -> None:
+    catalog = Catalog(DatabaseEngine(mysql_settings(tmp_path)))
+    catalog.initialize()
+    source = catalog.sync_sources([{"label": "Photos", "uri": "/srv/query-model"}])[0]
+    now = utc_now()
+    with catalog.engine.transaction() as connection:
+        folder_id = catalog.upsert_folder(
+            connection,
+            source.id,
+            "/srv/query-model/",
+            "",
+            "Query model",
+            now,
+        )
+        for index, (name, rating, favorite, keyword) in enumerate(
+            (
+                ("selected.jpg", 5, 1, "Summer"),
+                ("low.jpg", 2, 1, "Summer"),
+                ("other.jpg", 5, 0, "Winter"),
+            ),
+            start=1,
+        ):
+            picture_id = catalog.insert_picture(
+                connection,
+                {
+                    "source_id": source.id,
+                    "folder_id": folder_id,
+                    "uri": "/srv/query-model/" + name,
+                    "filename": name,
+                    "extension": "jpg",
+                    "file_size": 100,
+                    "file_mtime": float(index),
+                    "discovered_at": "2026-07-24 0%d:00:00" % index,
+                    "last_seen_at": now,
+                    "taken_at": "2020-07-%02d 10:00:00" % (16 + index),
+                    "taken_source": "EXIF",
+                    "camera_make": "Canon",
+                    "camera_model": "EOS R6",
+                    "rating": rating,
+                    "metadata_hash": "query-model-%d" % index,
+                    "thumb_uri": "/srv/query-model/" + name,
+                },
+                [keyword],
+            )
+            if favorite:
+                catalog.engine.execute(
+                    connection,
+                    "UPDATE pictures SET favorite=1 WHERE id=?",
+                    (picture_id,),
+                ).close()
+
+    query = {
+        "version": 1,
+        "root": {
+            "type": "group",
+            "match": "all",
+            "negated": False,
+            "children": [
+                {"type": "rule", "field": "favorite", "operator": "eq", "value": True},
+                {"type": "rule", "field": "keyword", "operator": "eq", "value": "summer"},
+                {
+                    "type": "rule",
+                    "field": "taken_date",
+                    "operator": "between",
+                    "from": "2020-07-01",
+                    "to": "2020-07-31",
+                },
+                {
+                    "type": "rule",
+                    "field": "camera",
+                    "operator": "eq",
+                    "value": {"make": "Canon", "model": "EOS R6"},
+                },
+            ],
+        },
+        "sort": [{"field": "filename", "direction": "asc"}],
+        "scope": {
+            "source_ids": [source.id],
+            "include_missing": False,
+            "include_excluded": False,
+        },
+        "default_policy": {"apply_min_rating": True},
+    }
+
+    catalog.set_rating_policy("3")
+    assert [row["filename"] for row in catalog.query_pictures(query, 10)] == ["selected.jpg"]
+    assert catalog.count_query_pictures(query) == 1
+
+    query["default_policy"] = {"apply_min_rating": False}
+    assert [row["filename"] for row in catalog.query_pictures(query, 10)] == [
+        "low.jpg",
+        "selected.jpg",
+    ]
+    assert catalog.count_query_pictures(query) == 2

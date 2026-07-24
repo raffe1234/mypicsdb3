@@ -4,7 +4,7 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.17 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.18 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-2 migration, backup and restore, date
 > browsing and large-library behaviour still require documented validation on
@@ -25,6 +25,8 @@ indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 - Favorites, ratings, keywords, cameras, year/month/day and geotagged views.
 - Optional global minimum-rating display policy for normal browser and widget
   views, with a temporary all-pictures override.
+- Versioned, validated Query Model foundation for future search, smart filters,
+  saved views and smart collections.
 - Stable widget endpoints for configurable skins.
 - Optional **Estuary MyPicsDB 3** skin with picture rows on the home screen.
 - GitHub Actions, Kodi repository generation and GitHub Pages deployment.
@@ -318,7 +320,19 @@ scanning, metadata extraction or stored database values. The active policy is
 shown in the browser category. Open **Show all pictures temporarily** from the
 add-on main menu to bypass the configured policy for that browsing session.
 
-### 6. Configure automatic scanning
+### 6. Query Model foundation
+
+Version 0.2.18 contains an internal Query Model version 1 used by automated
+tests and catalogue APIs. It validates nested all/any/not rules for rating,
+favorite, source, album, date range, camera and keyword, then compiles only
+allowlisted SQL with bound parameters for SQLite and MySQL/MariaDB.
+
+This release does not add a Kodi query-builder screen, global text search, saved
+views or smart collections, and it does not change database schema 2. See
+[Query Model version 1](docs/QUERY_MODEL.md) for its JSON form, limits and
+security boundary.
+
+### 7. Configure automatic scanning
 
 Open **MyPicsDB 3 > Settings > Scanning** and enable **Enable automatic
 scanning**. Set **Automatic scan interval (hours)** to any whole number from 1
