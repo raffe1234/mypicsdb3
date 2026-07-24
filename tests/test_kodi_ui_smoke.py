@@ -92,6 +92,7 @@ class FakeKodi:
             widget_limit=15,
             browser_page_size=100,
             album_view_mode=55,
+            minimum_rating_policy="all",
         )
         self.log = types.SimpleNamespace(warning=lambda *args: None)
         self.notifications = []
@@ -115,6 +116,10 @@ class FakeKodi:
 class FakeCatalog:
     def __init__(self):
         self.deleted_sources = []
+        self.rating_policy = "all"
+
+    def set_rating_policy(self, rating_policy):
+        self.rating_policy = rating_policy
 
     def sync_sources(self, sources):
         return []
@@ -227,6 +232,33 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert item.art["thumb"] == url
     assert item.properties["MyPicsDB3.Camera"] == "Canon EOS R6"
     assert is_folder is False
+
+
+def test_rating_policy_is_visible_and_can_be_temporarily_bypassed(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.minimum_rating_policy = "3"
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("", {}))
+
+    assert runtime.catalog.rating_policy == "3"
+    assert calls.items[0][1].label == "Minimum rating: 3+"
+    assert calls.items[1][1].label == "Show all pictures temporarily"
+    assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/?rating_policy=all"
+    assert calls.items[3][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
+
+    ui.dispatch(views.Request("", {"rating_policy": "all"}))
+
+    assert runtime.catalog.rating_policy == "all"
+    assert calls.items[1][1].label == "Use configured rating filter"
+    assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/"
+    assert calls.items[3][0] == (
+        "plugin://plugin.image.mypicsdb3/recent-taken?rating_policy=all"
+    )
+
+    ui.dispatch(views.Request("recent-taken", {"rating_policy": "all"}))
+    assert calls.category == "Recently taken  [COLOR=grey](Temporary: all pictures)[/COLOR]"
 
 
 def test_home_widget_uses_configured_limit_without_browser_pagination(monkeypatch) -> None:

@@ -1,6 +1,7 @@
 # Widget URL reference
 
-All widget views are read-only and never start a scan.
+All widget views are read-only and never start a scan. They use the local
+**Minimum picture rating** setting, just like the interactive browser views.
 
 | View | URL |
 |---|---|

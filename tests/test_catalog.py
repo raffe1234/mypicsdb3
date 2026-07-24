@@ -22,6 +22,7 @@ def add_picture(
     name: str = "image.jpg",
     taken_at: Optional[str] = "2020-07-17 14:15:16",
     discovered_at: str = "2026-07-17 09:00:00",
+    rating: Optional[int] = 5,
 ) -> int:
     source = catalog.sync_sources([{"label": "Photos", "uri": str(root)}])[0]
     catalog.set_source_enabled(source.id, True)
@@ -48,7 +49,7 @@ def add_picture(
                 "mime_type": "image/jpeg",
                 "camera_make": "Canon",
                 "camera_model": "EOS R6",
-                "rating": 5,
+                "rating": rating,
                 "gps_latitude": 59.3293,
                 "gps_longitude": 18.0686,
                 "city": "Stockholm",

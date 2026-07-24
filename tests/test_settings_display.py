@@ -55,6 +55,21 @@ def test_album_view_setting_shows_named_choices():
     assert setting.find("control").attrib == {"type": "list", "format": "integer"}
 
 
+def test_minimum_rating_setting_has_explicit_null_and_zero_semantics():
+    setting = settings_by_id()["minimum_rating_policy"]
+    assert setting.findtext("default") == "all"
+    assert setting.find("control").attrib == {"type": "list", "format": "string"}
+    assert [option.text for option in setting.findall("./constraints/options/option")] == [
+        "all",
+        "rated_and_unrated",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+    ]
+
+
 def test_english_catalogue_is_separated_and_has_clear_labels():
     text = STRINGS.read_text(encoding="utf-8")
     for label in (
@@ -62,6 +77,8 @@ def test_english_catalogue_is_separated_and_has_clear_labels():
         "Pictures per browser page",
         "Default album view",
         "Configure home-screen rows",
+        "Minimum picture rating",
+        "Rated and unrated (exclude rating 0)",
     ):
         assert ('msgid "%s"' % label) in text
         assert ('msgstr "%s"' % label) in text
