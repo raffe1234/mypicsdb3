@@ -1,5 +1,5 @@
 """Core package for MyPicsDB 3."""
 
 ADDON_ID = "plugin.image.mypicsdb3"
-VERSION = "0.2.16"
+VERSION = "0.2.17"
 SCHEMA_VERSION = 2

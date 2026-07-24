@@ -248,12 +248,6 @@ class PluginUI:
             **self._rating_route_params(browse_params),
         )
 
-    def _album_view_context(self) -> List[Tuple[str, str]]:
-        return [(
-            self.text(32215, "Save current view as album default"),
-            "RunPlugin(%s)" % self.url("action/save-album-view"),
-        )]
-
     def _next_page_item(
         self,
         route: str,
@@ -305,13 +299,12 @@ class PluginUI:
         limit = safe_limit(params.get("limit"), self.kodi.settings.browser_page_size)
         offset = int(params.get("offset", "0") or 0)
         pictures = self.catalog.pictures_in_folder(folder_id, limit, offset)
-        album_view_context = self._album_view_context()
         items = [
-            self._folder_item(row, extra_context=album_view_context, browse_params=params)
+            self._folder_item(row, browse_params=params)
             for row in child_folders
         ]
         items.extend(
-            self._picture_item(row, extra_context=album_view_context, browse_params=params)
+            self._picture_item(row, browse_params=params)
             for row in pictures
         )
         if len(pictures) == limit:
@@ -320,7 +313,6 @@ class PluginUI:
                     "folder",
                     offset,
                     limit,
-                    context=album_view_context,
                     id=folder_id,
                 )
             )

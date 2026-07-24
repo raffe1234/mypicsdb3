@@ -4,7 +4,7 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.16 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.17 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-2 migration, backup and restore, date
 > browsing and large-library behaviour still require documented validation on
@@ -301,8 +301,9 @@ is reloaded once after midnight so **On this day** changes without manual action
 
 ### 5. Configure the minimum-rating display policy
 
-Open **MyPicsDB 3 > Settings > General > Minimum picture rating** to choose
-which pictures normal browser and widget views should show:
+Open the context menu anywhere inside MyPicsDB 3 and select **Minimum
+picture rating**, or open **MyPicsDB 3 > Settings > General > Minimum picture
+rating**, to choose which pictures normal browser and widget views should show:
 
 - **All pictures** includes pictures with no stored rating, explicit rating 0,
   and ratings 1 through 5.

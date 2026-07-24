@@ -4,6 +4,7 @@ import os
 
 import pytest
 
+from mypicsdb3 import VERSION
 from mypicsdb3.config import Settings
 from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
@@ -119,7 +120,7 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
     assert [row["version"] for row in history] == [1, 2]
-    assert {row["addon_version"] for row in history} == {"0.2.16"}
+    assert {row["addon_version"] for row in history} == {VERSION}
     assert count["total"] == 2
     assert index is not None
 

@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.16" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.17" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -12,6 +12,10 @@
   <extension point="xbmc.service" library="service.py" />
   <extension point="kodi.context.item">
     <menu id="kodi.core.main">
+      <item library="rating_context.py">
+        <label>32400</label>
+        <visible>String.StartsWith(Container.FolderPath,plugin://plugin.image.mypicsdb3)</visible>
+      </item>
       <item library="context.py">
         <label>32215</label>
         <visible>String.StartsWith(Container.FolderPath,plugin://plugin.image.mypicsdb3/folder)</visible>
@@ -30,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Add a global minimum-rating display policy with a temporary Show all pictures override.</news>
+    <news>Add direct context-menu access to minimum-rating settings and remove a duplicate album-view action.</news>
   </extension>
 </addon>

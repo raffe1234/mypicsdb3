@@ -394,7 +394,7 @@ def test_home_screen_editor_enables_a_hidden_row(monkeypatch) -> None:
     assert "ReloadSkin()" in calls.builtins
 
 
-def test_album_items_expose_save_default_view_context_action(monkeypatch) -> None:
+def test_album_items_do_not_duplicate_global_save_view_context_action(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
@@ -402,7 +402,7 @@ def test_album_items_expose_save_default_view_context_action(monkeypatch) -> Non
 
     assert calls.items
     _, picture, _ = calls.items[0]
-    assert (
-        "Save current view as album default",
-        "RunPlugin(plugin://plugin.image.mypicsdb3/action/save-album-view)",
-    ) in picture.context
+    assert all(
+        label != "Save current view as album default"
+        for label, _command in picture.context
+    )
