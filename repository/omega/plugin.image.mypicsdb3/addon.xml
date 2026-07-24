@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.18" provider-name="MyPicsDB 3 contributors">
+  <requires>
+    <import addon="xbmc.python" version="3.0.1" />
+    <import addon="script.module.exifread" version="2.1.2+matrix.0" />
+    <import addon="script.module.pymysql" version="1.1.0" />
+    <import addon="script.module.iptcinfo3" version="2.1.4" optional="true" />
+  </requires>
+  <extension point="xbmc.python.pluginsource" library="addon.py">
+    <provides>image</provides>
+  </extension>
+  <extension point="xbmc.service" library="service.py" />
+  <extension point="kodi.context.item">
+    <menu id="kodi.core.main">
+      <item library="rating_context.py">
+        <label>32400</label>
+        <visible>String.StartsWith(Container.FolderPath,plugin://plugin.image.mypicsdb3)</visible>
+      </item>
+      <item library="context.py">
+        <label>32215</label>
+        <visible>String.StartsWith(Container.FolderPath,plugin://plugin.image.mypicsdb3/folder)</visible>
+      </item>
+    </menu>
+  </extension>
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">A searchable picture database and widget provider for Kodi</summary>
+    <description lang="en_GB">MyPicsDB 3 indexes selected Kodi picture sources into SQLite or MySQL/MariaDB. Browse pictures by date, year, camera, keywords and folders, or use its fast widget endpoints in a compatible skin.</description>
+    <disclaimer lang="en_GB">This is an independent community continuation inspired by MyPicsDB and MyPicsDB2. Back up important data before testing prerelease versions.</disclaimer>
+    <platform>all</platform>
+    <license>GPL-2.0-only</license>
+    <source>https://github.com/raffe1234/mypicsdb3</source>
+    <website>https://github.com/raffe1234/mypicsdb3</website>
+    <assets>
+      <icon>icon.png</icon>
+      <fanart>fanart.jpg</fanart>
+    </assets>
+    <news>Add a versioned, validated Query Model foundation with safe SQLite and MySQL/MariaDB compilation for future search and smart views.</news>
+  </extension>
+</addon>

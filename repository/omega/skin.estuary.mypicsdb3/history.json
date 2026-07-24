@@ -1,0 +1,29 @@
+{
+  "versions": [
+    {
+      "version": "21.3.5",
+      "filename": "skin.estuary.mypicsdb3-21.3.5.zip",
+      "source_ref": "21.3-Omega"
+    },
+    {
+      "version": "21.3.4",
+      "filename": "skin.estuary.mypicsdb3-21.3.4.zip",
+      "source_ref": "21.3-Omega"
+    },
+    {
+      "version": "21.3.3",
+      "filename": "skin.estuary.mypicsdb3-21.3.3.zip",
+      "source_ref": "21.3-Omega"
+    },
+    {
+      "version": "21.2.3",
+      "filename": "skin.estuary.mypicsdb3-21.2.3.zip",
+      "source_ref": "21.2-Omega"
+    },
+    {
+      "version": "21.1.3",
+      "filename": "skin.estuary.mypicsdb3-21.1.3.zip",
+      "source_ref": "21.1-Omega"
+    }
+  ]
+}
