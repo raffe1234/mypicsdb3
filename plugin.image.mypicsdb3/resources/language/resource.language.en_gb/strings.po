@@ -770,3 +770,19 @@ msgstr "Rating 5"
 msgctxt "#32407"
 msgid "Filters normal picture, album, date, camera, keyword and widget views. Unrated pictures have no stored rating; rating 0 is an explicit zero rating. Scanning and stored metadata are not changed."
 msgstr "Filters normal picture, album, date, camera, keyword and widget views. Unrated pictures have no stored rating; rating 0 is an explicit zero rating. Scanning and stored metadata are not changed."
+
+msgctxt "#32500"
+msgid "Search"
+msgstr "Search"
+
+msgctxt "#32501"
+msgid "Search pictures"
+msgstr "Search pictures"
+
+msgctxt "#32502"
+msgid "Search results: %s"
+msgstr "Search results: %s"
+
+msgctxt "#32503"
+msgid "Invalid search"
+msgstr "Invalid search"

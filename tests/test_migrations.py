@@ -10,6 +10,9 @@ from mypicsdb3.config import Settings
 from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
 from mypicsdb3.db.locks import MIGRATION_LOCK_NAME, SCAN_LOCK_NAME, acquire_lock, release_lock
+from mypicsdb3.db.migration_steps.v0002_date_browsing import (
+    MIGRATION as DATE_BROWSING_MIGRATION,
+)
 from mypicsdb3.db.migrations import (
     MigrationChecksumError,
     MigrationError,
@@ -28,6 +31,7 @@ def make_engine(tmp_path: Path) -> DatabaseEngine:
 def create_schema_one_without_history(engine: DatabaseEngine) -> None:
     with engine.transaction(immediate=True) as connection:
         create_schema(engine, connection)
+        engine.execute(connection, "DROP TABLE IF EXISTS picture_search_documents").close()
         engine.execute(connection, "DROP INDEX IF EXISTS idx_pictures_date_browse").close()
         engine.execute(
             connection,
@@ -56,7 +60,7 @@ def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> N
     result = MigrationRunner(engine).initialize()
 
     assert result.created_database is True
-    assert result.current_version == 2
+    assert result.current_version == 3
     assert result.backup_path is None
     assert not (tmp_path / "backups").exists()
     with engine.transaction() as connection:
@@ -69,11 +73,18 @@ def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> N
             "SELECT name FROM sqlite_master WHERE type='index' "
             "AND name='idx_pictures_date_browse'",
         )
-    assert [row["version"] for row in rows] == [1, 2]
+        search_table = engine.fetchone(
+            connection,
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name='picture_search_documents'",
+        )
+    assert [row["version"] for row in rows] == [1, 2, 3]
     assert rows[0]["name"] == "initial catalogue schema"
     assert rows[1]["name"] == "year-first date browsing index"
+    assert rows[2]["name"] == "normalized global search documents"
     assert all(len(row["checksum"]) == 64 for row in rows)
     assert index is not None
+    assert search_table is not None
     with engine.transaction() as connection:
         plan = engine.fetchall(
             connection,
@@ -102,8 +113,8 @@ def test_existing_schema_one_is_backed_up_and_registered(tmp_path: Path) -> None
     result = MigrationRunner(engine).initialize()
 
     assert result.bootstrapped_history is True
-    assert result.current_version == 2
-    assert result.applied_versions == (2,)
+    assert result.current_version == 3
+    assert result.applied_versions == (2, 3)
     assert result.backup_path is not None
     backup_path = Path(result.backup_path)
     assert backup_path.is_file()
@@ -123,16 +134,110 @@ def test_existing_schema_one_is_backed_up_and_registered(tmp_path: Path) -> None
     with engine.transaction() as connection:
         assert engine.fetchone(
             connection, "SELECT value FROM meta WHERE key='schema_version'"
-        )["value"] == "2"
+        )["value"] == "3"
         assert engine.fetchone(
             connection,
             "SELECT COUNT(*) AS total FROM schema_migrations",
-        )["total"] == 2
+        )["total"] == 3
         assert engine.fetchone(
             connection,
             "SELECT name FROM sqlite_master WHERE type='index' "
             "AND name='idx_pictures_date_browse'",
         ) is not None
+        assert engine.table_exists(connection, "picture_search_documents")
+
+
+def test_existing_schema_two_backfills_normalized_search_documents(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path)
+    MigrationRunner(
+        engine,
+        target_version=2,
+        migrations=(DATE_BROWSING_MIGRATION,),
+    ).initialize()
+    with engine.transaction(immediate=True) as connection:
+        engine.execute(connection, "DROP TABLE picture_search_documents").close()
+        source = engine.execute(
+            connection,
+            "INSERT INTO sources "
+            "(label, uri, uri_hash, enabled, available, created_at, updated_at) "
+            "VALUES (?, ?, ?, 1, 1, ?, ?)",
+            ("Photos", "/srv/photos/", "search-source", "2026-07-24", "2026-07-24"),
+        )
+        source_id = int(source.lastrowid)
+        source.close()
+        folder = engine.execute(
+            connection,
+            "INSERT INTO folders "
+            "(source_id, parent_uri, uri, uri_hash, name, discovered_at, last_seen_at, random_key, is_missing) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)",
+            (source_id, "", "/srv/photos/Åland/", "search-folder", "Åland", "2026-07-24", "2026-07-24", 0.5),
+        )
+        folder_id = int(folder.lastrowid)
+        folder.close()
+        picture = engine.execute(
+            connection,
+            "INSERT INTO pictures "
+            "(source_id, folder_id, uri, uri_hash, filename, extension, file_size, file_mtime, "
+            "discovered_at, last_seen_at, caption, camera_make, camera_model, city, country, "
+            "random_key, favorite, is_missing) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)",
+            (
+                source_id,
+                folder_id,
+                "/srv/photos/Åland/Sommar.jpg",
+                "search-picture",
+                "Sommar.jpg",
+                "jpg",
+                100,
+                1.0,
+                "2026-07-24",
+                "2026-07-24",
+                "Blå båt",
+                "Fujifilm",
+                "X-T5",
+                "Göteborg",
+                "Sverige",
+                0.25,
+            ),
+        )
+        picture_id = int(picture.lastrowid)
+        picture.close()
+        tag = engine.execute(
+            connection,
+            "INSERT INTO tags (name, normalized_name) VALUES (?, ?)",
+            ("Familj", "familj"),
+        )
+        tag_id = int(tag.lastrowid)
+        tag.close()
+        engine.execute(
+            connection,
+            "INSERT INTO picture_tags (picture_id, tag_id) VALUES (?, ?)",
+            (picture_id, tag_id),
+        ).close()
+
+    result = MigrationRunner(engine).initialize()
+
+    assert result.previous_version == 2
+    assert result.current_version == 3
+    assert result.applied_versions == (3,)
+    assert result.backup_path is not None
+    with engine.transaction() as connection:
+        row = engine.fetchone(
+            connection,
+            "SELECT document FROM picture_search_documents WHERE picture_id=?",
+            (picture_id,),
+        )
+        history = engine.fetchall(
+            connection,
+            "SELECT version FROM schema_migrations ORDER BY version",
+        )
+    assert row is not None
+    assert " åland " in row["document"]
+    assert " sommar " in row["document"]
+    assert " blå " in row["document"]
+    assert " familj " in row["document"]
+    assert " göteborg " in row["document"]
+    assert [item["version"] for item in history] == [1, 2, 3]
 
 
 def test_newer_schema_is_rejected_before_any_schema_write(tmp_path: Path) -> None:

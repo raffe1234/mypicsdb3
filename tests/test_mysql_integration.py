@@ -66,6 +66,10 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
         create_schema(engine, connection)
         engine.execute(
             connection,
+            "DROP TABLE picture_search_documents",
+        ).close()
+        engine.execute(
+            connection,
             "DROP INDEX idx_pictures_date_browse ON pictures",
         ).close()
         engine.execute(
@@ -93,8 +97,8 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     second = catalog.initialize()
 
     assert first.bootstrapped_history is True
-    assert first.current_version == 2
-    assert first.applied_versions == (2,)
+    assert first.current_version == 3
+    assert first.applied_versions == (2, 3)
     assert second.bootstrapped_history is False
     assert second.applied_versions == ()
     with engine.transaction() as connection:
@@ -117,12 +121,18 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
             "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='pictures' "
             "AND INDEX_NAME='idx_pictures_date_browse'",
         )
+        search_table = engine.fetchone(
+            connection,
+            "SELECT TABLE_NAME AS name FROM information_schema.TABLES "
+            "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='picture_search_documents'",
+        )
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
-    assert [row["version"] for row in history] == [1, 2]
+    assert [row["version"] for row in history] == [1, 2, 3]
     assert {row["addon_version"] for row in history} == {VERSION}
-    assert count["total"] == 2
+    assert count["total"] == 3
     assert index is not None
+    assert search_table is not None
 
 
 def test_mysql_rating_policy_matches_group_counts_and_picture_results(tmp_path) -> None:
@@ -170,6 +180,75 @@ def test_mysql_rating_policy_matches_group_counts_and_picture_results(tmp_path) 
     assert catalog.years()[0]["picture_count"] == 1
     assert catalog.recent_folders(10)[0]["picture_count"] == 1
     assert catalog.tags()[0]["picture_count"] == 1
+
+
+def test_existing_mysql_schema_two_backfills_global_search_documents(tmp_path) -> None:
+    engine = DatabaseEngine(mysql_settings(tmp_path))
+    catalog = Catalog(engine)
+    catalog.initialize()
+    source = catalog.sync_sources([{"label": "Photos", "uri": "/srv/search-backfill"}])[0]
+    now = utc_now()
+    with engine.transaction() as connection:
+        folder_id = catalog.upsert_folder(
+            connection,
+            source.id,
+            "/srv/search-backfill/Åland/",
+            "",
+            "Åland",
+            now,
+        )
+        picture_id = catalog.insert_picture(
+            connection,
+            {
+                "source_id": source.id,
+                "folder_id": folder_id,
+                "uri": "/srv/search-backfill/Åland/Sommar.jpg",
+                "filename": "Sommar.jpg",
+                "extension": "jpg",
+                "file_size": 100,
+                "file_mtime": 1.0,
+                "discovered_at": now,
+                "last_seen_at": now,
+                "taken_at": "2024-07-17 10:00:00",
+                "taken_source": "EXIF",
+                "caption": "Blå båt",
+                "camera_make": "Fujifilm",
+                "camera_model": "X-T5",
+                "city": "Göteborg",
+                "country": "Sverige",
+                "rating": 5,
+                "metadata_hash": "search-backfill",
+                "thumb_uri": "/srv/search-backfill/Åland/Sommar.jpg",
+            },
+            ["Familj"],
+        )
+        engine.execute(connection, "DROP TABLE picture_search_documents").close()
+        engine.execute(
+            connection,
+            "DELETE FROM schema_migrations WHERE version=?",
+            (3,),
+        ).close()
+        engine.execute(
+            connection,
+            "UPDATE meta SET value=? WHERE `key`=?",
+            ("2", "schema_version"),
+        ).close()
+
+    result = Catalog(engine).initialize()
+
+    assert result.previous_version == 2
+    assert result.current_version == 3
+    assert result.applied_versions == (3,)
+    with engine.transaction() as connection:
+        row = engine.fetchone(
+            connection,
+            "SELECT document FROM picture_search_documents WHERE picture_id=?",
+            (picture_id,),
+        )
+    assert row is not None
+    assert " åland " in row["document"]
+    assert " familj " in row["document"]
+    assert " göteborg " in row["document"]
 
 
 def test_mysql_query_model_matches_page_count_and_minimum_rating_policy(tmp_path) -> None:
@@ -232,6 +311,12 @@ def test_mysql_query_model_matches_page_count_and_minimum_rating_policy(tmp_path
             "children": [
                 {"type": "rule", "field": "favorite", "operator": "eq", "value": True},
                 {"type": "rule", "field": "keyword", "operator": "eq", "value": "summer"},
+                {
+                    "type": "rule",
+                    "field": "text",
+                    "operator": "contains_tokens",
+                    "value": "summer",
+                },
                 {
                     "type": "rule",
                     "field": "taken_date",

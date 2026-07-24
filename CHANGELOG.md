@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.19 - 2026-07-24
+
+- Add skin-independent global search from the MyPicsDB 3 main menu.
+- Normalize Unicode search text with NFKC and case folding, retain Swedish
+  letters, and require every entered word to match the same picture.
+- Search filename, caption, keywords, URI/path parts, camera and stored
+  location fields through Query Model version 1 with bound SQL parameters.
+- Raise the catalogue to schema 3 with normalized per-picture search documents,
+  a retry-safe batch backfill and ongoing scanner maintenance.
+- Preserve minimum-rating policy, temporary all-picture browsing and pagination
+  across search results on SQLite and MySQL/MariaDB.
+
 ## 0.2.18 - 2026-07-24
 
 - Add Query Model version 1 as the shared foundation for future search, smart

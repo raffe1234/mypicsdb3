@@ -25,6 +25,7 @@ from .rating_policy import (
     rating_policy_label,
 )
 from .router import Request
+from .search import build_global_search_request
 from .scanner import Scanner
 from .utils import parse_bool, plugin_url, safe_limit
 
@@ -120,6 +121,7 @@ class PluginUI:
         params = params or {}
         rating_params = self._rating_route_params(params)
         items = [
+            self.add_folder(self.text(32500, "Search"), "search", **rating_params),
             self.add_folder(self.text(30000, "Picture sources"), "sources", **rating_params),
             self.add_folder(self.text(30001, "Recently taken"), "recent-taken", **rating_params),
             self.add_folder(self.text(30002, "Recently added"), "recent-added", **rating_params),
@@ -154,6 +156,44 @@ class PluginUI:
                     ),
                 )
         self.finish(items, content="files", category=self.text(30056, "MyPicsDB 3"))
+
+    def search(self, params: Optional[Dict[str, str]] = None):
+        search_params = dict(params or {})
+        raw_text = search_params.get("q", "")
+        if not raw_text:
+            raw_text = xbmcgui.Dialog().input(self.text(32501, "Search pictures"))
+        if not raw_text:
+            return self.finish(
+                [],
+                content="images",
+                cache=False,
+                category=self.text(32500, "Search"),
+            )
+        try:
+            request = build_global_search_request(raw_text)
+        except ValueError as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32503, "Invalid search"), exc),
+                error=True,
+            )
+            return self.finish(
+                [],
+                content="images",
+                cache=False,
+                category=self.text(32500, "Search"),
+            )
+        search_params["q"] = request.text
+        category = self.text(32502, "Search results: %s") % request.text
+        return self.pictures(
+            "search",
+            lambda limit, offset: self.catalog.query_pictures(
+                request.query,
+                limit,
+                offset,
+            ),
+            search_params,
+            category,
+        )
 
     def sources(self, params: Optional[Dict[str, str]] = None):
         params = params or {}
@@ -706,6 +746,8 @@ class PluginUI:
             return self.root(params)
         if route.startswith("action/"):
             return self.action(route, params)
+        if route == "search":
+            return self.search(params)
         if route == "sources":
             return self.sources(params)
         if route == "source":

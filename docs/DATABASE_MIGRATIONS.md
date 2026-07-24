@@ -2,7 +2,8 @@
 
 MyPicsDB 3 uses a versioned migration runner for both SQLite and
 MySQL/MariaDB. Add-on version 0.2.13 introduced the framework. Version 0.2.15
-raises the catalogue to schema version 2 with the first real migration.
+raised the catalogue to schema version 2. Version 0.2.19 raises it to schema 3
+with normalized global-search documents.
 
 ## Startup sequence
 
@@ -37,6 +38,21 @@ migration checks whether the index already exists before creating it, which
 makes the MySQL/MariaDB DDL step safe to retry after an interrupted run. No
 picture rows or metadata columns are rewritten. The decision and its trade-offs
 are recorded in `docs/adr/0002-schema-2-date-browsing-index.md`.
+
+## Schema 3: normalized global-search documents
+
+Schema 3 adds `picture_search_documents` with one row per picture. The document
+contains bounded NFKC/casefold tokens derived from filename, caption, keywords,
+URI/path parts, camera and stored location fields.
+
+The migration creates the table and rebuilds all documents from authoritative
+picture and keyword data in batches of 500. It clears partial derived rows
+before rebuilding, making a retry safe after an interrupted MySQL/MariaDB DDL
+attempt. Search documents are maintained on later scanner inserts and updates.
+
+The migration does not alter original files or rewrite picture metadata. Its
+design is recorded in
+`docs/adr/0005-schema-3-global-search-documents.md`.
 
 ## SQLite backups
 
