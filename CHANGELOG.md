@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.17 - 2026-07-24
+
+- Add **Minimum picture rating** to the Kodi context menu throughout MyPicsDB 3.
+- Remove the duplicate **Save current view as album default** entry inside albums.
+
 ## 0.2.16 - 2026-07-24
 
 - Add a local minimum-rating display policy without changing database schema 2.
