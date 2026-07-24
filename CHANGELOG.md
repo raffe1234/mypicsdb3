@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.18 - 2026-07-24
+
+- Add Query Model version 1 as the shared foundation for future search, smart
+  filters, saved views and smart collections without changing database schema 2.
+- Strictly validate nested all/any/not groups, bounded values, registered fields,
+  operators, scopes and stable sort definitions.
+- Compile only trusted SQL fragments with bound parameters for SQLite and
+  MySQL/MariaDB, including catalogue page and count execution.
+- Add deterministic canonical JSON, minimum-rating-policy control and backend
+  parity coverage.
+
 ## 0.2.17 - 2026-07-24
 
 - Add **Minimum picture rating** to the Kodi context menu throughout MyPicsDB 3.

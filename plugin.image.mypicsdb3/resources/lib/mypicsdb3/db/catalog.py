@@ -5,6 +5,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ..models import Source
+from ..query_model import compile_picture_query
 from ..rating_policy import RATING_POLICY_ALL, normalize_rating_policy, rating_sql_predicate
 from ..utils import (
     NON_INDEXABLE_PICTURE_SOURCE_URIS,
@@ -341,6 +342,42 @@ class Catalog:
         query += " ORDER BY " + order + " LIMIT ? OFFSET ?"
         with self.engine.transaction() as connection:
             return self.engine.fetchall(connection, query, (*params, limit, offset))
+
+    def query_pictures(self, query_model: Any, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
+        """Run a validated versioned query model without exposing raw SQL."""
+        if type(limit) is not int:
+            raise ValueError("Query-model page limit must be an integer")
+        if type(offset) is not int:
+            raise ValueError("Query-model page offset must be an integer")
+        if limit < 1 or limit > 1000:
+            raise ValueError("Query-model page limit must be between 1 and 1000")
+        if offset < 0:
+            raise ValueError("Query-model page offset must not be negative")
+        compiled = compile_picture_query(query_model, self.rating_policy)
+        sql = (
+            "SELECT %s FROM pictures p "
+            "JOIN folders f ON f.id=p.folder_id "
+            "JOIN sources s ON s.id=p.source_id "
+            "WHERE %s ORDER BY %s LIMIT ? OFFSET ?"
+            % (PICTURE_COLUMNS, compiled.where_sql, compiled.order_by_sql)
+        )
+        with self.engine.transaction() as connection:
+            return self.engine.fetchall(
+                connection,
+                sql,
+                (*compiled.params, limit, offset),
+            )
+
+    def count_query_pictures(self, query_model: Any) -> int:
+        """Count the same result set used by :meth:`query_pictures`."""
+        compiled = compile_picture_query(query_model, self.rating_policy)
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(
+                connection,
+                "SELECT COUNT(*) AS total FROM pictures p WHERE %s" % compiled.where_sql,
+                compiled.params,
+            )
+        return int((row or {}).get("total") or 0)
 
     def recent_taken(self, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.taken_at IS NOT NULL", (), "p.taken_at DESC, p.id DESC", limit, offset)
