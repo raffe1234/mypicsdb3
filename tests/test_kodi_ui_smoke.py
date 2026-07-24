@@ -31,12 +31,16 @@ class FakeListItem:
 class FakeDialog:
     responses = []
     select_responses = []
+    input_responses = []
 
     def yesno(self, heading, message):
         return self.__class__.responses.pop(0)
 
     def select(self, heading, options, preselect=-1):
         return self.__class__.select_responses.pop(0)
+
+    def input(self, heading, defaultt=""):
+        return self.__class__.input_responses.pop(0)
 
 
 @dataclass
@@ -117,6 +121,7 @@ class FakeCatalog:
     def __init__(self):
         self.deleted_sources = []
         self.rating_policy = "all"
+        self.query_requests = []
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -148,6 +153,11 @@ class FakeCatalog:
             "source_label": "Photos",
             "rating": 5,
         }]
+
+
+    def query_pictures(self, query, limit, offset=0):
+        self.query_requests.append((query, limit, offset))
+        return self.recent_taken(limit, offset)
 
     def get_folder(self, folder_id):
         return {"id": folder_id, "source_id": 4, "uri": "smb://server/photos/Summer/", "name": "Summer"}
@@ -219,8 +229,9 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 16
-    assert calls.items[0][0].endswith("/sources")
+    assert len(calls.items) == 17
+    assert calls.items[0][0].endswith("/search")
+    assert calls.items[1][0].endswith("/sources")
 
     calls.ended = False
     ui.dispatch(views.Request("recent-taken", {"limit": "15"}))
@@ -246,19 +257,51 @@ def test_rating_policy_is_visible_and_can_be_temporarily_bypassed(monkeypatch) -
     assert calls.items[0][1].label == "Minimum rating: 3+"
     assert calls.items[1][1].label == "Show all pictures temporarily"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/?rating_policy=all"
-    assert calls.items[3][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
+    assert calls.items[4][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
 
     ui.dispatch(views.Request("", {"rating_policy": "all"}))
 
     assert runtime.catalog.rating_policy == "all"
     assert calls.items[1][1].label == "Use configured rating filter"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/"
-    assert calls.items[3][0] == (
+    assert calls.items[4][0] == (
         "plugin://plugin.image.mypicsdb3/recent-taken?rating_policy=all"
     )
 
     ui.dispatch(views.Request("recent-taken", {"rating_policy": "all"}))
     assert calls.category == "Recently taken  [COLOR=grey](Temporary: all pictures)[/COLOR]"
+
+
+def test_global_search_prompts_normalizes_and_preserves_pagination(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.browser_page_size = 1
+    FakeDialog.input_responses = [" ÅLAND  Sommar! "]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("search", {}))
+
+    assert calls.category == "Search results: åland sommar"
+    assert calls.content == "images"
+    assert len(runtime.catalog.query_requests) == 1
+    query, limit, offset = runtime.catalog.query_requests[0]
+    assert (limit, offset) == (1, 0)
+    assert query.root.children[0].field == "text"
+    assert query.root.children[0].operator == "contains_tokens"
+    assert query.root.children[0].value.tokens == ("åland", "sommar")
+    assert calls.items[1][0] == (
+        "plugin://plugin.image.mypicsdb3/search?offset=1&limit=1&q=%C3%A5land+sommar"
+    )
+
+    FakeDialog.input_responses = []
+    ui.dispatch(
+        views.Request(
+            "search",
+            {"q": "åland sommar", "offset": "1", "limit": "1"},
+        )
+    )
+    assert len(runtime.catalog.query_requests) == 2
+    assert runtime.catalog.query_requests[1][1:] == (1, 1)
 
 
 def test_home_widget_uses_configured_limit_without_browser_pagination(monkeypatch) -> None:

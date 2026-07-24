@@ -24,8 +24,9 @@ Database startup is owned by `db/migrations.py`; do not add ad-hoc DDL to
 fresh-database schema, add one deterministic and checksummed migration step,
 and test upgrades from every supported schema. Never change a checksum after
 release. See `docs/DATABASE_MIGRATIONS.md`. Version 0.2.13 introduced the
-migration foundation while retaining schema version 1. Version 0.2.15 raises
-the current catalogue to schema version 2.
+migration foundation while retaining schema version 1. Version 0.2.15 raised the
+catalogue to schema version 2. Version 0.2.19 raises it to schema version 3
+with normalized global-search documents.
 
 ## Building the Estuary skin
 

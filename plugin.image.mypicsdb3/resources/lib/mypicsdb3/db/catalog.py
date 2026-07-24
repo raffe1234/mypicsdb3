@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 from ..models import Source
 from ..query_model import compile_picture_query
 from ..rating_policy import RATING_POLICY_ALL, normalize_rating_policy, rating_sql_predicate
+from ..search_index import build_picture_search_document
 from ..utils import (
     NON_INDEXABLE_PICTURE_SOURCE_URIS,
     is_indexable_picture_source_uri,
@@ -248,6 +249,7 @@ class Catalog:
             return None, None, None
 
     def insert_picture(self, connection, record: Dict[str, Any], keywords: Iterable[str]) -> int:
+        keyword_values = tuple(keywords)
         year, month, day = self._date_parts(record.get("taken_at"))
         fields = (
             record["source_id"], record["folder_id"], record["uri"], sha256_text(record["uri"]), record["filename"],
@@ -269,10 +271,12 @@ class Catalog:
             picture_id = int(cursor.lastrowid)
         finally:
             cursor.close()
-        self.replace_tags(connection, picture_id, keywords)
+        self.replace_tags(connection, picture_id, keyword_values)
+        self.replace_search_document(connection, picture_id, record, keyword_values)
         return picture_id
 
     def update_picture(self, connection, picture_id: int, record: Dict[str, Any], keywords: Iterable[str]) -> None:
+        keyword_values = tuple(keywords)
         year, month, day = self._date_parts(record.get("taken_at"))
         self.engine.execute(connection, """UPDATE pictures SET
             source_id=?, folder_id=?, uri=?, filename=?, extension=?, file_size=?, file_mtime=?, last_seen_at=?,
@@ -288,7 +292,27 @@ class Catalog:
                 record.get("state"), record.get("country"), record.get("sublocation"), record.get("caption"),
                 record.get("metadata_hash"), record.get("thumb_uri"), picture_id,
             )).close()
-        self.replace_tags(connection, picture_id, keywords)
+        self.replace_tags(connection, picture_id, keyword_values)
+        self.replace_search_document(connection, picture_id, record, keyword_values)
+
+    def replace_search_document(
+        self,
+        connection,
+        picture_id: int,
+        record: Dict[str, Any],
+        keywords: Iterable[str],
+    ) -> None:
+        document = build_picture_search_document(record, keywords)
+        self.engine.execute(
+            connection,
+            "DELETE FROM picture_search_documents WHERE picture_id=?",
+            (picture_id,),
+        ).close()
+        self.engine.execute(
+            connection,
+            "INSERT INTO picture_search_documents (picture_id, document) VALUES (?, ?)",
+            (picture_id, document),
+        ).close()
 
     def replace_tags(self, connection, picture_id: int, keywords: Iterable[str]) -> None:
         self.engine.execute(connection, "DELETE FROM picture_tags WHERE picture_id=?", (picture_id,)).close()

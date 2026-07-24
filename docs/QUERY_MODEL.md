@@ -1,9 +1,9 @@
 # Query Model version 1
 
-MyPicsDB 3 version 0.2.18 introduces an internal, versioned Query Model for
-future global search, smart filters, saved views and smart collections. It is a
-foundation API: Kodi does not yet expose a query editor and no query JSON is
-stored in database schema 2.
+MyPicsDB 3 version 0.2.18 introduced an internal, versioned Query Model for
+search, smart filters, saved views and smart collections. Version 0.2.19 uses
+it for Kodi global search. Kodi still does not expose a general query editor
+and no query JSON is stored in database schema 3.
 
 ## Goals
 
@@ -30,6 +30,12 @@ MySQL/MariaDB.
     "match": "all",
     "negated": false,
     "children": [
+      {
+        "type": "rule",
+        "field": "text",
+        "operator": "contains_tokens",
+        "value": "summer stockholm"
+      },
       {
         "type": "rule",
         "field": "taken_date",
@@ -81,10 +87,16 @@ adding operator-specific raw fragments.
 | `taken_date` | inclusive ISO dates | `between` |
 | `camera` | object with `make` and/or `model` | `eq` |
 | `keyword` | exact keyword or keyword list | `eq`, `in` |
+| `text` | normalized free text | `contains_tokens` |
 
 Keyword matching is exact after `casefold()`, matching the normalized keyword
 stored by the scanner. A single `keyword in [...]` rule means any listed
 keyword. Multiple keyword rules inside an `all` group require all of them.
+
+The `text` rule uses NFKC normalization, Unicode case folding and alphanumeric
+tokens. Multiple words in one `contains_tokens` value mean AND. The compiler
+matches bound parameters against schema-3 normalized search documents; raw
+search text is never copied into SQL.
 
 Allowed sort fields are `taken_at`, `discovered_at`, `rating`, `filename` and
 `id`, in ascending or descending order. The normalizer always places `id` last
@@ -97,7 +109,8 @@ Version 1 enforces:
 - at most three group levels;
 - at most 50 rules;
 - at most 100 values in list rules or source scope;
-- at most 512 characters in a normal string;
+- at most 512 characters in a normal string or search query;
+- at most 12 distinct search words and 191 characters per search word;
 - strict booleans and integers, so `true` is not accepted as integer `1`;
 - registered fields and operators only;
 - no unknown object members;
@@ -110,8 +123,9 @@ Unknown query versions are rejected rather than guessed or silently upgraded.
 
 `canonical_picture_query_json()` returns normalized UTF-8 JSON with sorted
 object keys and compact separators. Source IDs and list-rule values are
-normalized and duplicate values removed. This representation is suitable for
-future hashing, cache keys and storage, but version 0.2.18 does not persist it.
+normalized and duplicate values removed. Text-search values are serialized as
+canonical space-separated tokens. This representation is suitable for future
+hashing, cache keys and storage, but version 0.2.19 does not persist query JSON.
 
 ## Catalogue integration
 
@@ -128,12 +142,11 @@ The public compiler result contains reusable `where_sql`, `params` and
 `order_by_sql` fragments. Future preview and facet consumers must build on
 these fragments rather than introduce separate user-defined SQL paths.
 
-## Deliberately not included in 0.2.18
+## Deliberately not included in 0.2.19
 
 - no Kodi query-builder dialog;
-- no global text-search field or token index;
+- no phrase, fuzzy, prefix or relevance-ranked search;
 - no saved-view or smart-collection tables;
-- no database migration;
 - no raw SQL compatibility mode;
 - no query JSON in plugin URLs.
 

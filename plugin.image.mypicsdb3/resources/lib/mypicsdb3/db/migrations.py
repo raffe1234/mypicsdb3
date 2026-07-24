@@ -34,6 +34,9 @@ class MigrationChecksumError(MigrationError):
 
 
 from .migration_steps.v0002_date_browsing import MIGRATION as DATE_BROWSING_MIGRATION
+from .migration_steps.v0003_global_search_documents import (
+    MIGRATION as GLOBAL_SEARCH_DOCUMENTS_MIGRATION,
+)
 
 
 @dataclass(frozen=True)
@@ -70,7 +73,10 @@ MYSQL_MIGRATION_TABLE = """CREATE TABLE IF NOT EXISTS schema_migrations (
     addon_version VARCHAR(32) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin"""
 
-DEFAULT_MIGRATIONS: Tuple[MigrationStep, ...] = (DATE_BROWSING_MIGRATION,)
+DEFAULT_MIGRATIONS: Tuple[MigrationStep, ...] = (
+    DATE_BROWSING_MIGRATION,
+    GLOBAL_SEARCH_DOCUMENTS_MIGRATION,
+)
 MIGRATION_LOCK_TTL_SECONDS = 7200
 
 

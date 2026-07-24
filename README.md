@@ -4,11 +4,12 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.18 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.19 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
-> automated tests. The schema-1-to-2 migration, backup and restore, date
-> browsing and large-library behaviour still require documented validation on
-> real Kodi installations before calling the project production-stable.
+> automated tests. The schema-1-to-3 migrations, search-document backfill,
+> backup and restore, and large-library search performance still require
+> documented validation on real Kodi installations before calling the project
+> production-stable.
 
 ## Features
 
@@ -22,11 +23,13 @@ indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 - Missing-source safety: an unavailable SMB/NFS source is never interpreted as
   deletion of every picture.
 - Lazy Kodi thumbnail caching; no duplicate thumbnail tree is generated.
+- Global Unicode-normalized AND search across filename, caption, keywords,
+  path parts, camera and stored location fields.
 - Favorites, ratings, keywords, cameras, year/month/day and geotagged views.
 - Optional global minimum-rating display policy for normal browser and widget
   views, with a temporary all-pictures override.
-- Versioned, validated Query Model foundation for future search, smart filters,
-  saved views and smart collections.
+- Versioned, validated Query Model used by global search and prepared for
+  future smart filters, saved views and smart collections.
 - Stable widget endpoints for configurable skins.
 - Optional **Estuary MyPicsDB 3** skin with picture rows on the home screen.
 - GitHub Actions, Kodi repository generation and GitHub Pages deployment.
@@ -301,7 +304,25 @@ The background service detects a local date change while Kodi is running and
 refreshes date-sensitive views. On the Estuary MyPicsDB 3 home screen, the skin
 is reloaded once after midnight so **On this day** changes without manual action.
 
-### 5. Configure the minimum-rating display policy
+### 5. Search the whole catalogue
+
+Select **Search** at the top of the MyPicsDB 3 main menu and enter one or more
+words. Search covers indexed filename, caption, keywords, path parts, camera
+make/model, city, state, country and sublocation. Punctuation separates words.
+Unicode text is normalized and case-folded, so Swedish letters such as å, ä and
+ö are retained.
+
+Multiple words use AND semantics: every word must occur somewhere in the same
+picture's search document, but the words may come from different fields. For
+example, `fujifilm göteborg sommar` can match a camera make, a city and a
+keyword on one picture. Version 0.2.19 does not implement phrase search, fuzzy
+matching or prefix completion.
+
+The configured minimum-rating policy also applies to search results. Use
+**Show all pictures temporarily** from the main menu before searching to bypass
+the policy for that browsing session.
+
+### 6. Configure the minimum-rating display policy
 
 Open the context menu anywhere inside MyPicsDB 3 and select **Minimum
 picture rating**, or open **MyPicsDB 3 > Settings > General > Minimum picture
@@ -320,19 +341,21 @@ scanning, metadata extraction or stored database values. The active policy is
 shown in the browser category. Open **Show all pictures temporarily** from the
 add-on main menu to bypass the configured policy for that browsing session.
 
-### 6. Query Model foundation
+### 7. Query Model and global search
 
-Version 0.2.18 contains an internal Query Model version 1 used by automated
-tests and catalogue APIs. It validates nested all/any/not rules for rating,
-favorite, source, album, date range, camera and keyword, then compiles only
-allowlisted SQL with bound parameters for SQLite and MySQL/MariaDB.
+Version 0.2.19 extends Query Model version 1 with the allowlisted `text` /
+`contains_tokens` rule used by Kodi global search. The model still validates
+nested all/any/not rules for rating, favorite, source, album, date range,
+camera and keyword, and compiles only trusted SQL with bound parameters for
+SQLite and MySQL/MariaDB.
 
-This release does not add a Kodi query-builder screen, global text search, saved
-views or smart collections, and it does not change database schema 2. See
-[Query Model version 1](docs/QUERY_MODEL.md) for its JSON form, limits and
-security boundary.
+Search text is never copied into SQL. It is converted to normalized tokens and
+matched against schema-3 search documents maintained by scans and the schema-2
+to schema-3 migration. This release does not add a general Kodi query-builder,
+saved views or smart collections. See [Query Model version 1](docs/QUERY_MODEL.md)
+and [Global search](docs/GLOBAL_SEARCH.md).
 
-### 7. Configure automatic scanning
+### 8. Configure automatic scanning
 
 Open **MyPicsDB 3 > Settings > Scanning** and enable **Enable automatic
 scanning**. Set **Automatic scan interval (hours)** to any whole number from 1
@@ -396,10 +419,11 @@ tested by this project.
 SQLite is recommended for one Kodi device. The database is stored under the
 add-on profile directory and must not be moved to SMB/NFS.
 
-The current development release uses schema version 2 for both SQLite and
-MySQL/MariaDB. Schema 2 adds a year-first date-browsing index. Existing SQLite
-schema-1 databases receive an atomic, integrity-checked backup before the index
-is added; MySQL/MariaDB operators must keep an external backup. See
+The current development release uses schema version 3 for both SQLite and
+MySQL/MariaDB. Schema 2 adds the year-first date-browsing index. Schema 3 adds
+one normalized search document per picture and backfills existing catalogues.
+Existing SQLite databases receive an atomic, integrity-checked backup before a
+schema migration; MySQL/MariaDB operators must keep an external backup. See
 [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before testing a
 development build that changes the catalogue schema.
 

@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
 
 from .rating_policy import RATING_POLICY_ALL, rating_sql_predicate
+from .search_index import SearchTextError, normalize_search_query
 
 
 QUERY_MODEL_VERSION = 1
@@ -25,6 +26,12 @@ class QueryValidationError(ValueError):
 class CameraValue:
     make: Optional[str] = None
     model: Optional[str] = None
+
+
+@dataclass(frozen=True)
+class TextSearchValue:
+    text: str
+    tokens: Tuple[str, ...]
 
 
 @dataclass(frozen=True)
@@ -94,6 +101,7 @@ _FIELD_OPERATORS = {
     "taken_date": frozenset({"between"}),
     "camera": frozenset({"eq"}),
     "keyword": frozenset({"eq", "in"}),
+    "text": frozenset({"contains_tokens"}),
 }
 
 
@@ -248,6 +256,12 @@ def _parse_rule(value: Any, path: str, rule_counter: List[int]) -> QueryRule:
         parsed = _camera_value(raw, path + ".value")
     elif field == "keyword":
         parsed = _keyword_list(raw, path + ".value") if operator == "in" else _string(raw, path + ".value", maximum=191).casefold()
+    elif field == "text":
+        try:
+            normalized_text, tokens = normalize_search_query(raw)
+        except SearchTextError as exc:
+            raise _path_message(path + ".value", str(exc)) from exc
+        parsed = TextSearchValue(text=normalized_text, tokens=tokens)
     else:
         raise _path_message(path + ".field", "unsupported field %r" % field)
     return QueryRule(field=field, operator=operator, value=parsed)
@@ -404,6 +418,8 @@ def _node_to_dict(node: QueryNode) -> Dict[str, Any]:
                 for key, item in (("make", value.make), ("model", value.model))
                 if item is not None
             }
+        elif isinstance(value, TextSearchValue):
+            value = value.text
         elif isinstance(value, tuple):
             value = list(value)
         result["value"] = value
@@ -502,6 +518,18 @@ def _compile_rule(rule: QueryRule) -> Tuple[str, Tuple[Any, ...]]:
             "JOIN tags t ON t.id=pt.tag_id "
             "WHERE pt.picture_id=p.id AND %s)" % predicate,
             params,
+        )
+
+    if field == "text":
+        search: TextSearchValue = value
+        predicates = [
+            "psd.document LIKE ? ESCAPE '!'"
+            for _ in search.tokens
+        ]
+        return (
+            "p.id IN (SELECT psd.picture_id FROM picture_search_documents psd "
+            "WHERE %s)" % " AND ".join(predicates),
+            tuple("%% %s %%" % token for token in search.tokens),
         )
 
     raise QueryValidationError("Compiler has no implementation for field %r" % field)
