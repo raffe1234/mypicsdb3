@@ -4,10 +4,11 @@ MyPicsDB 3 is an independent, community-maintained successor inspired by
 MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
 indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.15 development release candidate. The catalogue, SQLite backend, scanner,
+> Status: 0.2.15 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
-> automated tests. Real Kodi installations are still required for platform and
-> large-library testing before calling the project production-stable.
+> automated tests. The schema-1-to-2 migration, backup and restore, date
+> browsing and large-library behaviour still require documented validation on
+> real Kodi installations before calling the project production-stable.
 
 ## Features
 

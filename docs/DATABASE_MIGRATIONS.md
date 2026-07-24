@@ -35,7 +35,8 @@ Schema 2 adds `idx_pictures_date_browse` on:
 The index supports the Years browser's year → month → day hierarchy. The
 migration checks whether the index already exists before creating it, which
 makes the MySQL/MariaDB DDL step safe to retry after an interrupted run. No
-picture rows or metadata columns are rewritten.
+picture rows or metadata columns are rewritten. The decision and its trade-offs
+are recorded in `docs/adr/0002-schema-2-date-browsing-index.md`.
 
 ## SQLite backups
 
