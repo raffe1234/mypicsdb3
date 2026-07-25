@@ -12,6 +12,8 @@
 - Let minimum-picture-rating policies include videos without assigning fake
   ratings to video records.
 - Document video setup, current metadata limitations and cleanup behaviour.
+- Reconcile a lowered schema marker with already-recorded later migrations without
+  inserting duplicate MySQL/MariaDB migration-history rows.
 
 ## 0.2.21 - 2026-07-25
 

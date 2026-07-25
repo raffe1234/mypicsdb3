@@ -250,6 +250,41 @@ def test_existing_schema_two_backfills_normalized_search_documents(tmp_path: Pat
     assert [item["version"] for item in history] == [1, 2, 3, 4]
 
 
+def test_schema_marker_reconciles_already_recorded_later_migration(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path)
+    MigrationRunner(engine).initialize()
+    with engine.transaction(immediate=True) as connection:
+        engine.execute(connection, "DROP TABLE picture_search_documents").close()
+        engine.execute(
+            connection,
+            "DELETE FROM schema_migrations WHERE version=?",
+            (3,),
+        ).close()
+        engine.execute(
+            connection,
+            "UPDATE meta SET value=? WHERE key=?",
+            ("2", "schema_version"),
+        ).close()
+
+    result = MigrationRunner(engine).initialize()
+
+    assert result.previous_version == 2
+    assert result.current_version == 4
+    assert result.applied_versions == (3,)
+    with engine.transaction() as connection:
+        history = engine.fetchall(
+            connection,
+            "SELECT version FROM schema_migrations ORDER BY version",
+        )
+        schema_version = engine.fetchone(
+            connection,
+            "SELECT value FROM meta WHERE key=?",
+            ("schema_version",),
+        )
+    assert [item["version"] for item in history] == [1, 2, 3, 4]
+    assert schema_version == {"value": "4"}
+
+
 def test_newer_schema_is_rejected_before_any_schema_write(tmp_path: Path) -> None:
     database = tmp_path / "mypicsdb3.sqlite"
     with sqlite3.connect(str(database)) as connection:
