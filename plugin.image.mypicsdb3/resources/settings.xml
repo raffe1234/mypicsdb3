@@ -343,6 +343,21 @@
             <heading>32025</heading>
           </control>
         </setting>
+        <setting id="include_videos" type="boolean" label="32610" help="32611">
+          <level>0</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="video_extensions" type="string" label="32612" help="32613">
+          <level>2</level>
+          <default>mp4,mov,m4v,mkv,avi,mpg,mpeg,mts,m2ts,webm</default>
+          <constraints>
+            <allowempty>false</allowempty>
+          </constraints>
+          <control type="edit" format="string">
+            <heading>32612</heading>
+          </control>
+        </setting>
         <setting id="exclude_fragments" type="string" label="32026" help="32126">
           <level>1</level>
           <default>@eaDir|.thumbnails|#recycle|@Recycle</default>

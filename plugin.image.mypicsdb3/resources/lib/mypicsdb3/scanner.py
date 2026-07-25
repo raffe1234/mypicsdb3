@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import mimetypes
 import os
 import socket
 import time
@@ -188,7 +189,11 @@ class Scanner:
                     if self._is_excluded(picture_uri, filename):
                         continue
                     extension = extension_of(filename)
-                    if extension not in self.settings.extensions:
+                    if extension in self.settings.extensions:
+                        media_type = "picture"
+                    elif self.settings.include_videos and extension in self.settings.video_extensions:
+                        media_type = "video"
+                    else:
                         continue
                     stats.pictures_seen += 1
                     if self.progress:
@@ -196,12 +201,28 @@ class Scanner:
                     try:
                         file_stat = self.filesystem.stat(picture_uri)
                         existing = self.catalog.find_picture(connection, picture_uri)
-                        if existing and int(existing["file_size"]) == file_stat.size and abs(float(existing["file_mtime"]) - file_stat.mtime) < 0.001:
+                        if (
+                            existing
+                            and str(existing.get("media_type") or "picture") == media_type
+                            and int(existing["file_size"]) == file_stat.size
+                            and abs(float(existing["file_mtime"]) - file_stat.mtime) < 0.001
+                        ):
                             self.catalog.touch_picture(connection, int(existing["id"]), folder_id, source.id, scan_started_at)
                             stats.pictures_unchanged += 1
                         else:
-                            metadata = self.metadata_reader(picture_uri, self.filesystem, self.settings, file_stat.size)
-                            self._check_cancelled()
+                            if media_type == "picture":
+                                metadata = self.metadata_reader(
+                                    picture_uri,
+                                    self.filesystem,
+                                    self.settings,
+                                    file_stat.size,
+                                )
+                                self._check_cancelled()
+                            else:
+                                metadata = MetadataResult(
+                                    mime_type=mimetypes.guess_type(filename)[0]
+                                    or "video/%s" % extension,
+                                )
                             if not metadata.taken_at:
                                 metadata.taken_at = local_datetime_from_timestamp(file_stat.mtime)
                                 metadata.taken_source = "File mtime fallback"
@@ -212,6 +233,7 @@ class Scanner:
                                 "uri": picture_uri,
                                 "filename": filename,
                                 "extension": extension,
+                                "media_type": media_type,
                                 "file_size": file_stat.size,
                                 "file_mtime": file_stat.mtime,
                                 "discovered_at": existing.get("discovered_at") if existing else scan_started_at,
@@ -253,7 +275,7 @@ class Scanner:
                         message = "%s: %s" % (picture_uri, exc)
                         stats.error_messages.append(message)
                         if self.logger:
-                            self.logger.warning("Picture scan error for %s: %s", picture_uri, exc)
+                            self.logger.warning("Media scan error for %s: %s", picture_uri, exc)
 
             self._check_cancelled()
             stats.missing_marked = self.catalog.mark_missing_after_scan(connection, source.id, scan_started_at)

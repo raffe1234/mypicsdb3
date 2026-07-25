@@ -22,6 +22,8 @@ class Settings:
     startup_delay_seconds: int = 60
     pause_during_playback: bool = True
     extensions: Tuple[str, ...] = ("jpg", "jpeg", "png", "gif", "bmp", "tif", "tiff", "webp", "heic", "heif", "avif")
+    include_videos: bool = False
+    video_extensions: Tuple[str, ...] = ("mp4", "mov", "m4v", "mkv", "avi", "mpg", "mpeg", "mts", "m2ts", "webm")
     exclude_fragments: Tuple[str, ...] = ("@eadir", ".thumbnails", "#recycle", "@recycle")
     exclude_hidden: bool = True
     batch_size: int = 100
@@ -62,6 +64,8 @@ def from_getter(getter: Callable[[str], Any], profile_path: str) -> Settings:
         startup_delay_seconds=parse_int(getter("startup_delay_seconds"), 60, 0, 3600),
         pause_during_playback=parse_bool(getter("pause_during_playback"), True),
         extensions=split_csv(str(getter("extensions") or "jpg,jpeg,png,gif,bmp,tif,tiff,webp,heic,heif,avif")),
+        include_videos=parse_bool(getter("include_videos"), False),
+        video_extensions=split_csv(str(getter("video_extensions") or "mp4,mov,m4v,mkv,avi,mpg,mpeg,mts,m2ts,webm")),
         exclude_fragments=split_pipe(str(getter("exclude_fragments") or "")),
         exclude_hidden=parse_bool(getter("exclude_hidden"), True),
         batch_size=parse_int(getter("batch_size"), 100, 10, 2000),

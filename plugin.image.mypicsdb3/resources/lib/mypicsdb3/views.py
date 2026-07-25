@@ -30,7 +30,11 @@ from .rating_policy import (
 from .router import Request
 from .search import build_global_search_request
 from .scanner import Scanner
+from .slideshow import SlideshowError, start_mixed_slideshow
 from .utils import parse_bool, plugin_url, safe_limit
+
+
+MAX_SLIDESHOW_ITEMS = 5000
 
 
 class PluginUI:
@@ -138,6 +142,7 @@ class PluginUI:
             )
             for node in MAIN_MENU_NODES
             if node.key not in hidden_nodes
+            and (node.key != "videos" or self.kodi.settings.include_videos)
         )
         items.extend(
             [
@@ -234,11 +239,12 @@ class PluginUI:
         items = [self._folder_item(folder, browse_params=params) for folder in folders]
         self.finish(items, content="images", category=self._rating_category(source.label, params))
 
-    def _picture_item(
+    def _media_item(
         self,
         row: Dict[str, Any],
         extra_context: Optional[List[Tuple[str, str]]] = None,
         browse_params: Optional[Dict[str, str]] = None,
+        slideshow_route: Optional[str] = None,
     ) -> Tuple[str, xbmcgui.ListItem, bool]:
         date_text = str(row.get("taken_at") or row.get("discovered_at") or "")
         label = row.get("filename") or date_text or self.text(30031, "Picture")
@@ -252,10 +258,18 @@ class PluginUI:
             info["cameramodel"] = row["camera_model"]
         if row.get("caption"):
             info["exifcomment"] = row["caption"]
+        media_type = str(row.get("media_type") or "picture")
         try:
-            item.setInfo("pictures", info)
+            if media_type == "video":
+                item.setInfo("video", {"title": label, "dateadded": date_text})
+                item.setProperty("IsPlayable", "true")
+                if row.get("mime_type") and hasattr(item, "setMimeType"):
+                    item.setMimeType(str(row["mime_type"]))
+            else:
+                item.setInfo("pictures", info)
         except Exception:
             pass
+        item.setProperty("MyPicsDB3.MediaType", media_type)
         item.setProperty("MyPicsDB3.PictureId", str(row.get("id", "")))
         item.setProperty("MyPicsDB3.TakenAt", date_text)
         item.setProperty("MyPicsDB3.Camera", " ".join(filter(None, [row.get("camera_make"), row.get("camera_model")])))
@@ -265,6 +279,24 @@ class PluginUI:
             item.setProperty("MyPicsDB3.Rating", str(row["rating"]))
         toggle = "RunPlugin(%s)" % self.url("action/toggle-favorite", id=row.get("id"))
         context = [(self.text(30022, "Toggle favorite"), toggle)]
+        if slideshow_route:
+            slideshow_params = {
+                key: value
+                for key, value in (browse_params or {}).items()
+                if key not in {"offset", "limit", "widget"}
+            }
+            slideshow_params.update(
+                {"scope": slideshow_route, "start": row.get("id")}
+            )
+            context.append(
+                (
+                    self.text(32603, "Play slideshow from here"),
+                    "RunPlugin(%s)" % self.url(
+                        "action/start-slideshow",
+                        **slideshow_params,
+                    ),
+                )
+            )
         if row.get("folder_id"):
             context.append((self.text(30023, "Open containing album"), "ActivateWindow(Pictures,%s,return)" % self.url("folder", id=row["folder_id"], **self._rating_route_params(browse_params))))
         if extra_context:
@@ -282,8 +314,17 @@ class PluginUI:
         label = "%s  [COLOR=grey](%d)[/COLOR]" % (row.get("name") or self.text(30032, "Album"), count)
         art = row.get("representative_thumb") or row.get("representative_uri") or self.icon
         context = [(self.text(30021, "Scan selected source"), "RunPlugin(%s)" % self.url("action/scan", source=row.get("source_id")))]
-        if row.get("uri"):
-            context.append(("Slideshow", "SlideShow(%s,recursive)" % row["uri"]))
+        if row.get("id"):
+            context.append(
+                (
+                    self.text(32602, "Play mixed slideshow"),
+                    "RunPlugin(%s)" % self.url(
+                        "action/start-slideshow",
+                        scope="folder-tree",
+                        id=row["id"],
+                    ),
+                )
+            )
         if extra_context:
             context.extend(extra_context)
         return self.add_folder(
@@ -322,7 +363,7 @@ class PluginUI:
         limit = safe_limit(params.get("limit"), default_limit)
         offset = int(params.get("offset", "0") or 0)
         rows = getter(limit, offset)
-        items = [self._picture_item(row, browse_params=params) for row in rows]
+        items = [self._media_item(row, browse_params=params, slideshow_route=route) for row in rows]
         if not random_view and len(rows) == limit and not is_widget and "limit" not in params:
             page_params = {
                 key: value
@@ -351,7 +392,7 @@ class PluginUI:
             for row in child_folders
         ]
         items.extend(
-            self._picture_item(row, browse_params=params)
+            self._media_item(row, browse_params=params, slideshow_route="folder")
             for row in pictures
         )
         if len(pictures) == limit:
@@ -558,13 +599,89 @@ class PluginUI:
     def _save_current_album_view(self) -> None:
         save_current_album_view(self.kodi, self.text, xbmc, xbmcgui)
 
+    def _slideshow_rows(self, params: Dict[str, str]) -> List[Dict[str, Any]]:
+        scope = params.get("scope", "")
+        limit = MAX_SLIDESHOW_ITEMS
+        if scope == "folder":
+            return self.catalog.pictures_in_folder(int(params["id"]), limit, 0)
+        if scope == "folder-tree":
+            return self.catalog.media_in_folder_tree(int(params["id"]), limit)
+        if scope == "recent-taken":
+            return self.catalog.recent_taken(limit, 0)
+        if scope == "recent-added":
+            return self.catalog.recent_added(limit, 0)
+        if scope == "random":
+            return self.catalog.random_pictures(
+                safe_limit(params.get("limit"), self.kodi.settings.widget_limit)
+            )
+        if scope == "on-this-day":
+            now = datetime.now()
+            return self.catalog.on_this_day(now.month, now.day, now.year, limit, 0)
+        if scope == "year":
+            return self.catalog.pictures_for_year(int(params["year"]), limit, 0)
+        if scope == "day":
+            return self.catalog.pictures_for_day(
+                int(params["year"]),
+                int(params["month"]),
+                int(params["day"]),
+                limit,
+                0,
+            )
+        if scope == "no-date":
+            return self.catalog.pictures_without_date(limit, 0)
+        if scope == "camera":
+            return self.catalog.pictures_for_camera(
+                params.get("make", ""), params.get("model", ""), limit, 0
+            )
+        if scope == "tag":
+            return self.catalog.pictures_for_tag(int(params["id"]), limit, 0)
+        if scope == "favorites":
+            return self.catalog.favorites(limit, 0)
+        if scope == "rated":
+            return self.catalog.rated(limit, 0)
+        if scope == "geotagged":
+            return self.catalog.geotagged(limit, 0)
+        if scope == "videos":
+            return self.catalog.videos(limit, 0)
+        if scope == "search":
+            request = build_global_search_request(params.get("q", ""))
+            return self.catalog.query_pictures(request.query, limit, 0)
+        return []
+
+    def _start_slideshow(self, params: Dict[str, str]) -> None:
+        rows = self._slideshow_rows(params)
+        if not rows:
+            self.kodi.notify(self.text(32604, "No media to play"))
+            return
+        start_id = int(params.get("start", "0") or 0)
+        start_position = next(
+            (
+                index
+                for index, row in enumerate(rows)
+                if int(row.get("id") or 0) == start_id
+            ),
+            0,
+        )
+        try:
+            start_mixed_slideshow(
+                xbmc,
+                [str(row.get("uri") or "") for row in rows],
+                start_position,
+            )
+        except SlideshowError as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
+                error=True,
+            )
+
     def status(self):
         overview = self.catalog.overview()
         latest = self.catalog.latest_scan()
         values = [
             "%s: %s" % (self.text(30041, "Database backend"), overview["backend"]),
-            "%s: %s" % (self.text(30038, "Indexed pictures"), overview["pictures"]),
-            "%s: %s" % (self.text(30039, "Missing pictures"), overview["missing"]),
+            "%s: %s" % (self.text(30038, "Indexed media"), overview["pictures"]),
+            "%s: %s" % (self.text(32601, "Indexed videos"), overview["videos"]),
+            "%s: %s" % (self.text(30039, "Missing media"), overview["missing"]),
             "%s: %s" % (self.text(30040, "Indexed albums"), overview["folders"]),
             "%s: %s" % (self.text(30036, "Last scan"), latest.get("finished_at") if latest else self.text(30037, "Never")),
         ]
@@ -584,6 +701,9 @@ class PluginUI:
     def action(self, route: str, params: Dict[str, str]):
         if route == "action/settings":
             self.kodi.open_settings()
+            return
+        if route == "action/start-slideshow":
+            self._start_slideshow(params)
             return
         if route == "action/configure-home":
             self._configure_home_screen()
@@ -799,7 +919,7 @@ class PluginUI:
         if route == "random":
             limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit)
             return self.finish(
-                [self._picture_item(row, browse_params=params) for row in self.catalog.random_pictures(limit)],
+                [self._media_item(row, browse_params=params) for row in self.catalog.random_pictures(limit)],
                 category=self._rating_category(self.text(30003, "Random memories"), params),
             )
         if route == "recent-folders":
@@ -817,6 +937,8 @@ class PluginUI:
             now = datetime.now()
             getter = lambda limit, offset: self.catalog.on_this_day(now.month, now.day, now.year, limit, offset)
             return self.pictures(route, getter, params, self.text(30006, "On this day"))
+        if route == "videos":
+            return self.pictures(route, self.catalog.videos, params, self.text(32600, "Videos"))
         if route == "years":
             return self.years(params)
         if route == "year":

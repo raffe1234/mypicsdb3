@@ -571,7 +571,7 @@ def compile_picture_query(
     if query.default_policy.apply_min_rating:
         rating_sql, rating_params = rating_sql_predicate(minimum_rating_policy, "p.rating")
         if rating_sql:
-            predicates.append(rating_sql)
+            predicates.append("(p.media_type='video' OR %s)" % rating_sql)
             params.extend(rating_params)
 
     root_sql, root_params = _compile_group(query.root)

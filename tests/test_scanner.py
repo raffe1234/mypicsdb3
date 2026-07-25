@@ -224,3 +224,44 @@ def test_active_scan_refreshes_its_shorter_lock(monkeypatch, tmp_path: Path) -> 
     assert refresh_calls
     assert all(call[0] == "catalogue-scan" for call in refresh_calls)
     assert all(call[2] == 1800 for call in refresh_calls)
+
+
+def test_video_scan_skips_picture_metadata_and_stores_media_type(tmp_path: Path) -> None:
+    media = tmp_path / "media"
+    media.mkdir()
+    (media / "photo.jpg").write_bytes(b"picture")
+    (media / "clip.mp4").write_bytes(b"video")
+
+    settings = Settings(
+        profile_path=str(tmp_path / "profile"),
+        extensions=("jpg",),
+        include_videos=True,
+        video_extensions=("mp4",),
+    )
+    catalog = Catalog(DatabaseEngine(settings))
+    catalog.initialize()
+    source = catalog.sync_sources([{"label": "Media", "uri": str(media)}])[0]
+    catalog.set_source_enabled(source.id, True)
+    metadata_calls = []
+
+    def picture_metadata(path, filesystem, scan_settings, file_size):
+        metadata_calls.append(Path(path).name)
+        return MetadataResult(mime_type="image/jpeg")
+
+    stats = Scanner(
+        catalog,
+        LocalFilesystem(),
+        settings,
+        metadata_reader=picture_metadata,
+    ).scan_sources()
+
+    assert stats.pictures_seen == 2
+    assert metadata_calls == ["photo.jpg"]
+    rows = catalog.recent_added(10)
+    assert {row["filename"]: row["media_type"] for row in rows} == {
+        "photo.jpg": "picture",
+        "clip.mp4": "video",
+    }
+    video = next(row for row in rows if row["media_type"] == "video")
+    assert video["mime_type"] == "video/mp4"
+    assert video["taken_source"] == "File mtime fallback"

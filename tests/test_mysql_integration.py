@@ -97,8 +97,8 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     second = catalog.initialize()
 
     assert first.bootstrapped_history is True
-    assert first.current_version == 3
-    assert first.applied_versions == (2, 3)
+    assert first.current_version == 4
+    assert first.applied_versions == (2, 3, 4)
     assert second.bootstrapped_history is False
     assert second.applied_versions == ()
     with engine.transaction() as connection:
@@ -128,9 +128,9 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
         )
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
-    assert [row["version"] for row in history] == [1, 2, 3]
+    assert [row["version"] for row in history] == [1, 2, 3, 4]
     assert {row["addon_version"] for row in history} == {VERSION}
-    assert count["total"] == 3
+    assert count["total"] == 4
     assert index is not None
     assert search_table is not None
 
@@ -237,7 +237,7 @@ def test_existing_mysql_schema_two_backfills_global_search_documents(tmp_path) -
     result = Catalog(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 3
+    assert result.current_version == 4
     assert result.applied_versions == (3,)
     with engine.transaction() as connection:
         row = engine.fetchone(

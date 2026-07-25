@@ -160,12 +160,12 @@ msgid "Never"
 msgstr "Never"
 
 msgctxt "#30038"
-msgid "Indexed pictures"
-msgstr "Indexed pictures"
+msgid "Indexed media"
+msgstr "Indexed media"
 
 msgctxt "#30039"
-msgid "Missing pictures"
-msgstr "Missing pictures"
+msgid "Missing media"
+msgstr "Missing media"
 
 msgctxt "#30040"
 msgid "Indexed albums"
@@ -798,3 +798,43 @@ msgstr "Add-on menu saved"
 msgctxt "#32302"
 msgid "Choose which browsing nodes are visible in the MyPicsDB 3 add-on menu. Search, picture sources, scanning and settings remain available."
 msgstr "Choose which browsing nodes are visible in the MyPicsDB 3 add-on menu. Search, picture sources, scanning and settings remain available."
+
+msgctxt "#32600"
+msgid "Videos"
+msgstr "Videos"
+
+msgctxt "#32601"
+msgid "Indexed videos"
+msgstr "Indexed videos"
+
+msgctxt "#32602"
+msgid "Play mixed slideshow"
+msgstr "Play mixed slideshow"
+
+msgctxt "#32603"
+msgid "Play slideshow from here"
+msgstr "Play slideshow from here"
+
+msgctxt "#32604"
+msgid "No media to play"
+msgstr "No media to play"
+
+msgctxt "#32605"
+msgid "Could not start slideshow"
+msgstr "Could not start slideshow"
+
+msgctxt "#32610"
+msgid "Include videos"
+msgstr "Include videos"
+
+msgctxt "#32611"
+msgid "Index supported video files alongside pictures. Video metadata is limited to filename, file information and file modification date in this release. Run a new scan after changing this setting."
+msgstr "Index supported video files alongside pictures. Video metadata is limited to filename, file information and file modification date in this release. Run a new scan after changing this setting."
+
+msgctxt "#32612"
+msgid "Video file extensions"
+msgstr "Video file extensions"
+
+msgctxt "#32613"
+msgid "Comma-separated video extensions without leading dots. Used only when Include videos is enabled."
+msgstr "Comma-separated video extensions without leading dots. Used only when Include videos is enabled."

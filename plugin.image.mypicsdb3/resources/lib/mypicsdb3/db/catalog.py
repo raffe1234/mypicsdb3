@@ -23,7 +23,7 @@ from .migrations import MigrationRunner
 
 
 PICTURE_COLUMNS = """
-p.id, p.source_id, p.folder_id, p.uri, p.filename, p.extension, p.file_size,
+p.id, p.source_id, p.folder_id, p.uri, p.filename, p.extension, p.media_type, p.file_size,
 p.file_mtime, p.discovered_at, p.last_seen_at, p.taken_at, p.taken_source,
 p.taken_year, p.taken_month, p.taken_day, p.width, p.height, p.orientation,
 p.mime_type, p.camera_make, p.camera_model, p.rating, p.gps_latitude,
@@ -42,8 +42,15 @@ class Catalog:
     def set_rating_policy(self, rating_policy: str) -> None:
         self.rating_policy = normalize_rating_policy(rating_policy)
 
-    def _rating_predicate(self, column: str = "p.rating") -> Tuple[str, Sequence[Any]]:
-        return rating_sql_predicate(self.rating_policy, column)
+    def _rating_predicate(
+        self,
+        column: str = "p.rating",
+        media_type_column: Optional[str] = None,
+    ) -> Tuple[str, Sequence[Any]]:
+        predicate, params = rating_sql_predicate(self.rating_policy, column)
+        if predicate and media_type_column:
+            predicate = "(%s='video' OR %s)" % (media_type_column, predicate)
+        return predicate, params
 
     def _apply_rating_policy(
         self,
@@ -51,7 +58,7 @@ class Catalog:
         params: Sequence[Any],
         column: str = "p.rating",
     ) -> Tuple[str, Tuple[Any, ...]]:
-        predicate, policy_params = self._rating_predicate(column)
+        predicate, policy_params = self._rating_predicate(column, "p.media_type")
         if predicate:
             where = "(%s) AND %s" % (where, predicate) if where else predicate
         return where, (*params, *policy_params)
@@ -200,12 +207,19 @@ class Catalog:
 
     def overview(self) -> Dict[str, Any]:
         with self.engine.transaction() as connection:
-            pictures = self.engine.fetchone(connection, "SELECT COUNT(*) AS total, SUM(CASE WHEN is_missing=1 THEN 1 ELSE 0 END) AS missing FROM pictures") or {}
+            pictures = self.engine.fetchone(
+                connection,
+                "SELECT COUNT(*) AS total, "
+                "SUM(CASE WHEN is_missing=1 THEN 1 ELSE 0 END) AS missing, "
+                "SUM(CASE WHEN media_type='video' AND is_missing=0 THEN 1 ELSE 0 END) AS videos "
+                "FROM pictures",
+            ) or {}
             folders = self.engine.fetchone(connection, "SELECT COUNT(*) AS total FROM folders WHERE is_missing=0") or {}
             sources = self.engine.fetchone(connection, "SELECT COUNT(*) AS total, SUM(CASE WHEN enabled=1 THEN 1 ELSE 0 END) AS enabled FROM sources") or {}
         return {
             "pictures": int(pictures.get("total") or 0),
             "missing": int(pictures.get("missing") or 0),
+            "videos": int(pictures.get("videos") or 0),
             "folders": int(folders.get("total") or 0),
             "sources": int(sources.get("total") or 0),
             "enabled_sources": int(sources.get("enabled") or 0),
@@ -234,7 +248,7 @@ class Catalog:
             cursor.close()
 
     def find_picture(self, connection, uri: str) -> Optional[Dict[str, Any]]:
-        return self.engine.fetchone(connection, "SELECT id, file_size, file_mtime, metadata_hash, favorite, discovered_at FROM pictures WHERE uri_hash=?", (sha256_text(uri),))
+        return self.engine.fetchone(connection, "SELECT id, file_size, file_mtime, media_type, metadata_hash, favorite, discovered_at FROM pictures WHERE uri_hash=?", (sha256_text(uri),))
 
     def touch_picture(self, connection, picture_id: int, folder_id: int, source_id: int, seen_at: str) -> None:
         self.engine.execute(connection, "UPDATE pictures SET folder_id=?, source_id=?, last_seen_at=?, is_missing=0, missing_since=NULL WHERE id=?", (folder_id, source_id, seen_at, picture_id)).close()
@@ -253,7 +267,7 @@ class Catalog:
         year, month, day = self._date_parts(record.get("taken_at"))
         fields = (
             record["source_id"], record["folder_id"], record["uri"], sha256_text(record["uri"]), record["filename"],
-            record["extension"], record["file_size"], record["file_mtime"], record["discovered_at"], record["last_seen_at"],
+            record["extension"], record.get("media_type", "picture"), record["file_size"], record["file_mtime"], record["discovered_at"], record["last_seen_at"],
             record.get("taken_at"), record.get("taken_source"), year, month, day, record.get("width"), record.get("height"),
             record.get("orientation"), record.get("mime_type"), record.get("camera_make"), record.get("camera_model"),
             record.get("rating"), record.get("gps_latitude"), record.get("gps_longitude"), record.get("city"), record.get("state"),
@@ -261,12 +275,12 @@ class Catalog:
             random.random(),
         )
         cursor = self.engine.execute(connection, """INSERT INTO pictures (
-            source_id, folder_id, uri, uri_hash, filename, extension, file_size, file_mtime,
+            source_id, folder_id, uri, uri_hash, filename, extension, media_type, file_size, file_mtime,
             discovered_at, last_seen_at, taken_at, taken_source, taken_year, taken_month, taken_day,
             width, height, orientation, mime_type, camera_make, camera_model, rating,
             gps_latitude, gps_longitude, city, state, country, sublocation, caption,
             metadata_hash, thumb_uri, random_key, favorite, is_missing
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)""", fields)
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)""", fields)
         try:
             picture_id = int(cursor.lastrowid)
         finally:
@@ -279,13 +293,13 @@ class Catalog:
         keyword_values = tuple(keywords)
         year, month, day = self._date_parts(record.get("taken_at"))
         self.engine.execute(connection, """UPDATE pictures SET
-            source_id=?, folder_id=?, uri=?, filename=?, extension=?, file_size=?, file_mtime=?, last_seen_at=?,
+            source_id=?, folder_id=?, uri=?, filename=?, extension=?, media_type=?, file_size=?, file_mtime=?, last_seen_at=?,
             taken_at=?, taken_source=?, taken_year=?, taken_month=?, taken_day=?, width=?, height=?, orientation=?,
             mime_type=?, camera_make=?, camera_model=?, rating=?, gps_latitude=?, gps_longitude=?, city=?, state=?,
             country=?, sublocation=?, caption=?, metadata_hash=?, thumb_uri=?, is_missing=0, missing_since=NULL
             WHERE id=?""", (
                 record["source_id"], record["folder_id"], record["uri"], record["filename"], record["extension"],
-                record["file_size"], record["file_mtime"], record["last_seen_at"], record.get("taken_at"),
+                record.get("media_type", "picture"), record["file_size"], record["file_mtime"], record["last_seen_at"], record.get("taken_at"),
                 record.get("taken_source"), year, month, day, record.get("width"), record.get("height"),
                 record.get("orientation"), record.get("mime_type"), record.get("camera_make"), record.get("camera_model"),
                 record.get("rating"), record.get("gps_latitude"), record.get("gps_longitude"), record.get("city"),
@@ -418,6 +432,9 @@ class Catalog:
     def geotagged(self, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.gps_latitude IS NOT NULL AND p.gps_longitude IS NOT NULL", (), "COALESCE(p.taken_at, p.discovered_at) DESC", limit, offset)
 
+    def videos(self, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
+        return self._pictures("p.media_type='video'", (), "COALESCE(p.taken_at, p.discovered_at) DESC, p.id DESC", limit, offset)
+
     def on_this_day(self, month: int, day: int, current_year: int, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.taken_month=? AND p.taken_day=? AND p.taken_year<?", (month, day, current_year), "p.taken_year DESC, p.taken_at DESC", limit, offset)
 
@@ -459,6 +476,23 @@ class Catalog:
     def pictures_in_folder(self, folder_id: int, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.folder_id=?", (folder_id,), "COALESCE(p.taken_at, p.discovered_at) DESC, p.filename", limit, offset)
 
+    @staticmethod
+    def _escape_like(value: str) -> str:
+        return value.replace("!", "!!").replace("%", "!%").replace("_", "!_")
+
+    def media_in_folder_tree(self, folder_id: int, limit: int) -> List[Dict[str, Any]]:
+        folder = self.get_folder(folder_id)
+        if not folder:
+            return []
+        prefix = self._escape_like(str(folder["uri"])) + "%"
+        return self._pictures(
+            "p.source_id=? AND p.uri LIKE ? ESCAPE '!'",
+            (int(folder["source_id"]), prefix),
+            "COALESCE(p.taken_at, p.discovered_at) DESC, p.filename",
+            limit,
+            0,
+        )
+
     def random_pictures(self, limit: int) -> List[Dict[str, Any]]:
         seed = random.random()
         first = self._pictures("p.random_key>=?", (seed,), "p.random_key", limit, 0)
@@ -468,8 +502,8 @@ class Catalog:
         return first
 
     def _folder_rows(self, where: str, params: Sequence[Any], order: str, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
-        count_predicate, count_params = self._rating_predicate("pc.rating")
-        representative_predicate, representative_params = self._rating_predicate("pr.rating")
+        count_predicate, count_params = self._rating_predicate("pc.rating", "pc.media_type")
+        representative_predicate, representative_params = self._rating_predicate("pr.rating", "pr.media_type")
         count_filter = " AND " + count_predicate if count_predicate else ""
         representative_filter = " AND " + representative_predicate if representative_predicate else ""
         query = """SELECT f.*, p.uri AS representative_uri, p.thumb_uri AS representative_thumb,
@@ -514,7 +548,7 @@ class Catalog:
             return self.engine.fetchone(connection, "SELECT f.*, s.label AS source_label FROM folders f JOIN sources s ON s.id=f.source_id WHERE f.id=?", (folder_id,))
 
     def years(self) -> List[Dict[str, Any]]:
-        predicate, policy_params = self._rating_predicate("rating")
+        predicate, policy_params = self._rating_predicate("rating", "media_type")
         policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(
@@ -538,7 +572,7 @@ class Catalog:
             return groups
 
     def months_for_year(self, year: int) -> List[Dict[str, Any]]:
-        predicate, policy_params = self._rating_predicate("rating")
+        predicate, policy_params = self._rating_predicate("rating", "media_type")
         policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(
@@ -565,7 +599,7 @@ class Catalog:
             return result
 
     def days_for_month(self, year: int, month: int) -> List[Dict[str, Any]]:
-        predicate, policy_params = self._rating_predicate("rating")
+        predicate, policy_params = self._rating_predicate("rating", "media_type")
         policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(
@@ -592,7 +626,7 @@ class Catalog:
             return result
 
     def undated_summary(self) -> Optional[Dict[str, Any]]:
-        predicate, policy_params = self._rating_predicate("rating")
+        predicate, policy_params = self._rating_predicate("rating", "media_type")
         policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             count = self.engine.fetchone(
@@ -616,14 +650,14 @@ class Catalog:
             return row
 
     def cameras(self) -> List[Dict[str, Any]]:
-        predicate, policy_params = self._rating_predicate("rating")
+        predicate, policy_params = self._rating_predicate("rating", "media_type")
         policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(connection, """SELECT COALESCE(camera_make,'') AS camera_make, COALESCE(camera_model,'') AS camera_model, COUNT(*) AS picture_count
-                FROM pictures WHERE is_missing=0 AND (camera_make IS NOT NULL OR camera_model IS NOT NULL)
+                FROM pictures WHERE is_missing=0 AND media_type='picture' AND (camera_make IS NOT NULL OR camera_model IS NOT NULL)
                 %s GROUP BY COALESCE(camera_make,''), COALESCE(camera_model,'') ORDER BY picture_count DESC, camera_make, camera_model""" % policy_sql, policy_params)
             for group in groups:
-                rep = self.engine.fetchone(connection, "SELECT uri, thumb_uri FROM pictures WHERE is_missing=0 AND COALESCE(camera_make,'')=? AND COALESCE(camera_model,'')=?%s ORDER BY COALESCE(taken_at, discovered_at) DESC LIMIT 1" % policy_sql, (group["camera_make"], group["camera_model"], *policy_params))
+                rep = self.engine.fetchone(connection, "SELECT uri, thumb_uri FROM pictures WHERE is_missing=0 AND media_type='picture' AND COALESCE(camera_make,'')=? AND COALESCE(camera_model,'')=?%s ORDER BY COALESCE(taken_at, discovered_at) DESC LIMIT 1" % policy_sql, (group["camera_make"], group["camera_model"], *policy_params))
                 group.update(rep or {})
             return groups
 
@@ -633,10 +667,10 @@ class Catalog:
         with self.engine.transaction() as connection:
             groups = self.engine.fetchall(connection, """SELECT t.id, t.name, COUNT(*) AS picture_count
                 FROM tags t JOIN picture_tags pt ON pt.tag_id=t.id JOIN pictures p ON p.id=pt.picture_id
-                WHERE p.is_missing=0%s GROUP BY t.id, t.name ORDER BY picture_count DESC, t.name""" % policy_sql, policy_params)
+                WHERE p.is_missing=0 AND p.media_type='picture'%s GROUP BY t.id, t.name ORDER BY picture_count DESC, t.name""" % policy_sql, policy_params)
             for group in groups:
                 rep = self.engine.fetchone(connection, """SELECT p.uri, p.thumb_uri FROM pictures p JOIN picture_tags pt ON pt.picture_id=p.id
-                    WHERE p.is_missing=0 AND pt.tag_id=?%s ORDER BY COALESCE(p.taken_at, p.discovered_at) DESC LIMIT 1""" % policy_sql, (group["id"], *policy_params))
+                    WHERE p.is_missing=0 AND p.media_type='picture' AND pt.tag_id=?%s ORDER BY COALESCE(p.taken_at, p.discovered_at) DESC LIMIT 1""" % policy_sql, (group["id"], *policy_params))
                 group.update(rep or {})
             return groups
 
