@@ -48,6 +48,7 @@ SQLITE_SCHEMA = [
         uri_hash TEXT NOT NULL UNIQUE,
         filename TEXT NOT NULL,
         extension TEXT NOT NULL,
+        media_type TEXT NOT NULL DEFAULT 'picture',
         file_size INTEGER NOT NULL,
         file_mtime REAL NOT NULL,
         discovered_at TEXT NOT NULL,
@@ -125,6 +126,7 @@ SQLITE_SCHEMA = [
     "CREATE INDEX IF NOT EXISTS idx_pictures_folder ON pictures(folder_id, is_missing)",
     "CREATE INDEX IF NOT EXISTS idx_pictures_camera ON pictures(is_missing, camera_make, camera_model)",
     "CREATE INDEX IF NOT EXISTS idx_pictures_favorite ON pictures(is_missing, favorite)",
+    "CREATE INDEX IF NOT EXISTS idx_pictures_media_type ON pictures(is_missing, media_type, taken_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(source_id, parent_uri, is_missing)",
     "CREATE INDEX IF NOT EXISTS idx_folders_recent ON folders(is_missing, latest_discovered_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_folders_random ON folders(is_missing, random_key)",
@@ -173,6 +175,7 @@ MYSQL_SCHEMA = [
         uri_hash CHAR(64) NOT NULL UNIQUE,
         filename VARCHAR(1024) NOT NULL,
         extension VARCHAR(32) NOT NULL,
+        media_type VARCHAR(16) NOT NULL DEFAULT 'picture',
         file_size BIGINT NOT NULL,
         file_mtime DOUBLE NOT NULL,
         discovered_at DATETIME(6) NOT NULL,
@@ -211,7 +214,8 @@ MYSQL_SCHEMA = [
         INDEX idx_pictures_date_browse (is_missing, taken_year, taken_month, taken_day, taken_at),
         INDEX idx_pictures_folder (folder_id, is_missing),
         INDEX idx_pictures_camera (is_missing, camera_make, camera_model),
-        INDEX idx_pictures_favorite (is_missing, favorite)
+        INDEX idx_pictures_favorite (is_missing, favorite),
+        INDEX idx_pictures_media_type (is_missing, media_type, taken_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
     """CREATE TABLE IF NOT EXISTS tags (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

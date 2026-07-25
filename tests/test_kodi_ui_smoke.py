@@ -60,6 +60,7 @@ def load_views(monkeypatch):
     calls = Calls()
     xbmc = types.ModuleType("xbmc")
     xbmc.executebuiltin = calls.builtins.append
+    xbmc.executeJSONRPC = lambda payload: '{"jsonrpc":"2.0","id":1,"result":"OK"}'
     xbmc.getInfoLabel = lambda label: ""
     xbmcgui = types.ModuleType("xbmcgui")
     xbmcgui.ListItem = FakeListItem
@@ -101,6 +102,7 @@ class FakeKodi:
             browser_page_size=100,
             album_view_mode=55,
             minimum_rating_policy="all",
+            include_videos=False,
         )
         self.log = types.SimpleNamespace(warning=lambda *args: None)
         self.notifications = []
@@ -156,6 +158,7 @@ class FakeCatalog:
             "folder_name": "Summer",
             "source_label": "Photos",
             "rating": 5,
+            "media_type": "picture",
         }]
 
 
@@ -274,14 +277,14 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
 def test_main_menu_editor_persists_hidden_nodes(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
-    FakeDialog.multiselect_responses = [[0, 6]]
+    FakeDialog.multiselect_responses = [[0, 7]]
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
     ui.dispatch(views.Request("action/configure-menu", {}))
 
     assert runtime.kodi.addon.getSetting("hidden_main_menu_nodes") == (
         "recent_added|random_memories|recent_albums|random_albums|on_this_day|"
-        "cameras|keywords|favorites|rated|geotagged"
+        "videos|cameras|keywords|favorites|rated|geotagged"
     )
     assert runtime.kodi.notifications == [("Add-on menu saved", False)]
     assert calls.builtins[-1] == "Container.Refresh"
@@ -491,3 +494,34 @@ def test_album_items_do_not_duplicate_global_save_view_context_action(monkeypatc
         label != "Save current view as album default"
         for label, _command in picture.context
     )
+
+
+def test_video_node_and_video_list_item_are_playable_when_enabled(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.include_videos = True
+    video = dict(runtime.catalog.recent_taken(1)[0])
+    video.update(
+        {
+            "id": 9,
+            "uri": "smb://server/photos/clip.mp4",
+            "thumb_uri": "smb://server/photos/clip.mp4",
+            "filename": "clip.mp4",
+            "media_type": "video",
+            "mime_type": "video/mp4",
+        }
+    )
+    runtime.catalog.videos = lambda limit, offset=0: [video]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.root()
+    urls = [url for url, _item, _folder in calls.items]
+    assert "plugin://plugin.image.mypicsdb3/videos" in urls
+
+    ui.dispatch(views.Request("videos", {}))
+    url, item, is_folder = calls.items[0]
+    assert url.endswith("clip.mp4")
+    assert item.properties["IsPlayable"] == "true"
+    assert item.properties["MyPicsDB3.MediaType"] == "video"
+    assert "video" in item.info
+    assert is_folder is False

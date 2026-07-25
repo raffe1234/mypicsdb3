@@ -83,3 +83,15 @@ def test_english_catalogue_is_separated_and_has_clear_labels():
         assert ('msgid "%s"' % label) in text
         assert ('msgstr "%s"' % label) in text
     assert not re.search(r'msgstr "[^"]*"\nmsgctxt "#', text)
+
+
+def test_video_scanning_is_opt_in_and_has_separate_extensions():
+    settings = settings_by_id()
+    assert settings["include_videos"].findtext("default") == "false"
+    assert settings["video_extensions"].findtext("default") == (
+        "mp4,mov,m4v,mkv,avi,mpg,mpeg,mts,m2ts,webm"
+    )
+    values = {"include_videos": "true", "video_extensions": "mp4,mkv"}
+    parsed = from_getter(lambda key: values.get(key, ""), "/tmp/mypicsdb3")
+    assert parsed.include_videos is True
+    assert parsed.video_extensions == ("mp4", "mkv")

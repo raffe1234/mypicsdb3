@@ -58,6 +58,7 @@ MAIN_MENU_NODES: Tuple[MainMenuNode, ...] = (
     MainMenuNode("recent_albums", 30004, "Recent albums", "recent-folders"),
     MainMenuNode("random_albums", 30005, "Random albums", "random-folders"),
     MainMenuNode("on_this_day", 30006, "On this day", "on-this-day"),
+    MainMenuNode("videos", 32600, "Videos", "videos"),
     MainMenuNode("years", 30007, "Years", "years"),
     MainMenuNode("cameras", 30008, "Cameras", "cameras"),
     MainMenuNode("keywords", 30009, "Keywords", "keywords"),

@@ -37,6 +37,7 @@ from .migration_steps.v0002_date_browsing import MIGRATION as DATE_BROWSING_MIGR
 from .migration_steps.v0003_global_search_documents import (
     MIGRATION as GLOBAL_SEARCH_DOCUMENTS_MIGRATION,
 )
+from .migration_steps.v0004_mixed_media import MIGRATION as MIXED_MEDIA_MIGRATION
 
 
 @dataclass(frozen=True)
@@ -76,6 +77,7 @@ MYSQL_MIGRATION_TABLE = """CREATE TABLE IF NOT EXISTS schema_migrations (
 DEFAULT_MIGRATIONS: Tuple[MigrationStep, ...] = (
     DATE_BROWSING_MIGRATION,
     GLOBAL_SEARCH_DOCUMENTS_MIGRATION,
+    MIXED_MEDIA_MIGRATION,
 )
 MIGRATION_LOCK_TTL_SECONDS = 7200
 
@@ -278,6 +280,7 @@ class MigrationRunner:
 
             bootstrapped = self._bootstrap_history(locked_state.version)
             self._validate_history()
+            recorded_versions = set(locked_state.history_versions)
             current_version = locked_state.version
             for version in range(current_version + 1, self.target_version + 1):
                 migration = self._migration_by_version.get(version)
@@ -290,7 +293,13 @@ class MigrationRunner:
                     MIGRATION_LOCK_TTL_SECONDS,
                 ):
                     raise MigrationLockError("The database migration lock was lost")
+                if version in recorded_versions:
+                    with self.engine.transaction(immediate=True) as connection:
+                        self._write_schema_version(connection, version)
+                    current_version = version
+                    continue
                 self._apply_migration(migration)
+                recorded_versions.add(version)
                 applied.append(version)
                 current_version = version
             self._validate_history()

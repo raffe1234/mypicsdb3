@@ -23,6 +23,7 @@ def add_picture(
     taken_at: Optional[str] = "2020-07-17 14:15:16",
     discovered_at: str = "2026-07-17 09:00:00",
     rating: Optional[int] = 5,
+    media_type: str = "picture",
 ) -> int:
     source = catalog.sync_sources([{"label": "Photos", "uri": str(root)}])[0]
     catalog.set_source_enabled(source.id, True)
@@ -36,7 +37,8 @@ def add_picture(
                 "folder_id": folder_id,
                 "uri": str(root / name),
                 "filename": name,
-                "extension": "jpg",
+                "extension": "mp4" if media_type == "video" else "jpg",
+                "media_type": media_type,
                 "file_size": 123,
                 "file_mtime": 1000.0,
                 "discovered_at": discovered_at,
@@ -179,3 +181,31 @@ def test_sync_sources_removes_kodi_picture_addons_virtual_source(tmp_path: Path)
     ])
 
     assert [source.label for source in sources] == ["Photos"]
+
+
+def test_videos_share_date_and_folder_views_without_fake_ratings(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "media"
+    picture_id = add_picture(catalog, root, "photo.jpg", rating=5)
+    video_id = add_picture(
+        catalog,
+        root,
+        "clip.mp4",
+        taken_at="2020-07-18 10:00:00",
+        rating=None,
+        media_type="video",
+    )
+
+    assert catalog.overview()["videos"] == 1
+    assert [row["id"] for row in catalog.videos(10)] == [video_id]
+    assert {row["id"] for row in catalog.pictures_for_year(2020, 10)} == {
+        picture_id,
+        video_id,
+    }
+    catalog.set_rating_policy("5")
+    folder_id = catalog.recent_taken(10)[0]["folder_id"]
+    assert {row["id"] for row in catalog.pictures_in_folder(folder_id, 10)} == {
+        picture_id,
+        video_id,
+    }
+    assert [row["id"] for row in catalog.rated(10)] == [picture_id]

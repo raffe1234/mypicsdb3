@@ -2,8 +2,9 @@
 
 MyPicsDB 3 uses a versioned migration runner for both SQLite and
 MySQL/MariaDB. Add-on version 0.2.13 introduced the framework. Version 0.2.15
-raised the catalogue to schema version 2. Version 0.2.19 raises it to schema 3
-with normalized global-search documents.
+raised the catalogue to schema version 2. Version 0.2.19 raised it to schema 3
+with normalized global-search documents. Version 0.2.22 raises it to schema 4
+with an explicit picture/video media type.
 
 ## Startup sequence
 
@@ -53,6 +54,20 @@ attempt. Search documents are maintained on later scanner inserts and updates.
 The migration does not alter original files or rewrite picture metadata. Its
 design is recorded in
 `docs/adr/0005-schema-3-global-search-documents.md`.
+
+## Schema 4: mixed picture and video media type
+
+Schema 4 adds `pictures.media_type` with the default value `picture` and creates
+`idx_pictures_media_type` on:
+
+```text
+(is_missing, media_type, taken_at)
+```
+
+Existing rows remain pictures. New opt-in video rows use `media_type=video` and
+share the existing catalogue, date hierarchy, folders, favorites and search
+index. The migration checks for both the column and index before creating them,
+so a partially completed MySQL/MariaDB DDL step can be retried safely.
 
 ## SQLite backups
 

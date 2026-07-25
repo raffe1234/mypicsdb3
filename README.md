@@ -1,13 +1,14 @@
 # MyPicsDB 3
 
 MyPicsDB 3 is an independent, community-maintained successor inspired by
-MyPicsDB and MyPicsDB2. It provides a searchable picture catalogue, background
-indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
+MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
+home-video catalogue, background indexing, mixed slideshows and fast home-screen
+widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.19 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.22 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
-> automated tests. The schema-1-to-3 migrations, search-document backfill,
-> backup and restore, and large-library search performance still require
+> automated tests. The schema-1-to-4 migrations, search-document backfill,
+> mixed-media playlist integration, backup and restore, and large-library search performance still require
 > documented validation on real Kodi installations before calling the project
 > production-stable.
 
@@ -26,6 +27,9 @@ indexing and fast home-screen widgets for Kodi 21 Omega and Kodi 22 Piers.
 - Global Unicode-normalized AND search across filename, caption, keywords,
   path parts, camera and stored location fields.
 - Favorites, ratings, keywords, cameras, year/month/day and geotagged views.
+- Optional indexing of common home-video formats alongside pictures, including
+  a dedicated **Videos** node and mixed picture/video date and folder views.
+- Database-backed mixed slideshows that preserve catalogue filters and order.
 - Optional global minimum-rating display policy for normal browser and widget
   views, with a temporary all-pictures override.
 - Versioned, validated Query Model used by global search and prepared for
@@ -43,6 +47,7 @@ plugin://plugin.image.mypicsdb3/random?limit=15
 plugin://plugin.image.mypicsdb3/recent-folders?limit=15
 plugin://plugin.image.mypicsdb3/random-folders?limit=15
 plugin://plugin.image.mypicsdb3/on-this-day?limit=15
+plugin://plugin.image.mypicsdb3/videos?limit=15
 plugin://plugin.image.mypicsdb3/years
 plugin://plugin.image.mypicsdb3/cameras
 plugin://plugin.image.mypicsdb3/keywords
@@ -101,11 +106,33 @@ releases yourself and install newer packages manually.
      notifications, plus which browsing nodes are visible in the add-on menu;
    - **Home screen** — Media sources and the content and order of the Estuary
      MyPicsDB 3 rows;
-   - **Scanning** — automatic scans, scan timing, playback pauses, file types,
-     exclusions and batch size;
+   - **Scanning** — automatic scans, scan timing, playback pauses, picture and
+     optional video file types, exclusions and batch size;
    - **Metadata** — XMP, IPTC, GPS storage and metadata read limits;
    - **Database** — local SQLite or a shared MySQL/MariaDB catalogue;
    - **Maintenance** — missing-record retention and debug logging.
+
+## Optional video support
+
+Video indexing is disabled by default. Enable **Settings > Scanning > Include
+videos**, review the video-extension list and run **Scan now**. Videos are stored
+in the existing catalogue with `media_type=video`. In 0.2.22, their date comes
+from the file modification time and their MIME type is inferred from the
+filename; no separate video scraper or `ffprobe` dependency is used.
+
+Videos appear in folder, recent, date, favorites and search results and in the
+dedicated **Videos** node. Camera, keyword, geolocation and embedded-rating
+views remain picture-only. Minimum-picture-rating policies still include videos
+without assigning a fake rating to them.
+
+Kodi plays an individual video directly. Use **Play slideshow from here** on a
+media item or **Play mixed slideshow** on an album to build Kodi picture playlist
+2 from the current database result. Album playback includes descendants and the
+playlist action is capped at 5,000 media files.
+
+Disabling video support does not immediately delete stored rows. Run a new scan
+to mark video rows missing, then use **Scan status > Clean missing records**
+after the configured retention period.
 
 ## Installing MyPicsDB 3
 

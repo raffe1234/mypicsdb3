@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.22 - 2026-07-25
+
+- Add optional indexing for common home-video formats alongside pictures.
+- Add schema 4 with a backward-compatible `pictures.media_type` column and
+  index for SQLite and MySQL/MariaDB; existing rows migrate as pictures.
+- Add a dedicated Videos browser node and mark video list items playable in
+  Kodi while keeping picture-only metadata views unchanged.
+- Add database-backed mixed picture/video slideshows using Kodi picture
+  playlist 2, including filtered result order and recursive album playback.
+- Let minimum-picture-rating policies include videos without assigning fake
+  ratings to video records.
+- Document video setup, current metadata limitations and cleanup behaviour.
+- Reconcile a lowered schema marker with already-recorded later migrations without
+  inserting duplicate MySQL/MariaDB migration-history rows.
+
 ## 0.2.21 - 2026-07-25
 
 - Always exclude Synology `@eaDir` metadata trees, including directory names
