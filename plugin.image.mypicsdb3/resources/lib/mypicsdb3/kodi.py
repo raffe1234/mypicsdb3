@@ -78,21 +78,43 @@ class KodiContext:
         self.addon.openSettings()
 
     @staticmethod
-    def refresh_date_sensitive_views() -> None:
+    def refresh_date_sensitive_views() -> bool:
         """Refresh views whose contents depend on the local calendar date.
 
-        Estuary home-screen widgets keep their directory contents until the
-        skin is rebuilt. Reloading the custom skin once at midnight refreshes
-        all rows; elsewhere a normal container refresh is sufficient.
+        The custom Estuary home rows are cached until the skin is rebuilt.
+        Reloading a skin while Kodi is scanning, playing media, displaying a
+        modal dialog or running a screen saver can destabilize the GUI, so the
+        background service must defer and retry until the home window is idle.
         """
         if xbmc is None:
-            return
-        current_window = xbmcgui.getCurrentWindowId() if xbmcgui and hasattr(xbmcgui, "getCurrentWindowId") else None
+            return True
+
+        current_window = (
+            xbmcgui.getCurrentWindowId()
+            if xbmcgui and hasattr(xbmcgui, "getCurrentWindowId")
+            else None
+        )
         skin_id = xbmc.getSkinDir() if hasattr(xbmc, "getSkinDir") else ""
-        if current_window == 10000 and skin_id == "skin.estuary.mypicsdb3":
-            xbmc.executebuiltin("ReloadSkin()")
-        else:
+        if skin_id != "skin.estuary.mypicsdb3":
             xbmc.executebuiltin("Container.Refresh")
+            return True
+
+        if current_window != 10000:
+            return False
+
+        if hasattr(xbmc, "getCondVisibility"):
+            unsafe_conditions = (
+                "Library.IsScanning",
+                "Player.HasMedia",
+                "System.HasActiveModalDialog",
+                "System.ScreenSaverActive",
+                "System.DPMSActive",
+            )
+            if any(xbmc.getCondVisibility(condition) for condition in unsafe_conditions):
+                return False
+
+        xbmc.executebuiltin("ReloadSkin()")
+        return True
 
     @staticmethod
     def is_playing() -> bool:

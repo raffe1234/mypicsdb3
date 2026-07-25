@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.20 - 2026-07-25
+
+- Queue the date-sensitive home-screen refresh instead of reloading the skin
+  immediately at midnight.
+- Wait 60 seconds after the date changes and retry while Kodi is scanning a
+  library, playing media, showing a modal dialog, running the screen saver or
+  using DPMS.
+- Defer the custom Estuary reload until the Home window is active, while other
+  skins continue to use a normal container refresh.
+- Keep the refresh request pending after transient GUI errors and log when it is
+  deferred or completed.
+
 ## 0.2.19 - 2026-07-24
 
 - Add skin-independent global search from the MyPicsDB 3 main menu.
