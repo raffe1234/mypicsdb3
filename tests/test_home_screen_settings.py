@@ -98,6 +98,26 @@ def test_general_settings_offer_estuary_album_views() -> None:
         "500",
     }
 
+
+def test_general_settings_offer_addon_menu_visibility_editor() -> None:
+    root = ET.parse(
+        ROOT / "plugin.image.mypicsdb3" / "resources" / "settings.xml"
+    ).getroot()
+    settings = {node.attrib["id"]: node for node in root.findall(".//setting")}
+
+    configure = settings["configure_main_menu"]
+    assert configure.attrib["type"] == "action"
+    assert configure.findtext("data") == (
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/configure-menu)"
+    )
+    assert configure.find("control").attrib == {
+        "type": "button",
+        "format": "action",
+    }
+    hidden = settings["hidden_main_menu_nodes"]
+    assert hidden.findtext("level") == "4"
+    assert hidden.findtext("visible") == "false"
+
 def test_home_fragment_has_visible_titles_and_all_routes() -> None:
     home = (ROOT / "contrib" / "estuary" / "Home-pictures-group.xml").read_text(
         encoding="utf-8"

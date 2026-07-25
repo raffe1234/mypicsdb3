@@ -14,8 +14,11 @@ from .home_layout_editor import HomeLayoutEditorText, show_home_layout_editor
 from .preferences import (
     DEFAULT_HOME_ROWS,
     HOME_VIEW_BY_KEY,
+    MAIN_MENU_NODES,
     normalize_home_layout,
+    parse_hidden_main_menu_nodes,
     parse_persisted_home_layout,
+    serialize_hidden_main_menu_nodes,
     serialize_home_layout,
     serialize_persisted_home_layout,
 )
@@ -123,22 +126,26 @@ class PluginUI:
         items = [
             self.add_folder(self.text(32500, "Search"), "search", **rating_params),
             self.add_folder(self.text(30000, "Picture sources"), "sources", **rating_params),
-            self.add_folder(self.text(30001, "Recently taken"), "recent-taken", **rating_params),
-            self.add_folder(self.text(30002, "Recently added"), "recent-added", **rating_params),
-            self.add_folder(self.text(30003, "Random memories"), "random", **rating_params),
-            self.add_folder(self.text(30004, "Recent albums"), "recent-folders", **rating_params),
-            self.add_folder(self.text(30005, "Random albums"), "random-folders", **rating_params),
-            self.add_folder(self.text(30006, "On this day"), "on-this-day", **rating_params),
-            self.add_folder(self.text(30007, "Years"), "years", **rating_params),
-            self.add_folder(self.text(30008, "Cameras"), "cameras", **rating_params),
-            self.add_folder(self.text(30009, "Keywords"), "keywords", **rating_params),
-            self.add_folder(self.text(30010, "Favorites"), "favorites", **rating_params),
-            self.add_folder(self.text(30011, "Rated pictures"), "rated", **rating_params),
-            self.add_folder(self.text(30012, "Geotagged pictures"), "geotagged", **rating_params),
-            self.add_action(self.text(30013, "Scan now"), "action/scan"),
-            self.add_folder(self.text(30014, "Scan status"), "status"),
-            self.add_action(self.text(30015, "Settings"), "action/settings"),
         ]
+        hidden_nodes = parse_hidden_main_menu_nodes(
+            self.kodi.addon.getSetting("hidden_main_menu_nodes")
+        )
+        items.extend(
+            self.add_folder(
+                self.text(node.string_id, node.fallback),
+                node.route,
+                **rating_params,
+            )
+            for node in MAIN_MENU_NODES
+            if node.key not in hidden_nodes
+        )
+        items.extend(
+            [
+                self.add_action(self.text(30013, "Scan now"), "action/scan"),
+                self.add_folder(self.text(30014, "Scan status"), "status"),
+                self.add_action(self.text(30015, "Settings"), "action/settings"),
+            ]
+        )
         configured = self._configured_rating_policy()
         if configured != RATING_POLICY_ALL:
             effective = self._effective_rating_policy(params)
@@ -520,6 +527,34 @@ class PluginUI:
         self.kodi.notify(self.text(32214, "Home-screen layout saved"))
         xbmc.executebuiltin("ReloadSkin()")
 
+    def _configure_main_menu(self) -> None:
+        hidden = parse_hidden_main_menu_nodes(
+            self.kodi.addon.getSetting("hidden_main_menu_nodes")
+        )
+        selected = xbmcgui.Dialog().multiselect(
+            self.text(32228, "Configure add-on menu"),
+            [self.text(node.string_id, node.fallback) for node in MAIN_MENU_NODES],
+            preselect=[
+                index
+                for index, node in enumerate(MAIN_MENU_NODES)
+                if node.key not in hidden
+            ],
+        )
+        if selected is None:
+            return
+        visible_indexes = {int(index) for index in selected}
+        hidden = {
+            node.key
+            for index, node in enumerate(MAIN_MENU_NODES)
+            if index not in visible_indexes
+        }
+        self.kodi.addon.setSetting(
+            "hidden_main_menu_nodes",
+            serialize_hidden_main_menu_nodes(hidden),
+        )
+        self.kodi.notify(self.text(32229, "Add-on menu saved"))
+        xbmc.executebuiltin("Container.Refresh")
+
     def _save_current_album_view(self) -> None:
         save_current_album_view(self.kodi, self.text, xbmc, xbmcgui)
 
@@ -552,6 +587,9 @@ class PluginUI:
             return
         if route == "action/configure-home":
             self._configure_home_screen()
+            return
+        if route == "action/configure-menu":
+            self._configure_main_menu()
             return
         if route == "action/save-album-view":
             self._save_current_album_view()

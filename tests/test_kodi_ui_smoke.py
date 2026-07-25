@@ -31,6 +31,7 @@ class FakeListItem:
 class FakeDialog:
     responses = []
     select_responses = []
+    multiselect_responses = []
     input_responses = []
 
     def yesno(self, heading, message):
@@ -38,6 +39,9 @@ class FakeDialog:
 
     def select(self, heading, options, preselect=-1):
         return self.__class__.select_responses.pop(0)
+
+    def multiselect(self, heading, options, preselect=None):
+        return self.__class__.multiselect_responses.pop(0)
 
     def input(self, heading, defaultt=""):
         return self.__class__.input_responses.pop(0)
@@ -243,6 +247,44 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert item.art["thumb"] == url
     assert item.properties["MyPicsDB3.Camera"] == "Canon EOS R6"
     assert is_folder is False
+
+
+def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.addon.settings["hidden_main_menu_nodes"] = (
+        "recent_taken|years|favorites"
+    )
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.root()
+
+    urls = [url for url, _item, _is_folder in calls.items]
+    assert len(urls) == 14
+    assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
+    assert "plugin://plugin.image.mypicsdb3/years" not in urls
+    assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
+    assert "plugin://plugin.image.mypicsdb3/search" in urls
+    assert "plugin://plugin.image.mypicsdb3/sources" in urls
+    assert "plugin://plugin.image.mypicsdb3/action/scan" in urls
+    assert "plugin://plugin.image.mypicsdb3/status" in urls
+    assert "plugin://plugin.image.mypicsdb3/action/settings" in urls
+
+
+def test_main_menu_editor_persists_hidden_nodes(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    FakeDialog.multiselect_responses = [[0, 6]]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("action/configure-menu", {}))
+
+    assert runtime.kodi.addon.getSetting("hidden_main_menu_nodes") == (
+        "recent_added|random_memories|recent_albums|random_albums|on_this_day|"
+        "cameras|keywords|favorites|rated|geotagged"
+    )
+    assert runtime.kodi.notifications == [("Add-on menu saved", False)]
+    assert calls.builtins[-1] == "Container.Refresh"
 
 
 def test_rating_policy_is_visible_and_can_be_temporarily_bypassed(monkeypatch) -> None:

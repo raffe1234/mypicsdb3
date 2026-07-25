@@ -3,9 +3,12 @@ from __future__ import annotations
 from mypicsdb3.preferences import (
     DEFAULT_ALBUM_VIEW_MODE,
     HOME_VIEW_KEYS,
+    MAIN_MENU_NODE_KEYS,
     normalize_album_view_mode,
     normalize_home_layout,
+    parse_hidden_main_menu_nodes,
     parse_persisted_home_layout,
+    serialize_hidden_main_menu_nodes,
     serialize_home_layout,
     serialize_persisted_home_layout,
 )
@@ -53,3 +56,13 @@ def test_album_view_mode_accepts_only_supported_estuary_ids() -> None:
     assert normalize_album_view_mode(500) == 500
     assert normalize_album_view_mode("999") == DEFAULT_ALBUM_VIEW_MODE
     assert normalize_album_view_mode("") == DEFAULT_ALBUM_VIEW_MODE
+
+
+def test_hidden_main_menu_nodes_are_validated_and_canonicalized() -> None:
+    hidden = parse_hidden_main_menu_nodes(
+        "favorites|unknown|recent_taken|favorites"
+    )
+
+    assert hidden == frozenset({"favorites", "recent_taken"})
+    assert serialize_hidden_main_menu_nodes(hidden) == "recent_taken|favorites"
+    assert set(MAIN_MENU_NODE_KEYS) >= hidden

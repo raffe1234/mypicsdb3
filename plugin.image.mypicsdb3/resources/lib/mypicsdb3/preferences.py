@@ -18,6 +18,14 @@ class AlbumViewMode:
     fallback: str
 
 
+@dataclass(frozen=True)
+class MainMenuNode:
+    key: str
+    string_id: int
+    fallback: str
+    route: str
+
+
 HOME_VIEWS: Tuple[HomeView, ...] = (
     HomeView("recent_taken", 30001, "Recently taken"),
     HomeView("recent_added", 30002, "Recently added"),
@@ -42,6 +50,22 @@ DEFAULT_HOME_ROWS: Tuple[str, ...] = (
     "none",
     "none",
 )
+
+MAIN_MENU_NODES: Tuple[MainMenuNode, ...] = (
+    MainMenuNode("recent_taken", 30001, "Recently taken", "recent-taken"),
+    MainMenuNode("recent_added", 30002, "Recently added", "recent-added"),
+    MainMenuNode("random_memories", 30003, "Random memories", "random"),
+    MainMenuNode("recent_albums", 30004, "Recent albums", "recent-folders"),
+    MainMenuNode("random_albums", 30005, "Random albums", "random-folders"),
+    MainMenuNode("on_this_day", 30006, "On this day", "on-this-day"),
+    MainMenuNode("years", 30007, "Years", "years"),
+    MainMenuNode("cameras", 30008, "Cameras", "cameras"),
+    MainMenuNode("keywords", 30009, "Keywords", "keywords"),
+    MainMenuNode("favorites", 30010, "Favorites", "favorites"),
+    MainMenuNode("rated", 30011, "Rated pictures", "rated"),
+    MainMenuNode("geotagged", 30012, "Geotagged pictures", "geotagged"),
+)
+MAIN_MENU_NODE_KEYS: Tuple[str, ...] = tuple(node.key for node in MAIN_MENU_NODES)
 
 ALBUM_VIEW_MODES: Tuple[AlbumViewMode, ...] = (
     AlbumViewMode(0, 32201, "Use skin default"),
@@ -128,6 +152,26 @@ def serialize_persisted_home_layout(order: Iterable[object], enabled: Iterable[o
         key if key in enabled_keys else "!" + key
         for key in normalized_order
     )
+
+
+def parse_hidden_main_menu_nodes(value: object) -> FrozenSet[str]:
+    """Read the canonical pipe-separated list of hidden add-on menu nodes."""
+    hidden = {
+        token.strip()
+        for token in str(value or "").split("|")
+        if token.strip() in MAIN_MENU_NODE_KEYS
+    }
+    return frozenset(hidden)
+
+
+def serialize_hidden_main_menu_nodes(hidden: Iterable[object]) -> str:
+    """Store hidden add-on menu nodes in stable display order."""
+    hidden_keys = {
+        str(value)
+        for value in hidden
+        if str(value) in MAIN_MENU_NODE_KEYS
+    }
+    return "|".join(key for key in MAIN_MENU_NODE_KEYS if key in hidden_keys)
 
 
 def normalize_album_view_mode(value: object) -> int:

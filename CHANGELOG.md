@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.21 - 2026-07-25
+
+- Always exclude Synology `@eaDir` metadata trees, including directory names
+  that end with `@eaDir`, even when an older profile has no matching custom
+  exclusion setting.
+- Add a General-settings editor for choosing which catalogue browsing nodes are
+  visible in the MyPicsDB 3 add-on menu.
+- Keep Search, Picture sources, Scan now, Scan status and Settings available so
+  catalogue management cannot be hidden accidentally.
+
 ## 0.2.20 - 2026-07-25
 
 - Queue the date-sensitive home-screen refresh instead of reloading the skin
