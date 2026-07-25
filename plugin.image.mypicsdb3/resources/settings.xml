@@ -62,6 +62,22 @@
           <default>true</default>
           <control type="toggle" />
         </setting>
+        <setting id="configure_main_menu" type="action" label="32228" help="32302">
+          <level>0</level>
+          <data>RunPlugin(plugin://plugin.image.mypicsdb3/action/configure-menu)</data>
+          <control type="button" format="action">
+            <close>true</close>
+          </control>
+        </setting>
+        <setting id="hidden_main_menu_nodes" type="string" label="32228" help="32302">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
       </group>
     </category>
     <category id="home_screen" label="32070" help="32170">

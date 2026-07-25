@@ -56,6 +56,23 @@ class Scanner:
         lower = path.casefold()
         return any(fragment in lower for fragment in self.settings.exclude_fragments)
 
+    @staticmethod
+    def _is_synology_metadata_directory(path: str, name: str) -> bool:
+        """Always ignore Synology @eaDir metadata trees.
+
+        This is deliberately independent of the user-editable exclusion list.
+        Existing profiles may have an empty or older saved value, while these
+        directories never contain original library media.
+        """
+        candidates = (name, basename_uri(path))
+        return any(
+            candidate.rstrip("/\\").casefold().endswith("@eadir")
+            for candidate in candidates
+        )
+
+    def _is_excluded_directory(self, path: str, name: str) -> bool:
+        return self._is_synology_metadata_directory(path, name) or self._is_excluded(path, name)
+
     def _check_cancelled(self) -> None:
         if self.cancelled():
             raise ScanCancelled()
@@ -146,7 +163,7 @@ class Scanner:
                 if folder_uri in visited:
                     continue
                 visited.add(folder_uri)
-                if self._is_excluded(folder_uri, folder_name):
+                if self._is_excluded_directory(folder_uri, folder_name):
                     continue
                 folder_id = self.catalog.upsert_folder(connection, source.id, folder_uri, parent_uri, folder_name, scan_started_at)
                 stats.folders_seen += 1
@@ -162,7 +179,7 @@ class Scanner:
 
                 for directory in sorted(directories, reverse=True):
                     child_uri = join_uri(folder_uri, directory, directory=True)
-                    if not self._is_excluded(child_uri, directory):
+                    if not self._is_excluded_directory(child_uri, directory):
                         stack.append((child_uri, folder_uri, directory))
 
                 for filename in sorted(files):

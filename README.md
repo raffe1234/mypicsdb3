@@ -98,7 +98,7 @@ releases yourself and install newer packages manually.
 3. Return to the MyPicsDB 3 main menu and select **Scan now**.
 4. Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings** to adjust:
    - **General** — widget size, browser page size, the default album view and
-     notifications;
+     notifications, plus which browsing nodes are visible in the add-on menu;
    - **Home screen** — Media sources and the content and order of the Estuary
      MyPicsDB 3 rows;
    - **Scanning** — automatic scans, scan timing, playback pauses, file types,
@@ -288,6 +288,10 @@ After the first successful scan, the add-on main menu provides:
 - **Rated pictures** — pictures with an embedded metadata rating;
 - **Geotagged pictures** — pictures with stored GPS coordinates.
 
+Open **Settings > General > Configure add-on menu** to show or hide any of
+these twelve catalogue browsing nodes. Search, Picture sources, Scan now, Scan
+status and Settings always remain visible.
+
 Open the context menu on a picture and select **Toggle favorite** to add or
 remove it from Favorites. **Open containing album** opens the indexed folder.
 Album context menus can also start a recursive Kodi slideshow.
@@ -299,6 +303,11 @@ before the relevant pictures are scanned again.
 The configurable extension list includes formats such as HEIC, HEIF and AVIF.
 Indexing an extension does not guarantee that every Kodi platform or installed
 image decoder can display that format.
+
+Synology `@eaDir` metadata directories are always ignored, even if the custom
+exclusion setting is empty. A rescan marks thumbnails that were indexed by an
+older version as missing; the normal missing-record cleanup can then remove
+their retained database rows.
 
 The background service detects a local date change while Kodi is running and
 refreshes date-sensitive views. On the Estuary MyPicsDB 3 home screen, the skin
@@ -545,6 +554,9 @@ In **Settings > General**, the numeric values are shown with descriptive labels:
 - **Default items per home-screen row** — 15 by default, configurable from 1 to 50
 - **Pictures per browser page**
 - **Default album view**
+
+**Configure add-on menu** opens a multi-select dialog for the twelve catalogue
+browsing nodes shown between Picture sources and the scan actions.
 
 In **Settings > Home screen**, **Configure home-screen rows** opens a visual
 nine-row editor. Each row has an **On/Off** control plus buttons for moving the

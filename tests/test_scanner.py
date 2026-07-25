@@ -34,12 +34,16 @@ def fake_metadata(path, filesystem, settings, file_size):
     )
 
 
-def setup_scanner(tmp_path: Path, root: Path):
+def setup_scanner(
+    tmp_path: Path,
+    root: Path,
+    exclude_fragments=("#recycle",),
+):
     settings = Settings(
         profile_path=str(tmp_path / "profile"),
         database_backend="sqlite",
         extensions=("jpg",),
-        exclude_fragments=("#recycle",),
+        exclude_fragments=exclude_fragments,
         batch_size=10,
         store_gps=True,
     )
@@ -107,6 +111,29 @@ def test_scanner_honours_excluded_fragments(tmp_path: Path) -> None:
     result = scanner.scan_sources()
     assert result.pictures_seen == 1
     assert catalog.recent_added(10)[0]["filename"] == "kept.jpg"
+
+
+def test_scanner_always_ignores_synology_eadir_trees(tmp_path: Path) -> None:
+    root = tmp_path / "photos"
+    metadata = root / "Album@eaDir" / "20260515_094806.jpg"
+    metadata.mkdir(parents=True)
+    (metadata / "SYNOPHOTO_THUMB_B.jpg").write_bytes(b"thumbnail")
+    (metadata / "SYNOPHOTO_THUMB_S.jpg").write_bytes(b"thumbnail")
+    (metadata / "SYNOPHOTO_THUMB_XL.jpg").write_bytes(b"thumbnail")
+    (root / "20260515_094806.jpg").write_bytes(b"original")
+
+    catalog, _, scanner = setup_scanner(
+        tmp_path,
+        root,
+        exclude_fragments=(),
+    )
+    result = scanner.scan_sources()
+
+    assert result.pictures_seen == 1
+    assert result.pictures_added == 1
+    assert [row["filename"] for row in catalog.recent_added(10)] == [
+        "20260515_094806.jpg"
+    ]
 
 
 def test_scan_stops_as_soon_as_a_blocking_listdir_returns(tmp_path: Path) -> None:
