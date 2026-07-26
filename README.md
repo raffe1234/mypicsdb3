@@ -569,10 +569,17 @@ authors. Contributions and issue reports are welcome.
 
 ## Versioning and releases
 
-Update the MyPicsDB 3 plug-in and repository versions with:
+Update the MyPicsDB 3 plug-in version with:
 
 ```bash
 python3 tools/set_version.py 0.3.0
+```
+
+The repository add-on keeps its existing version during normal plug-in
+releases. Bump it only when `repository.mypicsdb3` itself changes:
+
+```bash
+python3 tools/set_version.py 0.3.0 --repository-version 0.3.0
 ```
 
 The skin version and pinned upstream Kodi tag are maintained separately in

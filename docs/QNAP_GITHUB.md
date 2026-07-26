@@ -62,6 +62,7 @@ For a new release, update the version first:
 
 ```bash
 python3 tools/set_version.py 0.2.0
+# Add --repository-version 0.2.0 only when repository.mypicsdb3 changed.
 # Update CHANGELOG.md, test, commit and push.
 git tag -a v0.2.0 -m "MyPicsDB 3 0.2.0"
 git push origin v0.2.0
