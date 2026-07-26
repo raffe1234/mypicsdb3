@@ -84,9 +84,10 @@ class ServiceLoop:
         kodi_context,
         date_provider: Callable[[], date] = date.today,
         monotonic_provider: Callable[[], float] = time.monotonic,
+        monitor=None,
     ):
         self.kodi = kodi_context
-        self.monitor = self.kodi.abort_monitor()
+        self.monitor = monitor or self.kodi.abort_monitor()
         self.next_scan_at = 0.0
         self.date_provider = date_provider
         self.monotonic_provider = monotonic_provider
@@ -143,8 +144,15 @@ class ServiceLoop:
         filesystem = KodiFilesystem(self.kodi.profile_path.rstrip("/\\") + "/temp")
         return settings, catalog, filesystem
 
+    def _abort_requested(self) -> bool:
+        return bool(self.monitor and self.monitor.abortRequested())
+
     def run(self):
+        if self._abort_requested():
+            return
         settings, catalog, filesystem = self._runtime_parts()
+        if self._abort_requested():
+            return
         try:
             catalog.sync_sources(self.kodi.kodi_picture_sources())
         except Exception as exc:
@@ -154,14 +162,18 @@ class ServiceLoop:
         next_maintenance_at = now
         slideshow_monitor = MixedSlideshowVideoMonitor(self.kodi, catalog)
 
-        while not self.monitor.abortRequested():
+        while not self._abort_requested():
             slideshow_monitor.tick()
             now = self.monotonic_provider()
             if now >= next_maintenance_at:
                 self._refresh_after_date_change()
                 settings = self.kodi.refresh_settings()
+                if self._abort_requested():
+                    break
                 if settings.auto_scan and now >= self.next_scan_at:
                     if not (settings.pause_during_playback and self.kodi.is_playing()):
+                        if self._abort_requested():
+                            break
                         try:
                             engine = DatabaseEngine(settings, self.kodi.log)
                             catalog = Catalog(engine, self.kodi.log)
@@ -172,16 +184,21 @@ class ServiceLoop:
                                 filesystem,
                                 settings,
                                 self.kodi.log,
-                                cancelled=self.monitor.abortRequested,
+                                cancelled=self._abort_requested,
                             )
                             stats = scanner.scan_sources()
-                            self.kodi.log.info(
-                                "Automatic scan finished: %d pictures, %d errors",
-                                stats.pictures_seen,
-                                stats.errors,
-                            )
+                            if stats.cancelled:
+                                self.kodi.log.info("Automatic scan cancelled")
+                            else:
+                                self.kodi.log.info(
+                                    "Automatic scan finished: %d pictures, %d errors",
+                                    stats.pictures_seen,
+                                    stats.errors,
+                                )
                         except Exception as exc:
                             self.kodi.log.error("Automatic scan failed: %s", exc)
+                        if self._abort_requested():
+                            break
                         self.next_scan_at = (
                             self.monotonic_provider()
                             + settings.scan_interval_hours * 3600
