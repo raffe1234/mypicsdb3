@@ -225,9 +225,9 @@ def test_upstream_config_has_versioned_channels_and_history():
     assert project.retain_versions == 5
     assert set(project.channels) == {"omega", "piers"}
     assert project.channels["omega"].releases[0].ref == "21.3-Omega"
-    assert project.channels["omega"].patch_revision == 5
-    assert project.channels["omega"].releases[0].skin_version == "21.3.5"
-    assert project.channels["piers"].patch_revision == 3
+    assert project.channels["omega"].patch_revision == 6
+    assert project.channels["omega"].releases[0].skin_version == "21.3.6"
+    assert project.channels["piers"].patch_revision == 4
     assert project.channels["piers"].releases[0].ref == "22.0b1-Piers"
     assert all(
         len(channel.releases) <= project.retain_versions
