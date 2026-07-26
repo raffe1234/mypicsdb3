@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.26 - 2026-07-26
+
+- Bump the Estuary MyPicsDB 3 skin package revisions so Kodi installs the
+  home-screen XML added in 0.2.24.
+- Ensure **On this day** and **On this day - random** can both appear when both
+  rows are enabled. Existing installations update from skin 21.3.5 to 21.3.6
+  on Kodi 21.3.
+
 ## 0.2.25 - 2026-07-26
 
 - Treat Kodi's early `System.OnQuit` and `System.OnRestart` notifications as
