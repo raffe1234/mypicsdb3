@@ -723,7 +723,7 @@
       <radiowidth>78</radiowidth>
       <radioheight>42</radioheight>
       <onup>1108</onup>
-      <ondown>1109</ondown>
+      <ondown>1110</ondown>
       <onleft>1109</onleft>
       <onright>1209</onright>
     </control>
@@ -742,7 +742,7 @@
       <texturefocus>home-editor-focus.png</texturefocus>
       <texturenofocus>home-editor-panel.png</texturenofocus>
       <onup>1208</onup>
-      <ondown>1209</ondown>
+      <ondown>1210</ondown>
       <onleft>1109</onleft>
       <onright>1309</onright>
     </control>
@@ -761,8 +761,85 @@
       <texturefocus>home-editor-focus.png</texturefocus>
       <texturenofocus>home-editor-panel.png</texturenofocus>
       <onup>1308</onup>
-      <ondown>1309</ondown>
+      <ondown>1310</ondown>
       <onleft>1209</onleft>
+      <onright>1401</onright>
+    </control>
+    <control type="label" id="1010">
+      <left>500</left>
+      <top>882</top>
+      <width>640</width>
+      <height>58</height>
+      <label />
+      <font>font13</font>
+      <textcolor>FFD8DDDF</textcolor>
+      <align>left</align>
+      <aligny>center</aligny>
+    </control>
+    <control type="radiobutton" id="1110">
+      <left>1160</left>
+      <top>882</top>
+      <width>190</width>
+      <height>58</height>
+      <label />
+      <font>font13</font>
+      <textcolor>FFD8DDDF</textcolor>
+      <focusedcolor>FFFFFFFF</focusedcolor>
+      <disabledcolor>FF596164</disabledcolor>
+      <align>left</align>
+      <aligny>center</aligny>
+      <textoffsetx>0</textoffsetx>
+      <texturefocus>home-editor-focus.png</texturefocus>
+      <texturenofocus>home-editor-panel.png</texturenofocus>
+      <textureradioonfocus>home-editor-toggle-on-focus.png</textureradioonfocus>
+      <textureradioonnofocus>home-editor-toggle-on.png</textureradioonnofocus>
+      <textureradioofffocus>home-editor-toggle-off-focus.png</textureradioofffocus>
+      <textureradiooffnofocus>home-editor-toggle-off.png</textureradiooffnofocus>
+      <radioposx>102</radioposx>
+      <radioposy>8</radioposy>
+      <radiowidth>78</radiowidth>
+      <radioheight>42</radioheight>
+      <onup>1109</onup>
+      <ondown>1110</ondown>
+      <onleft>1110</onleft>
+      <onright>1210</onright>
+    </control>
+    <control type="button" id="1210">
+      <left>1370</left>
+      <top>882</top>
+      <width>65</width>
+      <height>58</height>
+      <label>▲</label>
+      <font>font13</font>
+      <textcolor>FFD8DDDF</textcolor>
+      <focusedcolor>FFFFFFFF</focusedcolor>
+      <disabledcolor>FF596164</disabledcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus>home-editor-focus.png</texturefocus>
+      <texturenofocus>home-editor-panel.png</texturenofocus>
+      <onup>1209</onup>
+      <ondown>1210</ondown>
+      <onleft>1110</onleft>
+      <onright>1310</onright>
+    </control>
+    <control type="button" id="1310">
+      <left>1445</left>
+      <top>882</top>
+      <width>65</width>
+      <height>58</height>
+      <label>▼</label>
+      <font>font13</font>
+      <textcolor>FFD8DDDF</textcolor>
+      <focusedcolor>FFFFFFFF</focusedcolor>
+      <disabledcolor>FF596164</disabledcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus>home-editor-focus.png</texturefocus>
+      <texturenofocus>home-editor-panel.png</texturenofocus>
+      <onup>1309</onup>
+      <ondown>1310</ondown>
+      <onleft>1210</onleft>
       <onright>1401</onright>
     </control>
     <control type="button" id="1401">

@@ -39,6 +39,7 @@ def test_persisted_layout_keeps_disabled_views_in_position() -> None:
         "recent_albums",
         "random_albums",
         "on_this_day",
+        "on_this_day_random",
         "rated",
         "geotagged",
     )
@@ -66,3 +67,19 @@ def test_hidden_main_menu_nodes_are_validated_and_canonicalized() -> None:
     assert hidden == frozenset({"favorites", "recent_taken"})
     assert serialize_hidden_main_menu_nodes(hidden) == "recent_taken|favorites"
     assert set(MAIN_MENU_NODE_KEYS) >= hidden
+
+
+def test_home_layout_offers_both_on_this_day_variants() -> None:
+    assert "on_this_day" in HOME_VIEW_KEYS
+    assert "on_this_day_random" in HOME_VIEW_KEYS
+
+    order, enabled = normalize_home_layout(
+        ["on_this_day", "on_this_day_random"]
+    )
+
+    assert order[:2] == ("on_this_day", "on_this_day_random")
+    assert enabled == frozenset({"on_this_day", "on_this_day_random"})
+    assert serialize_home_layout(order, enabled)[:2] == (
+        "on_this_day",
+        "on_this_day_random",
+    )

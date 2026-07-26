@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.24 - 2026-07-26
+
+- Restored the chronological **On this day** home-screen row as a separate choice.
+- Added **On this day - random** as an independent home-screen row so either or both can be enabled.
+- Explicitly shuffles random On this day results before returning them.
+- Keeps nine visible home rows while exposing ten configurable view types.
+
 ## 0.2.23 - 2026-07-26
 
 - Keep the chronological **On this day** browser and add a random variant that

@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.23 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.24 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-4 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -169,13 +169,14 @@ After MyPicsDB 3 is installed:
    **Settings > Interface > Skin**.
 5. Keep the skin when Kodi displays its confirmation dialog.
 
-The skin can show **Media sources** plus nine configurable MyPicsDB 3 rows:
+The skin can show **Media sources** plus nine configurable MyPicsDB 3 rows. Ten view types are available, so either On this day variant or both can be enabled:
 
 - Recently taken
 - Recently added
 - Random memories
 - Recent albums
 - Random albums
+- On this day
 - On this day - random
 - Favorites
 - Rated pictures
@@ -190,9 +191,10 @@ Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings > Home screen** to:
 
 The visual editor lists every view once in the same order used on the Pictures
 home screen. Every row has its own **On/Off**, **Move up** and **Move down**
-controls. The first six views are enabled by default through **On this day - random**.
-Favorites, Rated pictures and Geotagged pictures are disabled by default, so the
-initial home screen stays compact. Existing Row 1 through Row 9 choices are
+controls. The first six views are enabled by default through **On this day**.
+On this day - random, Favorites, Rated pictures and Geotagged pictures are
+disabled by default, so the initial home screen stays compact. At most nine
+views can be enabled at the same time. Existing Row 1 through Row 9 choices are
 migrated automatically the first time the editor is opened.
 
 Rows with no indexed results disappear until matching pictures have been
@@ -311,7 +313,7 @@ After the first successful scan, the add-on main menu provides:
 - **Recent albums** and **Random albums** — folders represented by indexed
   pictures;
 - **On this day** — all matching pictures from earlier years, newest year first;
-- **On this day - random** — a random sample across all matching earlier years;
+- **On this day - random** — a freshly shuffled sample across all matching earlier years;
 - **Years** — browse by year, then month and day, with a separate **No date** folder;
 - **Cameras** and **Keywords** — metadata-based navigation;
 - **Favorites** — pictures marked through the Kodi context menu;

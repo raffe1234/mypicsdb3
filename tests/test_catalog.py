@@ -233,8 +233,17 @@ def test_random_on_this_day_uses_all_earlier_years_without_duplicates(
             ).close()
 
     monkeypatch.setattr("mypicsdb3.db.catalog.random.random", lambda: 0.5)
+    shuffled = []
+
+    def reverse_rows(rows):
+        shuffled.append([row["id"] for row in rows])
+        rows.reverse()
+
+    monkeypatch.setattr("mypicsdb3.db.catalog.random.shuffle", reverse_rows)
     rows = catalog.random_on_this_day(7, 17, 2026, 10)
 
+    assert shuffled == [[ids[1], ids[2], ids[0]]]
+    assert [row["id"] for row in rows] == [ids[0], ids[2], ids[1]]
     assert {row["id"] for row in rows} == set(ids)
     assert len(rows) == len({row["id"] for row in rows})
     assert catalog.media_type_for_uri(str(root / "memory-2020.jpg")) == "picture"

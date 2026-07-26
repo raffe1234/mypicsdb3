@@ -21,5 +21,6 @@ All widget views are read-only and never start a scan. They use the local
 
 The optional `limit` is restricted to 1–500. Interactive views use pagination.
 Random views use indexed random keys rather than `ORDER BY RANDOM()` across the
-whole table. The Estuary MyPicsDB 3 **On this day - random** home row uses the
-random endpoint so older years are not hidden by the widget limit.
+whole table. **On this day - random** also shuffles the selected rows before they
+are returned, so the visible order is not chronological. The Estuary MyPicsDB 3
+home screen offers **On this day** and **On this day - random** as separate rows.

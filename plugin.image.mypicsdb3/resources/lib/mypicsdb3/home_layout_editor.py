@@ -4,7 +4,12 @@ import traceback
 from dataclasses import dataclass
 from typing import Dict, FrozenSet, Iterable, List, Optional, Sequence, Set, Tuple
 
-from .preferences import DEFAULT_HOME_ROWS, HOME_VIEW_KEYS, normalize_home_layout
+from .preferences import (
+    DEFAULT_HOME_ROWS,
+    HOME_ROW_COUNT,
+    HOME_VIEW_KEYS,
+    normalize_home_layout,
+)
 
 
 @dataclass(frozen=True)
@@ -33,13 +38,15 @@ class HomeLayoutState:
             if str(value) in HOME_VIEW_KEYS
         }
         self.order: List[str] = list(normalized_order)
-        self.enabled: Set[str] = enabled_keys
+        self.enabled: Set[str] = set(
+            [key for key in self.order if key in enabled_keys][:HOME_ROW_COUNT]
+        )
 
     def toggle(self, index: int) -> None:
         key = self.order[index]
         if key in self.enabled:
             self.enabled.remove(key)
-        else:
+        elif len(self.enabled) < HOME_ROW_COUNT:
             self.enabled.add(key)
 
     def move(self, index: int, offset: int) -> int:
@@ -105,7 +112,7 @@ def show_home_layout_editor(
     labels: Dict[str, str],
     text: HomeLayoutEditorText,
 ) -> Optional[Tuple[Tuple[str, ...], FrozenSet[str]]]:
-    """Show the XML-based nine-row editor, with a safe dialog fallback."""
+    """Show the XML-based home-view editor, with a safe dialog fallback."""
     import xbmc  # type: ignore
     import xbmcaddon  # type: ignore
     import xbmcgui  # type: ignore
