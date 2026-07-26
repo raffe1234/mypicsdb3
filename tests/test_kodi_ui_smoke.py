@@ -60,6 +60,7 @@ def load_views(monkeypatch):
     calls = Calls()
     xbmc = types.ModuleType("xbmc")
     xbmc.executebuiltin = calls.builtins.append
+    xbmc.sleep = lambda milliseconds: None
     xbmc.executeJSONRPC = lambda payload: '{"jsonrpc":"2.0","id":1,"result":"OK"}'
     xbmc.getInfoLabel = lambda label: ""
     xbmcgui = types.ModuleType("xbmcgui")
@@ -162,6 +163,12 @@ class FakeCatalog:
         }]
 
 
+    def on_this_day(self, month, day, current_year, limit, offset=0):
+        return self.recent_taken(limit, offset)
+
+    def random_on_this_day(self, month, day, current_year, limit):
+        return self.recent_taken(limit, 0)
+
     def query_pictures(self, query, limit, offset=0):
         self.query_requests.append((query, limit, offset))
         return self.recent_taken(limit, offset)
@@ -236,7 +243,7 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 17
+    assert len(calls.items) == 18
     assert calls.items[0][0].endswith("/search")
     assert calls.items[1][0].endswith("/sources")
 
@@ -263,7 +270,7 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     ui.root()
 
     urls = [url for url, _item, _is_folder in calls.items]
-    assert len(urls) == 14
+    assert len(urls) == 15
     assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
     assert "plugin://plugin.image.mypicsdb3/years" not in urls
     assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
@@ -277,14 +284,14 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
 def test_main_menu_editor_persists_hidden_nodes(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
-    FakeDialog.multiselect_responses = [[0, 7]]
+    FakeDialog.multiselect_responses = [[0, 8]]
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
     ui.dispatch(views.Request("action/configure-menu", {}))
 
     assert runtime.kodi.addon.getSetting("hidden_main_menu_nodes") == (
         "recent_added|random_memories|recent_albums|random_albums|on_this_day|"
-        "videos|cameras|keywords|favorites|rated|geotagged"
+        "on_this_day_random|videos|cameras|keywords|favorites|rated|geotagged"
     )
     assert runtime.kodi.notifications == [("Add-on menu saved", False)]
     assert calls.builtins[-1] == "Container.Refresh"
@@ -440,15 +447,40 @@ def test_refresh_sources_asks_before_deleting_missing_source(monkeypatch) -> Non
     assert runtime.catalog.deleted_sources == [9]
 
 
-def test_album_uses_default_view(monkeypatch) -> None:
+def test_browser_views_use_default_view_but_widgets_keep_skin_layout(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
     runtime.kodi.settings.album_view_mode = 54
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
-    ui.folder(3, {})
+    ui.dispatch(views.Request("recent-taken", {}))
+    assert calls.builtins.count("Container.SetViewMode(54)") == 2
 
-    assert "Container.SetViewMode(54)" in calls.builtins
+    calls.builtins.clear()
+    ui.folder(3, {})
+    assert calls.builtins.count("Container.SetViewMode(54)") == 2
+    assert len(calls.items) == 1
+
+    calls.builtins.clear()
+    ui.dispatch(views.Request("recent-taken", {"widget": "1"}))
+    assert calls.builtins == []
+
+
+def test_random_on_this_day_route_uses_random_catalog_query(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    requested = []
+    runtime.catalog.random_on_this_day = (
+        lambda month, day, current_year, limit: requested.append(
+            (month, day, current_year, limit)
+        ) or runtime.catalog.recent_taken(limit, 0)
+    )
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("on-this-day-random", {"widget": "1", "limit": "9"}))
+
+    assert requested and requested[0][3] == 9
+    assert calls.category == "On this day - random"
     assert len(calls.items) == 1
 
 

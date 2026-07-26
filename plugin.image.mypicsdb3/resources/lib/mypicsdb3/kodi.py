@@ -121,5 +121,17 @@ class KodiContext:
         return bool(xbmc and xbmc.Player().isPlaying())
 
     @staticmethod
+    def playing_file() -> str:
+        if xbmc is None:
+            return ""
+        try:
+            player = xbmc.Player()
+            if not player.isPlaying():
+                return ""
+            return normalize_uri(str(player.getPlayingFile() or ""))
+        except Exception:
+            return ""
+
+    @staticmethod
     def abort_monitor():
         return xbmc.Monitor() if xbmc else None

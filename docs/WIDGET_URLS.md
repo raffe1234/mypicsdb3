@@ -10,7 +10,8 @@ All widget views are read-only and never start a scan. They use the local
 | Random memories | `plugin://plugin.image.mypicsdb3/random?limit=15` |
 | Recent albums | `plugin://plugin.image.mypicsdb3/recent-folders?limit=15` |
 | Random albums | `plugin://plugin.image.mypicsdb3/random-folders?limit=15` |
-| Same date in earlier years | `plugin://plugin.image.mypicsdb3/on-this-day?limit=15` |
+| Same date in earlier years, newest first | `plugin://plugin.image.mypicsdb3/on-this-day?limit=15` |
+| Same date in earlier years, random | `plugin://plugin.image.mypicsdb3/on-this-day-random?limit=15` |
 | Years | `plugin://plugin.image.mypicsdb3/years` |
 | Cameras | `plugin://plugin.image.mypicsdb3/cameras` |
 | Keywords | `plugin://plugin.image.mypicsdb3/keywords` |
@@ -20,4 +21,5 @@ All widget views are read-only and never start a scan. They use the local
 
 The optional `limit` is restricted to 1–500. Interactive views use pagination.
 Random views use indexed random keys rather than `ORDER BY RANDOM()` across the
-whole table.
+whole table. The Estuary MyPicsDB 3 **On this day - random** home row uses the
+random endpoint so older years are not hidden by the widget limit.

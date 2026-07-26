@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2.23 - 2026-07-26
+
+- Keep the chronological **On this day** browser and add a random variant that
+  samples matching dates across all earlier years; the Estuary home row now
+  uses the random variant without changing saved row settings.
+- Apply the configured default album view consistently to interactive picture,
+  album, date, camera and keyword browsers while leaving widget layouts to the
+  skin.
+- Run both full and selected-source manual scans with Kodi's non-modal
+  background progress indicator, including pause/resume during playback.
+- Advance the picture playlist automatically after an indexed video finishes
+  in a mixed slideshow, avoiding the repeated black-screen image-load loop.
+
 ## 0.2.22 - 2026-07-25
 
 - Add optional indexing for common home-video formats alongside pictures.

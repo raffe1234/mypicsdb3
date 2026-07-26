@@ -122,7 +122,19 @@ class PluginUI:
         xbmcplugin.addDirectoryItems(self.handle, list(items), len(items))
         xbmcplugin.endOfDirectory(self.handle, succeeded=True, cacheToDisc=cache)
         if view_mode:
-            xbmc.executebuiltin("Container.SetViewMode(%d)" % view_mode)
+            command = "Container.SetViewMode(%d)" % view_mode
+            xbmc.executebuiltin(command)
+            # ActivateWindow(Pictures, plugin://...) can finish while the new
+            # container is still settling. Reapply once after a short delay so
+            # "Open containing album" receives the same configured view.
+            if hasattr(xbmc, "sleep"):
+                xbmc.sleep(100)
+                xbmc.executebuiltin(command)
+
+    def _browser_view_mode(self, params: Optional[Dict[str, str]] = None) -> int:
+        if parse_bool((params or {}).get("widget"), False):
+            return 0
+        return int(self.kodi.settings.album_view_mode or 0)
 
     def root(self, params: Optional[Dict[str, str]] = None):
         params = params or {}
@@ -237,7 +249,12 @@ class PluginUI:
             return
         folders = self.catalog.source_root_folders(source_id)
         items = [self._folder_item(folder, browse_params=params) for folder in folders]
-        self.finish(items, content="images", category=self._rating_category(source.label, params))
+        self.finish(
+            items,
+            content="images",
+            category=self._rating_category(source.label, params),
+            view_mode=self._browser_view_mode(params),
+        )
 
     def _media_item(
         self,
@@ -376,6 +393,7 @@ class PluginUI:
             content="images",
             cache=False,
             category=self._rating_category(category, params),
+            view_mode=self._browser_view_mode(params),
         )
 
     def folder(self, folder_id: int, params: Dict[str, str]):
@@ -411,7 +429,7 @@ class PluginUI:
                 folder.get("name") or self.text(30032, "Albums"),
                 params,
             ),
-            view_mode=self.kodi.settings.album_view_mode,
+            view_mode=self._browser_view_mode(params),
         )
 
     def folders(self, route: str, rows: List[Dict[str, Any]], category: str, params: Optional[Dict[str, str]] = None):
@@ -420,6 +438,7 @@ class PluginUI:
             [self._folder_item(row, browse_params=params) for row in rows],
             content="images",
             category=self._rating_category(category, params),
+            view_mode=self._browser_view_mode(params),
         )
 
     def years(self, params: Optional[Dict[str, str]] = None):
@@ -451,7 +470,12 @@ class PluginUI:
                     **rating_params,
                 )
             )
-        self.finish(items, content="images", category=self._rating_category(self.text(30007, "Years"), params))
+        self.finish(
+            items,
+            content="images",
+            category=self._rating_category(self.text(30007, "Years"), params),
+            view_mode=self._browser_view_mode(params),
+        )
 
     def months(self, year: int, params: Optional[Dict[str, str]] = None):
         params = params or {}
@@ -471,7 +495,12 @@ class PluginUI:
                     **rating_params,
                 )
             )
-        self.finish(items, content="images", category=self._rating_category(str(year), params))
+        self.finish(
+            items,
+            content="images",
+            category=self._rating_category(str(year), params),
+            view_mode=self._browser_view_mode(params),
+        )
 
     def days(self, year: int, month: int, params: Optional[Dict[str, str]] = None):
         params = params or {}
@@ -496,6 +525,7 @@ class PluginUI:
             items,
             content="images",
             category=self._rating_category("%s %d" % (month_name, year), params),
+            view_mode=self._browser_view_mode(params),
         )
 
     def cameras(self, params: Optional[Dict[str, str]] = None):
@@ -506,7 +536,12 @@ class PluginUI:
             name = " ".join(filter(None, [row.get("camera_make"), row.get("camera_model")])) or self.text(30033, "Unknown camera")
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (name, row["picture_count"])
             items.append(self.add_folder(label, "camera", art=row.get("thumb_uri") or row.get("uri"), make=row.get("camera_make", ""), model=row.get("camera_model", ""), **rating_params))
-        self.finish(items, content="images", category=self._rating_category(self.text(30008, "Cameras"), params))
+        self.finish(
+            items,
+            content="images",
+            category=self._rating_category(self.text(30008, "Cameras"), params),
+            view_mode=self._browser_view_mode(params),
+        )
 
     def keywords(self, params: Optional[Dict[str, str]] = None):
         params = params or {}
@@ -515,7 +550,12 @@ class PluginUI:
         for row in self.catalog.tags():
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (row["name"], row["picture_count"])
             items.append(self.add_folder(label, "tag", art=row.get("thumb_uri") or row.get("uri"), id=row["id"], **rating_params))
-        self.finish(items, content="images", category=self._rating_category(self.text(30009, "Keywords"), params))
+        self.finish(
+            items,
+            content="images",
+            category=self._rating_category(self.text(30009, "Keywords"), params),
+            view_mode=self._browser_view_mode(params),
+        )
 
     def _configure_home_screen(self) -> None:
         persisted_layout = parse_persisted_home_layout(
@@ -617,6 +657,9 @@ class PluginUI:
         if scope == "on-this-day":
             now = datetime.now()
             return self.catalog.on_this_day(now.month, now.day, now.year, limit, 0)
+        if scope == "on-this-day-random":
+            now = datetime.now()
+            return self.catalog.random_on_this_day(now.month, now.day, now.year, limit)
         if scope == "year":
             return self.catalog.pictures_for_year(int(params["year"]), limit, 0)
         if scope == "day":
@@ -755,59 +798,10 @@ class PluginUI:
             return
 
     def _manual_scan(self, source_id: Optional[str]):
-        if source_id:
-            self._background_source_scan(int(source_id))
-            return
+        source_ids = [int(source_id)] if source_id else None
+        self._background_scan(source_ids)
 
-        monitor = self.kodi.abort_monitor()
-
-        def abort_requested() -> bool:
-            return bool(monitor and monitor.abortRequested())
-
-        if abort_requested():
-            return
-
-        dialog = xbmcgui.DialogProgress()
-        dialog.create(self.text(30056, "MyPicsDB 3"), self.text(30026, "Scanning started"))
-
-        def cancelled() -> bool:
-            if abort_requested():
-                return True
-            try:
-                return dialog.iscanceled()
-            except Exception:
-                if abort_requested():
-                    return True
-                raise
-
-        def progress(source, path, stats):
-            if abort_requested():
-                return
-            try:
-                dialog.update(0, "%s\n%s\n%s: %d" % (source.label, path, self.text(30047, "Pictures found"), stats.pictures_seen))
-            except Exception:
-                if not abort_requested():
-                    raise
-
-        scanner = Scanner(self.catalog, self.runtime.filesystem, self.kodi.settings, self.kodi.log, cancelled=cancelled, progress=progress)
-        try:
-            stats = scanner.scan_sources()
-            if abort_requested():
-                return
-            if stats.cancelled:
-                self.kodi.notify(self.text(30042, "Scan cancelled"))
-            else:
-                message = "%s: %d, %s: %d" % (self.text(30047, "Pictures found"), stats.pictures_seen, self.text(30050, "Errors"), stats.errors)
-                self.kodi.notify(message, error=stats.errors > 0, milliseconds=6000)
-        except RuntimeError as exc:
-            if not abort_requested():
-                self.kodi.notify(str(exc), error=True)
-        finally:
-            if not abort_requested():
-                dialog.close()
-                xbmc.executebuiltin("Container.Refresh")
-
-    def _background_source_scan(self, source_id: int):
+    def _background_scan(self, source_ids: Optional[List[int]] = None):
         heading = self.text(30056, "MyPicsDB 3")
         scanning_message = self.text(30026, "Scanning started")
         paused_message = self.text(30065, "Scan paused during playback")
@@ -845,14 +839,14 @@ class PluginUI:
                 if not paused:
                     paused = True
                     update_dialog(0, paused_message)
-                    self.kodi.log.info("Selected source scan paused during playback")
+                    self.kodi.log.info("Manual scan paused during playback")
                 if monitor.waitForAbort(1):
                     return True
 
             if paused and not abort_requested():
                 paused = False
                 update_dialog(0, resumed_message)
-                self.kodi.log.info("Selected source scan resumed after playback")
+                self.kodi.log.info("Manual scan resumed after playback")
 
             return abort_requested()
 
@@ -874,7 +868,7 @@ class PluginUI:
             progress=progress,
         )
         try:
-            stats = scanner.scan_sources([source_id])
+            stats = scanner.scan_sources(source_ids)
             if abort_requested():
                 return
             if stats.cancelled:
@@ -921,6 +915,7 @@ class PluginUI:
             return self.finish(
                 [self._media_item(row, browse_params=params) for row in self.catalog.random_pictures(limit)],
                 category=self._rating_category(self.text(30003, "Random memories"), params),
+                view_mode=self._browser_view_mode(params),
             )
         if route == "recent-folders":
             default_limit = (
@@ -937,6 +932,25 @@ class PluginUI:
             now = datetime.now()
             getter = lambda limit, offset: self.catalog.on_this_day(now.month, now.day, now.year, limit, offset)
             return self.pictures(route, getter, params, self.text(30006, "On this day"))
+        if route == "on-this-day-random":
+            now = datetime.now()
+            limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit)
+            rows = self.catalog.random_on_this_day(now.month, now.day, now.year, limit)
+            return self.finish(
+                [
+                    self._media_item(
+                        row,
+                        browse_params=params,
+                        slideshow_route=route,
+                    )
+                    for row in rows
+                ],
+                category=self._rating_category(
+                    self.text(32606, "On this day - random"),
+                    params,
+                ),
+                view_mode=self._browser_view_mode(params),
+            )
         if route == "videos":
             return self.pictures(route, self.catalog.videos, params, self.text(32600, "Videos"))
         if route == "years":

@@ -185,8 +185,37 @@ def test_selected_source_scan_runs_in_background_and_pauses(monkeypatch):
     assert runtime.kodi.notifications[-1][0] == "Pictures found: 1, Errors: 0"
 
 
+def test_full_scan_runs_in_background(monkeypatch):
+    FakeBackgroundDialog.instances.clear()
+    views, executed = load_views(monkeypatch)
+    captured = {}
+
+    class FakeScanner:
+        def __init__(self, catalog, filesystem, settings, logger, cancelled, progress):
+            captured["cancelled"] = cancelled
+            captured["progress"] = progress
+
+        def scan_sources(self, source_ids=None):
+            captured["source_ids"] = source_ids
+            return types.SimpleNamespace(cancelled=False, pictures_seen=4, errors=0)
+
+    monkeypatch.setattr(views, "Scanner", FakeScanner)
+    runtime = FakeRuntime()
+    runtime.kodi.playing = False
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui._manual_scan(None)
+
+    dialog = FakeBackgroundDialog.instances[-1]
+    assert captured["source_ids"] is None
+    assert dialog.created == [("MyPicsDB 3", "Scanning started")]
+    assert dialog.closed is True
+    assert executed[-1] == "Container.Refresh"
+    assert runtime.kodi.notifications[-1][0] == "Pictures found: 4, Errors: 0"
+
+
 def test_full_scan_stops_without_gui_calls_when_kodi_aborts(monkeypatch):
-    FakeForegroundDialog.instances.clear()
+    FakeBackgroundDialog.instances.clear()
     views, executed = load_views(monkeypatch)
     captured = {}
     runtime = FakeRuntime()
@@ -206,6 +235,7 @@ def test_full_scan_stops_without_gui_calls_when_kodi_aborts(monkeypatch):
             captured["progress"] = progress
 
         def scan_sources(self, source_ids=None):
+            captured["source_ids"] = source_ids
             runtime.kodi.monitor.abort_requested = True
             assert captured["cancelled"]() is True
             captured["progress"](
@@ -228,8 +258,8 @@ def test_full_scan_stops_without_gui_calls_when_kodi_aborts(monkeypatch):
     )
     ui._manual_scan(None)
 
-    dialog = FakeForegroundDialog.instances[-1]
-    assert dialog.iscancelled_calls == 0
+    dialog = FakeBackgroundDialog.instances[-1]
+    assert captured["source_ids"] is None
     assert dialog.updates == []
     assert dialog.closed is False
     assert executed == []

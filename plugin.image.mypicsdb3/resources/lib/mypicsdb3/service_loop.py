@@ -11,6 +11,71 @@ from .scanner import Scanner
 
 DATE_REFRESH_DELAY_SECONDS = 60.0
 DATE_REFRESH_RETRY_SECONDS = 15.0
+SERVICE_POLL_SECONDS = 0.5
+MAINTENANCE_INTERVAL_SECONDS = 5.0
+VIDEO_IDLE_CLEAR_POLLS = 3
+
+
+class MixedSlideshowVideoMonitor:
+    """Advance Kodi's picture playlist after an indexed video finishes."""
+
+    def __init__(self, kodi_context, catalog: Catalog):
+        self.kodi = kodi_context
+        self.catalog = catalog
+        self.active_video_uri = ""
+        self.idle_polls = 0
+        self.failure_logged = False
+
+    def _active_players(self):
+        result = self.kodi.execute_jsonrpc("Player.GetActivePlayers")
+        return result if isinstance(result, list) else []
+
+    def tick(self) -> None:
+        try:
+            players = self._active_players()
+            self.failure_logged = False
+            by_type = {
+                str(player.get("type") or ""): int(player.get("playerid", -1))
+                for player in players
+                if isinstance(player, dict)
+            }
+
+            if "video" in by_type:
+                playing_file = self.kodi.playing_file()
+                if playing_file == self.active_video_uri:
+                    self.idle_polls = 0
+                    return
+                self.active_video_uri = ""
+                if playing_file and self.catalog.media_type_for_uri(playing_file) == "video":
+                    self.active_video_uri = playing_file
+                    self.idle_polls = 0
+                return
+
+            if self.active_video_uri and "picture" in by_type:
+                self.kodi.execute_jsonrpc(
+                    "Player.GoTo",
+                    {"playerid": by_type["picture"], "to": "next"},
+                )
+                self.kodi.log.info(
+                    "Advanced mixed slideshow after video finished: %s",
+                    self.active_video_uri,
+                )
+                self.active_video_uri = ""
+                self.idle_polls = 0
+                return
+
+            if self.active_video_uri:
+                self.idle_polls += 1
+                if self.idle_polls >= VIDEO_IDLE_CLEAR_POLLS:
+                    self.active_video_uri = ""
+                    self.idle_polls = 0
+        except Exception as exc:
+            if not self.failure_logged:
+                self.kodi.log.warning(
+                    "Mixed slideshow video monitor failed: %s",
+                    exc,
+                )
+                self.failure_logged = True
 
 
 class ServiceLoop:
@@ -84,28 +149,43 @@ class ServiceLoop:
             catalog.sync_sources(self.kodi.kodi_picture_sources())
         except Exception as exc:
             self.kodi.log.warning("Initial source synchronization failed: %s", exc)
-        self.next_scan_at = time.monotonic() + settings.startup_delay_seconds
+        now = self.monotonic_provider()
+        self.next_scan_at = now + settings.startup_delay_seconds
+        next_maintenance_at = now
+        slideshow_monitor = MixedSlideshowVideoMonitor(self.kodi, catalog)
+
         while not self.monitor.abortRequested():
-            self._refresh_after_date_change()
-            settings = self.kodi.refresh_settings()
-            now = time.monotonic()
-            if settings.auto_scan and now >= self.next_scan_at:
-                if not (settings.pause_during_playback and self.kodi.is_playing()):
-                    try:
-                        engine = DatabaseEngine(settings, self.kodi.log)
-                        catalog = Catalog(engine, self.kodi.log)
-                        catalog.initialize()
-                        scanner = Scanner(
-                            catalog,
-                            filesystem,
-                            settings,
-                            self.kodi.log,
-                            cancelled=self.monitor.abortRequested,
+            slideshow_monitor.tick()
+            now = self.monotonic_provider()
+            if now >= next_maintenance_at:
+                self._refresh_after_date_change()
+                settings = self.kodi.refresh_settings()
+                if settings.auto_scan and now >= self.next_scan_at:
+                    if not (settings.pause_during_playback and self.kodi.is_playing()):
+                        try:
+                            engine = DatabaseEngine(settings, self.kodi.log)
+                            catalog = Catalog(engine, self.kodi.log)
+                            catalog.initialize()
+                            slideshow_monitor.catalog = catalog
+                            scanner = Scanner(
+                                catalog,
+                                filesystem,
+                                settings,
+                                self.kodi.log,
+                                cancelled=self.monitor.abortRequested,
+                            )
+                            stats = scanner.scan_sources()
+                            self.kodi.log.info(
+                                "Automatic scan finished: %d pictures, %d errors",
+                                stats.pictures_seen,
+                                stats.errors,
+                            )
+                        except Exception as exc:
+                            self.kodi.log.error("Automatic scan failed: %s", exc)
+                        self.next_scan_at = (
+                            self.monotonic_provider()
+                            + settings.scan_interval_hours * 3600
                         )
-                        stats = scanner.scan_sources()
-                        self.kodi.log.info("Automatic scan finished: %d pictures, %d errors", stats.pictures_seen, stats.errors)
-                    except Exception as exc:
-                        self.kodi.log.error("Automatic scan failed: %s", exc)
-                    self.next_scan_at = time.monotonic() + settings.scan_interval_hours * 3600
-            if self.monitor.waitForAbort(5):
+                next_maintenance_at = now + MAINTENANCE_INTERVAL_SECONDS
+            if self.monitor.waitForAbort(SERVICE_POLL_SECONDS):
                 break
