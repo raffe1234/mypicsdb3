@@ -115,7 +115,7 @@
               <option label="30003">random_memories</option>
               <option label="30004">recent_albums</option>
               <option label="30005">random_albums</option>
-              <option label="30006">on_this_day</option>
+              <option label="32606">on_this_day</option>
               <option label="30010">favorites</option>
               <option label="30011">rated</option>
               <option label="30012">geotagged</option>
@@ -137,7 +137,7 @@
               <option label="30003">random_memories</option>
               <option label="30004">recent_albums</option>
               <option label="30005">random_albums</option>
-              <option label="30006">on_this_day</option>
+              <option label="32606">on_this_day</option>
               <option label="30010">favorites</option>
               <option label="30011">rated</option>
               <option label="30012">geotagged</option>
@@ -159,7 +159,7 @@
               <option label="30003">random_memories</option>
               <option label="30004">recent_albums</option>
               <option label="30005">random_albums</option>
-              <option label="30006">on_this_day</option>
+              <option label="32606">on_this_day</option>
               <option label="30010">favorites</option>
               <option label="30011">rated</option>
               <option label="30012">geotagged</option>
@@ -181,7 +181,7 @@
               <option label="30003">random_memories</option>
               <option label="30004">recent_albums</option>
               <option label="30005">random_albums</option>
-              <option label="30006">on_this_day</option>
+              <option label="32606">on_this_day</option>
               <option label="30010">favorites</option>
               <option label="30011">rated</option>
               <option label="30012">geotagged</option>
@@ -203,7 +203,7 @@
               <option label="30003">random_memories</option>
               <option label="30004">recent_albums</option>
               <option label="30005">random_albums</option>
-              <option label="30006">on_this_day</option>
+              <option label="32606">on_this_day</option>
               <option label="30010">favorites</option>
               <option label="30011">rated</option>
               <option label="30012">geotagged</option>
@@ -225,7 +225,7 @@
               <option label="30003">random_memories</option>
               <option label="30004">recent_albums</option>
               <option label="30005">random_albums</option>
-              <option label="30006">on_this_day</option>
+              <option label="32606">on_this_day</option>
               <option label="30010">favorites</option>
               <option label="30011">rated</option>
               <option label="30012">geotagged</option>
@@ -247,7 +247,7 @@
               <option label="30003">random_memories</option>
               <option label="30004">recent_albums</option>
               <option label="30005">random_albums</option>
-              <option label="30006">on_this_day</option>
+              <option label="32606">on_this_day</option>
               <option label="30010">favorites</option>
               <option label="30011">rated</option>
               <option label="30012">geotagged</option>
@@ -269,7 +269,7 @@
               <option label="30003">random_memories</option>
               <option label="30004">recent_albums</option>
               <option label="30005">random_albums</option>
-              <option label="30006">on_this_day</option>
+              <option label="32606">on_this_day</option>
               <option label="30010">favorites</option>
               <option label="30011">rated</option>
               <option label="30012">geotagged</option>
@@ -291,7 +291,7 @@
               <option label="30003">random_memories</option>
               <option label="30004">recent_albums</option>
               <option label="30005">random_albums</option>
-              <option label="30006">on_this_day</option>
+              <option label="32606">on_this_day</option>
               <option label="30010">favorites</option>
               <option label="30011">rated</option>
               <option label="30012">geotagged</option>

@@ -56,6 +56,7 @@ The skin is responsible for:
 | Recent albums | `plugin://plugin.image.mypicsdb3/recent-folders?limit=15` | Folders |
 | Random albums | `plugin://plugin.image.mypicsdb3/random-folders?limit=15` | Folders |
 | On this day | `plugin://plugin.image.mypicsdb3/on-this-day?limit=15` | Pictures |
+| On this day - random | `plugin://plugin.image.mypicsdb3/on-this-day-random?limit=15` | Pictures |
 | Favorites | `plugin://plugin.image.mypicsdb3/favorites?limit=15` | Pictures |
 | Rated pictures | `plugin://plugin.image.mypicsdb3/rated?limit=15` | Pictures |
 | Geotagged pictures | `plugin://plugin.image.mypicsdb3/geotagged?limit=15` | Pictures |
@@ -118,7 +119,7 @@ Supported values are:
 | `random_memories` | Random memories |
 | `recent_albums` | Recent albums |
 | `random_albums` | Random albums |
-| `on_this_day` | On this day |
+| `on_this_day` | On this day - random |
 | `favorites` | Favorites |
 | `rated` | Rated pictures |
 | `geotagged` | Geotagged pictures |

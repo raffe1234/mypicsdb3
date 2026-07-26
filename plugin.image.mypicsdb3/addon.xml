@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.22" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.23" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Add optional video indexing, a Videos node and database-backed mixed picture/video slideshows. Existing databases migrate safely to schema 4.</news>
+    <news>Add random On this day memories, consistent browser views, background manual scans and automatic mixed-slideshow advancement after videos.</news>
   </extension>
 </addon>

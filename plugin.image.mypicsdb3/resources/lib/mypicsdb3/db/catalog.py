@@ -438,6 +438,39 @@ class Catalog:
     def on_this_day(self, month: int, day: int, current_year: int, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.taken_month=? AND p.taken_day=? AND p.taken_year<?", (month, day, current_year), "p.taken_year DESC, p.taken_at DESC", limit, offset)
 
+    def random_on_this_day(self, month: int, day: int, current_year: int, limit: int) -> List[Dict[str, Any]]:
+        seed = random.random()
+        where = "p.taken_month=? AND p.taken_day=? AND p.taken_year<?"
+        first = self._pictures(
+            where + " AND p.random_key>=?",
+            (month, day, current_year, seed),
+            "p.random_key",
+            limit,
+            0,
+        )
+        if len(first) < limit:
+            second = self._pictures(
+                where + " AND p.random_key<?",
+                (month, day, current_year, seed),
+                "p.random_key",
+                limit - len(first),
+                0,
+            )
+            first.extend(second)
+        return first
+
+    def media_type_for_uri(self, uri: str) -> Optional[str]:
+        normalized = normalize_uri(uri)
+        if not normalized:
+            return None
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(
+                connection,
+                "SELECT media_type FROM pictures WHERE uri_hash=? AND is_missing=0",
+                (sha256_text(normalized),),
+            )
+        return str(row["media_type"]) if row and row.get("media_type") else None
+
     def pictures_for_year(self, year: int, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.taken_year=?", (year,), "p.taken_at DESC, p.id DESC", limit, offset)
 

@@ -823,6 +823,10 @@ msgctxt "#32605"
 msgid "Could not start slideshow"
 msgstr "Could not start slideshow"
 
+msgctxt "#32606"
+msgid "On this day - random"
+msgstr "On this day - random"
+
 msgctxt "#32610"
 msgid "Include videos"
 msgstr "Include videos"

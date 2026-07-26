@@ -51,9 +51,9 @@
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1"/>
 						<param name="widget_limit" value="50"/>
-						<param name="widget_header" value="On this day"/>
+						<param name="widget_header" value="On this day - random"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
@@ -116,9 +116,9 @@
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1"/>
 						<param name="widget_limit" value="50"/>
-						<param name="widget_header" value="On this day"/>
+						<param name="widget_header" value="On this day - random"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
@@ -181,9 +181,9 @@
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1"/>
 						<param name="widget_limit" value="50"/>
-						<param name="widget_header" value="On this day"/>
+						<param name="widget_header" value="On this day - random"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
@@ -246,9 +246,9 @@
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1"/>
 						<param name="widget_limit" value="50"/>
-						<param name="widget_header" value="On this day"/>
+						<param name="widget_header" value="On this day - random"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
@@ -311,9 +311,9 @@
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1"/>
 						<param name="widget_limit" value="50"/>
-						<param name="widget_header" value="On this day"/>
+						<param name="widget_header" value="On this day - random"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
@@ -376,9 +376,9 @@
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1"/>
 						<param name="widget_limit" value="50"/>
-						<param name="widget_header" value="On this day"/>
+						<param name="widget_header" value="On this day - random"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
@@ -441,9 +441,9 @@
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1"/>
 						<param name="widget_limit" value="50"/>
-						<param name="widget_header" value="On this day"/>
+						<param name="widget_header" value="On this day - random"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
@@ -506,9 +506,9 @@
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1"/>
 						<param name="widget_limit" value="50"/>
-						<param name="widget_header" value="On this day"/>
+						<param name="widget_header" value="On this day - random"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
@@ -571,9 +571,9 @@
 						<param name="list_id" value="5000"/>
 					</include>
 					<include content="WidgetListPoster" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1"/>
 						<param name="widget_limit" value="50"/>
-						<param name="widget_header" value="On this day"/>
+						<param name="widget_header" value="On this day - random"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>

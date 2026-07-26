@@ -209,3 +209,33 @@ def test_videos_share_date_and_folder_views_without_fake_ratings(tmp_path: Path)
         video_id,
     }
     assert [row["id"] for row in catalog.rated(10)] == [picture_id]
+
+
+def test_random_on_this_day_uses_all_earlier_years_without_duplicates(
+    tmp_path: Path, monkeypatch
+) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "photos"
+    ids = [
+        add_picture(catalog, root, "memory-2018.jpg", "2018-07-17 08:00:00"),
+        add_picture(catalog, root, "memory-2020.jpg", "2020-07-17 09:00:00"),
+        add_picture(catalog, root, "memory-2024.jpg", "2024-07-17 10:00:00"),
+    ]
+    add_picture(catalog, root, "today.jpg", "2026-07-17 11:00:00")
+    add_picture(catalog, root, "other-day.jpg", "2024-07-18 12:00:00")
+
+    with catalog.engine.transaction() as connection:
+        for picture_id, random_key in zip(ids, (0.1, 0.6, 0.9)):
+            catalog.engine.execute(
+                connection,
+                "UPDATE pictures SET random_key=? WHERE id=?",
+                (random_key, picture_id),
+            ).close()
+
+    monkeypatch.setattr("mypicsdb3.db.catalog.random.random", lambda: 0.5)
+    rows = catalog.random_on_this_day(7, 17, 2026, 10)
+
+    assert {row["id"] for row in rows} == set(ids)
+    assert len(rows) == len({row["id"] for row in rows})
+    assert catalog.media_type_for_uri(str(root / "memory-2020.jpg")) == "picture"
+    assert catalog.media_type_for_uri(str(root / "missing.jpg")) is None
