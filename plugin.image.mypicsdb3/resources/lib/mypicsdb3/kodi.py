@@ -17,6 +17,42 @@ except ImportError:  # pragma: no cover - Kodi modules are unavailable in unit t
     xbmc = xbmcaddon = xbmcgui = xbmcvfs = None
 
 
+SHUTDOWN_NOTIFICATION_METHODS = frozenset(("System.OnQuit", "System.OnRestart"))
+
+
+def create_abort_monitor(xbmc_module=None):
+    """Create a monitor that reacts to Kodi's early shutdown notification.
+
+    Kodi sends ``System.OnQuit`` before the service manager triggers the normal
+    Monitor abort flag. Catching that notification lets scans stop while Kodi is
+    still in the first part of its shutdown sequence.
+    """
+
+    module = xbmc_module if xbmc_module is not None else xbmc
+    if module is None:
+        return None
+
+    class ShutdownAwareMonitor(module.Monitor):
+        def __init__(self):
+            super().__init__()
+            self._shutdown_requested = False
+
+        def onNotification(self, sender, method, data):  # noqa: N802 - Kodi API
+            if str(method or "") in SHUTDOWN_NOTIFICATION_METHODS:
+                self._shutdown_requested = True
+
+        def abortRequested(self):  # noqa: N802 - Kodi API
+            return bool(self._shutdown_requested or super().abortRequested())
+
+        def waitForAbort(self, timeout):  # noqa: N802 - Kodi API
+            if self._shutdown_requested:
+                return True
+            native_abort = super().waitForAbort(timeout)
+            return bool(native_abort or self._shutdown_requested)
+
+    return ShutdownAwareMonitor()
+
+
 class KodiContext:
     def __init__(self):
         if xbmcaddon is None:
@@ -134,4 +170,4 @@ class KodiContext:
 
     @staticmethod
     def abort_monitor():
-        return xbmc.Monitor() if xbmc else None
+        return create_abort_monitor()

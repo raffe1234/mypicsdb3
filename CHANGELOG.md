@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.25 - 2026-07-26
+
+- Treat Kodi's early `System.OnQuit` and `System.OnRestart` notifications as
+  immediate cancellation signals for the service and manual scans.
+- Reuse the shutdown-aware monitor during in-place add-on update retries so
+  service initialization cannot continue after Kodi has begun exiting.
+- Recheck shutdown state immediately before starting an automatic scan and
+  after a cancelled scan, preventing delayed background work during exit.
+
 ## 0.2.24 - 2026-07-26
 
 - Restored the chronological **On this day** home-screen row as a separate choice.

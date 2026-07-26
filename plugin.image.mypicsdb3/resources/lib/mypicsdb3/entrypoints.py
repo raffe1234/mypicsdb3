@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import sys
-import time
 from typing import Optional, Sequence
 
 
@@ -20,8 +19,10 @@ def plugin_main(argv: Optional[Sequence[str]] = None) -> None:
 
 
 def service_main() -> None:
-    from .kodi import KodiContext
+    from .kodi import KodiContext, create_abort_monitor
     from .service_loop import ServiceLoop
+
+    monitor = create_abort_monitor()
 
     # During an in-place update Kodi can briefly start the service between
     # unregistering the old add-on and registering the new one.
@@ -35,17 +36,20 @@ def service_main() -> None:
             if "Unknown addon id" not in str(exc):
                 raise
             last_error = exc
-            if attempt < 4:
-                time.sleep(1.0)
+            if attempt < 4 and monitor.waitForAbort(1.0):
+                return
 
     if context is None:
         if last_error is not None:
             raise last_error
         raise RuntimeError("Could not initialize the MyPicsDB 3 Kodi context")
 
+    if monitor.abortRequested():
+        return
+
     context.log.info("MyPicsDB 3 service started")
     try:
-        ServiceLoop(context).run()
+        ServiceLoop(context, monitor=monitor).run()
     except Exception as exc:
         context.log.error("MyPicsDB 3 service stopped with an error: %s", exc)
     finally:
