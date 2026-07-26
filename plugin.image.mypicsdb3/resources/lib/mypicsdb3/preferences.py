@@ -32,13 +32,15 @@ HOME_VIEWS: Tuple[HomeView, ...] = (
     HomeView("random_memories", 30003, "Random memories"),
     HomeView("recent_albums", 30004, "Recent albums"),
     HomeView("random_albums", 30005, "Random albums"),
-    HomeView("on_this_day", 32606, "On this day - random"),
+    HomeView("on_this_day", 30006, "On this day"),
+    HomeView("on_this_day_random", 32606, "On this day - random"),
     HomeView("favorites", 30010, "Favorites"),
     HomeView("rated", 30011, "Rated pictures"),
     HomeView("geotagged", 30012, "Geotagged pictures"),
 )
 HOME_VIEW_KEYS: Tuple[str, ...] = tuple(view.key for view in HOME_VIEWS)
 HOME_VIEW_BY_KEY = {view.key: view for view in HOME_VIEWS}
+HOME_ROW_COUNT = 9
 DEFAULT_HOME_ROWS: Tuple[str, ...] = (
     "recent_taken",
     "recent_added",
@@ -109,8 +111,8 @@ def serialize_home_layout(order: Iterable[object], enabled: Iterable[object]) ->
     normalized_order.extend(key for key in HOME_VIEW_KEYS if key not in seen)
 
     rows = [key for key in normalized_order if key in enabled_keys]
-    rows.extend("none" for _ in range(len(HOME_VIEW_KEYS) - len(rows)))
-    return tuple(rows[: len(HOME_VIEW_KEYS)])
+    rows.extend("none" for _ in range(HOME_ROW_COUNT - len(rows)))
+    return tuple(rows[:HOME_ROW_COUNT])
 
 
 def parse_persisted_home_layout(value: object) -> Optional[Tuple[Tuple[str, ...], FrozenSet[str]]]:
@@ -136,6 +138,9 @@ def parse_persisted_home_layout(value: object) -> Optional[Tuple[Tuple[str, ...]
     if not order:
         return None
     order.extend(key for key in HOME_VIEW_KEYS if key not in seen)
+    enabled = set(
+        [key for key in order if key in enabled][:HOME_ROW_COUNT]
+    )
     return tuple(order), frozenset(enabled)
 
 
@@ -150,6 +155,9 @@ def serialize_persisted_home_layout(order: Iterable[object], enabled: Iterable[o
             normalized_order.append(key)
             seen.add(key)
     normalized_order.extend(key for key in HOME_VIEW_KEYS if key not in seen)
+    enabled_keys = set(
+        [key for key in normalized_order if key in enabled_keys][:HOME_ROW_COUNT]
+    )
     return "|".join(
         key if key in enabled_keys else "!" + key
         for key in normalized_order

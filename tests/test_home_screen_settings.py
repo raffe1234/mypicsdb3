@@ -13,6 +13,7 @@ VIEW_VALUES = {
     "recent_albums",
     "random_albums",
     "on_this_day",
+    "on_this_day_random",
     "favorites",
     "rated",
     "geotagged",
@@ -36,6 +37,7 @@ ROUTES = [
     "random?widget=1",
     "recent-folders?widget=1",
     "random-folders?widget=1",
+    "on-this-day?widget=1",
     "on-this-day-random?widget=1",
     "favorites?widget=1",
     "rated?widget=1",
@@ -48,6 +50,7 @@ HEADINGS = [
     "Random memories",
     "Recent albums",
     "Random albums",
+    "On this day",
     "On this day - random",
     "Favorites",
     "Rated pictures",
@@ -130,5 +133,5 @@ def test_home_fragment_has_visible_titles_and_all_routes() -> None:
         assert f"plugin://plugin.image.mypicsdb3/{route}" in home
     for heading in HEADINGS:
         assert f'value="{heading}"' in home
-    assert home.count('<param name="widget_limit" value="50"/>') == 81
+    assert home.count('<param name="widget_limit" value="50"/>') == 90
     assert "$ADDON[plugin.image.mypicsdb3" not in home

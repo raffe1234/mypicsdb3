@@ -457,6 +457,7 @@ class Catalog:
                 0,
             )
             first.extend(second)
+        random.shuffle(first)
         return first
 
     def media_type_for_uri(self, uri: str) -> Optional[str]:
