@@ -60,17 +60,31 @@ def read_python_package_version() -> str:
 
 
 def verify_release_versions() -> None:
-    versions = {
-        addon.name: ET.parse(addon / "addon.xml").getroot().attrib.get("version", "")
-        for addon in STATIC_ADDONS
-    }
-    versions["mypicsdb3 package"] = read_python_package_version()
-    for label, version in versions.items():
-        parse_numeric_version(version, "%s version" % label)
-    if len(set(versions.values())) != 1:
+    plugin_version = ET.parse(
+        ROOT / "plugin.image.mypicsdb3" / "addon.xml"
+    ).getroot().attrib.get("version", "")
+    repository_version = ET.parse(
+        ROOT / "repository.mypicsdb3" / "addon.xml"
+    ).getroot().attrib.get("version", "")
+    package_version = read_python_package_version()
+
+    plugin_numeric = parse_numeric_version(
+        plugin_version, "plugin.image.mypicsdb3 version"
+    )
+    repository_numeric = parse_numeric_version(
+        repository_version, "repository.mypicsdb3 version"
+    )
+    parse_numeric_version(package_version, "mypicsdb3 package version")
+
+    if plugin_version != package_version:
         fail(
-            "Release versions differ: %s"
-            % ", ".join("%s=%s" % item for item in sorted(versions.items()))
+            "Plug-in and Python package versions differ: plugin=%s, package=%s"
+            % (plugin_version, package_version)
+        )
+    if repository_numeric > plugin_numeric:
+        fail(
+            "Repository add-on version %s cannot be newer than plug-in version %s"
+            % (repository_version, plugin_version)
         )
 
 

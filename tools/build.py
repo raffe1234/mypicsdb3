@@ -211,6 +211,72 @@ def package(addon_dir: Path, package_dir: Path) -> Path:
     return output
 
 
+def addon_archive_matches_directory(zip_path: Path, addon_dir: Path) -> bool:
+    expected: dict[str, bytes] = {}
+    for path in sorted(addon_dir.rglob("*")):
+        if not path.is_file() or "__pycache__" in path.parts or path.suffix == ".pyc":
+            continue
+        name = (Path(addon_dir.name) / path.relative_to(addon_dir)).as_posix()
+        expected[name] = path.read_bytes()
+
+    try:
+        with zipfile.ZipFile(zip_path) as archive:
+            actual_names = {name for name in archive.namelist() if not name.endswith("/")}
+            if actual_names != set(expected):
+                return False
+            return all(archive.read(name) == payload for name, payload in expected.items())
+    except (OSError, zipfile.BadZipFile, KeyError):
+        return False
+
+
+def find_previous_addon_archive(
+    previous_repository: Path | None,
+    addon_dir: Path,
+    channels: Sequence[str],
+) -> Path | None:
+    if previous_repository is None:
+        return None
+
+    filename = "%s-%s.zip" % (addon_dir.name, addon_version(addon_dir))
+    roots = [previous_repository / channel for channel in channels]
+    roots.append(previous_repository)
+    for root in roots:
+        candidate = root / addon_dir.name / filename
+        if not candidate.is_file():
+            continue
+        if not addon_archive_matches_directory(candidate, addon_dir):
+            raise RuntimeError(
+                "%s changed without a version bump; update its version before publishing"
+                % addon_dir.name
+            )
+        return candidate
+    return None
+
+
+def prepare_static_package(
+    addon_dir: Path,
+    package_dir: Path,
+    previous_repository: Path | None,
+    channels: Sequence[str],
+) -> Path:
+    previous = find_previous_addon_archive(
+        previous_repository, addon_dir, channels
+    )
+    if previous is None:
+        return package(addon_dir, package_dir)
+
+    output = package_dir / previous.name
+    output.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(previous, output)
+    return output
+
+
+def publish_standalone_static_package(addon_dir: Path, project_version: str) -> bool:
+    if addon_dir.name != "repository.mypicsdb3":
+        return True
+    return addon_version(addon_dir) == project_version
+
+
 def build_skin_packages(
     selected_channels: Sequence[str],
     history_limit: int,
@@ -436,9 +502,15 @@ def main() -> int:
 
     static_packages: dict[Path, Path] = {}
     for addon_dir in STATIC_ADDON_DIRS:
-        zip_path = package(addon_dir, PACKAGES / "static")
+        zip_path = prepare_static_package(
+            addon_dir=addon_dir,
+            package_dir=PACKAGES / "static",
+            previous_repository=args.previous_repository,
+            channels=selected_channels,
+        )
         static_packages[addon_dir] = zip_path
-        shutil.copy2(zip_path, DIST / zip_path.name)
+        if publish_standalone_static_package(addon_dir, project_version):
+            shutil.copy2(zip_path, DIST / zip_path.name)
 
     if args.skip_skin:
         legacy_root = DIST / "repository"

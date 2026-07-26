@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.27 - 2026-07-26
+
+- Keep the repository add-on on its own version instead of bumping it for every
+  MyPicsDB 3 plug-in release, preventing Kodi from replacing the repository
+  while it is being used for an update check.
+- Reuse the exact previously published repository archive when its version and
+  contents are unchanged, and fail the Pages build if repository files change
+  without a version bump.
+- Do not attach an unchanged repository zip to plug-in-only GitHub releases.
+
 ## 0.2.26 - 2026-07-26
 
 - Bump the Estuary MyPicsDB 3 skin package revisions so Kodi installs the

@@ -73,6 +73,7 @@ python3 -m pytest tests/test_mysql_integration.py
 
 ```bash
 python3 tools/set_version.py 0.2.0
+# Add --repository-version 0.2.0 only when repository.mypicsdb3 changed.
 python3 -m pytest
 python3 tools/verify.py
 python3 tools/build.py
