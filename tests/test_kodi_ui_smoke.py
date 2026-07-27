@@ -56,20 +56,33 @@ class Calls:
     ended: bool = False
     builtins: list[str] = field(default_factory=list)
     rpc_requests: list[dict] = field(default_factory=list)
+    sleeps: list[int] = field(default_factory=list)
+    info_label_sequences: dict[str, list[str]] = field(default_factory=dict)
 
 
 def load_views(monkeypatch):
     calls = Calls()
     xbmc = types.ModuleType("xbmc")
     xbmc.executebuiltin = calls.builtins.append
-    xbmc.sleep = lambda milliseconds: None
+    xbmc.sleep = calls.sleeps.append
 
     def execute_jsonrpc(payload):
         calls.rpc_requests.append(json.loads(payload))
         return '{"jsonrpc":"2.0","id":1,"result":"OK"}'
 
     xbmc.executeJSONRPC = execute_jsonrpc
-    xbmc.getInfoLabel = lambda label: ""
+
+    def get_info_label(label):
+        sequence = calls.info_label_sequences.get(label)
+        if sequence:
+            return sequence.pop(0)
+        if label == "Container.PluginCategory":
+            return calls.category or ""
+        if label == "Container.Content":
+            return calls.content or ""
+        return ""
+
+    xbmc.getInfoLabel = get_info_label
     xbmcgui = types.ModuleType("xbmcgui")
     xbmcgui.ListItem = FakeListItem
     xbmcgui.Dialog = FakeDialog
@@ -499,16 +512,44 @@ def test_browser_views_use_default_view_but_widgets_keep_skin_layout(monkeypatch
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
     ui.dispatch(views.Request("recent-taken", {}))
-    assert calls.builtins.count("Container.SetViewMode(54)") == 2
+    assert calls.builtins.count("Container.SetViewMode(54)") == 1
 
     calls.builtins.clear()
     ui.folder(3, {})
-    assert calls.builtins.count("Container.SetViewMode(54)") == 2
+    assert calls.builtins.count("Container.SetViewMode(54)") == 1
     assert len(calls.items) == 1
 
     calls.builtins.clear()
     ui.dispatch(views.Request("recent-taken", {"widget": "1"}))
     assert calls.builtins == []
+
+
+def test_search_waits_for_picture_container_before_setting_view(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.album_view_mode = 500
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    calls.info_label_sequences = {
+        "Container.PluginCategory": [
+            "MyPicsDB 3",
+            "MyPicsDB 3",
+            "Search results: torrevieja",
+        ],
+        "Container.Content": ["files", "files", "images"],
+    }
+    ui.dispatch(views.Request("search", {"q": "torrevieja"}))
+
+    assert calls.builtins == ["Container.SetViewMode(500)"]
+    assert calls.sleeps == [50, 50]
+
+    calls.builtins.clear()
+    calls.sleeps.clear()
+    ui.dispatch(views.Request("", {}))
+    assert calls.category == "MyPicsDB 3"
+    assert calls.content == "files"
+    assert calls.builtins == []
+    assert calls.sleeps == []
 
 
 def test_random_on_this_day_route_uses_random_catalog_query(monkeypatch) -> None:
@@ -789,9 +830,16 @@ def test_saved_search_ui_saves_lists_opens_and_paginates_by_id(monkeypatch) -> N
             "RunPlugin(plugin://plugin.image.mypicsdb3/action/delete-saved-search?id=42)",
         ),
     ]
+    assert not any(command.startswith("Container.SetViewMode") for command in calls.builtins)
 
+    calls.info_label_sequences = {
+        "Container.PluginCategory": ["Saved searches", "Sommarresor"],
+        "Container.Content": ["files", "images"],
+    }
     ui.dispatch(views.Request("saved-search", {"id": "42"}))
     assert calls.category == "Sommarresor"
+    assert calls.builtins == ["Container.SetViewMode(55)"]
+    assert calls.sleeps[-1:] == [50]
     assert runtime.catalog.query_requests[-1][0] is query
     assert calls.items[1][0] == (
         "plugin://plugin.image.mypicsdb3/saved-search?offset=1&limit=1&id=42"

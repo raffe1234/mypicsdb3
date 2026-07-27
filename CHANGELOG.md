@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.35 - 2026-07-27
+
+- Apply the configured album view only after Kodi reports that the requested
+  picture container is active.
+- Match both the plug-in category and content type before sending
+  `Container.SetViewMode`, preventing search and saved-search results from
+  changing the parent MyPicsDB 3 menu view.
+- Stop using immediate duplicate view-mode commands; time out without touching
+  another container when Kodi does not expose the expected result view.
+- Keep widgets, the main menu and database schema 5 unchanged.
+
 ## 0.2.34 - 2026-07-27
 
 - Add **Saved searches** to the add-on menu and allow the current global text

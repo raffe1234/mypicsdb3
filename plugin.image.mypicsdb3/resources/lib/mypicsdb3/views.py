@@ -37,6 +37,7 @@ from .slideshow import (
     start_native_folder_slideshow,
 )
 from .utils import parse_bool, plugin_url, safe_limit
+from .view_mode import set_view_mode_when_container_ready
 
 
 MAX_SLIDESHOW_ITEMS = 5000
@@ -126,15 +127,13 @@ class PluginUI:
         xbmcplugin.setContent(self.handle, content)
         xbmcplugin.addDirectoryItems(self.handle, list(items), len(items))
         xbmcplugin.endOfDirectory(self.handle, succeeded=True, cacheToDisc=cache)
-        if view_mode:
-            command = "Container.SetViewMode(%d)" % view_mode
-            xbmc.executebuiltin(command)
-            # ActivateWindow(Pictures, plugin://...) can finish while the new
-            # container is still settling. Reapply once after a short delay so
-            # "Open containing album" receives the same configured view.
-            if hasattr(xbmc, "sleep"):
-                xbmc.sleep(100)
-                xbmc.executebuiltin(command)
+        if view_mode and category:
+            set_view_mode_when_container_ready(
+                xbmc,
+                view_mode,
+                expected_category=category,
+                expected_content=content,
+            )
 
     def _browser_view_mode(self, params: Optional[Dict[str, str]] = None) -> int:
         if parse_bool((params or {}).get("widget"), False):
