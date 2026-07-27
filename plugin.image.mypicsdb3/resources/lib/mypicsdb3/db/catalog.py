@@ -5,8 +5,19 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ..models import Source
-from ..query_model import compile_picture_query
+from ..query_model import (
+    canonical_picture_query_json,
+    compile_picture_query,
+    parse_picture_query,
+    picture_query_to_dict,
+)
 from ..rating_policy import RATING_POLICY_ALL, normalize_rating_policy, rating_sql_predicate
+from ..saved_searches import (
+    SavedSearch,
+    SavedSearchValidationError,
+    normalize_saved_search_name,
+    parse_stored_saved_search,
+)
 from ..search_index import build_picture_search_document
 from ..utils import (
     NON_INDEXABLE_PICTURE_SOURCE_URIS,
@@ -68,6 +79,105 @@ class Catalog:
 
     def test_connection(self) -> None:
         self.engine.test_connection()
+
+    def list_saved_searches(self) -> List[Dict[str, Any]]:
+        order = "name COLLATE NOCASE, id" if self.engine.backend == "sqlite" else "name, id"
+        with self.engine.transaction() as connection:
+            return self.engine.fetchall(
+                connection,
+                "SELECT id, name, query_version, created_at, updated_at "
+                "FROM saved_searches ORDER BY %s" % order,
+            )
+
+    def get_saved_search(self, saved_search_id: int) -> Optional[SavedSearch]:
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(
+                connection,
+                "SELECT id, name, query_version, query_json, created_at, updated_at "
+                "FROM saved_searches WHERE id=?",
+                (saved_search_id,),
+            )
+        return parse_stored_saved_search(row) if row is not None else None
+
+    def get_saved_search_summary(self, saved_search_id: int) -> Optional[Dict[str, Any]]:
+        with self.engine.transaction() as connection:
+            return self.engine.fetchone(
+                connection,
+                "SELECT id, name, query_version, created_at, updated_at "
+                "FROM saved_searches WHERE id=?",
+                (saved_search_id,),
+            )
+
+    def create_saved_search(self, name: str, query_model: Any) -> int:
+        normalized_name = normalize_saved_search_name(name)
+        query = parse_picture_query(picture_query_to_dict(query_model))
+        query_json = canonical_picture_query_json(query)
+        now = utc_now()
+        with self.engine.transaction(immediate=True) as connection:
+            existing = self.engine.fetchone(
+                connection,
+                "SELECT id FROM saved_searches WHERE name=?",
+                (normalized_name,),
+            )
+            if existing is not None:
+                raise SavedSearchValidationError(
+                    "A saved search with this name already exists"
+                )
+            try:
+                cursor = self.engine.execute(
+                    connection,
+                    "INSERT INTO saved_searches "
+                    "(name, query_version, query_json, created_at, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?)",
+                    (normalized_name, query.version, query_json, now, now),
+                )
+            except self.engine.integrity_errors as exc:
+                raise SavedSearchValidationError(
+                    "A saved search with this name already exists"
+                ) from exc
+            try:
+                return int(cursor.lastrowid)
+            finally:
+                cursor.close()
+
+    def rename_saved_search(self, saved_search_id: int, name: str) -> bool:
+        normalized_name = normalize_saved_search_name(name)
+        with self.engine.transaction(immediate=True) as connection:
+            existing = self.engine.fetchone(
+                connection,
+                "SELECT id FROM saved_searches WHERE name=? AND id<>?",
+                (normalized_name, saved_search_id),
+            )
+            if existing is not None:
+                raise SavedSearchValidationError(
+                    "A saved search with this name already exists"
+                )
+            try:
+                cursor = self.engine.execute(
+                    connection,
+                    "UPDATE saved_searches SET name=?, updated_at=? WHERE id=?",
+                    (normalized_name, utc_now(), saved_search_id),
+                )
+            except self.engine.integrity_errors as exc:
+                raise SavedSearchValidationError(
+                    "A saved search with this name already exists"
+                ) from exc
+            try:
+                return int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
+
+    def delete_saved_search(self, saved_search_id: int) -> bool:
+        with self.engine.transaction(immediate=True) as connection:
+            cursor = self.engine.execute(
+                connection,
+                "DELETE FROM saved_searches WHERE id=?",
+                (saved_search_id,),
+            )
+            try:
+                return int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
 
     def sync_sources(self, kodi_sources: Sequence[Dict[str, str]]) -> List[Source]:
         now = utc_now()

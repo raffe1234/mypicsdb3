@@ -98,6 +98,14 @@ SQLITE_SCHEMA = [
         document TEXT NOT NULL,
         FOREIGN KEY(picture_id) REFERENCES pictures(id) ON DELETE CASCADE
     )""",
+    """CREATE TABLE IF NOT EXISTS saved_searches (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        query_version INTEGER NOT NULL,
+        query_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )""",
     """CREATE TABLE IF NOT EXISTS scan_runs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         source_id INTEGER,
@@ -234,6 +242,14 @@ MYSQL_SCHEMA = [
         document TEXT NOT NULL,
         CONSTRAINT fk_picture_search_documents_picture
             FOREIGN KEY(picture_id) REFERENCES pictures(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
+    """CREATE TABLE IF NOT EXISTS saved_searches (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(191) NOT NULL UNIQUE,
+        query_version INT NOT NULL,
+        query_json LONGTEXT NOT NULL,
+        created_at DATETIME(6) NOT NULL,
+        updated_at DATETIME(6) NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
     """CREATE TABLE IF NOT EXISTS scan_runs (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

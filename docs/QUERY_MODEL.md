@@ -2,8 +2,9 @@
 
 MyPicsDB 3 version 0.2.18 introduced an internal, versioned Query Model for
 search, smart filters, saved views and smart collections. Version 0.2.19 uses
-it for Kodi global search. Kodi still does not expose a general query editor
-and no query JSON is stored in database schema 3.
+it for Kodi global search. Version 0.2.34 stores canonical version-1 Query
+Model JSON for named saved searches in database schema 5. Kodi still does not
+expose a general smart-filter editor.
 
 ## Goals
 
@@ -124,8 +125,8 @@ Unknown query versions are rejected rather than guessed or silently upgraded.
 `canonical_picture_query_json()` returns normalized UTF-8 JSON with sorted
 object keys and compact separators. Source IDs and list-rule values are
 normalized and duplicate values removed. Text-search values are serialized as
-canonical space-separated tokens. This representation is suitable for future
-hashing, cache keys and storage, but version 0.2.19 does not persist query JSON.
+canonical space-separated tokens. This representation is used by schema-5 saved searches. The stored query model
+version and JSON are revalidated every time a saved search is opened.
 
 ## Catalogue integration
 
@@ -142,13 +143,13 @@ The public compiler result contains reusable `where_sql`, `params` and
 `order_by_sql` fragments. Future preview and facet consumers must build on
 these fragments rather than introduce separate user-defined SQL paths.
 
-## Deliberately not included in 0.2.19
+## Deliberately not included in 0.2.34
 
 - no Kodi query-builder dialog;
 - no phrase, fuzzy, prefix or relevance-ranked search;
-- no saved-view or smart-collection tables;
+- no general smart-filter editor or arbitrary saved smart collection;
 - no raw SQL compatibility mode;
-- no query JSON in plugin URLs.
+- no query JSON in saved-search plugin URLs; they reference a database ID.
 
 Those features can be added in separate reviewable releases while retaining
 Query Model version 1 or introducing an explicit later version.

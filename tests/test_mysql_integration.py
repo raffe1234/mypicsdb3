@@ -9,6 +9,7 @@ from mypicsdb3.config import Settings
 from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
 from mypicsdb3.db.schema import create_schema
+from mypicsdb3.search import build_global_search_request
 from mypicsdb3.utils import utc_now
 
 
@@ -64,6 +65,7 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     engine = DatabaseEngine(mysql_settings(tmp_path))
     with engine.transaction() as connection:
         create_schema(engine, connection)
+        engine.execute(connection, "DROP TABLE saved_searches").close()
         engine.execute(
             connection,
             "DROP TABLE picture_search_documents",
@@ -97,8 +99,8 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     second = catalog.initialize()
 
     assert first.bootstrapped_history is True
-    assert first.current_version == 4
-    assert first.applied_versions == (2, 3, 4)
+    assert first.current_version == 5
+    assert first.applied_versions == (2, 3, 4, 5)
     assert second.bootstrapped_history is False
     assert second.applied_versions == ()
     with engine.transaction() as connection:
@@ -128,9 +130,9 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
         )
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
-    assert [row["version"] for row in history] == [1, 2, 3, 4]
+    assert [row["version"] for row in history] == [1, 2, 3, 4, 5]
     assert {row["addon_version"] for row in history} == {VERSION}
-    assert count["total"] == 4
+    assert count["total"] == 5
     assert index is not None
     assert search_table is not None
 
@@ -237,7 +239,7 @@ def test_existing_mysql_schema_two_backfills_global_search_documents(tmp_path) -
     result = Catalog(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 4
+    assert result.current_version == 5
     assert result.applied_versions == (3,)
     with engine.transaction() as connection:
         row = engine.fetchone(
@@ -351,3 +353,19 @@ def test_mysql_query_model_matches_page_count_and_minimum_rating_policy(tmp_path
         "selected.jpg",
     ]
     assert catalog.count_query_pictures(query) == 2
+
+
+def test_mysql_saved_search_roundtrip(tmp_path) -> None:
+    catalog = Catalog(DatabaseEngine(mysql_settings(tmp_path)))
+    catalog.initialize()
+    query = build_global_search_request("åland sommar").query
+
+    saved_id = catalog.create_saved_search("Sommarresor", query)
+    saved = catalog.get_saved_search(saved_id)
+
+    assert saved is not None
+    assert saved.name == "Sommarresor"
+    assert saved.query.root.children[0].value.text == "åland sommar"
+    assert catalog.rename_saved_search(saved_id, "Östersjön") is True
+    assert catalog.list_saved_searches()[0]["name"] == "Östersjön"
+    assert catalog.delete_saved_search(saved_id) is True

@@ -3,8 +3,9 @@
 MyPicsDB 3 uses a versioned migration runner for both SQLite and
 MySQL/MariaDB. Add-on version 0.2.13 introduced the framework. Version 0.2.15
 raised the catalogue to schema version 2. Version 0.2.19 raised it to schema 3
-with normalized global-search documents. Version 0.2.22 raises it to schema 4
-with an explicit picture/video media type.
+with normalized global-search documents. Version 0.2.22 raised it to schema 4
+with an explicit picture/video media type. Version 0.2.34 raises it to schema 5
+with validated saved searches.
 
 ## Startup sequence
 
@@ -68,6 +69,17 @@ Existing rows remain pictures. New opt-in video rows use `media_type=video` and
 share the existing catalogue, date hierarchy, folders, favorites and search
 index. The migration checks for both the column and index before creating them,
 so a partially completed MySQL/MariaDB DDL step can be retried safely.
+
+## Schema 5: saved searches
+
+Schema 5 adds `saved_searches` with a user-facing name, the explicit Query
+Model version, canonical Query Model JSON and creation/update timestamps. The
+table is portable across SQLite and MySQL/MariaDB.
+
+The add-on stores no raw SQL. Each saved query is parsed and validated again
+when it is opened; malformed JSON, unknown fields, unsupported operators and
+unknown query versions are rejected. Saved-search plugin URLs contain only the
+database row ID, pagination and local display-policy parameters.
 
 ## SQLite backups
 

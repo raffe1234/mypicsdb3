@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.34 - 2026-07-27
+
+- Add **Saved searches** to the add-on menu and allow the current global text
+  search to be saved, reopened with normal pagination and slideshow support,
+  renamed or deleted.
+- Add database schema 5 with a portable `saved_searches` table for SQLite and
+  MySQL/MariaDB. Store canonical Query Model JSON and its explicit version, not
+  raw SQL or query JSON in saved-view plugin URLs.
+- Revalidate the stored query version, JSON structure, fields and operators
+  every time a saved search is opened.
+
 ## 0.2.33 - 2026-07-27
 
 - Build large database-backed slideshows in bounded JSON-RPC batches instead of

@@ -29,6 +29,7 @@ from .rating_policy import (
 )
 from .router import Request
 from .search import build_global_search_request
+from .saved_searches import SavedSearchValidationError
 from .scanner import Scanner
 from .slideshow import (
     SlideshowError,
@@ -145,6 +146,7 @@ class PluginUI:
         rating_params = self._rating_route_params(params)
         items = [
             self.add_folder(self.text(32500, "Search"), "search", **rating_params),
+            self.add_folder(self.text(32700, "Saved searches"), "saved-searches", **rating_params),
             self.add_folder(self.text(30000, "Picture sources"), "sources", **rating_params),
         ]
         hidden_nodes = parse_hidden_main_menu_nodes(
@@ -212,6 +214,11 @@ class PluginUI:
             )
         search_params["q"] = request.text
         category = self.text(32502, "Search results: %s") % request.text
+        save_item = self.add_action(
+            self.text(32701, "Save this search"),
+            "action/save-search",
+            q=request.text,
+        )
         return self.pictures(
             "search",
             lambda limit, offset: self.catalog.query_pictures(
@@ -221,6 +228,75 @@ class PluginUI:
             ),
             search_params,
             category,
+            prefix_items=[save_item],
+        )
+
+    def saved_searches(self, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
+        items = []
+        for row in self.catalog.list_saved_searches():
+            saved_id = int(row["id"])
+            rename = "RunPlugin(%s)" % self.url(
+                "action/rename-saved-search", id=saved_id
+            )
+            delete = "RunPlugin(%s)" % self.url(
+                "action/delete-saved-search", id=saved_id
+            )
+            context = [
+                (self.text(32705, "Rename saved search"), rename),
+                (self.text(32706, "Delete saved search"), delete),
+            ]
+            items.append(
+                self.add_folder(
+                    str(row["name"]),
+                    "saved-search",
+                    context=context,
+                    id=saved_id,
+                    **rating_params,
+                )
+            )
+        self.finish(
+            items,
+            content="files",
+            category=self._rating_category(
+                self.text(32700, "Saved searches"), params
+            ),
+        )
+
+    def saved_search(self, saved_search_id: int, params: Dict[str, str]):
+        try:
+            saved = self.catalog.get_saved_search(saved_search_id)
+        except SavedSearchValidationError as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32710, "Invalid saved search"), exc),
+                error=True,
+            )
+            return self.finish(
+                [],
+                content="images",
+                cache=False,
+                category=self.text(32700, "Saved searches"),
+            )
+        if saved is None:
+            self.kodi.notify(self.text(32709, "Saved search was not found"), error=True)
+            return self.finish(
+                [],
+                content="images",
+                cache=False,
+                category=self.text(32700, "Saved searches"),
+            )
+        saved_params = dict(params)
+        saved_params["id"] = str(saved.id)
+        return self.pictures(
+            "saved-search",
+            lambda limit, offset: self.catalog.query_pictures(
+                saved.query,
+                limit,
+                offset,
+            ),
+            saved_params,
+            saved.name,
         )
 
     def sources(self, params: Optional[Dict[str, str]] = None):
@@ -374,7 +450,15 @@ class PluginUI:
             **params,
         )
 
-    def pictures(self, route: str, getter: Callable[[int, int], List[Dict[str, Any]]], params: Dict[str, str], category: str, random_view: bool = False):
+    def pictures(
+        self,
+        route: str,
+        getter: Callable[[int, int], List[Dict[str, Any]]],
+        params: Dict[str, str],
+        category: str,
+        random_view: bool = False,
+        prefix_items: Optional[Sequence[Tuple[str, xbmcgui.ListItem, bool]]] = None,
+    ):
         is_widget = parse_bool(params.get("widget"), False)
         default_limit = (
             self.kodi.settings.widget_limit
@@ -384,7 +468,11 @@ class PluginUI:
         limit = safe_limit(params.get("limit"), default_limit)
         offset = int(params.get("offset", "0") or 0)
         rows = getter(limit, offset)
-        items = [self._media_item(row, browse_params=params, slideshow_route=route) for row in rows]
+        items = list(prefix_items or ())
+        items.extend(
+            self._media_item(row, browse_params=params, slideshow_route=route)
+            for row in rows
+        )
         if not random_view and len(rows) == limit and not is_widget and "limit" not in params:
             page_params = {
                 key: value
@@ -693,6 +781,13 @@ class PluginUI:
         if scope == "search":
             request = build_global_search_request(params.get("q", ""))
             return self.catalog.query_pictures(request.query, limit, 0)
+        if scope == "saved-search":
+            saved = self.catalog.get_saved_search(int(params["id"]))
+            return (
+                self.catalog.query_pictures(saved.query, limit, 0)
+                if saved is not None
+                else []
+            )
         return []
 
     @staticmethod
@@ -744,7 +839,14 @@ class PluginUI:
                 )
             return
 
-        rows = self._slideshow_rows(params)
+        try:
+            rows = self._slideshow_rows(params)
+        except SavedSearchValidationError as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32710, "Invalid saved search"), exc),
+                error=True,
+            )
+            return
         if not rows:
             self.kodi.notify(self.text(32604, "No media to play"))
             return
@@ -810,6 +912,72 @@ class PluginUI:
             return
         if route == "action/save-album-view":
             self._save_current_album_view()
+            return
+        if route == "action/save-search":
+            try:
+                request = build_global_search_request(params.get("q", ""))
+                name = xbmcgui.Dialog().input(
+                    self.text(32702, "Saved-search name"),
+                    defaultt=request.text,
+                )
+                if not name:
+                    return
+                self.catalog.create_saved_search(name, request.query)
+                self.kodi.notify(self.text(32703, "Search saved"))
+            except (ValueError, SavedSearchValidationError) as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32704, "Could not save search"), exc),
+                    error=True,
+                )
+            return
+        if route == "action/rename-saved-search":
+            try:
+                saved = self.catalog.get_saved_search_summary(int(params["id"]))
+                if saved is None:
+                    self.kodi.notify(
+                        self.text(32709, "Saved search was not found"),
+                        error=True,
+                    )
+                    return
+                current_name = str(saved["name"])
+                name = xbmcgui.Dialog().input(
+                    self.text(32705, "Rename saved search"),
+                    defaultt=current_name,
+                )
+                if not name or name.strip() == current_name:
+                    return
+                self.catalog.rename_saved_search(int(saved["id"]), name)
+                self.kodi.notify(self.text(32707, "Saved search renamed"))
+                xbmc.executebuiltin("Container.Refresh")
+            except SavedSearchValidationError as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32711, "Could not rename saved search"), exc),
+                    error=True,
+                )
+            return
+        if route == "action/delete-saved-search":
+            try:
+                saved = self.catalog.get_saved_search_summary(int(params["id"]))
+                if saved is None:
+                    self.kodi.notify(
+                        self.text(32709, "Saved search was not found"),
+                        error=True,
+                    )
+                    return
+                confirmed = xbmcgui.Dialog().yesno(
+                    self.text(32706, "Delete saved search"),
+                    self.text(32712, "Delete '%s'?") % str(saved["name"]),
+                )
+                if not confirmed:
+                    return
+                self.catalog.delete_saved_search(int(saved["id"]))
+                self.kodi.notify(self.text(32708, "Saved search deleted"))
+                xbmc.executebuiltin("Container.Refresh")
+            except SavedSearchValidationError as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32710, "Invalid saved search"), exc),
+                    error=True,
+                )
             return
         if route == "action/refresh-sources":
             sources = self.catalog.sync_sources(self.kodi.kodi_picture_sources())
@@ -954,6 +1122,10 @@ class PluginUI:
             return self.action(route, params)
         if route == "search":
             return self.search(params)
+        if route == "saved-searches":
+            return self.saved_searches(params)
+        if route == "saved-search":
+            return self.saved_search(int(params["id"]), params)
         if route == "sources":
             return self.sources(params)
         if route == "source":

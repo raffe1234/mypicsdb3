@@ -5,9 +5,9 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.33 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.34 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
-> automated tests. The schema-1-to-4 migrations, search-document backfill,
+> automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
 > documented validation on real Kodi installations before calling the project
 > production-stable.
@@ -34,8 +34,8 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
   with bounded playlist batches for large results spanning multiple folders.
 - Optional global minimum-rating display policy for normal browser and widget
   views, with a temporary all-pictures override.
-- Versioned, validated Query Model used by global search and prepared for
-  future smart filters, saved views and smart collections.
+- Versioned, validated Query Model used by global search and schema-5 saved
+  searches; stored queries are revalidated when opened and never expose raw SQL.
 - Stable widget endpoints for configurable skins.
 - Optional **Estuary MyPicsDB 3** skin with picture rows on the home screen.
 - GitHub Actions, Kodi repository generation and GitHub Pages deployment.

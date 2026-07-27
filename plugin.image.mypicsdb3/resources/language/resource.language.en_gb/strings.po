@@ -846,3 +846,55 @@ msgstr "Comma-separated video extensions without leading dots. Used only when In
 msgctxt "#32614"
 msgid "MyPicsDB 3 is starting. Please try again in a moment."
 msgstr "MyPicsDB 3 is starting. Please try again in a moment."
+
+msgctxt "#32700"
+msgid "Saved searches"
+msgstr "Saved searches"
+
+msgctxt "#32701"
+msgid "Save this search"
+msgstr "Save this search"
+
+msgctxt "#32702"
+msgid "Saved-search name"
+msgstr "Saved-search name"
+
+msgctxt "#32703"
+msgid "Search saved"
+msgstr "Search saved"
+
+msgctxt "#32704"
+msgid "Could not save search"
+msgstr "Could not save search"
+
+msgctxt "#32705"
+msgid "Rename saved search"
+msgstr "Rename saved search"
+
+msgctxt "#32706"
+msgid "Delete saved search"
+msgstr "Delete saved search"
+
+msgctxt "#32707"
+msgid "Saved search renamed"
+msgstr "Saved search renamed"
+
+msgctxt "#32708"
+msgid "Saved search deleted"
+msgstr "Saved search deleted"
+
+msgctxt "#32709"
+msgid "Saved search was not found"
+msgstr "Saved search was not found"
+
+msgctxt "#32710"
+msgid "Invalid saved search"
+msgstr "Invalid saved search"
+
+msgctxt "#32711"
+msgid "Could not rename saved search"
+msgstr "Could not rename saved search"
+
+msgctxt "#32712"
+msgid "Delete '%s'?"
+msgstr "Delete '%s'?"

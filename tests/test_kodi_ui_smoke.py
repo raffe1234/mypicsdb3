@@ -140,6 +140,11 @@ class FakeCatalog:
         self.deleted_sources = []
         self.rating_policy = "all"
         self.query_requests = []
+        self.saved_search_rows = []
+        self.saved_search_objects = {}
+        self.created_saved_searches = []
+        self.renamed_saved_searches = []
+        self.deleted_saved_searches = []
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -183,6 +188,30 @@ class FakeCatalog:
     def query_pictures(self, query, limit, offset=0):
         self.query_requests.append((query, limit, offset))
         return self.recent_taken(limit, offset)
+
+    def list_saved_searches(self):
+        return list(self.saved_search_rows)
+
+    def get_saved_search(self, saved_search_id):
+        return self.saved_search_objects.get(saved_search_id)
+
+    def get_saved_search_summary(self, saved_search_id):
+        saved = self.saved_search_objects.get(saved_search_id)
+        if saved is None:
+            return None
+        return {"id": saved.id, "name": saved.name, "query_version": 1}
+
+    def create_saved_search(self, name, query):
+        self.created_saved_searches.append((name, query))
+        return 1
+
+    def rename_saved_search(self, saved_search_id, name):
+        self.renamed_saved_searches.append((saved_search_id, name))
+        return True
+
+    def delete_saved_search(self, saved_search_id):
+        self.deleted_saved_searches.append(saved_search_id)
+        return True
 
     def get_folder(self, folder_id):
         return {"id": folder_id, "source_id": 4, "uri": "smb://server/photos/Summer/", "name": "Summer"}
@@ -254,9 +283,10 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 18
+    assert len(calls.items) == 19
     assert calls.items[0][0].endswith("/search")
-    assert calls.items[1][0].endswith("/sources")
+    assert calls.items[1][0].endswith("/saved-searches")
+    assert calls.items[2][0].endswith("/sources")
 
     calls.ended = False
     ui.dispatch(views.Request("recent-taken", {"limit": "15"}))
@@ -281,11 +311,12 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     ui.root()
 
     urls = [url for url, _item, _is_folder in calls.items]
-    assert len(urls) == 15
+    assert len(urls) == 16
     assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
     assert "plugin://plugin.image.mypicsdb3/years" not in urls
     assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
     assert "plugin://plugin.image.mypicsdb3/search" in urls
+    assert "plugin://plugin.image.mypicsdb3/saved-searches" in urls
     assert "plugin://plugin.image.mypicsdb3/sources" in urls
     assert "plugin://plugin.image.mypicsdb3/action/scan" in urls
     assert "plugin://plugin.image.mypicsdb3/status" in urls
@@ -320,14 +351,14 @@ def test_rating_policy_is_visible_and_can_be_temporarily_bypassed(monkeypatch) -
     assert calls.items[0][1].label == "Minimum rating: 3+"
     assert calls.items[1][1].label == "Show all pictures temporarily"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/?rating_policy=all"
-    assert calls.items[4][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
+    assert calls.items[5][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
 
     ui.dispatch(views.Request("", {"rating_policy": "all"}))
 
     assert runtime.catalog.rating_policy == "all"
     assert calls.items[1][1].label == "Use configured rating filter"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/"
-    assert calls.items[4][0] == (
+    assert calls.items[5][0] == (
         "plugin://plugin.image.mypicsdb3/recent-taken?rating_policy=all"
     )
 
@@ -352,7 +383,10 @@ def test_global_search_prompts_normalizes_and_preserves_pagination(monkeypatch) 
     assert query.root.children[0].field == "text"
     assert query.root.children[0].operator == "contains_tokens"
     assert query.root.children[0].value.tokens == ("åland", "sommar")
-    assert calls.items[1][0] == (
+    assert calls.items[0][0] == (
+        "plugin://plugin.image.mypicsdb3/action/save-search?q=%C3%A5land+sommar"
+    )
+    assert calls.items[2][0] == (
         "plugin://plugin.image.mypicsdb3/search?offset=1&limit=1&q=%C3%A5land+sommar"
     )
 
@@ -712,3 +746,87 @@ def test_failed_database_slideshow_does_not_leave_video_monitor_armed(monkeypatc
     assert runtime.kodi.notifications == [
         ("Could not start slideshow: Kodi rejected playlist", True)
     ]
+
+
+def test_saved_search_ui_saves_lists_opens_and_paginates_by_id(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.browser_page_size = 1
+    query = views.build_global_search_request("åland sommar").query
+    saved = types.SimpleNamespace(id=42, name="Sommarresor", query=query)
+    runtime.catalog.saved_search_rows = [
+        {
+            "id": 42,
+            "name": "Sommarresor",
+            "query_version": 1,
+            "created_at": "2026-07-27",
+            "updated_at": "2026-07-27",
+        }
+    ]
+    runtime.catalog.saved_search_objects[42] = saved
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    FakeDialog.input_responses = ["Sommarresor"]
+    ui.dispatch(views.Request("action/save-search", {"q": " ÅLAND Sommar! "}))
+    assert runtime.catalog.created_saved_searches[0][0] == "Sommarresor"
+    assert runtime.catalog.created_saved_searches[0][1].root.children[0].value.text == (
+        "åland sommar"
+    )
+    assert runtime.kodi.notifications[-1] == ("Search saved", False)
+
+    ui.dispatch(views.Request("saved-searches", {}))
+    assert calls.category == "Saved searches"
+    assert calls.items[0][0] == (
+        "plugin://plugin.image.mypicsdb3/saved-search?id=42"
+    )
+    assert calls.items[0][1].context == [
+        (
+            "Rename saved search",
+            "RunPlugin(plugin://plugin.image.mypicsdb3/action/rename-saved-search?id=42)",
+        ),
+        (
+            "Delete saved search",
+            "RunPlugin(plugin://plugin.image.mypicsdb3/action/delete-saved-search?id=42)",
+        ),
+    ]
+
+    ui.dispatch(views.Request("saved-search", {"id": "42"}))
+    assert calls.category == "Sommarresor"
+    assert runtime.catalog.query_requests[-1][0] is query
+    assert calls.items[1][0] == (
+        "plugin://plugin.image.mypicsdb3/saved-search?offset=1&limit=1&id=42"
+    )
+    assert "q=" not in calls.items[1][0]
+    assert "query" not in calls.items[1][0]
+    slideshow_commands = [
+        command for label, command in calls.items[0][1].context
+        if label == "Play slideshow from here"
+    ]
+    assert slideshow_commands == [
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/start-slideshow?"
+        "id=42&scope=saved-search&start=1)"
+    ]
+
+
+def test_saved_search_ui_renames_and_deletes_after_confirmation(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    query = views.build_global_search_request("sommar").query
+    runtime.catalog.saved_search_objects[7] = types.SimpleNamespace(
+        id=7,
+        name="Sommar",
+        query=query,
+    )
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    FakeDialog.input_responses = ["Semester"]
+    ui.dispatch(views.Request("action/rename-saved-search", {"id": "7"}))
+    assert runtime.catalog.renamed_saved_searches == [(7, "Semester")]
+    assert runtime.kodi.notifications[-1] == ("Saved search renamed", False)
+    assert calls.builtins[-1] == "Container.Refresh"
+
+    FakeDialog.responses = [True]
+    ui.dispatch(views.Request("action/delete-saved-search", {"id": "7"}))
+    assert runtime.catalog.deleted_saved_searches == [7]
+    assert runtime.kodi.notifications[-1] == ("Saved search deleted", False)
+    assert calls.builtins[-1] == "Container.Refresh"
