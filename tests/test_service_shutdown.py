@@ -116,3 +116,37 @@ def test_shutdown_race_before_due_scan_does_not_start_scanner(monkeypatch) -> No
     assert catalog.synced_sources == []
     assert kodi.refresh_calls == 1
     assert monitor.aborted is True
+
+
+def test_diagnostic_build_does_not_create_mixed_slideshow_monitor(monkeypatch) -> None:
+    monitor = FakeMonitor()
+    kodi = FakeKodi(monitor)
+    settings = SimpleNamespace(
+        auto_scan=False,
+        pause_during_playback=False,
+        startup_delay_seconds=0,
+        scan_interval_hours=1,
+    )
+    catalog = FakeCatalog()
+    loop = ServiceLoop(
+        kodi,
+        date_provider=lambda: date(2026, 7, 27),
+        monotonic_provider=lambda: 100.0,
+        monitor=monitor,
+    )
+    loop._runtime_parts = lambda: (settings, catalog, object())
+
+    class SlideshowMonitorMustNotStart:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError("mixed slideshow monitor started in diagnostic build")
+
+    monkeypatch.setattr(
+        service_loop,
+        "MixedSlideshowVideoMonitor",
+        SlideshowMonitorMustNotStart,
+    )
+
+    loop.run()
+
+    assert catalog.synced_sources == []
+    assert monitor.aborted is True
