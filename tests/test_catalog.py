@@ -93,6 +93,65 @@ def test_catalog_queries_and_favorites(tmp_path: Path) -> None:
     assert catalog.geotagged(10)[0]["city"] == "Stockholm"
 
 
+def test_album_art_prefers_a_picture_over_a_newer_video(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "mixed-album"
+    picture_id = add_picture(
+        catalog,
+        root,
+        "cover.jpg",
+        taken_at="2024-01-01 12:00:00",
+        discovered_at="2026-07-20 09:00:00",
+    )
+    add_picture(
+        catalog,
+        root,
+        "latest.mp4",
+        taken_at="2026-06-21 03:15:00",
+        discovered_at="2026-07-21 09:00:00",
+        media_type="video",
+    )
+
+    recent = catalog.recent_folders(10)[0]
+    random_album = catalog.random_folders(10)[0]
+
+    assert recent["representative_uri"].endswith("cover.jpg")
+    assert random_album["representative_uri"].endswith("cover.jpg")
+    with catalog.engine.transaction() as connection:
+        summary = catalog.engine.fetchone(
+            connection,
+            "SELECT representative_picture_id, latest_taken_at, latest_discovered_at "
+            "FROM folders WHERE id=?",
+            (recent["id"],),
+        )
+    assert summary["representative_picture_id"] == picture_id
+    assert summary["latest_taken_at"] == "2026-06-21 03:15:00"
+    assert summary["latest_discovered_at"] == "2026-07-21 09:00:00"
+
+
+def test_video_only_album_keeps_video_as_fallback_art(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "video-album"
+    video_id = add_picture(
+        catalog,
+        root,
+        "only.mp4",
+        taken_at="2026-06-21 00:15:53",
+        media_type="video",
+    )
+
+    album = catalog.recent_folders(10)[0]
+
+    assert album["representative_uri"].endswith("only.mp4")
+    with catalog.engine.transaction() as connection:
+        summary = catalog.engine.fetchone(
+            connection,
+            "SELECT representative_picture_id FROM folders WHERE id=?",
+            (album["id"],),
+        )
+    assert summary["representative_picture_id"] == video_id
+
+
 def test_date_hierarchy_and_undated_queries(tmp_path: Path) -> None:
     catalog = make_catalog(tmp_path)
     root = tmp_path / "photos"

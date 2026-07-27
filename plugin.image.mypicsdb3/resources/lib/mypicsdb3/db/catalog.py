@@ -364,9 +364,27 @@ class Catalog:
     def update_folder_summaries(self, connection, source_id: int) -> None:
         folders = self.engine.fetchall(connection, "SELECT id FROM folders WHERE source_id=? AND is_missing=0", (source_id,))
         for folder in folders:
-            recent = self.engine.fetchone(connection, "SELECT id, taken_at, discovered_at FROM pictures WHERE folder_id=? AND is_missing=0 ORDER BY COALESCE(taken_at, discovered_at) DESC, id DESC LIMIT 1", (folder["id"],))
-            if recent:
-                self.engine.execute(connection, "UPDATE folders SET representative_picture_id=?, latest_taken_at=?, latest_discovered_at=? WHERE id=?", (recent["id"], recent.get("taken_at"), recent.get("discovered_at"), folder["id"])).close()
+            latest = self.engine.fetchone(
+                connection,
+                "SELECT id, taken_at, discovered_at FROM pictures "
+                "WHERE folder_id=? AND is_missing=0 "
+                "ORDER BY COALESCE(taken_at, discovered_at) DESC, id DESC LIMIT 1",
+                (folder["id"],),
+            )
+            if latest:
+                representative = self.engine.fetchone(
+                    connection,
+                    "SELECT id FROM pictures WHERE folder_id=? AND is_missing=0 "
+                    "ORDER BY CASE WHEN media_type='picture' THEN 0 ELSE 1 END, "
+                    "COALESCE(taken_at, discovered_at) DESC, id DESC LIMIT 1",
+                    (folder["id"],),
+                )
+                representative_id = representative["id"] if representative else latest["id"]
+                self.engine.execute(
+                    connection,
+                    "UPDATE folders SET representative_picture_id=?, latest_taken_at=?, latest_discovered_at=? WHERE id=?",
+                    (representative_id, latest.get("taken_at"), latest.get("discovered_at"), folder["id"]),
+                ).close()
             else:
                 self.engine.execute(connection, "UPDATE folders SET representative_picture_id=NULL, latest_taken_at=NULL, latest_discovered_at=NULL WHERE id=?", (folder["id"],)).close()
 
@@ -548,7 +566,8 @@ class Catalog:
                    LEFT JOIN pictures p ON p.id=(
                        SELECT pr.id FROM pictures pr
                        WHERE pr.folder_id=f.id AND pr.is_missing=0%s
-                       ORDER BY COALESCE(pr.taken_at, pr.discovered_at) DESC, pr.id DESC LIMIT 1
+                       ORDER BY CASE WHEN pr.media_type='picture' THEN 0 ELSE 1 END,
+                                COALESCE(pr.taken_at, pr.discovered_at) DESC, pr.id DESC LIMIT 1
                    )
                    WHERE f.is_missing=0""" % (count_filter, representative_filter)
         if where:

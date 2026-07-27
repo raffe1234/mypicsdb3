@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.32 - 2026-07-27
+
+- Prefer the newest eligible picture as artwork for recent, random and folder
+  album rows, even when a newer video exists in the same album.
+- Keep the newest media timestamps for recent-album ordering instead of letting
+  the picture-first artwork choice change album recency.
+- Fall back to video artwork for albums that contain no pictures.
+- Keep database schema 4 and avoid modifying original media.
+
 ## 0.2.31 - 2026-07-27
 
 - Treat a directory-listing failure as an incomplete source traversal and skip
