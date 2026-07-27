@@ -2,13 +2,12 @@
 
 ## 0.2.35 - 2026-07-27
 
-- Apply the configured album view only after Kodi reports that the requested
-  picture container is active.
-- Match both the plug-in category and content type before sending
-  `Container.SetViewMode`, preventing search and saved-search results from
-  changing the parent MyPicsDB 3 menu view.
-- Stop using immediate duplicate view-mode commands; time out without touching
-  another container when Kodi does not expose the expected result view.
+- Wait until the requested picture container has remained active long enough for
+  Kodi's path-specific view state to begin settling.
+- Match the plug-in category and content type before every view operation, so
+  search and saved-search results cannot change the parent MyPicsDB 3 menu view.
+- Apply the configured album view synchronously, verify the active view control
+  and retry only when Kodi performs a late restore to Shift or another saved view.
 - Keep widgets, the main menu and database schema 5 unchanged.
 
 ## 0.2.34 - 2026-07-27

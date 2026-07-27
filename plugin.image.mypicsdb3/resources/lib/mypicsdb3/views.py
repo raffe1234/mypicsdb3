@@ -130,6 +130,7 @@ class PluginUI:
         if view_mode and category:
             set_view_mode_when_container_ready(
                 xbmc,
+                xbmcgui,
                 view_mode,
                 expected_category=category,
                 expected_content=content,

@@ -55,6 +55,7 @@ class Calls:
     items: list | None = None
     ended: bool = False
     builtins: list[str] = field(default_factory=list)
+    focus_id: int = 55
     rpc_requests: list[dict] = field(default_factory=list)
     sleeps: list[int] = field(default_factory=list)
     info_label_sequences: dict[str, list[str]] = field(default_factory=dict)
@@ -63,7 +64,13 @@ class Calls:
 def load_views(monkeypatch):
     calls = Calls()
     xbmc = types.ModuleType("xbmc")
-    xbmc.executebuiltin = calls.builtins.append
+
+    def execute_builtin(command, _block=False):
+        calls.builtins.append(command)
+        if command.startswith("Container.SetViewMode("):
+            calls.focus_id = int(command.rsplit("(", 1)[1].rstrip(")"))
+
+    xbmc.executebuiltin = execute_builtin
     xbmc.sleep = calls.sleeps.append
 
     def execute_jsonrpc(payload):
@@ -88,7 +95,9 @@ def load_views(monkeypatch):
     xbmcgui.Dialog = FakeDialog
     xbmcgui.DialogProgress = object
     xbmcgui.getCurrentWindowId = lambda: 10002
-    xbmcgui.Window = lambda window_id: types.SimpleNamespace(getFocusId=lambda: 55)
+    xbmcgui.Window = lambda window_id: types.SimpleNamespace(
+        getFocusId=lambda: calls.focus_id
+    )
     xbmcplugin = types.ModuleType("xbmcplugin")
     xbmcplugin.setPluginCategory = lambda handle, category: setattr(calls, "category", category)
     xbmcplugin.setContent = lambda handle, content: setattr(calls, "content", content)
@@ -516,7 +525,8 @@ def test_browser_views_use_default_view_but_widgets_keep_skin_layout(monkeypatch
 
     calls.builtins.clear()
     ui.folder(3, {})
-    assert calls.builtins.count("Container.SetViewMode(54)") == 1
+    assert calls.focus_id == 54
+    assert calls.builtins.count("Container.SetViewMode(54)") <= 1
     assert len(calls.items) == 1
 
     calls.builtins.clear()
@@ -541,7 +551,7 @@ def test_search_waits_for_picture_container_before_setting_view(monkeypatch) -> 
     ui.dispatch(views.Request("search", {"q": "torrevieja"}))
 
     assert calls.builtins == ["Container.SetViewMode(500)"]
-    assert calls.sleeps == [50, 50]
+    assert calls.sleeps and all(value == 50 for value in calls.sleeps)
 
     calls.builtins.clear()
     calls.sleeps.clear()
@@ -838,7 +848,8 @@ def test_saved_search_ui_saves_lists_opens_and_paginates_by_id(monkeypatch) -> N
     }
     ui.dispatch(views.Request("saved-search", {"id": "42"}))
     assert calls.category == "Sommarresor"
-    assert calls.builtins == ["Container.SetViewMode(55)"]
+    assert calls.focus_id == 55
+    assert calls.builtins in ([], ["Container.SetViewMode(55)"])
     assert calls.sleeps[-1:] == [50]
     assert runtime.catalog.query_requests[-1][0] is query
     assert calls.items[1][0] == (
