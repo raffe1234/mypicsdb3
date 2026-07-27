@@ -2,16 +2,24 @@ from __future__ import annotations
 
 import json
 
-from mypicsdb3.slideshow import PICTURE_PLAYLIST_ID, start_mixed_slideshow
+from mypicsdb3.slideshow import (
+    PICTURE_PLAYLIST_ID,
+    start_mixed_slideshow,
+    start_native_folder_slideshow,
+)
 
 
 class FakeXbmc:
     def __init__(self):
         self.requests = []
+        self.builtins = []
 
     def executeJSONRPC(self, payload):
         self.requests.append(json.loads(payload))
         return json.dumps({"jsonrpc": "2.0", "id": 1, "result": "OK"})
+
+    def executebuiltin(self, command):
+        self.builtins.append(command)
 
 
 def test_mixed_slideshow_uses_picture_playlist_and_start_position() -> None:
@@ -38,3 +46,17 @@ def test_mixed_slideshow_uses_picture_playlist_and_start_position() -> None:
         "playlistid": PICTURE_PLAYLIST_ID,
         "position": 1,
     }
+
+
+def test_native_folder_slideshow_uses_kodi_recursive_slideshow() -> None:
+    xbmc = FakeXbmc()
+
+    start_native_folder_slideshow(
+        xbmc,
+        "smb://nas/Pictures/Trip, summer/",
+        recursive=True,
+    )
+
+    assert xbmc.builtins == [
+        'SlideShow("smb://nas/Pictures/Trip, summer/",recursive,notrandom)'
+    ]

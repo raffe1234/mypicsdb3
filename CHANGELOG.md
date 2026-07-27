@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.2.28 - 2026-07-27
+
+- Use Kodi's native recursive folder slideshow when starting a slideshow from an
+  album, allowing Kodi to handle picture/video transitions and consecutive
+  videos directly.
+- Keep the database-backed mixed playlist for result sets that can span
+  unrelated folders, such as searches and other catalogue views.
+- Avoid the rapid MJPEG playback and difficult-to-stop sequence seen when the
+  custom mixed-slideshow video monitor was disabled during diagnosis.
+
 ## 0.2.27 - 2026-07-26
 
 - Keep the repository add-on on its own version instead of bumping it for every

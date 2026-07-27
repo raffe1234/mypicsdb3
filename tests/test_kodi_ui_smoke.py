@@ -557,3 +557,26 @@ def test_video_node_and_video_list_item_are_playable_when_enabled(monkeypatch) -
     assert item.properties["MyPicsDB3.MediaType"] == "video"
     assert "video" in item.info
     assert is_folder is False
+
+
+def test_folder_tree_slideshow_uses_kodi_native_recursive_slideshow(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.get_folder = lambda folder_id: {
+        "id": folder_id,
+        "source_id": 4,
+        "uri": "smb://server/photos/Trip, summer/",
+        "name": "Trip, summer",
+    }
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "folder-tree", "id": "12"},
+        )
+    )
+
+    assert calls.builtins == [
+        'SlideShow("smb://server/photos/Trip, summer/",recursive,notrandom)'
+    ]

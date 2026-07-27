@@ -30,7 +30,11 @@ from .rating_policy import (
 from .router import Request
 from .search import build_global_search_request
 from .scanner import Scanner
-from .slideshow import SlideshowError, start_mixed_slideshow
+from .slideshow import (
+    SlideshowError,
+    start_mixed_slideshow,
+    start_native_folder_slideshow,
+)
 from .utils import parse_bool, plugin_url, safe_limit
 
 
@@ -692,6 +696,25 @@ class PluginUI:
         return []
 
     def _start_slideshow(self, params: Dict[str, str]) -> None:
+        if params.get("scope", "") == "folder-tree":
+            folder = self.catalog.get_folder(int(params["id"]))
+            folder_uri = str((folder or {}).get("uri") or "")
+            if not folder_uri:
+                self.kodi.notify(self.text(32604, "No media to play"))
+                return
+            try:
+                start_native_folder_slideshow(
+                    xbmc,
+                    folder_uri,
+                    recursive=True,
+                )
+            except SlideshowError as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
+                    error=True,
+                )
+            return
+
         rows = self._slideshow_rows(params)
         if not rows:
             self.kodi.notify(self.text(32604, "No media to play"))

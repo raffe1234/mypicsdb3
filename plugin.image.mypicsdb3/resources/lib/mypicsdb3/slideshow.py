@@ -11,6 +11,12 @@ class SlideshowError(RuntimeError):
     pass
 
 
+def _quote_builtin_argument(value: str) -> str:
+    """Quote one Kodi built-in argument without changing the media URI."""
+
+    return '"%s"' % str(value).replace("\\", "\\\\").replace('"', '\\"')
+
+
 def _rpc(xbmc_module, method: str, params: dict) -> None:
     request = {
         "jsonrpc": "2.0",
@@ -48,3 +54,26 @@ def start_mixed_slideshow(
         {"item": {"playlistid": PICTURE_PLAYLIST_ID, "position": position}},
     )
     return len(items)
+
+
+def start_native_folder_slideshow(
+    xbmc_module,
+    folder_uri: str,
+    *,
+    recursive: bool = True,
+) -> None:
+    """Use Kodi's native folder slideshow for one indexed album tree.
+
+    Kodi owns picture/video transitions for this path, which avoids the custom
+    JSON-RPC playlist and background video monitor used for database result
+    sets spanning arbitrary folders.
+    """
+
+    uri = str(folder_uri or "").strip()
+    if not uri:
+        raise SlideshowError("Folder URI is empty")
+    arguments = [_quote_builtin_argument(uri)]
+    if recursive:
+        arguments.append("recursive")
+    arguments.append("notrandom")
+    xbmc_module.executebuiltin("SlideShow(%s)" % ",".join(arguments))
