@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.33 - 2026-07-27
+
+- Build large database-backed slideshows in bounded JSON-RPC batches instead of
+  sending up to 5,000 media paths in one oversized `Playlist.Add` request.
+- Drop empty and duplicate media URIs while preserving catalogue order and
+  recalculate **Play slideshow from here** against the cleaned playlist.
+- Keep the mixed-video monitor inactive while the playlist is being assembled,
+  arm it only after playback starts successfully, and clear a partially built
+  playlist when Kodi rejects an add or open request.
+- Keep native recursive album slideshows unchanged and retain database schema 4.
+
 ## 0.2.32 - 2026-07-27
 
 - Prefer the newest eligible picture as artwork for recent, random and folder

@@ -695,6 +695,34 @@ class PluginUI:
             return self.catalog.query_pictures(request.query, limit, 0)
         return []
 
+    @staticmethod
+    def _database_slideshow_playlist(
+        rows: Sequence[Dict[str, Any]],
+        start_id: int,
+    ) -> Tuple[List[str], int, bool]:
+        """Prepare a stable playlist after dropping empty and duplicate URIs."""
+
+        uris: List[str] = []
+        positions: Dict[str, int] = {}
+        start_position = 0
+        start_found = False
+        has_video = False
+        for row in rows:
+            uri = str(row.get("uri") or "")
+            if not uri.strip():
+                continue
+            position = positions.get(uri)
+            if position is None:
+                position = len(uris)
+                positions[uri] = position
+                uris.append(uri)
+            if str(row.get("media_type") or "") == "video":
+                has_video = True
+            if not start_found and int(row.get("id") or 0) == start_id:
+                start_position = position
+                start_found = True
+        return uris, start_position, has_video
+
     def _start_slideshow(self, params: Dict[str, str]) -> None:
         if params.get("scope", "") == "folder-tree":
             folder = self.catalog.get_folder(int(params["id"]))
@@ -721,28 +749,23 @@ class PluginUI:
             self.kodi.notify(self.text(32604, "No media to play"))
             return
         start_id = int(params.get("start", "0") or 0)
-        start_position = next(
-            (
-                index
-                for index, row in enumerate(rows)
-                if int(row.get("id") or 0) == start_id
-            ),
-            0,
+        uris, start_position, has_video = self._database_slideshow_playlist(
+            rows,
+            start_id,
         )
-        uris = [str(row.get("uri") or "") for row in rows]
-        has_video = any(str(row.get("media_type") or "") == "video" for row in rows)
+        self.kodi.set_mixed_slideshow_active(False)
         try:
-            self.kodi.set_mixed_slideshow_active(has_video)
             started = start_mixed_slideshow(
                 xbmc,
                 uris,
                 start_position,
             )
             if not started:
-                self.kodi.set_mixed_slideshow_active(False)
                 self.kodi.notify(self.text(32604, "No media to play"))
+                return
+            if has_video:
+                self.kodi.set_mixed_slideshow_active(True)
         except SlideshowError as exc:
-            self.kodi.set_mixed_slideshow_active(False)
             self.kodi.notify(
                 "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
                 error=True,

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
-from typing import Iterable
+from typing import Iterable, List
 
 
 PICTURE_PLAYLIST_ID = 2
+PLAYLIST_ADD_BATCH_SIZE = 250
 
 
 class SlideshowError(RuntimeError):
@@ -24,7 +25,10 @@ def _rpc(xbmc_module, method: str, params: dict) -> None:
         "method": method,
         "params": params,
     }
-    raw = xbmc_module.executeJSONRPC(json.dumps(request, ensure_ascii=False))
+    try:
+        raw = xbmc_module.executeJSONRPC(json.dumps(request, ensure_ascii=False))
+    except Exception as exc:
+        raise SlideshowError("Kodi JSON-RPC call failed: %s" % method) from exc
     try:
         response = json.loads(raw or "{}")
     except (TypeError, ValueError) as exc:
@@ -33,26 +37,61 @@ def _rpc(xbmc_module, method: str, params: dict) -> None:
         raise SlideshowError(str(response["error"].get("message") or response["error"]))
 
 
+def _playlist_items(uris: Iterable[str]) -> List[dict]:
+    """Return unique, non-empty playlist items while preserving query order."""
+
+    items: List[dict] = []
+    seen = set()
+    for uri in uris:
+        value = str(uri or "")
+        if not value.strip() or value in seen:
+            continue
+        seen.add(value)
+        items.append({"file": value})
+    return items
+
+
+def _clear_picture_playlist_quietly(xbmc_module) -> None:
+    try:
+        _rpc(xbmc_module, "Playlist.Clear", {"playlistid": PICTURE_PLAYLIST_ID})
+    except SlideshowError:
+        pass
+
+
 def start_mixed_slideshow(
     xbmc_module,
     uris: Iterable[str],
     start_position: int = 0,
 ) -> int:
-    items = [{"file": str(uri)} for uri in uris if str(uri or "").strip()]
+    """Build and start one database-backed playlist from arbitrary folders.
+
+    Large result sets are appended in bounded JSON-RPC requests. This avoids one
+    oversized Playlist.Add payload while preserving catalogue order.
+    """
+
+    items = _playlist_items(uris)
     if not items:
         return 0
     position = max(0, min(int(start_position), len(items) - 1))
     _rpc(xbmc_module, "Playlist.Clear", {"playlistid": PICTURE_PLAYLIST_ID})
-    _rpc(
-        xbmc_module,
-        "Playlist.Add",
-        {"playlistid": PICTURE_PLAYLIST_ID, "item": items},
-    )
-    _rpc(
-        xbmc_module,
-        "Player.Open",
-        {"item": {"playlistid": PICTURE_PLAYLIST_ID, "position": position}},
-    )
+    try:
+        for offset in range(0, len(items), PLAYLIST_ADD_BATCH_SIZE):
+            _rpc(
+                xbmc_module,
+                "Playlist.Add",
+                {
+                    "playlistid": PICTURE_PLAYLIST_ID,
+                    "item": items[offset : offset + PLAYLIST_ADD_BATCH_SIZE],
+                },
+            )
+        _rpc(
+            xbmc_module,
+            "Player.Open",
+            {"item": {"playlistid": PICTURE_PLAYLIST_ID, "position": position}},
+        )
+    except SlideshowError:
+        _clear_picture_playlist_quietly(xbmc_module)
+        raise
     return len(items)
 
 

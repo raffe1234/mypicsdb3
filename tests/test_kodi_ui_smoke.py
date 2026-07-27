@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib
+import json
 import sys
 import types
 from dataclasses import dataclass, field
@@ -54,6 +55,7 @@ class Calls:
     items: list | None = None
     ended: bool = False
     builtins: list[str] = field(default_factory=list)
+    rpc_requests: list[dict] = field(default_factory=list)
 
 
 def load_views(monkeypatch):
@@ -61,7 +63,12 @@ def load_views(monkeypatch):
     xbmc = types.ModuleType("xbmc")
     xbmc.executebuiltin = calls.builtins.append
     xbmc.sleep = lambda milliseconds: None
-    xbmc.executeJSONRPC = lambda payload: '{"jsonrpc":"2.0","id":1,"result":"OK"}'
+
+    def execute_jsonrpc(payload):
+        calls.rpc_requests.append(json.loads(payload))
+        return '{"jsonrpc":"2.0","id":1,"result":"OK"}'
+
+    xbmc.executeJSONRPC = execute_jsonrpc
     xbmc.getInfoLabel = lambda label: ""
     xbmcgui = types.ModuleType("xbmcgui")
     xbmcgui.ListItem = FakeListItem
@@ -623,4 +630,85 @@ def test_database_slideshow_with_video_arms_video_monitor(monkeypatch) -> None:
         )
     )
 
-    assert runtime.kodi.mixed_slideshow_updates == [True]
+    assert runtime.kodi.mixed_slideshow_updates == [False, True]
+
+
+def test_database_slideshow_sanitizes_rows_and_recalculates_start_position(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    rows = [
+        {
+            "id": 1,
+            "uri": "smb://server/album-a/first.jpg",
+            "media_type": "picture",
+        },
+        {
+            "id": 2,
+            "uri": "",
+            "media_type": "picture",
+        },
+        {
+            "id": 3,
+            "uri": "smb://server/album-a/first.jpg",
+            "media_type": "picture",
+        },
+        {
+            "id": 4,
+            "uri": "smb://server/album-b/clip.mp4",
+            "media_type": "video",
+        },
+    ]
+    runtime.catalog.recent_taken = lambda limit, offset=0: rows
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "recent-taken", "start": "4"},
+        )
+    )
+
+    add_request = next(
+        request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
+    )
+    open_request = next(
+        request for request in calls.rpc_requests if request["method"] == "Player.Open"
+    )
+    assert add_request["params"]["item"] == [
+        {"file": "smb://server/album-a/first.jpg"},
+        {"file": "smb://server/album-b/clip.mp4"},
+    ]
+    assert open_request["params"]["item"]["position"] == 1
+    assert runtime.kodi.mixed_slideshow_updates == [False, True]
+
+
+def test_failed_database_slideshow_does_not_leave_video_monitor_armed(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    rows = runtime.catalog.recent_taken(10)
+    rows.append(
+        {
+            "id": 2,
+            "uri": "smb://server/album-b/clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.recent_taken = lambda limit, offset=0: rows
+
+    def fail_start(*args, **kwargs):
+        raise views.SlideshowError("Kodi rejected playlist")
+
+    monkeypatch.setattr(views, "start_mixed_slideshow", fail_start)
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "recent-taken", "start": "2"},
+        )
+    )
+
+    assert runtime.kodi.mixed_slideshow_updates == [False]
+    assert runtime.kodi.notifications == [
+        ("Could not start slideshow: Kodi rejected playlist", True)
+    ]
