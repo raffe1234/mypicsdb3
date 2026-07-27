@@ -154,6 +154,7 @@ class Scanner:
         self._scan_connection = connection
         scan_started_at = utc_now()
         changed_since_commit = 0
+        traversal_complete = True
         try:
             stack: List[Tuple[str, str, str]] = [(root, "", source.label)]
             visited = set()
@@ -172,6 +173,7 @@ class Scanner:
                 try:
                     directories, files = self.filesystem.listdir(folder_uri)
                 except Exception as exc:
+                    traversal_complete = False
                     stats.errors += 1
                     stats.error_messages.append("Cannot list %s: %s" % (folder_uri, exc))
                     if self.logger:
@@ -198,9 +200,9 @@ class Scanner:
                     stats.pictures_seen += 1
                     if self.progress:
                         self.progress(source, picture_uri, stats)
+                    existing = self.catalog.find_picture(connection, picture_uri)
                     try:
                         file_stat = self.filesystem.stat(picture_uri)
-                        existing = self.catalog.find_picture(connection, picture_uri)
                         if (
                             existing
                             and str(existing.get("media_type") or "picture") == media_type
@@ -271,6 +273,19 @@ class Scanner:
                     except (ScanCancelled, ScanLockLost):
                         raise
                     except Exception as exc:
+                        # The directory entry proves an existing catalogue row is
+                        # still present even when stat or metadata access fails.
+                        # Touch it so a transient SMB/VFS error cannot turn it
+                        # into a missing record at the end of this scan.
+                        if existing:
+                            self.catalog.touch_picture(
+                                connection,
+                                int(existing["id"]),
+                                folder_id,
+                                source.id,
+                                scan_started_at,
+                            )
+                            changed_since_commit += 1
                         stats.errors += 1
                         message = "%s: %s" % (picture_uri, exc)
                         stats.error_messages.append(message)
@@ -278,12 +293,29 @@ class Scanner:
                             self.logger.warning("Media scan error for %s: %s", picture_uri, exc)
 
             self._check_cancelled()
-            stats.missing_marked = self.catalog.mark_missing_after_scan(connection, source.id, scan_started_at)
+            if traversal_complete:
+                stats.missing_marked = self.catalog.mark_missing_after_scan(
+                    connection, source.id, scan_started_at
+                )
+                status = "completed" if stats.errors == 0 else "completed_with_errors"
+            else:
+                # Missing detection is source-wide and must only run after a
+                # complete traversal. One unreadable folder may hide an entire
+                # subtree, so preserving all previously indexed rows is safer
+                # than guessing which unseen paths were actually deleted.
+                status = "partial"
+                safety_message = (
+                    "Incomplete source traversal; missing-record marking was skipped"
+                )
+                stats.error_messages.append(safety_message)
+                if self.logger:
+                    self.logger.warning("%s: %s", root, safety_message)
             self.catalog.update_folder_summaries(connection, source.id)
             connection.commit()
             stats.sources_scanned = 1
-            self.catalog.set_source_scan_state(source.id, True, "completed" if stats.errors == 0 else "completed_with_errors", "\n".join(stats.error_messages[-5:]) or None)
-            self.catalog.finish_scan_run(scan_id, "completed" if stats.errors == 0 else "completed_with_errors", stats, "\n".join(stats.error_messages[-5:]) or None)
+            message = "\n".join(stats.error_messages[-5:]) or None
+            self.catalog.set_source_scan_state(source.id, True, status, message)
+            self.catalog.finish_scan_run(scan_id, status, stats, message)
         except ScanCancelled:
             connection.commit()
             stats.cancelled = True

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.31 - 2026-07-27
+
+- Treat a directory-listing failure as an incomplete source traversal and skip
+  missing-file and missing-folder marking for that source.
+- Keep previously indexed media active when a listed file temporarily fails
+  stat or metadata access.
+- Record incomplete scans with the explicit `partial` status while continuing
+  to index media from folders that were read successfully.
+- Mark genuine deletions on the next complete scan without changing database
+  schema 4.
+
 ## 0.2.30 - 2026-07-27
 
 - Treat a migration lock held by another MyPicsDB 3 process as a temporary

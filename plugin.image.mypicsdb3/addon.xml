@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.30" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.31" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Handle a temporarily locked database migration as a controlled busy state: browser requests show a clear message, widgets return an uncached empty list, and the background service waits and retries.</news>
+    <news>Protect indexed media during incomplete source scans: directory traversal failures no longer mark unseen files or folders missing, and listed files remain present when transient stat or metadata access fails.</news>
   </extension>
 </addon>

@@ -265,3 +265,105 @@ def test_video_scan_skips_picture_metadata_and_stores_media_type(tmp_path: Path)
     video = next(row for row in rows if row["media_type"] == "video")
     assert video["mime_type"] == "video/mp4"
     assert video["taken_source"] == "File mtime fallback"
+
+
+def test_partial_directory_traversal_preserves_missing_state_until_clean_scan(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "photos"
+    readable = root / "Readable"
+    blocked = root / "Blocked"
+    nested = blocked / "Nested"
+    readable.mkdir(parents=True)
+    nested.mkdir(parents=True)
+    deleted = readable / "deleted.jpg"
+    preserved = nested / "preserved.jpg"
+    deleted.write_bytes(b"deleted later")
+    preserved.write_bytes(b"keep indexed")
+
+    catalog, source, scanner = setup_scanner(tmp_path, root)
+    first = scanner.scan_sources()
+    assert first.pictures_added == 2
+
+    deleted.unlink()
+    added = readable / "added.jpg"
+    added.write_bytes(b"new during partial scan")
+
+    class PartiallyUnavailableFilesystem(LocalFilesystem):
+        def listdir(self, path):
+            if Path(path).resolve() == blocked.resolve():
+                raise OSError("temporary SMB directory failure")
+            return super().listdir(path)
+
+    partial_scanner = Scanner(
+        catalog,
+        PartiallyUnavailableFilesystem(),
+        scanner.settings,
+        metadata_reader=fake_metadata,
+    )
+    partial = partial_scanner.scan_source(catalog.get_source(source.id))
+
+    assert partial.errors == 1
+    assert partial.pictures_added == 1
+    assert partial.missing_marked == 0
+    assert catalog.overview()["missing"] == 0
+    assert catalog.overview()["folders"] == 4
+    assert {row["filename"] for row in catalog.recent_added(10)} == {
+        "added.jpg",
+        "deleted.jpg",
+        "preserved.jpg",
+    }
+    latest = catalog.latest_scan()
+    assert latest["status"] == "partial"
+    assert catalog.get_source(source.id).last_scan_status == "partial"
+    assert "Incomplete source traversal" in latest["message"]
+
+    complete = scanner.scan_source(catalog.get_source(source.id))
+
+    assert complete.errors == 0
+    assert complete.missing_marked == 1
+    assert catalog.overview()["missing"] == 1
+    assert {row["filename"] for row in catalog.recent_added(10)} == {
+        "added.jpg",
+        "preserved.jpg",
+    }
+    assert catalog.latest_scan()["status"] == "completed"
+
+
+def test_listed_existing_file_access_error_does_not_mark_it_missing(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "photos"
+    root.mkdir()
+    deleted = root / "deleted.jpg"
+    inaccessible = root / "inaccessible.jpg"
+    deleted.write_bytes(b"deleted later")
+    inaccessible.write_bytes(b"temporarily inaccessible")
+
+    catalog, source, scanner = setup_scanner(tmp_path, root)
+    first = scanner.scan_sources()
+    assert first.pictures_added == 2
+
+    deleted.unlink()
+
+    class FileAccessFailureFilesystem(LocalFilesystem):
+        def stat(self, path):
+            if Path(path).resolve() == inaccessible.resolve():
+                raise OSError("temporary SMB stat failure")
+            return super().stat(path)
+
+    failed_file_scanner = Scanner(
+        catalog,
+        FileAccessFailureFilesystem(),
+        scanner.settings,
+        metadata_reader=fake_metadata,
+    )
+    result = failed_file_scanner.scan_source(catalog.get_source(source.id))
+
+    assert result.errors == 1
+    assert result.missing_marked == 1
+    assert catalog.overview()["missing"] == 1
+    assert [row["filename"] for row in catalog.recent_added(10)] == [
+        "inaccessible.jpg"
+    ]
+    assert catalog.latest_scan()["status"] == "completed_with_errors"

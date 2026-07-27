@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.29 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.31 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-4 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -21,8 +21,8 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
 - EXIF capture date, camera, orientation, dimensions, rating and optional GPS.
 - Basic embedded XMP keywords, rating, location and capture date.
 - IPTC keywords, caption and location through IPTCInfo3 when available.
-- Missing-source safety: an unavailable SMB/NFS source is never interpreted as
-  deletion of every picture.
+- Missing-source safety: an unavailable SMB/NFS source or incomplete directory
+  traversal is never interpreted as deletion of unseen media.
 - Lazy Kodi thumbnail caching; no duplicate thumbnail tree is generated.
 - Global Unicode-normalized AND search across filename, caption, keywords,
   path parts, camera and stored location fields.
@@ -286,10 +286,11 @@ cancels the scan safely.
 The first scan can take time on a large local collection or NAS. Subsequent
 scans are incremental: unchanged files are not read and indexed again.
 
-If Scan status reports directory-listing or other traversal errors, investigate
-them before using **Clean missing records**. A source whose root is completely
-unavailable is protected from mass deletion, but a partially unreadable folder
-tree must be treated as an incomplete scan.
+If a folder cannot be listed, Scan status reports `partial`. MyPicsDB 3 still
+indexes folders that were read successfully, but it skips missing-record
+marking for that source. Genuine deletions are marked during the
+next complete scan. Investigate repeated traversal errors before using **Clean
+missing records**.
 
 Open **Scan status** after a scan to see:
 
