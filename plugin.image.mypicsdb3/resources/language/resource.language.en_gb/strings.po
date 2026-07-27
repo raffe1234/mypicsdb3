@@ -842,3 +842,7 @@ msgstr "Video file extensions"
 msgctxt "#32613"
 msgid "Comma-separated video extensions without leading dots. Used only when Include videos is enabled."
 msgstr "Comma-separated video extensions without leading dots. Used only when Include videos is enabled."
+
+msgctxt "#32614"
+msgid "MyPicsDB 3 is starting. Please try again in a moment."
+msgstr "MyPicsDB 3 is starting. Please try again in a moment."

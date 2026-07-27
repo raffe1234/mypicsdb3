@@ -6,8 +6,8 @@ from .kodi import KodiContext
 
 
 class Runtime:
-    def __init__(self):
-        self.kodi = KodiContext()
+    def __init__(self, kodi_context=None):
+        self.kodi = kodi_context if kodi_context is not None else KodiContext()
         self.engine = DatabaseEngine(self.kodi.settings, self.kodi.log)
         self.catalog = Catalog(
             self.engine,

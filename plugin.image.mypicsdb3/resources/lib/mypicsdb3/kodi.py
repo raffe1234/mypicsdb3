@@ -88,8 +88,17 @@ class KodiContext:
         value = self.addon.getLocalizedString(string_id)
         return value or fallback
 
-    def notify(self, message: str, error: bool = False, milliseconds: int = 4000) -> None:
-        if not self.settings.show_notifications or xbmcgui is None:
+    def notify(
+        self,
+        message: str,
+        error: bool = False,
+        milliseconds: int = 4000,
+        force: bool = False,
+    ) -> None:
+        if (
+            (not force and not self.settings.show_notifications)
+            or xbmcgui is None
+        ):
             return
         icon = xbmcgui.NOTIFICATION_ERROR if error else xbmcgui.NOTIFICATION_INFO
         xbmcgui.Dialog().notification(self.name, message, icon, milliseconds)

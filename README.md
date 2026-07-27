@@ -41,7 +41,7 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
 ## Widget endpoints
 
 ```text
-plugin://plugin.image.mypicsdb3/recent-taken?limit=15
+plugin://plugin.image.mypicsdb3/recent-taken?widget=1&limit=15
 plugin://plugin.image.mypicsdb3/recent-added?limit=15
 plugin://plugin.image.mypicsdb3/random?limit=15
 plugin://plugin.image.mypicsdb3/recent-folders?limit=15

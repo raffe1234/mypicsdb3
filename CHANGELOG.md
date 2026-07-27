@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.2.30 - 2026-07-27
+
+- Treat a migration lock held by another MyPicsDB 3 process as a temporary
+  database-busy state instead of exposing a plug-in failure.
+- Show a clear retry message for interactive browser requests while allowing
+  widgets to return a successful, uncached empty directory without a popup.
+- Let the background service wait briefly and retry database initialization,
+  while still stopping promptly when Kodi is shutting down.
+- Keep other migration and database failures visible instead of hiding them
+  behind the temporary-busy handling.
+
 ## 0.2.29 - 2026-07-27
 
 - Run the mixed-slideshow video monitor only while an explicitly started

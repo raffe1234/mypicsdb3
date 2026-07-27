@@ -50,21 +50,24 @@ The skin is responsible for:
 
 | View | Plugin path | Result |
 |---|---|---|
-| Recently taken | `plugin://plugin.image.mypicsdb3/recent-taken?limit=15` | Pictures |
-| Recently added | `plugin://plugin.image.mypicsdb3/recent-added?limit=15` | Pictures |
-| Random memories | `plugin://plugin.image.mypicsdb3/random?limit=15` | Pictures |
-| Recent albums | `plugin://plugin.image.mypicsdb3/recent-folders?limit=15` | Folders |
-| Random albums | `plugin://plugin.image.mypicsdb3/random-folders?limit=15` | Folders |
-| On this day | `plugin://plugin.image.mypicsdb3/on-this-day?limit=15` | Pictures |
-| On this day - random | `plugin://plugin.image.mypicsdb3/on-this-day-random?limit=15` | Pictures |
-| Favorites | `plugin://plugin.image.mypicsdb3/favorites?limit=15` | Pictures |
-| Rated pictures | `plugin://plugin.image.mypicsdb3/rated?limit=15` | Pictures |
-| Geotagged pictures | `plugin://plugin.image.mypicsdb3/geotagged?limit=15` | Pictures |
-| Years | `plugin://plugin.image.mypicsdb3/years` | Folders |
-| Cameras | `plugin://plugin.image.mypicsdb3/cameras` | Folders |
-| Keywords | `plugin://plugin.image.mypicsdb3/keywords` | Folders |
+| Recently taken | `plugin://plugin.image.mypicsdb3/recent-taken?widget=1&limit=15` | Pictures |
+| Recently added | `plugin://plugin.image.mypicsdb3/recent-added?widget=1&limit=15` | Pictures |
+| Random memories | `plugin://plugin.image.mypicsdb3/random?widget=1&limit=15` | Pictures |
+| Recent albums | `plugin://plugin.image.mypicsdb3/recent-folders?widget=1&limit=15` | Folders |
+| Random albums | `plugin://plugin.image.mypicsdb3/random-folders?widget=1&limit=15` | Folders |
+| On this day | `plugin://plugin.image.mypicsdb3/on-this-day?widget=1&limit=15` | Pictures |
+| On this day - random | `plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&limit=15` | Pictures |
+| Favorites | `plugin://plugin.image.mypicsdb3/favorites?widget=1&limit=15` | Pictures |
+| Rated pictures | `plugin://plugin.image.mypicsdb3/rated?widget=1&limit=15` | Pictures |
+| Geotagged pictures | `plugin://plugin.image.mypicsdb3/geotagged?widget=1&limit=15` | Pictures |
+| Years | `plugin://plugin.image.mypicsdb3/years?widget=1` | Folders |
+| Cameras | `plugin://plugin.image.mypicsdb3/cameras?widget=1` | Folders |
+| Keywords | `plugin://plugin.image.mypicsdb3/keywords?widget=1` | Folders |
 
-Keep home-screen limits small. Fifteen items is the project default. The Estuary MyPicsDB 3 integration supports 1–50 items per row.
+Keep the `widget=1` marker on widget URLs so transient database-busy handling
+can return an empty row without showing a notification. Keep home-screen limits
+small. Fifteen items is the project default. The Estuary MyPicsDB 3 integration
+supports 1–50 items per row.
 
 Random endpoints should normally disable Kodi 21's synthetic "more" item by
 using `browse="never"` or the equivalent parameter in the skin's widget

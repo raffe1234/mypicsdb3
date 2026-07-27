@@ -5,21 +5,23 @@ All widget views are read-only and never start a scan. They use the local
 
 | View | URL |
 |---|---|
-| Recently taken | `plugin://plugin.image.mypicsdb3/recent-taken?limit=15` |
-| Recently discovered | `plugin://plugin.image.mypicsdb3/recent-added?limit=15` |
-| Random memories | `plugin://plugin.image.mypicsdb3/random?limit=15` |
-| Recent albums | `plugin://plugin.image.mypicsdb3/recent-folders?limit=15` |
-| Random albums | `plugin://plugin.image.mypicsdb3/random-folders?limit=15` |
-| Same date in earlier years, newest first | `plugin://plugin.image.mypicsdb3/on-this-day?limit=15` |
-| Same date in earlier years, random | `plugin://plugin.image.mypicsdb3/on-this-day-random?limit=15` |
-| Years | `plugin://plugin.image.mypicsdb3/years` |
-| Cameras | `plugin://plugin.image.mypicsdb3/cameras` |
-| Keywords | `plugin://plugin.image.mypicsdb3/keywords` |
-| Favorites | `plugin://plugin.image.mypicsdb3/favorites?limit=15` |
-| Rated | `plugin://plugin.image.mypicsdb3/rated?limit=15` |
-| Geotagged | `plugin://plugin.image.mypicsdb3/geotagged?limit=15` |
+| Recently taken | `plugin://plugin.image.mypicsdb3/recent-taken?widget=1&limit=15` |
+| Recently discovered | `plugin://plugin.image.mypicsdb3/recent-added?widget=1&limit=15` |
+| Random memories | `plugin://plugin.image.mypicsdb3/random?widget=1&limit=15` |
+| Recent albums | `plugin://plugin.image.mypicsdb3/recent-folders?widget=1&limit=15` |
+| Random albums | `plugin://plugin.image.mypicsdb3/random-folders?widget=1&limit=15` |
+| Same date in earlier years, newest first | `plugin://plugin.image.mypicsdb3/on-this-day?widget=1&limit=15` |
+| Same date in earlier years, random | `plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&limit=15` |
+| Years | `plugin://plugin.image.mypicsdb3/years?widget=1` |
+| Cameras | `plugin://plugin.image.mypicsdb3/cameras?widget=1` |
+| Keywords | `plugin://plugin.image.mypicsdb3/keywords?widget=1` |
+| Favorites | `plugin://plugin.image.mypicsdb3/favorites?widget=1&limit=15` |
+| Rated | `plugin://plugin.image.mypicsdb3/rated?widget=1&limit=15` |
+| Geotagged | `plugin://plugin.image.mypicsdb3/geotagged?widget=1&limit=15` |
 
-The optional `limit` is restricted to 1–500. Interactive views use pagination.
+The `widget=1` marker lets MyPicsDB 3 distinguish background widget loading
+from interactive browsing. The optional `limit` is restricted to 1–500.
+Interactive views use pagination.
 Random views use indexed random keys rather than `ORDER BY RANDOM()` across the
 whole table. **On this day - random** also shuffles the selected rows before they
 are returned, so the visible order is not chronological. The Estuary MyPicsDB 3

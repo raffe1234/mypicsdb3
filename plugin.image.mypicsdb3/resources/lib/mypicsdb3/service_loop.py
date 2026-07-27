@@ -5,6 +5,7 @@ from datetime import date
 from typing import Callable
 
 from .db import Catalog, DatabaseEngine
+from .db.migrations import MigrationLockError
 from .filesystem import KodiFilesystem
 from .scanner import Scanner
 
@@ -15,6 +16,7 @@ SERVICE_POLL_SECONDS = 0.5
 MAINTENANCE_INTERVAL_SECONDS = 5.0
 VIDEO_IDLE_CLEAR_POLLS = 3
 MIXED_SLIDESHOW_STARTUP_IDLE_POLLS = 20
+DATABASE_BUSY_RETRY_SECONDS = 2.0
 
 
 class MixedSlideshowVideoMonitor:
@@ -167,10 +169,29 @@ class ServiceLoop:
     def _abort_requested(self) -> bool:
         return bool(self.monitor and self.monitor.abortRequested())
 
+    def _runtime_parts_when_ready(self):
+        busy_logged = False
+        while not self._abort_requested():
+            try:
+                return self._runtime_parts()
+            except MigrationLockError as exc:
+                if not busy_logged:
+                    self.kodi.log.info(
+                        "Database initialization is busy; retrying shortly: %s",
+                        exc,
+                    )
+                    busy_logged = True
+                if self.monitor.waitForAbort(DATABASE_BUSY_RETRY_SECONDS):
+                    return None
+        return None
+
     def run(self):
         if self._abort_requested():
             return
-        settings, catalog, filesystem = self._runtime_parts()
+        runtime_parts = self._runtime_parts_when_ready()
+        if runtime_parts is None:
+            return
+        settings, catalog, filesystem = runtime_parts
         if self._abort_requested():
             return
         try:
