@@ -15,11 +15,6 @@ SERVICE_POLL_SECONDS = 0.5
 MAINTENANCE_INTERVAL_SECONDS = 5.0
 VIDEO_IDLE_CLEAR_POLLS = 3
 
-# Diagnostic A/B build: keep the 0.2.23 mixed-slideshow transition monitor
-# completely inactive while the reported Kodi crash is isolated. Do not
-# enable this in a normal release without completing the Kodi test matrix.
-MIXED_SLIDESHOW_VIDEO_MONITOR_ENABLED = False
-
 
 class MixedSlideshowVideoMonitor:
     """Advance Kodi's picture playlist after an indexed video finishes."""
@@ -165,17 +160,10 @@ class ServiceLoop:
         now = self.monotonic_provider()
         self.next_scan_at = now + settings.startup_delay_seconds
         next_maintenance_at = now
-        slideshow_monitor = None
-        if MIXED_SLIDESHOW_VIDEO_MONITOR_ENABLED:
-            slideshow_monitor = MixedSlideshowVideoMonitor(self.kodi, catalog)
-        else:
-            self.kodi.log.warning(
-                "Diagnostic build: mixed slideshow video monitor is disabled"
-            )
+        slideshow_monitor = MixedSlideshowVideoMonitor(self.kodi, catalog)
 
         while not self._abort_requested():
-            if slideshow_monitor is not None:
-                slideshow_monitor.tick()
+            slideshow_monitor.tick()
             now = self.monotonic_provider()
             if now >= next_maintenance_at:
                 self._refresh_after_date_change()
@@ -190,8 +178,7 @@ class ServiceLoop:
                             engine = DatabaseEngine(settings, self.kodi.log)
                             catalog = Catalog(engine, self.kodi.log)
                             catalog.initialize()
-                            if slideshow_monitor is not None:
-                                slideshow_monitor.catalog = catalog
+                            slideshow_monitor.catalog = catalog
                             scanner = Scanner(
                                 catalog,
                                 filesystem,
