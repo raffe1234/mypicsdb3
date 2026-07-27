@@ -179,6 +179,10 @@ class KodiContext:
                 window.setProperty(MIXED_SLIDESHOW_PROPERTY, "true")
             else:
                 window.clearProperty(MIXED_SLIDESHOW_PROPERTY)
+            self.log.debug(
+                "Mixed slideshow monitor state: %s",
+                "active" if active else "inactive",
+            )
         except Exception as exc:
             self.log.warning("Could not update mixed slideshow state: %s", exc)
 

@@ -9,8 +9,12 @@ from mypicsdb3.service_loop import (
 
 class FakeLog:
     def __init__(self):
+        self.debug_messages = []
         self.info_messages = []
         self.warnings = []
+
+    def debug(self, message, *args):
+        self.debug_messages.append(message % args if args else message)
 
     def info(self, message, *args):
         self.info_messages.append(message % args if args else message)

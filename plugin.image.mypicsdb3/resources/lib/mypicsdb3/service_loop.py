@@ -40,6 +40,7 @@ class MixedSlideshowVideoMonitor:
         self.session_seen_player = False
 
     def _clear_session(self) -> None:
+        self.kodi.log.debug("Mixed slideshow monitor cleared idle session")
         self.kodi.set_mixed_slideshow_active(False)
         self._reset_state()
 
@@ -79,6 +80,11 @@ class MixedSlideshowVideoMonitor:
                 self.active_video_uri = ""
                 if playing_file and self.catalog.media_type_for_uri(playing_file) == "video":
                     self.active_video_uri = playing_file
+                    self.kodi.log.debug("Mixed slideshow monitor detected indexed video")
+                elif playing_file:
+                    self.kodi.log.debug(
+                        "Mixed slideshow monitor ignored unindexed video player item"
+                    )
                 return
 
             if self.active_video_uri and "picture" in by_type:

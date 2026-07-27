@@ -25,8 +25,14 @@ class Logger:
             getattr(self.standard, level)(text)
 
     def debug(self, message: str, *args) -> None:
-        if self.debug_enabled:
-            self._write("debug", message % args if args else message)
+        if not self.debug_enabled:
+            return
+        # Kodi normally suppresses LOGDEBUG unless system-wide debug logging is
+        # enabled. The add-on setting is intended to be self-contained, so emit
+        # opt-in diagnostics at INFO level in Kodi while retaining normal DEBUG
+        # semantics for non-Kodi test/development logging.
+        level = "info" if self.kodi is not None else "debug"
+        self._write(level, message % args if args else message)
 
     def info(self, message: str, *args) -> None:
         self._write("info", message % args if args else message)

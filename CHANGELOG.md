@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.37 - 2026-07-27
+
+- Keep Kodi's native recursive slideshow for picture-only album trees, but use
+  the bounded MyPicsDB picture playlist when the selected album tree contains
+  indexed videos.
+- Reuse the scoped mixed-video monitor for mixed album playback so video-to-
+  picture transitions are handled only for explicitly started mixed playlists.
+- Make the add-on's **Debug logging** setting visible in `kodi.log` without
+  requiring Kodi's global debug mode, and add route, media-count, playlist-batch
+  and monitor-state diagnostics.
+- Keep database schema 5 and repository add-on version 0.2.26 unchanged.
+
 ## 0.2.36 - 2026-07-27
 
 - Wait until the requested picture container has remained active long enough for

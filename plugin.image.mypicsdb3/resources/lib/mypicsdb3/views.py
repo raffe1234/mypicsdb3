@@ -819,25 +819,14 @@ class PluginUI:
         return uris, start_position, has_video
 
     def _start_slideshow(self, params: Dict[str, str]) -> None:
-        if params.get("scope", "") == "folder-tree":
+        scope = params.get("scope", "")
+        folder = None
+        if scope == "folder-tree":
             folder = self.catalog.get_folder(int(params["id"]))
             folder_uri = str((folder or {}).get("uri") or "")
             if not folder_uri:
                 self.kodi.notify(self.text(32604, "No media to play"))
                 return
-            try:
-                self.kodi.set_mixed_slideshow_active(False)
-                start_native_folder_slideshow(
-                    xbmc,
-                    folder_uri,
-                    recursive=True,
-                )
-            except SlideshowError as exc:
-                self.kodi.notify(
-                    "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
-                    error=True,
-                )
-            return
 
         try:
             rows = self._slideshow_rows(params)
@@ -855,12 +844,60 @@ class PluginUI:
             rows,
             start_id,
         )
+        picture_count = sum(
+            1 for row in rows if str(row.get("media_type") or "picture") != "video"
+        )
+        video_count = sum(
+            1 for row in rows if str(row.get("media_type") or "") == "video"
+        )
+        empty_count = sum(1 for row in rows if not str(row.get("uri") or "").strip())
+        duplicate_count = max(0, len(rows) - empty_count - len(uris))
+
+        if scope == "folder-tree" and not has_video:
+            self.kodi.log.debug(
+                "Slideshow route=native-picture scope=folder-tree folder_id=%s "
+                "rows=%d pictures=%d videos=0 empty=%d duplicates=%d",
+                params.get("id", ""),
+                len(rows),
+                picture_count,
+                empty_count,
+                duplicate_count,
+            )
+            try:
+                self.kodi.set_mixed_slideshow_active(False)
+                start_native_folder_slideshow(
+                    xbmc,
+                    str(folder.get("uri") or ""),
+                    recursive=True,
+                    logger=self.kodi.log,
+                )
+            except SlideshowError as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
+                    error=True,
+                )
+            return
+
+        self.kodi.log.debug(
+            "Slideshow route=mixed-playlist scope=%s folder_id=%s rows=%d "
+            "pictures=%d videos=%d unique=%d empty=%d duplicates=%d start=%d",
+            scope,
+            params.get("id", ""),
+            len(rows),
+            picture_count,
+            video_count,
+            len(uris),
+            empty_count,
+            duplicate_count,
+            start_position,
+        )
         self.kodi.set_mixed_slideshow_active(False)
         try:
             started = start_mixed_slideshow(
                 xbmc,
                 uris,
                 start_position,
+                logger=self.kodi.log,
             )
             if not started:
                 self.kodi.notify(self.text(32604, "No media to play"))

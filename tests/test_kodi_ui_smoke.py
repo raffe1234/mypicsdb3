@@ -134,7 +134,13 @@ class FakeKodi:
             minimum_rating_policy="all",
             include_videos=False,
         )
-        self.log = types.SimpleNamespace(warning=lambda *args: None)
+        self.debug_messages = []
+        self.log = types.SimpleNamespace(
+            warning=lambda *args: None,
+            debug=lambda message, *args: self.debug_messages.append(
+                message % args if args else message
+            ),
+        )
         self.notifications = []
         self.mixed_slideshow_updates = []
 
@@ -243,6 +249,9 @@ class FakeCatalog:
 
     def pictures_in_folder(self, folder_id, limit, offset):
         return self.recent_taken(limit, offset)
+
+    def media_in_folder_tree(self, folder_id, limit):
+        return self.recent_taken(limit, 0)
 
     def years(self):
         return [{
@@ -655,7 +664,7 @@ def test_video_node_and_video_list_item_are_playable_when_enabled(monkeypatch) -
     assert is_folder is False
 
 
-def test_folder_tree_slideshow_uses_kodi_native_recursive_slideshow(monkeypatch) -> None:
+def test_picture_only_folder_tree_uses_kodi_native_recursive_slideshow(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
     runtime.catalog.get_folder = lambda folder_id: {
@@ -677,6 +686,45 @@ def test_folder_tree_slideshow_uses_kodi_native_recursive_slideshow(monkeypatch)
         'SlideShow("smb://server/photos/Trip, summer/",recursive,notrandom)'
     ]
     assert runtime.kodi.mixed_slideshow_updates == [False]
+    assert any(
+        "route=native-picture" in message
+        for message in runtime.kodi.debug_messages
+    )
+
+
+def test_folder_tree_with_video_uses_explicit_mixed_playlist(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    rows = runtime.catalog.recent_taken(10)
+    rows.append(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/Trip/clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.media_in_folder_tree = lambda folder_id, limit: rows
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "folder-tree", "id": "12"},
+        )
+    )
+
+    assert calls.builtins == []
+    add_request = next(
+        request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
+    )
+    assert add_request["params"]["item"][-1] == {
+        "file": "smb://server/photos/Trip/clip.mp4"
+    }
+    assert runtime.kodi.mixed_slideshow_updates == [False, True]
+    assert any(
+        "route=mixed-playlist" in message and "videos=1" in message
+        for message in runtime.kodi.debug_messages
+    )
 
 
 def test_photo_only_database_slideshow_keeps_video_monitor_inactive(monkeypatch) -> None:

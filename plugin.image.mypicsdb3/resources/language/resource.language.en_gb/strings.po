@@ -540,8 +540,8 @@ msgid "Missing files remain visible to the catalogue for this many days before c
 msgstr "Missing files remain visible to the catalogue for this many days before cleanup. Zero removes them immediately when cleanup is run."
 
 msgctxt "#32162"
-msgid "Write detailed scanner information to kodi.log."
-msgstr "Write detailed scanner information to kodi.log."
+msgid "Write detailed add-on diagnostics to kodi.log without requiring Kodi's global debug mode."
+msgstr "Write detailed add-on diagnostics to kodi.log without requiring Kodi's global debug mode."
 
 msgctxt "#32070"
 msgid "Home screen"
