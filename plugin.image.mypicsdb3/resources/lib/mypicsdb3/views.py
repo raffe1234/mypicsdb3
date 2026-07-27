@@ -703,6 +703,7 @@ class PluginUI:
                 self.kodi.notify(self.text(32604, "No media to play"))
                 return
             try:
+                self.kodi.set_mixed_slideshow_active(False)
                 start_native_folder_slideshow(
                     xbmc,
                     folder_uri,
@@ -728,13 +729,20 @@ class PluginUI:
             ),
             0,
         )
+        uris = [str(row.get("uri") or "") for row in rows]
+        has_video = any(str(row.get("media_type") or "") == "video" for row in rows)
         try:
-            start_mixed_slideshow(
+            self.kodi.set_mixed_slideshow_active(has_video)
+            started = start_mixed_slideshow(
                 xbmc,
-                [str(row.get("uri") or "") for row in rows],
+                uris,
                 start_position,
             )
+            if not started:
+                self.kodi.set_mixed_slideshow_active(False)
+                self.kodi.notify(self.text(32604, "No media to play"))
         except SlideshowError as exc:
+            self.kodi.set_mixed_slideshow_active(False)
             self.kodi.notify(
                 "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
                 error=True,

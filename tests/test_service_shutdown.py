@@ -53,9 +53,14 @@ class FakeKodi:
     def kodi_picture_sources(self):
         return []
 
+    def mixed_slideshow_active(self):
+        return False
+
+    def set_mixed_slideshow_active(self, active):
+        raise AssertionError("inactive slideshow session must not be changed")
+
     def execute_jsonrpc(self, method, params=None):
-        assert method == "Player.GetActivePlayers"
-        return []
+        raise AssertionError("inactive slideshow session must not poll JSON-RPC")
 
     def refresh_settings(self):
         self.refresh_calls += 1

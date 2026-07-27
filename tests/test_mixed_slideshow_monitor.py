@@ -1,6 +1,10 @@
 from __future__ import annotations
 
-from mypicsdb3.service_loop import MixedSlideshowVideoMonitor, VIDEO_IDLE_CLEAR_POLLS
+from mypicsdb3.service_loop import (
+    MIXED_SLIDESHOW_STARTUP_IDLE_POLLS,
+    MixedSlideshowVideoMonitor,
+    VIDEO_IDLE_CLEAR_POLLS,
+)
 
 
 class FakeLog:
@@ -16,12 +20,26 @@ class FakeLog:
 
 
 class FakeKodi:
-    def __init__(self, player_states, playing_file="nfs://nas/photos/clip.mp4"):
+    def __init__(
+        self,
+        player_states,
+        playing_file="nfs://nas/photos/clip.mp4",
+        active=True,
+    ):
         self.player_states = iter(player_states)
         self.current_players = []
         self.current_file = playing_file
         self.calls = []
         self.log = FakeLog()
+        self.active = active
+        self.state_updates = []
+
+    def mixed_slideshow_active(self):
+        return self.active
+
+    def set_mixed_slideshow_active(self, active):
+        self.active = bool(active)
+        self.state_updates.append(bool(active))
 
     def execute_jsonrpc(self, method, params=None):
         self.calls.append((method, params))
@@ -46,6 +64,15 @@ class FakeCatalog:
         return self.media_type
 
 
+def test_inactive_monitor_does_not_poll_kodi() -> None:
+    kodi = FakeKodi([], active=False)
+    monitor = MixedSlideshowVideoMonitor(kodi, FakeCatalog())
+
+    monitor.tick()
+
+    assert kodi.calls == []
+
+
 def test_monitor_advances_picture_playlist_when_indexed_video_finishes() -> None:
     kodi = FakeKodi(
         [
@@ -62,9 +89,10 @@ def test_monitor_advances_picture_playlist_when_indexed_video_finishes() -> None
     assert catalog.lookups == ["nfs://nas/photos/clip.mp4"]
     assert ("Player.GoTo", {"playerid": 2, "to": "next"}) in kodi.calls
     assert monitor.active_video_uri == ""
+    assert kodi.active is True
 
 
-def test_monitor_does_not_advance_after_standalone_video() -> None:
+def test_monitor_clears_session_after_player_stops() -> None:
     kodi = FakeKodi(
         [[{"playerid": 1, "type": "video"}]]
         + [[] for _ in range(VIDEO_IDLE_CLEAR_POLLS)]
@@ -76,6 +104,23 @@ def test_monitor_does_not_advance_after_standalone_video() -> None:
 
     assert all(method != "Player.GoTo" for method, _params in kodi.calls)
     assert monitor.active_video_uri == ""
+    assert kodi.active is False
+    assert kodi.state_updates == [False]
+
+
+def test_monitor_allows_player_startup_grace_period() -> None:
+    kodi = FakeKodi([[] for _ in range(MIXED_SLIDESHOW_STARTUP_IDLE_POLLS)])
+    monitor = MixedSlideshowVideoMonitor(kodi, FakeCatalog())
+
+    for _ in range(MIXED_SLIDESHOW_STARTUP_IDLE_POLLS - 1):
+        monitor.tick()
+
+    assert kodi.active is True
+
+    monitor.tick()
+
+    assert kodi.active is False
+    assert kodi.state_updates == [False]
 
 
 def test_monitor_ignores_unindexed_video() -> None:

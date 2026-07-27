@@ -107,6 +107,7 @@ class FakeKodi:
         )
         self.log = types.SimpleNamespace(warning=lambda *args: None)
         self.notifications = []
+        self.mixed_slideshow_updates = []
 
     def localize(self, string_id, fallback):
         return fallback
@@ -122,6 +123,9 @@ class FakeKodi:
         if value:
             self.settings.album_view_mode = int(value)
         return self.settings
+
+    def set_mixed_slideshow_active(self, active):
+        self.mixed_slideshow_updates.append(bool(active))
 
 
 class FakeCatalog:
@@ -580,3 +584,43 @@ def test_folder_tree_slideshow_uses_kodi_native_recursive_slideshow(monkeypatch)
     assert calls.builtins == [
         'SlideShow("smb://server/photos/Trip, summer/",recursive,notrandom)'
     ]
+    assert runtime.kodi.mixed_slideshow_updates == [False]
+
+
+def test_photo_only_database_slideshow_keeps_video_monitor_inactive(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "recent-taken", "start": "1"},
+        )
+    )
+
+    assert runtime.kodi.mixed_slideshow_updates == [False]
+
+
+def test_database_slideshow_with_video_arms_video_monitor(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    rows = runtime.catalog.recent_taken(10)
+    rows.append(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.recent_taken = lambda limit, offset=0: rows
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "recent-taken", "start": "1"},
+        )
+    )
+
+    assert runtime.kodi.mixed_slideshow_updates == [True]

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.29 - 2026-07-27
+
+- Run the mixed-slideshow video monitor only while an explicitly started
+  database-backed MyPicsDB 3 playlist contains video.
+- Keep native recursive album slideshows free from MyPicsDB 3 JSON-RPC polling
+  and automatic `Player.GoTo` calls.
+- Clear stale mixed-slideshow session state after playback stops, while allowing
+  a short startup grace period before Kodi reports an active player.
+
 ## 0.2.28 - 2026-07-27
 
 - Use Kodi's native recursive folder slideshow when starting a slideshow from an

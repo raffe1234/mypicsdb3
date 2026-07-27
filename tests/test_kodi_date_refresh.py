@@ -105,3 +105,35 @@ def test_picture_addons_virtual_source_is_not_returned() -> None:
     assert context.kodi_picture_sources() == [
         {"label": "Photos", "uri": "smb://server/photos/"},
     ]
+
+
+def test_mixed_slideshow_state_uses_home_window_property(monkeypatch) -> None:
+    properties = {}
+
+    class FakeWindow:
+        def setProperty(self, key, value):
+            properties[key] = value
+
+        def getProperty(self, key):
+            return properties.get(key, "")
+
+        def clearProperty(self, key):
+            properties.pop(key, None)
+
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(Window=lambda window_id: FakeWindow()),
+    )
+    context = kodi.KodiContext.__new__(kodi.KodiContext)
+    context.log = types.SimpleNamespace(warning=lambda *args: None)
+
+    context.set_mixed_slideshow_active(True)
+
+    assert kodi.KodiContext.mixed_slideshow_active() is True
+    assert properties[kodi.MIXED_SLIDESHOW_PROPERTY] == "true"
+
+    context.set_mixed_slideshow_active(False)
+
+    assert kodi.KodiContext.mixed_slideshow_active() is False
+    assert kodi.MIXED_SLIDESHOW_PROPERTY not in properties

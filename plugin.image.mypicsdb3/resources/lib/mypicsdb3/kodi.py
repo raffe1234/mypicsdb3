@@ -18,6 +18,8 @@ except ImportError:  # pragma: no cover - Kodi modules are unavailable in unit t
 
 
 SHUTDOWN_NOTIFICATION_METHODS = frozenset(("System.OnQuit", "System.OnRestart"))
+HOME_WINDOW_ID = 10000
+MIXED_SLIDESHOW_PROPERTY = "MyPicsDB3.MixedSlideshowActive"
 
 
 def create_abort_monitor(xbmc_module=None):
@@ -151,6 +153,37 @@ class KodiContext:
 
         xbmc.executebuiltin("ReloadSkin()")
         return True
+
+    def set_mixed_slideshow_active(self, active: bool) -> None:
+        """Publish whether MyPicsDB owns the current database slideshow.
+
+        Kodi plug-in actions and the background service run in separate Python
+        interpreters. A property on the Home window is a lightweight, session-
+        local hand-off that avoids persistent settings or profile files.
+        """
+
+        if xbmcgui is None:
+            return
+        try:
+            window = xbmcgui.Window(HOME_WINDOW_ID)
+            if active:
+                window.setProperty(MIXED_SLIDESHOW_PROPERTY, "true")
+            else:
+                window.clearProperty(MIXED_SLIDESHOW_PROPERTY)
+        except Exception as exc:
+            self.log.warning("Could not update mixed slideshow state: %s", exc)
+
+    @staticmethod
+    def mixed_slideshow_active() -> bool:
+        if xbmcgui is None:
+            return False
+        try:
+            value = xbmcgui.Window(HOME_WINDOW_ID).getProperty(
+                MIXED_SLIDESHOW_PROPERTY
+            )
+            return str(value or "").strip().lower() == "true"
+        except Exception:
+            return False
 
     @staticmethod
     def is_playing() -> bool:

@@ -14,6 +14,7 @@ DATE_REFRESH_RETRY_SECONDS = 15.0
 SERVICE_POLL_SECONDS = 0.5
 MAINTENANCE_INTERVAL_SECONDS = 5.0
 VIDEO_IDLE_CLEAR_POLLS = 3
+MIXED_SLIDESHOW_STARTUP_IDLE_POLLS = 20
 
 
 class MixedSlideshowVideoMonitor:
@@ -24,14 +25,29 @@ class MixedSlideshowVideoMonitor:
         self.catalog = catalog
         self.active_video_uri = ""
         self.idle_polls = 0
+        self.session_seen_player = False
         self.failure_logged = False
 
     def _active_players(self):
         result = self.kodi.execute_jsonrpc("Player.GetActivePlayers")
         return result if isinstance(result, list) else []
 
+    def _reset_state(self) -> None:
+        self.active_video_uri = ""
+        self.idle_polls = 0
+        self.session_seen_player = False
+
+    def _clear_session(self) -> None:
+        self.kodi.set_mixed_slideshow_active(False)
+        self._reset_state()
+
     def tick(self) -> None:
         try:
+            if not self.kodi.mixed_slideshow_active():
+                self._reset_state()
+                self.failure_logged = False
+                return
+
             players = self._active_players()
             self.failure_logged = False
             by_type = {
@@ -39,16 +55,28 @@ class MixedSlideshowVideoMonitor:
                 for player in players
                 if isinstance(player, dict)
             }
+            relevant_player_active = "picture" in by_type or "video" in by_type
+            if not relevant_player_active:
+                self.idle_polls += 1
+                idle_limit = (
+                    VIDEO_IDLE_CLEAR_POLLS
+                    if self.session_seen_player
+                    else MIXED_SLIDESHOW_STARTUP_IDLE_POLLS
+                )
+                if self.idle_polls >= idle_limit:
+                    self._clear_session()
+                return
+
+            self.session_seen_player = True
+            self.idle_polls = 0
 
             if "video" in by_type:
                 playing_file = self.kodi.playing_file()
                 if playing_file == self.active_video_uri:
-                    self.idle_polls = 0
                     return
                 self.active_video_uri = ""
                 if playing_file and self.catalog.media_type_for_uri(playing_file) == "video":
                     self.active_video_uri = playing_file
-                    self.idle_polls = 0
                 return
 
             if self.active_video_uri and "picture" in by_type:
@@ -61,14 +89,6 @@ class MixedSlideshowVideoMonitor:
                     self.active_video_uri,
                 )
                 self.active_video_uri = ""
-                self.idle_polls = 0
-                return
-
-            if self.active_video_uri:
-                self.idle_polls += 1
-                if self.idle_polls >= VIDEO_IDLE_CLEAR_POLLS:
-                    self.active_video_uri = ""
-                    self.idle_polls = 0
         except Exception as exc:
             if not self.failure_logged:
                 self.kodi.log.warning(
