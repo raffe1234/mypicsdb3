@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.2.38 - 2026-07-28
+
+- Write the selected slideshow route and privacy-safe media counts at Kodi INFO
+  level for every slideshow start, so the active path remains visible even when
+  opt-in debug logging is not being captured.
+- Add a **Write diagnostic log entry** settings action that records the installed
+  version and current Debug logging value in `kodi.log` without opening the
+  database.
+- Use `InfoTagVideo` setters for video list items on current Kodi versions while
+  retaining a compatibility fallback for older test doubles.
+- Stop writing the completed video's full URI after mixed-slideshow transitions.
+- Keep the working 0.2.37 mixed-playlist behaviour, database schema 5 and
+  repository add-on version 0.2.26 unchanged.
+
 ## 0.2.37 - 2026-07-27
 
 - Keep Kodi's native recursive slideshow for picture-only album trees, but use

@@ -135,9 +135,13 @@ class FakeKodi:
             include_videos=False,
         )
         self.debug_messages = []
+        self.info_messages = []
         self.log = types.SimpleNamespace(
             warning=lambda *args: None,
             debug=lambda message, *args: self.debug_messages.append(
+                message % args if args else message
+            ),
+            info=lambda message, *args: self.info_messages.append(
                 message % args if args else message
             ),
         )
@@ -664,6 +668,56 @@ def test_video_node_and_video_list_item_are_playable_when_enabled(monkeypatch) -
     assert is_folder is False
 
 
+def test_video_items_prefer_info_tag_video_setters(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+
+    class FakeVideoTag:
+        def __init__(self):
+            self.title = None
+            self.date_added = None
+
+        def setTitle(self, value):
+            self.title = value
+
+        def setDateAdded(self, value):
+            self.date_added = value
+
+    class ModernListItem(FakeListItem):
+        def __init__(self, label="", path=""):
+            super().__init__(label, path)
+            self.video_tag = FakeVideoTag()
+
+        def getVideoInfoTag(self):
+            return self.video_tag
+
+        def setInfo(self, media_type, info):
+            if media_type == "video":
+                raise AssertionError("deprecated video setInfo must not be used")
+            super().setInfo(media_type, info)
+
+    views.xbmcgui.ListItem = ModernListItem
+    runtime = FakeRuntime()
+    runtime.kodi.settings.include_videos = True
+    video = dict(runtime.catalog.recent_taken(1)[0])
+    video.update(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/clip.mp4",
+            "filename": "clip.mp4",
+            "media_type": "video",
+            "taken_at": "2026-07-28 10:00:00",
+        }
+    )
+    runtime.catalog.videos = lambda limit, offset=0: [video]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("videos", {}))
+
+    _url, item, _is_folder = calls.items[0]
+    assert item.video_tag.title == "clip.mp4"
+    assert item.video_tag.date_added == "2026-07-28 10:00:00"
+
+
 def test_picture_only_folder_tree_uses_kodi_native_recursive_slideshow(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -688,7 +742,7 @@ def test_picture_only_folder_tree_uses_kodi_native_recursive_slideshow(monkeypat
     assert runtime.kodi.mixed_slideshow_updates == [False]
     assert any(
         "route=native-picture" in message
-        for message in runtime.kodi.debug_messages
+        for message in runtime.kodi.info_messages
     )
 
 
@@ -723,7 +777,7 @@ def test_folder_tree_with_video_uses_explicit_mixed_playlist(monkeypatch) -> Non
     assert runtime.kodi.mixed_slideshow_updates == [False, True]
     assert any(
         "route=mixed-playlist" in message and "videos=1" in message
-        for message in runtime.kodi.debug_messages
+        for message in runtime.kodi.info_messages
     )
 
 

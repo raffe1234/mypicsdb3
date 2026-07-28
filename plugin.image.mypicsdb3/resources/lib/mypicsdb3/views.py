@@ -336,6 +336,19 @@ class PluginUI:
             view_mode=self._browser_view_mode(params),
         )
 
+    @staticmethod
+    def _set_video_info(item, title: str, date_added: str) -> None:
+        """Set video metadata without Kodi's deprecated ListItem.setInfo path."""
+
+        getter = getattr(item, "getVideoInfoTag", None)
+        if callable(getter):
+            tag = getter()
+            tag.setTitle(str(title or ""))
+            if date_added:
+                tag.setDateAdded(str(date_added))
+            return
+        item.setInfo("video", {"title": title, "dateadded": date_added})
+
     def _media_item(
         self,
         row: Dict[str, Any],
@@ -358,7 +371,7 @@ class PluginUI:
         media_type = str(row.get("media_type") or "picture")
         try:
             if media_type == "video":
-                item.setInfo("video", {"title": label, "dateadded": date_text})
+                self._set_video_info(item, str(label), date_text)
                 item.setProperty("IsPlayable", "true")
                 if row.get("mime_type") and hasattr(item, "setMimeType"):
                     item.setMimeType(str(row["mime_type"]))
@@ -854,7 +867,7 @@ class PluginUI:
         duplicate_count = max(0, len(rows) - empty_count - len(uris))
 
         if scope == "folder-tree" and not has_video:
-            self.kodi.log.debug(
+            self.kodi.log.info(
                 "Slideshow route=native-picture scope=folder-tree folder_id=%s "
                 "rows=%d pictures=%d videos=0 empty=%d duplicates=%d",
                 params.get("id", ""),
@@ -878,7 +891,7 @@ class PluginUI:
                 )
             return
 
-        self.kodi.log.debug(
+        self.kodi.log.info(
             "Slideshow route=mixed-playlist scope=%s folder_id=%s rows=%d "
             "pictures=%d videos=%d unique=%d empty=%d duplicates=%d start=%d",
             scope,

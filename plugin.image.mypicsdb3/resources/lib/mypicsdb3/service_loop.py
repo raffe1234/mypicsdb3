@@ -93,8 +93,7 @@ class MixedSlideshowVideoMonitor:
                     {"playerid": by_type["picture"], "to": "next"},
                 )
                 self.kodi.log.info(
-                    "Advanced mixed slideshow after video finished: %s",
-                    self.active_video_uri,
+                    "Advanced mixed slideshow after indexed video finished"
                 )
                 self.active_video_uri = ""
         except Exception as exc:

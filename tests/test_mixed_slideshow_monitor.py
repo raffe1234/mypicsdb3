@@ -94,6 +94,10 @@ def test_monitor_advances_picture_playlist_when_indexed_video_finishes() -> None
     assert ("Player.GoTo", {"playerid": 2, "to": "next"}) in kodi.calls
     assert monitor.active_video_uri == ""
     assert kodi.active is True
+    assert kodi.log.info_messages == [
+        "Advanced mixed slideshow after indexed video finished"
+    ]
+    assert all("nfs://" not in message for message in kodi.log.info_messages)
 
 
 def test_monitor_clears_session_after_player_stops() -> None:

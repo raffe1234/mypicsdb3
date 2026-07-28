@@ -6,6 +6,9 @@ from typing import Optional, Sequence
 
 DATABASE_BUSY_STRING_ID = 32614
 DATABASE_BUSY_FALLBACK = "MyPicsDB 3 is starting. Please try again in a moment."
+DIAGNOSTIC_LOG_ROUTE = "action/log-diagnostic"
+DIAGNOSTIC_LOG_STRING_ID = 32721
+DIAGNOSTIC_LOG_FALLBACK = "Diagnostic entry written to kodi.log"
 
 
 def _finish_database_busy_plugin_request(context, handle: int, request) -> None:
@@ -29,12 +32,24 @@ def _finish_database_busy_plugin_request(context, handle: int, request) -> None:
         )
 
 
+def _write_diagnostic_log_entry(context) -> None:
+    from . import VERSION
+
+    settings = context.refresh_settings()
+    context.log.info(
+        "Diagnostic log entry: version=%s debug_logging=%s",
+        VERSION,
+        "true" if settings.debug_logging else "false",
+    )
+    context.notify(
+        context.localize(DIAGNOSTIC_LOG_STRING_ID, DIAGNOSTIC_LOG_FALLBACK),
+        force=True,
+    )
+
+
 def plugin_main(argv: Optional[Sequence[str]] = None) -> None:
-    from .db.migrations import MigrationLockError
     from .kodi import KodiContext
     from .router import parse_request
-    from .runtime import Runtime
-    from .views import PluginUI
 
     arguments = list(argv or sys.argv)
     base_url = arguments[0]
@@ -42,6 +57,14 @@ def plugin_main(argv: Optional[Sequence[str]] = None) -> None:
     query = arguments[2] if len(arguments) > 2 else ""
     request = parse_request(base_url, query)
     context = KodiContext()
+    if request.route == DIAGNOSTIC_LOG_ROUTE:
+        _write_diagnostic_log_entry(context)
+        return
+
+    from .db.migrations import MigrationLockError
+    from .runtime import Runtime
+    from .views import PluginUI
+
     try:
         runtime = Runtime(kodi_context=context)
     except MigrationLockError as exc:

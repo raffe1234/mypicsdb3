@@ -72,6 +72,43 @@ def install_plugin_modules(monkeypatch, context, request, runtime_error):
     return ended
 
 
+def test_diagnostic_log_action_bypasses_database_and_reports_current_setting(monkeypatch):
+    context = types.SimpleNamespace()
+    context.settings = types.SimpleNamespace(debug_logging=True)
+    context.log = FakeLog()
+    context.notifications = []
+    context.refresh_settings = lambda: context.settings
+    context.localize = lambda string_id, fallback: (
+        fallback if string_id == entrypoints.DIAGNOSTIC_LOG_STRING_ID else ""
+    )
+    context.notify = lambda message, error=False, milliseconds=4000, force=False: (
+        context.notifications.append((message, error, milliseconds, force))
+    )
+
+    fake_kodi_module = types.ModuleType("mypicsdb3.kodi")
+    fake_kodi_module.KodiContext = lambda: context
+    runtime_module = types.ModuleType("mypicsdb3.runtime")
+
+    class Runtime:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError("diagnostic action must not open the database")
+
+    runtime_module.Runtime = Runtime
+    monkeypatch.setitem(sys.modules, "mypicsdb3.kodi", fake_kodi_module)
+    monkeypatch.setitem(sys.modules, "mypicsdb3.runtime", runtime_module)
+
+    entrypoints.plugin_main(
+        ["plugin://plugin.image.mypicsdb3/action/log-diagnostic", "7", ""]
+    )
+
+    assert context.log.messages == [
+        ("info", "Diagnostic log entry: version=0.2.38 debug_logging=true")
+    ]
+    assert context.notifications == [
+        (entrypoints.DIAGNOSTIC_LOG_FALLBACK, False, 4000, True)
+    ]
+
+
 def test_interactive_plugin_request_reports_database_busy(monkeypatch):
     context = FakeKodiContext()
     request = Request("recent-taken", {})

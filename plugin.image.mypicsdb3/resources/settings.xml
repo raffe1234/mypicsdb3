@@ -531,6 +531,13 @@
           <default>false</default>
           <control type="toggle" />
         </setting>
+        <setting id="write_debug_log_entry" type="action" label="32720" help="32722">
+          <level>2</level>
+          <data>RunPlugin(plugin://plugin.image.mypicsdb3/action/log-diagnostic)</data>
+          <control type="button" format="action">
+            <close>false</close>
+          </control>
+        </setting>
       </group>
     </category>
   </section>

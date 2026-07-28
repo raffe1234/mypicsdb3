@@ -898,3 +898,15 @@ msgstr "Could not rename saved search"
 msgctxt "#32712"
 msgid "Delete '%s'?"
 msgstr "Delete '%s'?"
+
+msgctxt "#32720"
+msgid "Write diagnostic log entry"
+msgstr "Write diagnostic log entry"
+
+msgctxt "#32721"
+msgid "Diagnostic entry written to kodi.log"
+msgstr "Diagnostic entry written to kodi.log"
+
+msgctxt "#32722"
+msgid "Write one privacy-safe MyPicsDB 3 entry showing the installed version and current Debug logging setting. Use this to verify which kodi.log is active."
+msgstr "Write one privacy-safe MyPicsDB 3 entry showing the installed version and current Debug logging setting. Use this to verify which kodi.log is active."
