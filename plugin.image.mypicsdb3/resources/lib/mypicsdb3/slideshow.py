@@ -10,6 +10,26 @@ PLAYLIST_ADD_BATCH_SIZE = 250
 PICTURE_PLAYER_PROBE_POLLS = 30
 PICTURE_PLAYER_PROBE_INTERVAL_MS = 100
 PICTURE_PLAYER_CONFIRM_POLLS = 2
+PICTURE_FILE_EXTENSIONS = frozenset(
+    (
+        ".avif",
+        ".bmp",
+        ".gif",
+        ".heic",
+        ".heif",
+        ".j2k",
+        ".jp2",
+        ".jpeg",
+        ".jpg",
+        ".jxl",
+        ".pcx",
+        ".png",
+        ".tga",
+        ".tif",
+        ".tiff",
+        ".webp",
+    )
+)
 
 
 class SlideshowError(RuntimeError):
@@ -58,6 +78,14 @@ def _same_media_uri(left: str, right: str) -> bool:
         return str(value or "").strip().replace("\\", "/").casefold()
 
     return cleaned(left) == cleaned(right)
+
+
+def _looks_like_picture_uri(uri: str) -> bool:
+    """Return whether a media URI has a known still-picture extension."""
+
+    value = str(uri or "").strip().replace("\\", "/")
+    value = value.split("?", 1)[0].split("#", 1)[0].casefold()
+    return any(value.endswith(extension) for extension in PICTURE_FILE_EXTENSIONS)
 
 
 def _stop_player_quietly(xbmc_module, player_id: int) -> None:
@@ -125,7 +153,7 @@ def _verify_picture_playlist_player(
     xbmc_module,
     expected_picture_uri: str,
     logger: Optional[Any] = None,
-) -> None:
+) -> bool:
     """Detect Kodi builds that route picture playlist 2 through VideoPlayer.
 
     A stale native slideshow can leave a picture player active while the new
@@ -155,16 +183,20 @@ def _verify_picture_playlist_player(
             if player_type not in {"picture", "video"} or player_id < 0:
                 continue
             playing_uri = _player_item_uri(xbmc_module, player_id)
-            if not _same_media_uri(playing_uri, expected_picture_uri):
-                continue
-            if player_type == "video":
+            if player_type == "video" and (
+                _same_media_uri(playing_uri, expected_picture_uri)
+                or _looks_like_picture_uri(playing_uri)
+            ):
                 exact_video_player_id = player_id
-            elif player_type == "picture":
+                continue
+            if player_type == "picture" and _same_media_uri(
+                playing_uri, expected_picture_uri
+            ):
                 exact_picture_player = True
 
         if exact_video_player_id >= 0:
             raise SlideshowPlayerMismatchError(
-                "Kodi opened the picture-playlist probe with VideoPlayer"
+                "Kodi opened a picture-playlist image with VideoPlayer"
             )
 
         if exact_picture_player:
@@ -174,13 +206,14 @@ def _verify_picture_playlist_player(
                     logger.debug(
                         "Mixed slideshow picture-player probe succeeded for expected item"
                     )
-                return
+                return True
         else:
             confirmed_picture_polls = 0
         _sleep(xbmc_module, PICTURE_PLAYER_PROBE_INTERVAL_MS)
 
     if logger is not None:
         logger.debug("Mixed slideshow picture-player probe was inconclusive")
+    return False
 
 
 def _playlist_items(uris: Iterable[str]) -> List[dict]:
@@ -264,11 +297,15 @@ def _probe_mixed_picture_playlist(
             "Player.Open",
             {"item": {"playlistid": PICTURE_PLAYLIST_ID, "position": 0}},
         )
-        _verify_picture_playlist_player(
+        confirmed = _verify_picture_playlist_player(
             xbmc_module,
             str(expected_picture_uri),
             logger=logger,
         )
+        if not confirmed:
+            raise SlideshowPlayerMismatchError(
+                "Kodi did not confirm the picture player for the mixed playlist probe"
+            )
     finally:
         _stop_matching_players(xbmc_module, str(expected_picture_uri))
         _clear_playlist_quietly(xbmc_module, PICTURE_PLAYLIST_ID)
@@ -338,11 +375,15 @@ def start_mixed_slideshow(
             verify_position = max(
                 0, min(int(verify_picture_position), len(items) - 1)
             )
-            _verify_picture_playlist_player(
+            confirmed = _verify_picture_playlist_player(
                 xbmc_module,
                 str(items[verify_position]["file"]),
                 logger=logger,
             )
+            if not confirmed:
+                raise SlideshowPlayerMismatchError(
+                    "Kodi did not confirm the picture player for the full mixed playlist"
+                )
             if logger is not None:
                 logger.debug(
                     "Mixed slideshow full-playlist picture verification succeeded"

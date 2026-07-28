@@ -22,7 +22,7 @@ except ImportError:  # pragma: no cover - Kodi modules are unavailable in unit t
 SHUTDOWN_NOTIFICATION_METHODS = frozenset(("System.OnQuit", "System.OnRestart"))
 HOME_WINDOW_ID = 10000
 MIXED_SLIDESHOW_PROPERTY = "MyPicsDB3.MixedSlideshowActive"
-PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY = "MyPicsDB3.PicturePlaylistCompatibility"
+PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY = "MyPicsDB3.PicturePlaylistCompatibilityV2"
 SLIDESHOW_START_PROPERTY = "MyPicsDB3.SlideshowStart"
 SLIDESHOW_START_TTL_SECONDS = 180.0
 

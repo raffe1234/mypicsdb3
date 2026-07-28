@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.42 - 2026-07-28
+
+- Treat an inconclusive picture-player compatibility check as incompatible
+  instead of silently accepting it. This prevents Kodi 21 on Windows from
+  building and opening the full mixed playlist after the probe could not prove
+  that the expected picture was handled by the picture player.
+- Detect any still-picture URI currently opened by `VideoPlayer`, not only the
+  original expected probe item. Kodi can advance through several one-frame
+  MJPEG images between JSON-RPC polls, so exact-item matching alone can miss the
+  failure while the screen visibly flickers.
+- Use a new session-property key for compatibility results so a false
+  `compatible` value cached by 0.2.41 cannot survive an in-place update.
+- Keep picture-only database result sets on picture playlist 2 without applying
+  the mixed-media compatibility probe; the conservative fallback is limited to
+  lists that actually contain both pictures and videos.
+- Keep native picture-only album playback, video playlist 1 for video-only
+  results, the slideshow-start guard, database schema 5 and repository add-on
+  version 0.2.26 unchanged.
+
 ## 0.2.41 - 2026-07-28
 
 - Replace the one-picture compatibility probe with a minimal picture-and-video

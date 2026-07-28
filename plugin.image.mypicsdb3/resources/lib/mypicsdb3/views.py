@@ -963,6 +963,37 @@ class PluginUI:
                 )
             return
 
+        if picture_count and not video_count:
+            self.kodi.log.info(
+                "Slideshow route=picture-playlist scope=%s folder_id=%s rows=%d "
+                "pictures=%d videos=0 unique=%d empty=%d duplicates=%d start=%d",
+                scope,
+                params.get("id", ""),
+                len(rows),
+                picture_count,
+                len(uris),
+                empty_count,
+                duplicate_count,
+                start_position,
+            )
+            self.kodi.set_mixed_slideshow_active(False)
+            try:
+                stop_active_media_players(xbmc, logger=self.kodi.log)
+                started = start_mixed_slideshow(
+                    xbmc,
+                    uris,
+                    start_position,
+                    logger=self.kodi.log,
+                )
+                if not started:
+                    self.kodi.notify(self.text(32604, "No media to play"))
+            except SlideshowError as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
+                    error=True,
+                )
+            return
+
         if video_count and not picture_count:
             self.kodi.log.info(
                 "Slideshow route=video-playlist scope=%s folder_id=%s rows=%d "
@@ -1059,17 +1090,22 @@ class PluginUI:
                     setter(True)
             if has_video:
                 self.kodi.set_mixed_slideshow_active(True)
-        except SlideshowPlayerMismatchError:
+        except SlideshowPlayerMismatchError as exc:
             self.kodi.set_mixed_slideshow_active(False)
             setter = getattr(self.kodi, "set_picture_playlist_compatibility", None)
             if callable(setter):
                 setter(False)
+            mismatch_reason = (
+                "picture-playlist-unconfirmed"
+                if "did not confirm" in str(exc).casefold()
+                else "picture-playlist-opened-as-video"
+            )
             if scope == "folder-tree" and folder is not None:
                 try:
                     self._start_native_mixed_fallback(
                         folder,
                         params.get("id", ""),
-                        "picture-playlist-opened-as-video",
+                        mismatch_reason,
                     )
                 except SlideshowError as exc:
                     self.kodi.notify(

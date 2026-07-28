@@ -255,7 +255,7 @@ def test_mixed_slideshow_rejects_picture_opened_by_video_player() -> None:
 
     with pytest.raises(
         SlideshowPlayerMismatchError,
-        match="picture-playlist probe",
+        match="picture-playlist image",
     ):
         start_mixed_slideshow(
             xbmc,
@@ -274,6 +274,63 @@ def test_mixed_slideshow_rejects_picture_opened_by_video_player() -> None:
     ]
     assert "Player.Stop" in methods
     assert methods[-1] == "Playlist.Clear"
+
+
+def test_mixed_probe_rejects_inconclusive_player_state() -> None:
+    class InconclusiveXbmc(FakeXbmc):
+        def executeJSONRPC(self, payload):
+            request = json.loads(payload)
+            self.requests.append(request)
+            result = [] if request["method"] == "Player.GetActivePlayers" else "OK"
+            return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    xbmc = InconclusiveXbmc()
+
+    with pytest.raises(
+        SlideshowPlayerMismatchError,
+        match="did not confirm",
+    ):
+        start_mixed_slideshow(
+            xbmc,
+            ["/photos/a.jpg", "/photos/clip.mp4"],
+            probe_picture_position=0,
+            probe_video_position=1,
+        )
+
+    add_requests = [
+        request for request in xbmc.requests if request["method"] == "Playlist.Add"
+    ]
+    assert len(add_requests) == 1
+    assert add_requests[0]["params"]["item"] == [
+        {"file": "/photos/a.jpg"},
+        {"file": "/photos/clip.mp4"},
+    ]
+
+
+def test_video_player_picture_extension_rejects_after_expected_item_advanced() -> None:
+    class AdvancedPictureXbmc(FakeXbmc):
+        def executeJSONRPC(self, payload):
+            request = json.loads(payload)
+            self.requests.append(request)
+            method = request["method"]
+            if method == "Player.GetActivePlayers":
+                result = [{"playerid": 1, "type": "video"}]
+            elif method == "Player.GetItem":
+                result = {"item": {"file": "/photos/next-frame.JPG"}}
+            else:
+                result = "OK"
+            return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    with pytest.raises(
+        SlideshowPlayerMismatchError,
+        match="picture-playlist image",
+    ):
+        start_mixed_slideshow(
+            AdvancedPictureXbmc(),
+            ["/photos/a.jpg", "/photos/clip.mp4"],
+            probe_picture_position=0,
+            probe_video_position=1,
+        )
 
 
 def test_video_match_wins_over_unrelated_active_picture_player() -> None:
@@ -342,6 +399,44 @@ def test_full_mixed_playlist_is_verified_after_probe_succeeds() -> None:
             probe_video_position=1,
             verify_picture_position=0,
         )
+
+def test_full_mixed_playlist_rejects_inconclusive_verification() -> None:
+    class ProbeThenInconclusiveXbmc(FakeXbmc):
+        def __init__(self):
+            super().__init__()
+            self.open_count = 0
+
+        def executeJSONRPC(self, payload):
+            request = json.loads(payload)
+            self.requests.append(request)
+            method = request["method"]
+            if method == "Player.Open":
+                self.open_count += 1
+                result = "OK"
+            elif method == "Player.GetActivePlayers":
+                result = (
+                    [{"playerid": 2, "type": "picture"}]
+                    if self.open_count == 1
+                    else []
+                )
+            elif method == "Player.GetItem":
+                result = {"item": {"file": "/photos/a.jpg"}}
+            else:
+                result = "OK"
+            return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    with pytest.raises(
+        SlideshowPlayerMismatchError,
+        match="full mixed playlist",
+    ):
+        start_mixed_slideshow(
+            ProbeThenInconclusiveXbmc(),
+            ["/photos/a.jpg", "/photos/clip.mp4"],
+            probe_picture_position=0,
+            probe_video_position=1,
+            verify_picture_position=0,
+        )
+
 
 def test_video_only_playlist_uses_kodi_video_playlist() -> None:
     xbmc = FakeXbmc()

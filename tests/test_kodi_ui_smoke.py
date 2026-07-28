@@ -786,6 +786,20 @@ def test_picture_only_folder_tree_uses_kodi_native_recursive_slideshow(monkeypat
 def test_folder_tree_with_video_uses_explicit_mixed_playlist(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
+
+    def confirmed_picture_player(payload):
+        request = json.loads(payload)
+        calls.rpc_requests.append(request)
+        method = request["method"]
+        if method == "Player.GetActivePlayers":
+            result = [{"playerid": 2, "type": "picture"}]
+        elif method == "Player.GetItem":
+            result = {"item": {"file": "smb://server/photos/image.jpg"}}
+        else:
+            result = "OK"
+        return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    views.xbmc.executeJSONRPC = confirmed_picture_player
     rows = runtime.catalog.recent_taken(10)
     rows.append(
         {
@@ -834,8 +848,22 @@ def test_photo_only_database_slideshow_keeps_video_monitor_inactive(monkeypatch)
 
 
 def test_database_slideshow_with_video_arms_video_monitor(monkeypatch) -> None:
-    views, _calls = load_views(monkeypatch)
+    views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
+
+    def confirmed_picture_player(payload):
+        request = json.loads(payload)
+        calls.rpc_requests.append(request)
+        method = request["method"]
+        if method == "Player.GetActivePlayers":
+            result = [{"playerid": 2, "type": "picture"}]
+        elif method == "Player.GetItem":
+            result = {"item": {"file": "smb://server/photos/image.jpg"}}
+        else:
+            result = "OK"
+        return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    views.xbmc.executeJSONRPC = confirmed_picture_player
     rows = runtime.catalog.recent_taken(10)
     rows.append(
         {
@@ -955,6 +983,52 @@ def test_folder_tree_falls_back_to_native_when_picture_playlist_opens_as_video(
         "route=native-mixed-fallback" in message
         for message in runtime.kodi.info_messages
     )
+
+
+def test_folder_tree_falls_back_when_picture_playlist_probe_is_inconclusive(
+    monkeypatch,
+) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    rows = runtime.catalog.recent_taken(10)
+    rows.append(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/Trip/clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.media_in_folder_tree = lambda folder_id, limit: rows
+    runtime.kodi.picture_playlist_compatibility_value = None
+
+    def inconclusive_player(payload):
+        request = json.loads(payload)
+        calls.rpc_requests.append(request)
+        result = [] if request["method"] == "Player.GetActivePlayers" else "OK"
+        return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    views.xbmc.executeJSONRPC = inconclusive_player
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "folder-tree", "id": "12"},
+        )
+    )
+
+    assert calls.builtins == [
+        'SlideShow("smb://server/photos/Summer/",recursive,notrandom)'
+    ]
+    assert runtime.kodi.picture_playlist_compatibility_updates == [False]
+    assert any(
+        "reason=picture-playlist-unconfirmed" in message
+        for message in runtime.kodi.info_messages
+    )
+    add_requests = [
+        request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
+    ]
+    assert len(add_requests) == 1
 
 
 def test_cross_folder_mixed_slideshow_falls_back_to_pictures_only(monkeypatch) -> None:
