@@ -74,8 +74,13 @@ def load_views(monkeypatch):
     xbmc.sleep = calls.sleeps.append
 
     def execute_jsonrpc(payload):
-        calls.rpc_requests.append(json.loads(payload))
-        return '{"jsonrpc":"2.0","id":1,"result":"OK"}'
+        request = json.loads(payload)
+        calls.rpc_requests.append(request)
+        if request["method"] == "Player.GetActivePlayers":
+            result = [{"playerid": 2, "type": "picture"}]
+        else:
+            result = "OK"
+        return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
 
     xbmc.executeJSONRPC = execute_jsonrpc
 
@@ -858,15 +863,127 @@ def test_database_slideshow_sanitizes_rows_and_recalculates_start_position(monke
     add_request = next(
         request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
     )
-    open_request = next(
+    open_requests = [
         request for request in calls.rpc_requests if request["method"] == "Player.Open"
-    )
+    ]
     assert add_request["params"]["item"] == [
         {"file": "smb://server/album-a/first.jpg"},
         {"file": "smb://server/album-b/clip.mp4"},
     ]
-    assert open_request["params"]["item"]["position"] == 1
+    assert [request["params"]["item"]["position"] for request in open_requests] == [
+        0,
+        1,
+    ]
     assert runtime.kodi.mixed_slideshow_updates == [False, True]
+
+
+def test_folder_tree_falls_back_to_native_when_picture_playlist_opens_as_video(
+    monkeypatch,
+) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    rows = runtime.catalog.recent_taken(10)
+    rows.append(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/Trip/clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.media_in_folder_tree = lambda folder_id, limit: rows
+
+    def mismatched_player(payload):
+        request = json.loads(payload)
+        calls.rpc_requests.append(request)
+        method = request["method"]
+        if method == "Player.GetActivePlayers":
+            result = [{"playerid": 1, "type": "video"}]
+        elif method == "Player.GetItem":
+            result = {"item": {"file": "smb://server/photos/image.jpg"}}
+        else:
+            result = "OK"
+        return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    views.xbmc.executeJSONRPC = mismatched_player
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "folder-tree", "id": "12"},
+        )
+    )
+
+    assert calls.builtins == [
+        'SlideShow("smb://server/photos/Summer/",recursive,notrandom)'
+    ]
+    assert any(
+        request["method"] == "Player.Stop" for request in calls.rpc_requests
+    )
+    assert runtime.kodi.mixed_slideshow_updates == [False, False]
+    assert any(
+        "route=native-mixed-fallback" in message
+        for message in runtime.kodi.info_messages
+    )
+
+
+def test_cross_folder_mixed_slideshow_falls_back_to_pictures_only(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    rows = runtime.catalog.recent_taken(10)
+    rows.append(
+        {
+            "id": 2,
+            "uri": "smb://server/other/clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.recent_taken = lambda limit, offset=0: rows
+
+    def mismatched_player(payload):
+        request = json.loads(payload)
+        calls.rpc_requests.append(request)
+        method = request["method"]
+        if method == "Player.GetActivePlayers":
+            result = [{"playerid": 1, "type": "video"}]
+        elif method == "Player.GetItem":
+            result = {"item": {"file": "smb://server/photos/image.jpg"}}
+        else:
+            result = "OK"
+        return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    views.xbmc.executeJSONRPC = mismatched_player
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "recent-taken", "start": "1"},
+        )
+    )
+
+    add_requests = [
+        request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
+    ]
+    assert add_requests[0]["params"]["item"] == [
+        {"file": "smb://server/photos/image.jpg"},
+        {"file": "smb://server/other/clip.mp4"},
+    ]
+    assert add_requests[1]["params"]["item"] == [
+        {"file": "smb://server/photos/image.jpg"}
+    ]
+    assert runtime.kodi.mixed_slideshow_updates == [False, False]
+    assert runtime.kodi.notifications == [
+        (
+            "Kodi could not use its picture playlist for mixed media. "
+            "Playing pictures only.",
+            False,
+        )
+    ]
+    assert any(
+        "route=pictures-only-fallback" in message
+        for message in runtime.kodi.info_messages
+    )
 
 
 def test_failed_database_slideshow_does_not_leave_video_monitor_armed(monkeypatch) -> None:

@@ -910,3 +910,7 @@ msgstr "Diagnostic entry written to kodi.log"
 msgctxt "#32722"
 msgid "Write one privacy-safe MyPicsDB 3 entry showing the installed version and current Debug logging setting. Use this to verify which kodi.log is active."
 msgstr "Write one privacy-safe MyPicsDB 3 entry showing the installed version and current Debug logging setting. Use this to verify which kodi.log is active."
+
+msgctxt "#32723"
+msgid "Kodi could not use its picture playlist for mixed media. Playing pictures only."
+msgstr "Kodi could not use its picture playlist for mixed media. Playing pictures only."

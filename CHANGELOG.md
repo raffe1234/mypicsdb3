@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.39 - 2026-07-28
+
+- Probe the active Kodi player after starting a mixed picture playlist and
+  verify that a known picture is handled by the picture player.
+- Detect Kodi installations that instead open the picture probe with
+  `VideoPlayer`, where JPEG files are treated as one-frame MJPEG videos and
+  advance almost immediately.
+- Fall back to Kodi's native recursive slideshow for mixed album trees when
+  that player mismatch is observed. Keep the explicit mixed playlist on Kodi
+  installations where the picture-player probe succeeds.
+- Fall back to a picture-only database playlist for mixed searches and other
+  cross-folder result sets that cannot be represented by one native folder
+  slideshow, with a visible notification that videos were omitted.
+- Keep database schema 5 and repository add-on version 0.2.26 unchanged.
+
 ## 0.2.38 - 2026-07-28
 
 - Write the selected slideshow route and privacy-safe media counts at Kodi INFO

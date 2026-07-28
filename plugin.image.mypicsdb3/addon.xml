@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.38" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.39" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Make slideshow route selection visible in kodi.log, add a manual diagnostic log test, use Kodi video info tags instead of deprecated ListItem.setInfo video metadata, and avoid logging private video paths.</news>
+    <news>Detect Kodi builds that open mixed picture playlists with VideoPlayer, then fall back to native mixed album playback or a pictures-only cross-folder slideshow instead of rapidly advancing JPEG files.</news>
   </extension>
 </addon>

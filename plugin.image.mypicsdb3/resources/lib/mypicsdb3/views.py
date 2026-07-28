@@ -33,6 +33,7 @@ from .saved_searches import SavedSearchValidationError
 from .scanner import Scanner
 from .slideshow import (
     SlideshowError,
+    SlideshowPlayerMismatchError,
     start_mixed_slideshow,
     start_native_folder_slideshow,
 )
@@ -807,7 +808,7 @@ class PluginUI:
     def _database_slideshow_playlist(
         rows: Sequence[Dict[str, Any]],
         start_id: int,
-    ) -> Tuple[List[str], int, bool]:
+    ) -> Tuple[List[str], int, bool, Optional[int]]:
         """Prepare a stable playlist after dropping empty and duplicate URIs."""
 
         uris: List[str] = []
@@ -815,6 +816,7 @@ class PluginUI:
         start_position = 0
         start_found = False
         has_video = False
+        first_picture_position: Optional[int] = None
         for row in rows:
             uri = str(row.get("uri") or "")
             if not uri.strip():
@@ -824,12 +826,57 @@ class PluginUI:
                 position = len(uris)
                 positions[uri] = position
                 uris.append(uri)
-            if str(row.get("media_type") or "") == "video":
+            is_video = str(row.get("media_type") or "") == "video"
+            if is_video:
                 has_video = True
+            elif first_picture_position is None:
+                first_picture_position = position
             if not start_found and int(row.get("id") or 0) == start_id:
                 start_position = position
                 start_found = True
-        return uris, start_position, has_video
+        return uris, start_position, has_video, first_picture_position
+
+    def _start_picture_only_fallback(
+        self,
+        rows: Sequence[Dict[str, Any]],
+        start_id: int,
+        scope: str,
+        video_count: int,
+    ) -> None:
+        picture_rows = [
+            row
+            for row in rows
+            if str(row.get("media_type") or "picture") != "video"
+        ]
+        uris, start_position, _has_video, _probe = self._database_slideshow_playlist(
+            picture_rows,
+            start_id,
+        )
+        if not uris:
+            self.kodi.notify(self.text(32604, "No media to play"))
+            return
+        self.kodi.log.info(
+            "Slideshow route=pictures-only-fallback scope=%s pictures=%d "
+            "omitted_videos=%d start=%d",
+            scope,
+            len(uris),
+            video_count,
+            start_position,
+        )
+        started = start_mixed_slideshow(
+            xbmc,
+            uris,
+            start_position,
+            logger=self.kodi.log,
+        )
+        if started:
+            self.kodi.notify(
+                self.text(
+                    32723,
+                    "Kodi could not use its picture playlist for mixed media. "
+                    "Playing pictures only.",
+                )
+            )
 
     def _start_slideshow(self, params: Dict[str, str]) -> None:
         scope = params.get("scope", "")
@@ -853,9 +900,8 @@ class PluginUI:
             self.kodi.notify(self.text(32604, "No media to play"))
             return
         start_id = int(params.get("start", "0") or 0)
-        uris, start_position, has_video = self._database_slideshow_playlist(
-            rows,
-            start_id,
+        uris, start_position, has_video, first_picture_position = (
+            self._database_slideshow_playlist(rows, start_id)
         )
         picture_count = sum(
             1 for row in rows if str(row.get("media_type") or "picture") != "video"
@@ -910,6 +956,9 @@ class PluginUI:
                 xbmc,
                 uris,
                 start_position,
+                probe_picture_position=(
+                    first_picture_position if has_video else None
+                ),
                 logger=self.kodi.log,
             )
             if not started:
@@ -917,6 +966,40 @@ class PluginUI:
                 return
             if has_video:
                 self.kodi.set_mixed_slideshow_active(True)
+        except SlideshowPlayerMismatchError:
+            self.kodi.set_mixed_slideshow_active(False)
+            if scope == "folder-tree" and folder is not None:
+                self.kodi.log.info(
+                    "Slideshow route=native-mixed-fallback scope=folder-tree "
+                    "folder_id=%s reason=picture-playlist-opened-as-video",
+                    params.get("id", ""),
+                )
+                try:
+                    start_native_folder_slideshow(
+                        xbmc,
+                        str(folder.get("uri") or ""),
+                        recursive=True,
+                        logger=self.kodi.log,
+                    )
+                except SlideshowError as exc:
+                    self.kodi.notify(
+                        "%s: %s"
+                        % (self.text(32605, "Could not start slideshow"), exc),
+                        error=True,
+                    )
+                return
+            try:
+                self._start_picture_only_fallback(
+                    rows,
+                    start_id,
+                    scope,
+                    video_count,
+                )
+            except SlideshowError as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
+                    error=True,
+                )
         except SlideshowError as exc:
             self.kodi.notify(
                 "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),

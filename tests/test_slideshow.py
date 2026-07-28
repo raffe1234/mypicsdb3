@@ -8,6 +8,7 @@ from mypicsdb3.slideshow import (
     PICTURE_PLAYLIST_ID,
     PLAYLIST_ADD_BATCH_SIZE,
     SlideshowError,
+    SlideshowPlayerMismatchError,
     start_mixed_slideshow,
     start_native_folder_slideshow,
 )
@@ -32,6 +33,9 @@ class FakeXbmc:
 
     def executebuiltin(self, command):
         self.builtins.append(command)
+
+    def sleep(self, milliseconds):
+        pass
 
 
 def test_mixed_slideshow_uses_picture_playlist_and_start_position() -> None:
@@ -178,6 +182,87 @@ def test_mixed_slideshow_emits_opt_in_batch_diagnostics() -> None:
         "Mixed slideshow Player.Open: position=1",
         "Mixed slideshow Player.Open accepted by Kodi",
     ]
+
+
+def test_mixed_slideshow_probes_picture_player_before_requested_video_start() -> None:
+    class PicturePlayerXbmc(FakeXbmc):
+        def executeJSONRPC(self, payload):
+            request = json.loads(payload)
+            self.requests.append(request)
+            if request["method"] == "Player.GetActivePlayers":
+                result = [{"playerid": 2, "type": "picture"}]
+            else:
+                result = "OK"
+            return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    xbmc = PicturePlayerXbmc()
+
+    count = start_mixed_slideshow(
+        xbmc,
+        ["/photos/a.jpg", "/photos/clip.mp4"],
+        start_position=1,
+        probe_picture_position=0,
+    )
+
+    assert count == 2
+    assert [request["method"] for request in xbmc.requests] == [
+        "Playlist.Clear",
+        "Playlist.Add",
+        "Player.Open",
+        "Player.GetActivePlayers",
+        "Player.Open",
+    ]
+    open_positions = [
+        request["params"]["item"]["position"]
+        for request in xbmc.requests
+        if request["method"] == "Player.Open"
+    ]
+    assert open_positions == [0, 1]
+
+
+def test_mixed_slideshow_rejects_picture_opened_by_video_player() -> None:
+    class VideoPlayerXbmc(FakeXbmc):
+        def __init__(self):
+            super().__init__()
+            self.sleeps = []
+
+        def executeJSONRPC(self, payload):
+            request = json.loads(payload)
+            self.requests.append(request)
+            method = request["method"]
+            if method == "Player.GetActivePlayers":
+                result = [{"playerid": 1, "type": "video"}]
+            elif method == "Player.GetItem":
+                result = {"item": {"file": "/photos/a.jpg"}}
+            else:
+                result = "OK"
+            return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+        def sleep(self, milliseconds):
+            self.sleeps.append(milliseconds)
+
+    xbmc = VideoPlayerXbmc()
+
+    with pytest.raises(
+        SlideshowPlayerMismatchError,
+        match="picture-playlist probe",
+    ):
+        start_mixed_slideshow(
+            xbmc,
+            ["/photos/a.jpg", "/photos/clip.mp4"],
+            probe_picture_position=0,
+        )
+
+    assert [request["method"] for request in xbmc.requests] == [
+        "Playlist.Clear",
+        "Playlist.Add",
+        "Player.Open",
+        "Player.GetActivePlayers",
+        "Player.GetItem",
+        "Player.Stop",
+        "Playlist.Clear",
+    ]
+    assert xbmc.sleeps == [100]
 
 
 def test_native_slideshow_emits_opt_in_route_diagnostic() -> None:
