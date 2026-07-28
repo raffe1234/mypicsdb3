@@ -232,14 +232,24 @@ def _add_playlist_items(
         )
 
 
-def _probe_picture_playlist(
+def _probe_mixed_picture_playlist(
     xbmc_module,
     expected_picture_uri: str,
+    video_uri: str,
     logger: Optional[Any] = None,
 ) -> None:
-    """Probe one picture before constructing a potentially large playlist."""
+    """Probe a minimal picture/video list before building the full playlist.
 
-    probe_item = [{"file": str(expected_picture_uri)}]
+    Kodi 21 on Windows can play a one-picture playlist correctly but route the
+    same picture through VideoPlayer as soon as the picture playlist also
+    contains video. The compatibility probe must therefore include both media
+    types to exercise the route used by a real mixed slideshow.
+    """
+
+    probe_item = [
+        {"file": str(expected_picture_uri)},
+        {"file": str(video_uri)},
+    ]
     _rpc(xbmc_module, "Playlist.Clear", {"playlistid": PICTURE_PLAYLIST_ID})
     try:
         _rpc(
@@ -270,12 +280,15 @@ def start_mixed_slideshow(
     start_position: int = 0,
     logger: Optional[Any] = None,
     probe_picture_position: Optional[int] = None,
+    probe_video_position: Optional[int] = None,
+    verify_picture_position: Optional[int] = None,
 ) -> int:
     """Build and start one database-backed picture playlist.
 
-    When a picture position is supplied, one known picture is probed before the
-    full playlist is constructed. This avoids spending minutes adding a large
-    playlist on Kodi installations that cannot play picture playlist 2.
+    When picture and video positions are supplied, a minimal mixed playlist is
+    probed before the full playlist is constructed. This avoids spending
+    minutes adding a large playlist on Kodi installations that only fail when
+    picture playlist 2 contains both media types.
     """
 
     items = _playlist_items(uris)
@@ -284,12 +297,15 @@ def start_mixed_slideshow(
             logger.debug("Mixed slideshow contains no playable media after cleanup")
         return 0
     position = max(0, min(int(start_position), len(items) - 1))
-    probe_position = None
-    if probe_picture_position is not None:
-        probe_position = max(0, min(int(probe_picture_position), len(items) - 1))
-        _probe_picture_playlist(
+    if probe_picture_position is not None and probe_video_position is not None:
+        picture_position = max(
+            0, min(int(probe_picture_position), len(items) - 1)
+        )
+        video_position = max(0, min(int(probe_video_position), len(items) - 1))
+        _probe_mixed_picture_playlist(
             xbmc_module,
-            str(items[probe_position]["file"]),
+            str(items[picture_position]["file"]),
+            str(items[video_position]["file"]),
             logger=logger,
         )
 
@@ -318,6 +334,19 @@ def start_mixed_slideshow(
         )
         if logger is not None:
             logger.debug("Mixed slideshow Player.Open accepted by Kodi")
+        if verify_picture_position is not None:
+            verify_position = max(
+                0, min(int(verify_picture_position), len(items) - 1)
+            )
+            _verify_picture_playlist_player(
+                xbmc_module,
+                str(items[verify_position]["file"]),
+                logger=logger,
+            )
+            if logger is not None:
+                logger.debug(
+                    "Mixed slideshow full-playlist picture verification succeeded"
+                )
     except SlideshowError:
         _clear_playlist_quietly(xbmc_module, PICTURE_PLAYLIST_ID)
         raise

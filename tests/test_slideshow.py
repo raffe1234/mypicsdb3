@@ -207,13 +207,17 @@ def test_mixed_slideshow_probes_picture_player_before_building_full_playlist() -
         ["/photos/a.jpg", "/photos/clip.mp4"],
         start_position=1,
         probe_picture_position=0,
+        probe_video_position=1,
     )
 
     assert count == 2
     add_requests = [
         request for request in xbmc.requests if request["method"] == "Playlist.Add"
     ]
-    assert add_requests[0]["params"]["item"] == [{"file": "/photos/a.jpg"}]
+    assert add_requests[0]["params"]["item"] == [
+        {"file": "/photos/a.jpg"},
+        {"file": "/photos/clip.mp4"},
+    ]
     assert add_requests[-1]["params"]["item"] == [
         {"file": "/photos/a.jpg"},
         {"file": "/photos/clip.mp4"},
@@ -257,6 +261,7 @@ def test_mixed_slideshow_rejects_picture_opened_by_video_player() -> None:
             xbmc,
             ["/photos/a.jpg", "/photos/clip.mp4"],
             probe_picture_position=0,
+            probe_video_position=1,
         )
 
     methods = [request["method"] for request in xbmc.requests]
@@ -302,8 +307,41 @@ def test_video_match_wins_over_unrelated_active_picture_player() -> None:
             StalePictureAndVideoXbmc(),
             ["/photos/a.jpg", "/photos/clip.mp4"],
             probe_picture_position=0,
+            probe_video_position=1,
         )
 
+
+
+def test_full_mixed_playlist_is_verified_after_probe_succeeds() -> None:
+    class ProbeThenMismatchXbmc(FakeXbmc):
+        def __init__(self):
+            super().__init__()
+            self.open_count = 0
+
+        def executeJSONRPC(self, payload):
+            request = json.loads(payload)
+            self.requests.append(request)
+            method = request["method"]
+            if method == "Player.Open":
+                self.open_count += 1
+                result = "OK"
+            elif method == "Player.GetActivePlayers":
+                player_type = "picture" if self.open_count == 1 else "video"
+                result = [{"playerid": 2 if player_type == "picture" else 1, "type": player_type}]
+            elif method == "Player.GetItem":
+                result = {"item": {"file": "/photos/a.jpg"}}
+            else:
+                result = "OK"
+            return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    with pytest.raises(SlideshowPlayerMismatchError):
+        start_mixed_slideshow(
+            ProbeThenMismatchXbmc(),
+            ["/photos/a.jpg", "/photos/clip.mp4"],
+            probe_picture_position=0,
+            probe_video_position=1,
+            verify_picture_position=0,
+        )
 
 def test_video_only_playlist_uses_kodi_video_playlist() -> None:
     xbmc = FakeXbmc()

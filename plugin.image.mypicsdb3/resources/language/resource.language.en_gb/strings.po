@@ -918,3 +918,7 @@ msgstr "Kodi could not use its picture playlist for mixed media. Playing picture
 msgctxt "#32724"
 msgid "This Kodi installation cannot play a cross-folder picture slideshow. Open an album and start the slideshow there."
 msgstr "This Kodi installation cannot play a cross-folder picture slideshow. Open an album and start the slideshow there."
+
+msgctxt "#32725"
+msgid "A slideshow is already being prepared"
+msgstr "A slideshow is already being prepared"

@@ -732,6 +732,29 @@ def test_video_items_prefer_info_tag_video_setters(monkeypatch) -> None:
     assert item.video_tag.date_added == "2026-07-28 10:00:00"
 
 
+
+def test_parallel_slideshow_start_is_rejected_before_playlist_work(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.acquire_slideshow_start = lambda: None
+    released = []
+    runtime.kodi.release_slideshow_start = released.append
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "folder-tree", "id": "12"},
+        )
+    )
+
+    assert calls.rpc_requests == []
+    assert calls.builtins == []
+    assert released == []
+    assert runtime.kodi.notifications == [
+        ("A slideshow is already being prepared", False)
+    ]
+
 def test_picture_only_folder_tree_uses_kodi_native_recursive_slideshow(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -980,7 +1003,10 @@ def test_cross_folder_mixed_slideshow_falls_back_to_pictures_only(monkeypatch) -
             "method": "Playlist.Add",
             "params": {
                 "playlistid": 2,
-                "item": [{"file": "smb://server/photos/image.jpg"}],
+                "item": [
+                    {"file": "smb://server/photos/image.jpg"},
+                    {"file": "smb://server/other/clip.mp4"},
+                ],
             },
         }
     ]

@@ -810,7 +810,7 @@ class PluginUI:
     def _database_slideshow_playlist(
         rows: Sequence[Dict[str, Any]],
         start_id: int,
-    ) -> Tuple[List[str], int, bool, Optional[int]]:
+    ) -> Tuple[List[str], int, bool, Optional[int], Optional[int], bool]:
         """Prepare a stable playlist after dropping empty and duplicate URIs."""
 
         uris: List[str] = []
@@ -819,6 +819,8 @@ class PluginUI:
         start_found = False
         has_video = False
         first_picture_position: Optional[int] = None
+        first_video_position: Optional[int] = None
+        media_type_by_position: Dict[int, str] = {}
         for row in rows:
             uri = str(row.get("uri") or "")
             if not uri.strip():
@@ -829,14 +831,26 @@ class PluginUI:
                 positions[uri] = position
                 uris.append(uri)
             is_video = str(row.get("media_type") or "") == "video"
+            if position not in media_type_by_position:
+                media_type_by_position[position] = "video" if is_video else "picture"
             if is_video:
                 has_video = True
+                if first_video_position is None:
+                    first_video_position = position
             elif first_picture_position is None:
                 first_picture_position = position
             if not start_found and int(row.get("id") or 0) == start_id:
                 start_position = position
                 start_found = True
-        return uris, start_position, has_video, first_picture_position
+        start_is_picture = media_type_by_position.get(start_position) != "video"
+        return (
+            uris,
+            start_position,
+            has_video,
+            first_picture_position,
+            first_video_position,
+            start_is_picture,
+        )
 
     def _start_native_mixed_fallback(
         self,
@@ -869,6 +883,22 @@ class PluginUI:
         )
 
     def _start_slideshow(self, params: Dict[str, str]) -> None:
+        acquire = getattr(self.kodi, "acquire_slideshow_start", None)
+        release = getattr(self.kodi, "release_slideshow_start", None)
+        token = acquire() if callable(acquire) else ""
+        if callable(acquire) and not token:
+            self.kodi.notify(
+                self.text(32725, "A slideshow is already being prepared"),
+                error=False,
+            )
+            return
+        try:
+            self._start_slideshow_unlocked(params)
+        finally:
+            if token and callable(release):
+                release(token)
+
+    def _start_slideshow_unlocked(self, params: Dict[str, str]) -> None:
         scope = params.get("scope", "")
         folder = None
         if scope == "folder-tree":
@@ -890,9 +920,14 @@ class PluginUI:
             self.kodi.notify(self.text(32604, "No media to play"))
             return
         start_id = int(params.get("start", "0") or 0)
-        uris, start_position, has_video, first_picture_position = (
-            self._database_slideshow_playlist(rows, start_id)
-        )
+        (
+            uris,
+            start_position,
+            has_video,
+            first_picture_position,
+            first_video_position,
+            start_is_picture,
+        ) = self._database_slideshow_playlist(rows, start_id)
         picture_count = sum(
             1 for row in rows if str(row.get("media_type") or "picture") != "video"
         )
@@ -995,22 +1030,28 @@ class PluginUI:
             start_position,
         )
         self.kodi.set_mixed_slideshow_active(False)
-        probe_position = (
+        probe_picture_position = (
             first_picture_position if compatibility is not True else None
         )
+        probe_video_position = (
+            first_video_position if compatibility is not True else None
+        )
+        verify_picture_position = start_position if start_is_picture else None
         try:
             stop_active_media_players(xbmc, logger=self.kodi.log)
             started = start_mixed_slideshow(
                 xbmc,
                 uris,
                 start_position,
-                probe_picture_position=probe_position,
+                probe_picture_position=probe_picture_position,
+                probe_video_position=probe_video_position,
+                verify_picture_position=verify_picture_position,
                 logger=self.kodi.log,
             )
             if not started:
                 self.kodi.notify(self.text(32604, "No media to play"))
                 return
-            if probe_position is not None:
+            if probe_picture_position is not None:
                 setter = getattr(
                     self.kodi, "set_picture_playlist_compatibility", None
                 )

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.2.41 - 2026-07-28
+
+- Replace the one-picture compatibility probe with a minimal picture-and-video
+  picture playlist. Kodi 21 on Windows can play an image-only picture playlist
+  correctly but route every JPEG through `VideoPlayer` as soon as video is also
+  present.
+- Verify the expected picture again after the complete mixed playlist is opened
+  before caching the route as compatible. Clear the list and use the existing
+  native album fallback if the real playlist still opens that picture as MJPEG.
+- Add a session-local slideshow-start guard so repeated actions cannot append to
+  and open Kodi's global playlists concurrently while a slow SMB list is still
+  being constructed.
+- Keep native picture-only album playback, video playlist 1 for video-only
+  results, database schema 5 and repository add-on version 0.2.26 unchanged.
+
 ## 0.2.40 - 2026-07-28
 
 - Require the picture-player compatibility probe to report the exact expected

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import os
+import time
+import uuid
 from typing import Any, Dict, List, Optional
 
 from .config import Settings, from_getter
@@ -21,6 +23,8 @@ SHUTDOWN_NOTIFICATION_METHODS = frozenset(("System.OnQuit", "System.OnRestart"))
 HOME_WINDOW_ID = 10000
 MIXED_SLIDESHOW_PROPERTY = "MyPicsDB3.MixedSlideshowActive"
 PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY = "MyPicsDB3.PicturePlaylistCompatibility"
+SLIDESHOW_START_PROPERTY = "MyPicsDB3.SlideshowStart"
+SLIDESHOW_START_TTL_SECONDS = 180.0
 
 
 def create_abort_monitor(xbmc_module=None):
@@ -163,6 +167,59 @@ class KodiContext:
 
         xbmc.executebuiltin("ReloadSkin()")
         return True
+
+    def acquire_slideshow_start(self) -> Optional[str]:
+        """Acquire a short session-local guard for playlist construction.
+
+        Kodi may launch multiple plug-in interpreter instances when slideshow
+        actions are selected repeatedly. Without a guard, those instances can
+        clear and append to the same global Kodi playlists concurrently.
+        """
+
+        if xbmcgui is None:
+            return uuid.uuid4().hex
+        try:
+            window = xbmcgui.Window(HOME_WINDOW_ID)
+            now = time.time()
+            current = str(window.getProperty(SLIDESHOW_START_PROPERTY) or "")
+            if current:
+                _token, _separator, timestamp = current.partition("|")
+                try:
+                    age = now - float(timestamp)
+                except (TypeError, ValueError):
+                    age = SLIDESHOW_START_TTL_SECONDS + 1.0
+                if 0.0 <= age < SLIDESHOW_START_TTL_SECONDS:
+                    self.log.info(
+                        "Slideshow start ignored: another slideshow is being prepared"
+                    )
+                    return None
+
+            token = uuid.uuid4().hex
+            value = "%s|%.6f" % (token, now)
+            window.setProperty(SLIDESHOW_START_PROPERTY, value)
+            if str(window.getProperty(SLIDESHOW_START_PROPERTY) or "") != value:
+                self.log.info(
+                    "Slideshow start ignored: another slideshow acquired the guard"
+                )
+                return None
+            self.log.debug("Slideshow start guard acquired")
+            return token
+        except Exception as exc:
+            self.log.warning("Could not acquire slideshow start guard: %s", exc)
+            return uuid.uuid4().hex
+
+    def release_slideshow_start(self, token: str) -> None:
+        if xbmcgui is None:
+            return
+        try:
+            window = xbmcgui.Window(HOME_WINDOW_ID)
+            current = str(window.getProperty(SLIDESHOW_START_PROPERTY) or "")
+            current_token, _separator, _timestamp = current.partition("|")
+            if current_token == str(token or ""):
+                window.clearProperty(SLIDESHOW_START_PROPERTY)
+                self.log.debug("Slideshow start guard released")
+        except Exception as exc:
+            self.log.warning("Could not release slideshow start guard: %s", exc)
 
     def set_mixed_slideshow_active(self, active: bool) -> None:
         """Publish whether MyPicsDB owns the current database slideshow.
