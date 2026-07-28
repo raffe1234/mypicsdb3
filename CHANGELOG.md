@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.2.40 - 2026-07-28
+
+- Require the picture-player compatibility probe to report the exact expected
+  picture on two consecutive polls; ignore stale picture players left by an
+  earlier native slideshow.
+- Inspect every active player before deciding and give an exact VideoPlayer
+  match precedence, preventing the false-positive probe seen on Kodi 21 for
+  Windows where JPEG files then flashed by as one-frame MJPEG videos.
+- Probe one picture before constructing the full database playlist and cache
+  the result for the current Kodi session. Reuse the native mixed-folder
+  fallback immediately after an incompatibility is detected.
+- Route video-only album and Videos-node playback through Kodi video playlist 1
+  rather than picture playlist 2.
+- Stop an existing picture or video player before starting a replacement
+  slideshow, reducing overlap between repeated starts.
+- Do not start an unsafe cross-folder picture playlist on an incompatible Kodi
+  installation; show an explanatory notification instead.
+- Keep database schema 5 and repository add-on version 0.2.26 unchanged.
+
 ## 0.2.39 - 2026-07-28
 
 - Probe the active Kodi player after starting a mixed picture playlist and

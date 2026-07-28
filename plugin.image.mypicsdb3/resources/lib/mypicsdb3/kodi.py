@@ -20,6 +20,7 @@ except ImportError:  # pragma: no cover - Kodi modules are unavailable in unit t
 SHUTDOWN_NOTIFICATION_METHODS = frozenset(("System.OnQuit", "System.OnRestart"))
 HOME_WINDOW_ID = 10000
 MIXED_SLIDESHOW_PROPERTY = "MyPicsDB3.MixedSlideshowActive"
+PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY = "MyPicsDB3.PicturePlaylistCompatibility"
 
 
 def create_abort_monitor(xbmc_module=None):
@@ -197,6 +198,44 @@ class KodiContext:
             return str(value or "").strip().lower() == "true"
         except Exception:
             return False
+
+    def set_picture_playlist_compatibility(self, compatible: Optional[bool]) -> None:
+        """Cache picture-playlist support for the current Kodi session."""
+
+        if xbmcgui is None:
+            return
+        try:
+            window = xbmcgui.Window(HOME_WINDOW_ID)
+            if compatible is None:
+                window.clearProperty(PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY)
+                value = "unknown"
+            else:
+                value = "compatible" if compatible else "incompatible"
+                window.setProperty(PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY, value)
+            self.log.debug("Picture playlist compatibility: %s", value)
+        except Exception as exc:
+            self.log.warning(
+                "Could not update picture playlist compatibility: %s", exc
+            )
+
+    @staticmethod
+    def picture_playlist_compatibility() -> Optional[bool]:
+        if xbmcgui is None:
+            return None
+        try:
+            value = str(
+                xbmcgui.Window(HOME_WINDOW_ID).getProperty(
+                    PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY
+                )
+                or ""
+            ).strip().lower()
+        except Exception:
+            return None
+        if value == "compatible":
+            return True
+        if value == "incompatible":
+            return False
+        return None
 
     @staticmethod
     def is_playing() -> bool:

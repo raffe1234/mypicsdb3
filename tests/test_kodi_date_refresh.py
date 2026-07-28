@@ -137,3 +137,41 @@ def test_mixed_slideshow_state_uses_home_window_property(monkeypatch) -> None:
 
     assert kodi.KodiContext.mixed_slideshow_active() is False
     assert kodi.MIXED_SLIDESHOW_PROPERTY not in properties
+
+
+def test_picture_playlist_compatibility_uses_home_window_property(monkeypatch) -> None:
+    properties = {}
+
+    class FakeWindow:
+        def setProperty(self, key, value):
+            properties[key] = value
+
+        def getProperty(self, key):
+            return properties.get(key, "")
+
+        def clearProperty(self, key):
+            properties.pop(key, None)
+
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(Window=lambda window_id: FakeWindow()),
+    )
+    context = kodi.KodiContext.__new__(kodi.KodiContext)
+    context.log = types.SimpleNamespace(
+        warning=lambda *args: None,
+        debug=lambda *args: None,
+    )
+
+    assert kodi.KodiContext.picture_playlist_compatibility() is None
+
+    context.set_picture_playlist_compatibility(True)
+    assert kodi.KodiContext.picture_playlist_compatibility() is True
+    assert properties[kodi.PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY] == "compatible"
+
+    context.set_picture_playlist_compatibility(False)
+    assert kodi.KodiContext.picture_playlist_compatibility() is False
+    assert properties[kodi.PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY] == "incompatible"
+
+    context.set_picture_playlist_compatibility(None)
+    assert kodi.KodiContext.picture_playlist_compatibility() is None

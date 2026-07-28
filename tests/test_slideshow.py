@@ -9,8 +9,10 @@ from mypicsdb3.slideshow import (
     PLAYLIST_ADD_BATCH_SIZE,
     SlideshowError,
     SlideshowPlayerMismatchError,
+    VIDEO_PLAYLIST_ID,
     start_mixed_slideshow,
     start_native_folder_slideshow,
+    start_video_playlist,
 )
 
 
@@ -184,13 +186,16 @@ def test_mixed_slideshow_emits_opt_in_batch_diagnostics() -> None:
     ]
 
 
-def test_mixed_slideshow_probes_picture_player_before_requested_video_start() -> None:
+def test_mixed_slideshow_probes_picture_player_before_building_full_playlist() -> None:
     class PicturePlayerXbmc(FakeXbmc):
         def executeJSONRPC(self, payload):
             request = json.loads(payload)
             self.requests.append(request)
-            if request["method"] == "Player.GetActivePlayers":
+            method = request["method"]
+            if method == "Player.GetActivePlayers":
                 result = [{"playerid": 2, "type": "picture"}]
+            elif method == "Player.GetItem":
+                result = {"item": {"file": "/photos/a.jpg"}}
             else:
                 result = "OK"
             return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
@@ -205,12 +210,13 @@ def test_mixed_slideshow_probes_picture_player_before_requested_video_start() ->
     )
 
     assert count == 2
-    assert [request["method"] for request in xbmc.requests] == [
-        "Playlist.Clear",
-        "Playlist.Add",
-        "Player.Open",
-        "Player.GetActivePlayers",
-        "Player.Open",
+    add_requests = [
+        request for request in xbmc.requests if request["method"] == "Playlist.Add"
+    ]
+    assert add_requests[0]["params"]["item"] == [{"file": "/photos/a.jpg"}]
+    assert add_requests[-1]["params"]["item"] == [
+        {"file": "/photos/a.jpg"},
+        {"file": "/photos/clip.mp4"},
     ]
     open_positions = [
         request["params"]["item"]["position"]
@@ -253,16 +259,68 @@ def test_mixed_slideshow_rejects_picture_opened_by_video_player() -> None:
             probe_picture_position=0,
         )
 
-    assert [request["method"] for request in xbmc.requests] == [
+    methods = [request["method"] for request in xbmc.requests]
+    assert methods[:5] == [
         "Playlist.Clear",
         "Playlist.Add",
         "Player.Open",
         "Player.GetActivePlayers",
         "Player.GetItem",
-        "Player.Stop",
-        "Playlist.Clear",
     ]
-    assert xbmc.sleeps == [100]
+    assert "Player.Stop" in methods
+    assert methods[-1] == "Playlist.Clear"
+
+
+def test_video_match_wins_over_unrelated_active_picture_player() -> None:
+    class StalePictureAndVideoXbmc(FakeXbmc):
+        def executeJSONRPC(self, payload):
+            request = json.loads(payload)
+            self.requests.append(request)
+            method = request["method"]
+            if method == "Player.GetActivePlayers":
+                result = [
+                    {"playerid": 2, "type": "picture"},
+                    {"playerid": 1, "type": "video"},
+                ]
+            elif method == "Player.GetItem":
+                player_id = request["params"]["playerid"]
+                result = {
+                    "item": {
+                        "file": (
+                            "/old/slide.jpg"
+                            if player_id == 2
+                            else "/photos/a.jpg"
+                        )
+                    }
+                }
+            else:
+                result = "OK"
+            return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
+
+    with pytest.raises(SlideshowPlayerMismatchError):
+        start_mixed_slideshow(
+            StalePictureAndVideoXbmc(),
+            ["/photos/a.jpg", "/photos/clip.mp4"],
+            probe_picture_position=0,
+        )
+
+
+def test_video_only_playlist_uses_kodi_video_playlist() -> None:
+    xbmc = FakeXbmc()
+
+    count = start_video_playlist(
+        xbmc,
+        ["/videos/a.mp4", "/videos/b.mp4"],
+        start_position=1,
+    )
+
+    assert count == 2
+    assert xbmc.requests[0]["params"] == {"playlistid": VIDEO_PLAYLIST_ID}
+    assert xbmc.requests[1]["params"]["playlistid"] == VIDEO_PLAYLIST_ID
+    assert xbmc.requests[2]["params"]["item"] == {
+        "playlistid": VIDEO_PLAYLIST_ID,
+        "position": 1,
+    }
 
 
 def test_native_slideshow_emits_opt_in_route_diagnostic() -> None:

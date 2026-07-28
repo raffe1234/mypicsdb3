@@ -914,3 +914,7 @@ msgstr "Write one privacy-safe MyPicsDB 3 entry showing the installed version an
 msgctxt "#32723"
 msgid "Kodi could not use its picture playlist for mixed media. Playing pictures only."
 msgstr "Kodi could not use its picture playlist for mixed media. Playing pictures only."
+
+msgctxt "#32724"
+msgid "This Kodi installation cannot play a cross-folder picture slideshow. Open an album and start the slideshow there."
+msgstr "This Kodi installation cannot play a cross-folder picture slideshow. Open an album and start the slideshow there."

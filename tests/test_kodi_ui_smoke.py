@@ -152,6 +152,8 @@ class FakeKodi:
         )
         self.notifications = []
         self.mixed_slideshow_updates = []
+        self.picture_playlist_compatibility_value = True
+        self.picture_playlist_compatibility_updates = []
 
     def localize(self, string_id, fallback):
         return fallback
@@ -170,6 +172,13 @@ class FakeKodi:
 
     def set_mixed_slideshow_active(self, active):
         self.mixed_slideshow_updates.append(bool(active))
+
+    def picture_playlist_compatibility(self):
+        return self.picture_playlist_compatibility_value
+
+    def set_picture_playlist_compatibility(self, compatible):
+        self.picture_playlist_compatibility_value = compatible
+        self.picture_playlist_compatibility_updates.append(compatible)
 
 
 class FakeCatalog:
@@ -870,10 +879,7 @@ def test_database_slideshow_sanitizes_rows_and_recalculates_start_position(monke
         {"file": "smb://server/album-a/first.jpg"},
         {"file": "smb://server/album-b/clip.mp4"},
     ]
-    assert [request["params"]["item"]["position"] for request in open_requests] == [
-        0,
-        1,
-    ]
+    assert [request["params"]["item"]["position"] for request in open_requests] == [1]
     assert runtime.kodi.mixed_slideshow_updates == [False, True]
 
 
@@ -891,6 +897,7 @@ def test_folder_tree_falls_back_to_native_when_picture_playlist_opens_as_video(
         }
     )
     runtime.catalog.media_in_folder_tree = lambda folder_id, limit: rows
+    runtime.kodi.picture_playlist_compatibility_value = None
 
     def mismatched_player(payload):
         request = json.loads(payload)
@@ -939,6 +946,7 @@ def test_cross_folder_mixed_slideshow_falls_back_to_pictures_only(monkeypatch) -
         }
     )
     runtime.catalog.recent_taken = lambda limit, offset=0: rows
+    runtime.kodi.picture_playlist_compatibility_value = None
 
     def mismatched_player(payload):
         request = json.loads(payload)
@@ -965,25 +973,26 @@ def test_cross_folder_mixed_slideshow_falls_back_to_pictures_only(monkeypatch) -
     add_requests = [
         request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
     ]
-    assert add_requests[0]["params"]["item"] == [
-        {"file": "smb://server/photos/image.jpg"},
-        {"file": "smb://server/other/clip.mp4"},
-    ]
-    assert add_requests[1]["params"]["item"] == [
-        {"file": "smb://server/photos/image.jpg"}
+    assert add_requests == [
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "Playlist.Add",
+            "params": {
+                "playlistid": 2,
+                "item": [{"file": "smb://server/photos/image.jpg"}],
+            },
+        }
     ]
     assert runtime.kodi.mixed_slideshow_updates == [False, False]
+    assert runtime.kodi.picture_playlist_compatibility_updates == [False]
     assert runtime.kodi.notifications == [
         (
-            "Kodi could not use its picture playlist for mixed media. "
-            "Playing pictures only.",
-            False,
+            "This Kodi installation cannot play a cross-folder picture "
+            "slideshow. Open an album and start the slideshow there.",
+            True,
         )
     ]
-    assert any(
-        "route=pictures-only-fallback" in message
-        for message in runtime.kodi.info_messages
-    )
 
 
 def test_failed_database_slideshow_does_not_leave_video_monitor_armed(monkeypatch) -> None:
@@ -1108,3 +1117,75 @@ def test_saved_search_ui_renames_and_deletes_after_confirmation(monkeypatch) -> 
     assert runtime.catalog.deleted_saved_searches == [7]
     assert runtime.kodi.notifications[-1] == ("Saved search deleted", False)
     assert calls.builtins[-1] == "Container.Refresh"
+
+
+def test_video_only_slideshow_uses_video_playlist(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    rows = [
+        {
+            "id": 7,
+            "uri": "smb://server/photos/a.mp4",
+            "media_type": "video",
+        },
+        {
+            "id": 8,
+            "uri": "smb://server/photos/b.mp4",
+            "media_type": "video",
+        },
+    ]
+    runtime.catalog.media_in_folder_tree = lambda folder_id, limit: rows
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "folder-tree", "id": "12", "start": "8"},
+        )
+    )
+
+    add_request = next(
+        request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
+    )
+    open_request = next(
+        request for request in calls.rpc_requests if request["method"] == "Player.Open"
+    )
+    assert add_request["params"]["playlistid"] == 1
+    assert open_request["params"]["item"] == {"playlistid": 1, "position": 1}
+    assert runtime.kodi.mixed_slideshow_updates == [False]
+    assert any("route=video-playlist" in message for message in runtime.kodi.info_messages)
+
+
+def test_cached_incompatible_folder_tree_skips_picture_playlist_probe(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.picture_playlist_compatibility_value = False
+    rows = runtime.catalog.recent_taken(10)
+    rows.append(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/Trip/clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.media_in_folder_tree = lambda folder_id, limit: rows
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "folder-tree", "id": "12"},
+        )
+    )
+
+    assert not any(
+        request["method"] in {"Playlist.Clear", "Playlist.Add", "Player.Open"}
+        for request in calls.rpc_requests
+    )
+    assert calls.builtins == [
+        'SlideShow("smb://server/photos/Summer/",recursive,notrandom)'
+    ]
+    assert any(
+        "reason=cached-picture-playlist-incompatible" in message
+        for message in runtime.kodi.info_messages
+    )

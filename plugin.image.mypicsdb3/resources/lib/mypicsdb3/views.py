@@ -36,6 +36,8 @@ from .slideshow import (
     SlideshowPlayerMismatchError,
     start_mixed_slideshow,
     start_native_folder_slideshow,
+    start_video_playlist,
+    stop_active_media_players,
 )
 from .utils import parse_bool, plugin_url, safe_limit
 from .view_mode import set_view_mode_when_container_ready
@@ -836,47 +838,35 @@ class PluginUI:
                 start_found = True
         return uris, start_position, has_video, first_picture_position
 
-    def _start_picture_only_fallback(
+    def _start_native_mixed_fallback(
         self,
-        rows: Sequence[Dict[str, Any]],
-        start_id: int,
-        scope: str,
-        video_count: int,
+        folder: Dict[str, Any],
+        folder_id: str,
+        reason: str,
     ) -> None:
-        picture_rows = [
-            row
-            for row in rows
-            if str(row.get("media_type") or "picture") != "video"
-        ]
-        uris, start_position, _has_video, _probe = self._database_slideshow_playlist(
-            picture_rows,
-            start_id,
-        )
-        if not uris:
-            self.kodi.notify(self.text(32604, "No media to play"))
-            return
         self.kodi.log.info(
-            "Slideshow route=pictures-only-fallback scope=%s pictures=%d "
-            "omitted_videos=%d start=%d",
-            scope,
-            len(uris),
-            video_count,
-            start_position,
+            "Slideshow route=native-mixed-fallback scope=folder-tree "
+            "folder_id=%s reason=%s",
+            folder_id,
+            reason,
         )
-        started = start_mixed_slideshow(
+        stop_active_media_players(xbmc, logger=self.kodi.log)
+        start_native_folder_slideshow(
             xbmc,
-            uris,
-            start_position,
+            str(folder.get("uri") or ""),
+            recursive=True,
             logger=self.kodi.log,
         )
-        if started:
-            self.kodi.notify(
-                self.text(
-                    32723,
-                    "Kodi could not use its picture playlist for mixed media. "
-                    "Playing pictures only.",
-                )
-            )
+
+    def _notify_cross_folder_slideshow_unsupported(self) -> None:
+        self.kodi.notify(
+            self.text(
+                32724,
+                "This Kodi installation cannot play a cross-folder picture "
+                "slideshow. Open an album and start the slideshow there.",
+            ),
+            error=True,
+        )
 
     def _start_slideshow(self, params: Dict[str, str]) -> None:
         scope = params.get("scope", "")
@@ -924,6 +914,7 @@ class PluginUI:
             )
             try:
                 self.kodi.set_mixed_slideshow_active(False)
+                stop_active_media_players(xbmc, logger=self.kodi.log)
                 start_native_folder_slideshow(
                     xbmc,
                     str(folder.get("uri") or ""),
@@ -935,6 +926,59 @@ class PluginUI:
                     "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
                     error=True,
                 )
+            return
+
+        if video_count and not picture_count:
+            self.kodi.log.info(
+                "Slideshow route=video-playlist scope=%s folder_id=%s rows=%d "
+                "pictures=0 videos=%d unique=%d empty=%d duplicates=%d start=%d",
+                scope,
+                params.get("id", ""),
+                len(rows),
+                video_count,
+                len(uris),
+                empty_count,
+                duplicate_count,
+                start_position,
+            )
+            self.kodi.set_mixed_slideshow_active(False)
+            try:
+                stop_active_media_players(xbmc, logger=self.kodi.log)
+                started = start_video_playlist(
+                    xbmc, uris, start_position, logger=self.kodi.log
+                )
+                if not started:
+                    self.kodi.notify(self.text(32604, "No media to play"))
+            except SlideshowError as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
+                    error=True,
+                )
+            return
+
+        compatibility_getter = getattr(
+            self.kodi, "picture_playlist_compatibility", None
+        )
+        compatibility = (
+            compatibility_getter() if callable(compatibility_getter) else None
+        )
+        if compatibility is False:
+            self.kodi.set_mixed_slideshow_active(False)
+            if scope == "folder-tree" and folder is not None:
+                try:
+                    self._start_native_mixed_fallback(
+                        folder,
+                        params.get("id", ""),
+                        "cached-picture-playlist-incompatible",
+                    )
+                except SlideshowError as exc:
+                    self.kodi.notify(
+                        "%s: %s"
+                        % (self.text(32605, "Could not start slideshow"), exc),
+                        error=True,
+                    )
+            else:
+                self._notify_cross_folder_slideshow_unsupported()
             return
 
         self.kodi.log.info(
@@ -951,35 +995,40 @@ class PluginUI:
             start_position,
         )
         self.kodi.set_mixed_slideshow_active(False)
+        probe_position = (
+            first_picture_position if compatibility is not True else None
+        )
         try:
+            stop_active_media_players(xbmc, logger=self.kodi.log)
             started = start_mixed_slideshow(
                 xbmc,
                 uris,
                 start_position,
-                probe_picture_position=(
-                    first_picture_position if has_video else None
-                ),
+                probe_picture_position=probe_position,
                 logger=self.kodi.log,
             )
             if not started:
                 self.kodi.notify(self.text(32604, "No media to play"))
                 return
+            if probe_position is not None:
+                setter = getattr(
+                    self.kodi, "set_picture_playlist_compatibility", None
+                )
+                if callable(setter):
+                    setter(True)
             if has_video:
                 self.kodi.set_mixed_slideshow_active(True)
         except SlideshowPlayerMismatchError:
             self.kodi.set_mixed_slideshow_active(False)
+            setter = getattr(self.kodi, "set_picture_playlist_compatibility", None)
+            if callable(setter):
+                setter(False)
             if scope == "folder-tree" and folder is not None:
-                self.kodi.log.info(
-                    "Slideshow route=native-mixed-fallback scope=folder-tree "
-                    "folder_id=%s reason=picture-playlist-opened-as-video",
-                    params.get("id", ""),
-                )
                 try:
-                    start_native_folder_slideshow(
-                        xbmc,
-                        str(folder.get("uri") or ""),
-                        recursive=True,
-                        logger=self.kodi.log,
+                    self._start_native_mixed_fallback(
+                        folder,
+                        params.get("id", ""),
+                        "picture-playlist-opened-as-video",
                     )
                 except SlideshowError as exc:
                     self.kodi.notify(
@@ -988,18 +1037,7 @@ class PluginUI:
                         error=True,
                     )
                 return
-            try:
-                self._start_picture_only_fallback(
-                    rows,
-                    start_id,
-                    scope,
-                    video_count,
-                )
-            except SlideshowError as exc:
-                self.kodi.notify(
-                    "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
-                    error=True,
-                )
+            self._notify_cross_folder_slideshow_unsupported()
         except SlideshowError as exc:
             self.kodi.notify(
                 "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),

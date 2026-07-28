@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.39 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.40 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -132,17 +132,21 @@ views remain picture-only. Minimum-picture-rating policies still include videos
 without assigning a fake rating to them.
 
 Kodi plays an individual video directly. Use **Play slideshow from here** on a
-media item or **Play mixed slideshow** on an album to build Kodi picture playlist
-2 from the current database result. Album playback includes descendants and the
-playlist action is capped at 5,000 media files. A lightweight service monitor
-advances the picture playlist after an indexed video finishes.
+media item or **Play mixed slideshow** on an album. Video-only results use Kodi's
+video playlist. Picture-only album trees use Kodi's native recursive slideshow.
+Mixed album playback includes descendants and is capped at 5,000 media files.
+A lightweight service monitor advances a compatible picture playlist after an
+indexed video finishes.
 
-Kodi builds do not all route a mixed picture playlist through the same player.
-MyPicsDB 3 therefore probes a known picture at slideshow startup. If Kodi opens
-that picture with `VideoPlayer`, mixed album playback falls back to Kodi's native
-recursive folder slideshow. Mixed searches and other cross-folder result sets
-fall back to pictures only because they have no single folder URI; Kodi shows a
-notification when indexed videos are omitted.
+Kodi builds do not all route picture playlist 2 through the picture player.
+MyPicsDB 3 therefore probes one known picture before constructing a potentially
+large database playlist. The probe must report the exact expected file twice;
+an unrelated or stale picture player is ignored, and an exact `VideoPlayer`
+match takes precedence. If Kodi treats the JPEG as one-frame MJPEG video, the
+result is cached for the current Kodi session and album playback uses Kodi's
+native recursive folder slideshow. Cross-folder picture slideshows cannot be
+represented safely on such installations, so MyPicsDB shows an explanatory
+notification instead of flashing through the files.
 
 Disabling video support does not immediately delete stored rows. Run a new scan
 to mark video rows missing, then use **Scan status > Clean missing records**
