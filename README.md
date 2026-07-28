@@ -37,8 +37,10 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
   folders, with bounded playlist batches.
 - Optional global minimum-rating display policy for normal browser and widget
   views, with a temporary all-pictures override.
-- Versioned, validated Query Model used by global search and schema-5 saved
-  searches; stored queries are revalidated when opened and never expose raw SQL.
+- Save, reopen, rename and delete named global searches, with normal
+  pagination and slideshow support.
+- Versioned, validated Query Model used by global and saved searches; stored
+  queries are revalidated when opened and never expose raw SQL.
 - Stable widget endpoints for configurable skins.
 - Optional **Estuary MyPicsDB 3** skin with picture rows on the home screen.
 - GitHub Actions, Kodi repository generation and GitHub Pages deployment.
@@ -335,11 +337,14 @@ After the first successful scan, the add-on main menu provides:
 - **Cameras** and **Keywords** — metadata-based navigation;
 - **Favorites** — pictures marked through the Kodi context menu;
 - **Rated pictures** — pictures with an embedded metadata rating;
-- **Geotagged pictures** — pictures with stored GPS coordinates.
+- **Geotagged pictures** — pictures with stored GPS coordinates;
+- **Videos** — all indexed home videos, when optional video indexing is enabled;
+- **Saved searches** — named global searches that can be reopened with normal
+  pagination and slideshow support.
 
-Open **Settings > General > Configure add-on menu** to show or hide any of
-these catalogue browsing nodes. Search, Picture sources, Scan now, Scan
-status and Settings always remain visible.
+Open **Settings > General > Configure add-on menu** to show or hide the
+configurable catalogue browsing nodes. Search, Saved searches, Picture
+sources, Scan now, Scan status and Settings always remain visible.
 
 Open the context menu on a picture and select **Toggle favorite** to add or
 remove it from Favorites. **Open containing album** opens the indexed folder.
@@ -373,12 +378,20 @@ Unicode text is normalized and case-folded, so Swedish letters such as å, ä an
 Multiple words use AND semantics: every word must occur somewhere in the same
 picture's search document, but the words may come from different fields. For
 example, `fujifilm göteborg sommar` can match a camera make, a city and a
-keyword on one picture. Version 0.2.19 does not implement phrase search, fuzzy
-matching or prefix completion.
+keyword on one picture. Search does not currently implement phrase search,
+fuzzy matching or prefix completion.
 
-The configured minimum-rating policy also applies to search results. Use
-**Show all pictures temporarily** from the main menu before searching to bypass
-the policy for that browsing session.
+Select **Save this search** at the top of a result list and enter a unique name.
+Open **Saved searches** from the main menu to run it again against the current
+catalogue. Saved searches retain normal pagination and **Play slideshow from
+here** support. Use a saved search's context menu to rename or delete it. The
+add-on stores the validated query rather than a frozen copy of the results, so
+newly indexed matching media can appear the next time the search is opened.
+
+The configured minimum-rating policy also applies to search results and saved
+searches. Use **Show all pictures temporarily** from the main menu before
+searching or opening a saved search to bypass the policy for that browsing
+session.
 
 ### 6. Configure the minimum-rating display policy
 
@@ -399,19 +412,23 @@ scanning, metadata extraction or stored database values. The active policy is
 shown in the browser category. Open **Show all pictures temporarily** from the
 add-on main menu to bypass the configured policy for that browsing session.
 
-### 7. Query Model and global search
+### 7. Query Model, global search and saved searches
 
-Version 0.2.19 extends Query Model version 1 with the allowlisted `text` /
-`contains_tokens` rule used by Kodi global search. The model still validates
-nested all/any/not rules for rating, favorite, source, album, date range,
-camera and keyword, and compiles only trusted SQL with bound parameters for
-SQLite and MySQL/MariaDB.
+Version 0.2.19 extended Query Model version 1 with the allowlisted `text` /
+`contains_tokens` rule used by Kodi global search. Version 0.2.34 added named
+saved searches backed by canonical Query Model JSON in schema 5. The model also
+validates nested all/any/not rules for rating, favorite, source, album, date
+range, camera and keyword, and compiles only trusted SQL with bound parameters
+for SQLite and MySQL/MariaDB.
 
 Search text is never copied into SQL. It is converted to normalized tokens and
 matched against schema-3 search documents maintained by scans and the schema-2
-to schema-3 migration. This release does not add a general Kodi query-builder,
-saved views or smart collections. See [Query Model version 1](docs/QUERY_MODEL.md)
-and [Global search](docs/GLOBAL_SEARCH.md).
+to schema-3 migration. Saved-search plugin URLs contain only a database row ID;
+the stored query version and JSON are parsed and validated every time the search
+is opened. Kodi still does not expose a general smart-filter editor or smart
+collections. See [Query Model version 1](docs/QUERY_MODEL.md),
+[Global search](docs/GLOBAL_SEARCH.md) and
+[Database migrations](docs/DATABASE_MIGRATIONS.md).
 
 ### 8. Configure automatic scanning
 
@@ -478,13 +495,14 @@ tested by this project.
 SQLite is recommended for one Kodi device. The database is stored under the
 add-on profile directory and must not be moved to SMB/NFS.
 
-The current development release uses schema version 3 for both SQLite and
+The current development release uses schema version 5 for both SQLite and
 MySQL/MariaDB. Schema 2 adds the year-first date-browsing index. Schema 3 adds
 one normalized search document per picture and backfills existing catalogues.
-Existing SQLite databases receive an atomic, integrity-checked backup before a
-schema migration; MySQL/MariaDB operators must keep an external backup. See
-[docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before testing a
-development build that changes the catalogue schema.
+Schema 4 adds the picture/video media type. Schema 5 adds validated named saved
+searches. Existing SQLite databases receive an atomic, integrity-checked backup
+before a schema migration; MySQL/MariaDB operators must keep an external
+backup. See [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before
+testing a development build that changes the catalogue schema.
 
 MySQL/MariaDB is useful when several Kodi devices see identical picture URIs.
 See [docs/MYSQL_MARIADB.md](docs/MYSQL_MARIADB.md).
