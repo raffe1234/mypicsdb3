@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.44 - 2026-07-29
+
+- Add Nikon NEF to the default picture-extension list and to still-picture
+  slideshow classification. Existing installations using the unchanged legacy
+  default are upgraded automatically; custom extension lists remain unchanged.
+- Document that Kodi's Libraw image decoder is required to display NEF files.
+  Metadata extraction continues through ExifRead, while IPTC extraction remains
+  JPEG-only.
+- Apply configured album views only while window 10002 (Pictures) is active, no
+  modal dialog is open and the current container is not updating. Empty results
+  no longer request a view mode.
+- Add opt-in debug diagnostics for requested, applied, verified and cancelled
+  album-view changes to make intermittent skin timing failures reproducible.
+- Keep database schema 5, Query Model version 1 and repository add-on version
+  0.2.26 unchanged.
+
 ## 0.2.43 - 2026-07-29
 
 - Read IPTCInfo3 fields through indexed access instead of calling the unsupported

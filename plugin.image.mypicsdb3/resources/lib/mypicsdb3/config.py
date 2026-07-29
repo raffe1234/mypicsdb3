@@ -8,6 +8,30 @@ from .rating_policy import RATING_POLICY_ALL, normalize_rating_policy
 from .utils import parse_bool, parse_int, split_csv, split_pipe
 
 
+LEGACY_DEFAULT_PICTURE_EXTENSIONS = (
+    "jpg",
+    "jpeg",
+    "png",
+    "gif",
+    "bmp",
+    "tif",
+    "tiff",
+    "webp",
+    "heic",
+    "heif",
+    "avif",
+)
+DEFAULT_PICTURE_EXTENSIONS = LEGACY_DEFAULT_PICTURE_EXTENSIONS + ("nef",)
+
+
+def _picture_extensions(value: Any) -> Tuple[str, ...]:
+    """Return configured extensions and upgrade the unchanged legacy default."""
+    configured = split_csv(str(value or ""))
+    if not configured or configured == LEGACY_DEFAULT_PICTURE_EXTENSIONS:
+        return DEFAULT_PICTURE_EXTENSIONS
+    return configured
+
+
 @dataclass(frozen=True)
 class Settings:
     profile_path: str
@@ -21,7 +45,7 @@ class Settings:
     scan_interval_hours: int = 24
     startup_delay_seconds: int = 60
     pause_during_playback: bool = True
-    extensions: Tuple[str, ...] = ("jpg", "jpeg", "png", "gif", "bmp", "tif", "tiff", "webp", "heic", "heif", "avif")
+    extensions: Tuple[str, ...] = DEFAULT_PICTURE_EXTENSIONS
     include_videos: bool = False
     video_extensions: Tuple[str, ...] = ("mp4", "mov", "m4v", "mkv", "avi", "mpg", "mpeg", "mts", "m2ts", "webm")
     exclude_fragments: Tuple[str, ...] = ("@eadir", ".thumbnails", "#recycle", "@recycle")
@@ -63,7 +87,7 @@ def from_getter(getter: Callable[[str], Any], profile_path: str) -> Settings:
         scan_interval_hours=parse_int(getter("scan_interval_hours"), 24, 1, 720),
         startup_delay_seconds=parse_int(getter("startup_delay_seconds"), 60, 0, 3600),
         pause_during_playback=parse_bool(getter("pause_during_playback"), True),
-        extensions=split_csv(str(getter("extensions") or "jpg,jpeg,png,gif,bmp,tif,tiff,webp,heic,heif,avif")),
+        extensions=_picture_extensions(getter("extensions")),
         include_videos=parse_bool(getter("include_videos"), False),
         video_extensions=split_csv(str(getter("video_extensions") or "mp4,mov,m4v,mkv,avi,mpg,mpeg,mts,m2ts,webm")),
         exclude_fragments=split_pipe(str(getter("exclude_fragments") or "")),

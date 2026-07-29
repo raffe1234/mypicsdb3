@@ -22,6 +22,7 @@ PICTURE_FILE_EXTENSIONS = frozenset(
         ".jpeg",
         ".jpg",
         ".jxl",
+        ".nef",
         ".pcx",
         ".png",
         ".tga",

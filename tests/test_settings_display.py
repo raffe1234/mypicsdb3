@@ -4,7 +4,7 @@ import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from mypicsdb3.config import from_getter
+from mypicsdb3.config import DEFAULT_PICTURE_EXTENSIONS, from_getter
 
 ROOT = Path(__file__).resolve().parents[1]
 SETTINGS = ROOT / "plugin.image.mypicsdb3" / "resources" / "settings.xml"
@@ -83,6 +83,29 @@ def test_english_catalogue_is_separated_and_has_clear_labels():
         assert ('msgid "%s"' % label) in text
         assert ('msgstr "%s"' % label) in text
     assert not re.search(r'msgstr "[^"]*"\nmsgctxt "#', text)
+
+
+def test_nef_is_in_the_default_picture_extensions_and_legacy_defaults_upgrade():
+    settings = settings_by_id()
+    expected = "jpg,jpeg,png,gif,bmp,tif,tiff,webp,heic,heif,avif,nef"
+    assert settings["extensions"].findtext("default") == expected
+
+    default_settings = from_getter(lambda _key: "", "/tmp/mypicsdb3")
+    assert default_settings.extensions == DEFAULT_PICTURE_EXTENSIONS
+    assert default_settings.extensions[-1] == "nef"
+
+    legacy = "jpg,jpeg,png,gif,bmp,tif,tiff,webp,heic,heif,avif"
+    upgraded = from_getter(
+        lambda key: legacy if key == "extensions" else "",
+        "/tmp/mypicsdb3",
+    )
+    assert upgraded.extensions == DEFAULT_PICTURE_EXTENSIONS
+
+    custom = from_getter(
+        lambda key: "jpg,png" if key == "extensions" else "",
+        "/tmp/mypicsdb3",
+    )
+    assert custom.extensions == ("jpg", "png")
 
 
 def test_video_scanning_is_opt_in_and_has_separate_extensions():

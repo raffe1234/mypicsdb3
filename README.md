@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.43 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.44 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -29,8 +29,9 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
   path parts, camera and stored location fields.
 - Favorites, ratings, keywords, cameras, year/month/day and geotagged views.
 - Picture-first album artwork, with video fallback for video-only albums.
-- Stable album-view activation that waits for the requested picture container and
-  never changes the parent add-on menu or widget layout.
+- Guarded album-view activation that waits for the active, stable Pictures
+  container, skips empty results and never changes a background window or widget
+  layout.
 - Optional indexing of common home-video formats alongside pictures, including
   a dedicated **Videos** node and mixed picture/video date and folder views.
 - Native recursive slideshows for picture-only album trees and database-backed
@@ -356,9 +357,12 @@ The Keywords and Rated pictures views depend on metadata embedded in the source
 files. Geotagged pictures requires **Store GPS coordinates** to be enabled
 before the relevant pictures are scanned again.
 
-The configurable extension list includes formats such as HEIC, HEIF and AVIF.
-Indexing an extension does not guarantee that every Kodi platform or installed
-image decoder can display that format.
+The default picture-extension list includes Nikon NEF RAW files as well as HEIC,
+HEIF and AVIF. Existing installations that still use the unchanged pre-0.2.44
+default are upgraded automatically to include `nef`; custom extension lists are
+left unchanged. Kodi must have **Libraw image decoder** installed to display NEF
+files. Indexing an extension does not guarantee that every Kodi platform or
+installed image decoder can display that format.
 
 Synology `@eaDir` metadata directories are always ignored, even if the custom
 exclusion setting is empty. A rescan marks thumbnails that were indexed by an

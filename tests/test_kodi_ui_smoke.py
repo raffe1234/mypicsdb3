@@ -561,6 +561,18 @@ def test_browser_views_use_default_view_but_widgets_keep_skin_layout(monkeypatch
     assert calls.builtins == []
 
 
+def test_empty_picture_result_does_not_force_a_view_mode(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.album_view_mode = 500
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.finish([], content="images", category="Empty album", view_mode=500)
+
+    assert calls.builtins == []
+    assert calls.sleeps == []
+
+
 def test_search_waits_for_picture_container_before_setting_view(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()

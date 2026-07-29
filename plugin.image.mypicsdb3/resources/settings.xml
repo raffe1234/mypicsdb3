@@ -344,7 +344,7 @@
         </setting>
         <setting id="extensions" type="string" label="32025" help="32125">
           <level>2</level>
-          <default>jpg,jpeg,png,gif,bmp,tif,tiff,webp,heic,heif,avif</default>
+          <default>jpg,jpeg,png,gif,bmp,tif,tiff,webp,heic,heif,avif,nef</default>
           <constraints>
             <allowempty>false</allowempty>
           </constraints>

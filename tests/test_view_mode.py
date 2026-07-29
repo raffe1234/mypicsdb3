@@ -14,6 +14,7 @@ class FakeXbmc:
         current_mode=53,
         late_restore_mode=None,
         late_restore_after_sleeps=0,
+        conditions=None,
     ):
         self.categories = list(categories)
         self.contents = list(contents)
@@ -26,6 +27,7 @@ class FakeXbmc:
         self.late_restore_mode = late_restore_mode
         self.late_restore_after_sleeps = int(late_restore_after_sleeps)
         self.late_restore_done = False
+        self.conditions = {key: list(values) for key, values in (conditions or {}).items()}
 
     def getInfoLabel(self, label):
         if label == "Container.PluginCategory":
@@ -47,6 +49,12 @@ class FakeXbmc:
             return values.pop(0)
         return values[0] if values else ""
 
+    def getCondVisibility(self, condition):
+        values = self.conditions.get(condition, [])
+        if len(values) > 1:
+            return values.pop(0)
+        return values[0] if values else False
+
     def executebuiltin(self, command, block=False):
         self.commands.append(command)
         self.blocking.append(bool(block))
@@ -66,12 +74,14 @@ class FakeXbmc:
 
 
 class FakeXbmcGui:
-    def __init__(self, xbmc):
+    def __init__(self, xbmc, window_ids=None):
         self.xbmc = xbmc
+        self.window_ids = list(window_ids or [10002])
 
-    @staticmethod
-    def getCurrentWindowId():
-        return 10002
+    def getCurrentWindowId(self):
+        if len(self.window_ids) > 1:
+            return self.window_ids.pop(0)
+        return self.window_ids[0] if self.window_ids else 10002
 
     def Window(self, _window_id):
         return SimpleNamespace(getFocusId=lambda: self.xbmc.current_mode)
@@ -199,3 +209,76 @@ def test_view_mode_ignores_disabled_or_incomplete_requests() -> None:
 
     assert set_view_mode_when_container_ready(xbmc, xbmcgui, 0, "Pictures", "images") is False
     assert set_view_mode_when_container_ready(xbmc, xbmcgui, 500, "", "images") is False
+
+
+class FakeLogger:
+    def __init__(self):
+        self.messages = []
+
+    def debug(self, message, *args):
+        self.messages.append(message % args if args else message)
+
+
+def test_view_mode_waits_until_pictures_is_the_active_window() -> None:
+    xbmc = FakeXbmc(["Album"], ["images"])
+    xbmcgui = FakeXbmcGui(xbmc, window_ids=[12005, 10002, 10002])
+
+    changed = set_view_mode_when_container_ready(
+        xbmc,
+        xbmcgui,
+        500,
+        "Album",
+        "images",
+        settle_ms=0,
+        verify_ms=0,
+    )
+
+    assert changed is True
+    assert xbmc.commands == ["Container.SetViewMode(500)"]
+    assert xbmc.sleeps == [50, 50]
+
+
+def test_view_mode_waits_for_container_update_and_modal_to_finish() -> None:
+    xbmc = FakeXbmc(
+        ["Album"],
+        ["images"],
+        conditions={
+            "System.HasActiveModalDialog": [True, False, False, False],
+            "Container.IsUpdating": [True, False, False],
+        },
+    )
+
+    changed = set_view_mode_when_container_ready(
+        xbmc,
+        FakeXbmcGui(xbmc),
+        55,
+        "Album",
+        "images",
+        settle_ms=0,
+        verify_ms=0,
+    )
+
+    assert changed is True
+    assert xbmc.commands == ["Container.SetViewMode(55)"]
+    assert len(xbmc.sleeps) >= 2
+
+
+def test_view_mode_writes_opt_in_diagnostics() -> None:
+    xbmc = FakeXbmc(["Album"], ["images"])
+    logger = FakeLogger()
+
+    changed = set_view_mode_when_container_ready(
+        xbmc,
+        FakeXbmcGui(xbmc),
+        500,
+        "Album",
+        "images",
+        settle_ms=0,
+        verify_ms=0,
+        logger=logger,
+    )
+
+    assert changed is True
+    assert any("Album view request" in message for message in logger.messages)
+    assert any("Album view apply" in message for message in logger.messages)
+    assert any("Album view active" in message for message in logger.messages)

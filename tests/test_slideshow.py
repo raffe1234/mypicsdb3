@@ -10,6 +10,7 @@ from mypicsdb3.slideshow import (
     SlideshowError,
     SlideshowPlayerMismatchError,
     VIDEO_PLAYLIST_ID,
+    _looks_like_picture_uri,
     start_mixed_slideshow,
     start_native_folder_slideshow,
     start_video_playlist,
@@ -38,6 +39,11 @@ class FakeXbmc:
 
     def sleep(self, milliseconds):
         pass
+
+
+def test_nef_is_classified_as_a_picture_for_slideshows() -> None:
+    assert _looks_like_picture_uri("smb://nas/photos/DSC_0001.NEF") is True
+    assert _looks_like_picture_uri("/photos/DSC_0001.NEF?cache=1") is True
 
 
 def test_mixed_slideshow_uses_picture_playlist_and_start_position() -> None:

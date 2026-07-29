@@ -130,13 +130,14 @@ class PluginUI:
         xbmcplugin.setContent(self.handle, content)
         xbmcplugin.addDirectoryItems(self.handle, list(items), len(items))
         xbmcplugin.endOfDirectory(self.handle, succeeded=True, cacheToDisc=cache)
-        if view_mode and category:
+        if view_mode and category and items:
             set_view_mode_when_container_ready(
                 xbmc,
                 xbmcgui,
                 view_mode,
                 expected_category=category,
                 expected_content=content,
+                logger=self.kodi.log,
             )
 
     def _browser_view_mode(self, params: Optional[Dict[str, str]] = None) -> int:
