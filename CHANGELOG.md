@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.3.3 - 2026-07-29
+
+- Fix OK/Enter on MyPicsDB home-screen picture widgets by using Kodi's
+  `ShowPicture` action instead of allowing dynamic content to route still
+  pictures through `VideoPlayer` as one-frame MJPEG/TIFF media.
+- Add explicit, escaped widget actions for pictures, videos and album folders,
+  with a stable `MyPicsDB3.WidgetPath` property so SMB/NFS paths containing
+  spaces, commas, quotes or non-ASCII characters are passed as one argument.
+- Keep direct `PlayMedia` behaviour for indexed home videos and open album
+  widgets in the Pictures window with normal return navigation.
+- Keep automatic scans visually silent during Live TV, TV episodes, movies or
+  other media playback. If scanning is allowed to continue, the non-modal
+  progress dialog closes while playback is active and returns after playback
+  stops; scan state remains available through **Scan status**.
+- Bump the generated Estuary revisions, including Kodi 21.3 skin 21.3.8 and
+  Kodi 22 beta 1 skin 22.0.0~beta1.6, so installed skin forks receive the new
+  widget click actions.
+- Require no catalogue rescan or database migration; database schema 5, Query
+  Model version 1 and repository add-on version 0.2.26 remain unchanged.
+
 ## 0.3.2 - 2026-07-29
 
 - Add a dedicated `WidgetListPosterMyPicsDB` include to the generated Estuary

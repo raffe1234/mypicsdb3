@@ -81,6 +81,9 @@
 				<right>0</right>
 				<height>518</height>
 				<onclick condition="$PARAM[onclick_condition]">$PARAM[onclick_action]</onclick>
+				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),picture)">ShowPicture($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>
+				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),video)">PlayMedia($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>
+				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),folder)">ActivateWindow(Pictures,$ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)],return)</onclick>
 				<include content="WidgetListCommon">
 					<param name="list_id" value="$PARAM[list_id]"/>
 				</include>

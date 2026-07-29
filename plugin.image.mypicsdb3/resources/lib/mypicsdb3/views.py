@@ -172,10 +172,13 @@ class PluginUI:
         return item
 
     def add_folder(self, label: str, route: str, art: Optional[str] = None, context: Optional[List[Tuple[str, str]]] = None, **params: Any):
+        target = self.url(route, **params)
         item = self._item(label, art)
+        item.setProperty("MyPicsDB3.MediaType", "folder")
+        item.setProperty("MyPicsDB3.WidgetPath", target)
         if context:
             item.addContextMenuItems(context)
-        return (self.url(route, **params), item, True)
+        return (target, item, True)
 
     def add_action(self, label: str, route: str, art: Optional[str] = None, context: Optional[List[Tuple[str, str]]] = None, **params: Any):
         item = self._item(label, art)
@@ -469,6 +472,7 @@ class PluginUI:
         except Exception:
             pass
         item.setProperty("MyPicsDB3.MediaType", media_type)
+        item.setProperty("MyPicsDB3.WidgetPath", media_uri)
         item.setProperty("MyPicsDB3.PictureId", str(row.get("id", "")))
         item.setProperty("MyPicsDB3.TakenAt", date_text)
         item.setProperty("MyPicsDB3.Camera", " ".join(filter(None, [row.get("camera_make"), row.get("camera_model")])))

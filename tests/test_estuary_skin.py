@@ -134,6 +134,9 @@ def test_patch_skin_creates_separate_addon_and_widgets(tmp_path: Path):
     assert '$INFO[ListItem.Property(MyPicsDB3.WidgetLabel)]' in includes_home
     assert '<visible>String.IsEmpty(ListItem.Property(MyPicsDB3.WidgetLabel))</visible>' in includes_home
     assert '<scroll>$PARAM[focused]</scroll>' in includes_home
+    assert 'ShowPicture($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])' in includes_home
+    assert 'PlayMedia($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])' in includes_home
+    assert 'ActivateWindow(Pictures,$ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)],return)' in includes_home
     assert 'content="WidgetListPosterMyPicsDB"' in home
     pictures = (output / "xml" / "MyPics.xml").read_text(encoding="utf-8")
     assert "$ADDON[plugin.image.mypicsdb3 32215]" in pictures
@@ -231,9 +234,9 @@ def test_upstream_config_has_versioned_channels_and_history():
     assert project.retain_versions == 5
     assert set(project.channels) == {"omega", "piers"}
     assert project.channels["omega"].releases[0].ref == "21.3-Omega"
-    assert project.channels["omega"].patch_revision == 7
-    assert project.channels["omega"].releases[0].skin_version == "21.3.7"
-    assert project.channels["piers"].patch_revision == 5
+    assert project.channels["omega"].patch_revision == 8
+    assert project.channels["omega"].releases[0].skin_version == "21.3.8"
+    assert project.channels["piers"].patch_revision == 6
     assert project.channels["piers"].releases[0].ref == "22.0b1-Piers"
     assert all(
         len(channel.releases) <= project.retain_versions

@@ -227,12 +227,23 @@ class ServiceLoop:
                         last_progress_at = 0.0
                         user_cancelled = False
 
-                        def begin_status(_stats) -> None:
-                            nonlocal scan_started, progress_dialog
-                            scan_started = True
-                            publisher = getattr(self.kodi, "begin_scan_status", None)
-                            if callable(publisher):
-                                publisher(scan_token, "automatic")
+                        def close_progress_dialog() -> None:
+                            nonlocal progress_dialog
+                            if progress_dialog is None:
+                                return
+                            try:
+                                progress_dialog.close()
+                            except Exception:
+                                pass
+                            progress_dialog = None
+
+                        def ensure_progress_dialog():
+                            nonlocal progress_dialog
+                            if self.kodi.is_playing():
+                                close_progress_dialog()
+                                return None
+                            if progress_dialog is not None:
+                                return progress_dialog
                             creator = getattr(
                                 self.kodi,
                                 "create_background_progress",
@@ -243,6 +254,15 @@ class ServiceLoop:
                                     self.kodi.localize(30056, "MyPicsDB 3"),
                                     self.kodi.localize(32731, "Automatic scan"),
                                 )
+                            return progress_dialog
+
+                        def begin_status(_stats) -> None:
+                            nonlocal scan_started
+                            scan_started = True
+                            publisher = getattr(self.kodi, "begin_scan_status", None)
+                            if callable(publisher):
+                                publisher(scan_token, "automatic")
+                            ensure_progress_dialog()
 
                         def scan_cancelled() -> bool:
                             nonlocal user_cancelled
@@ -279,7 +299,8 @@ class ServiceLoop:
                                     path,
                                     stats.pictures_seen,
                                 )
-                            if progress_dialog is not None:
+                            dialog = ensure_progress_dialog()
+                            if dialog is not None:
                                 message = "%s\n%s\n%s: %d" % (
                                     source.label,
                                     path,
@@ -287,7 +308,7 @@ class ServiceLoop:
                                     stats.pictures_seen,
                                 )
                                 try:
-                                    progress_dialog.update(
+                                    dialog.update(
                                         0,
                                         self.kodi.localize(30056, "MyPicsDB 3"),
                                         message,
@@ -345,11 +366,7 @@ class ServiceLoop:
                                 )
                                 if callable(finisher):
                                     finisher(scan_token)
-                            if progress_dialog is not None:
-                                try:
-                                    progress_dialog.close()
-                                except Exception:
-                                    pass
+                            close_progress_dialog()
                         if self._abort_requested():
                             break
                         self.next_scan_at = (

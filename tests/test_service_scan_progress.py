@@ -66,8 +66,10 @@ class FakeKodi:
         self.monitor = monitor
         self.log = FakeLog()
         self.dialog = FakeProgressDialog()
+        self.dialogs = [self.dialog]
         self.scan_events = []
         self.cancel_requested = False
+        self.playing = False
         self.settings = SimpleNamespace(
             auto_scan=True,
             pause_during_playback=False,
@@ -91,7 +93,7 @@ class FakeKodi:
         return False
 
     def is_playing(self):
-        return False
+        return self.playing
 
     def localize(self, _string_id, fallback):
         return fallback
@@ -109,6 +111,9 @@ class FakeKodi:
         return self.cancel_requested
 
     def create_background_progress(self, heading, message):
+        if self.dialog.closed:
+            self.dialog = FakeProgressDialog()
+            self.dialogs.append(self.dialog)
         self.scan_events.append(("dialog", heading, message))
         return self.dialog
 
@@ -302,3 +307,119 @@ def test_automatic_scan_logs_user_requested_cancellation(monkeypatch) -> None:
     loop.run()
 
     assert ("info", "Automatic scan cancelled by user") in kodi.log.messages
+
+def test_automatic_scan_hides_progress_during_playback(monkeypatch) -> None:
+    monitor = FakeMonitor()
+    kodi = FakeKodi(monitor)
+    kodi.playing = True
+    initial_catalog = FakeCatalog()
+    scan_catalog = FakeCatalog()
+    loop = ServiceLoop(
+        kodi,
+        date_provider=lambda: date(2026, 7, 29),
+        monotonic_provider=lambda: 100.0,
+        monitor=monitor,
+    )
+    loop._runtime_parts = lambda: (kodi.settings, initial_catalog, object())
+
+    monkeypatch.setattr(service_loop, "DatabaseEngine", FakeEngine)
+    monkeypatch.setattr(service_loop, "Catalog", lambda _engine, _log: scan_catalog)
+
+    class PlaybackScanner:
+        def __init__(
+            self,
+            _catalog,
+            _filesystem,
+            _settings,
+            _logger,
+            cancelled,
+            progress,
+            started,
+        ):
+            self.progress = progress
+            self.started = started
+
+        def scan_sources(self):
+            self.started(SimpleNamespace())
+            self.progress(
+                SimpleNamespace(label="Family photos"),
+                "smb://nas/photos/image.jpg",
+                SimpleNamespace(pictures_seen=250),
+            )
+            monitor.aborted = True
+            return SimpleNamespace(cancelled=False, pictures_seen=250, errors=0)
+
+    monkeypatch.setattr(service_loop, "Scanner", PlaybackScanner)
+
+    loop.run()
+
+    assert not any(event[0] == "dialog" for event in kodi.scan_events)
+    assert any(event[0] == "progress" and event[-1] == 250 for event in kodi.scan_events)
+    assert kodi.scan_events[-1][0] == "finish"
+    assert ("info", "Automatic scan finished: 250 pictures, 0 errors") in kodi.log.messages
+
+
+def test_automatic_scan_restores_progress_after_playback_stops(monkeypatch) -> None:
+    monitor = FakeMonitor()
+    kodi = FakeKodi(monitor)
+    initial_catalog = FakeCatalog()
+    scan_catalog = FakeCatalog()
+    clock = iter((100.0, 101.0, 102.0, 103.0, 104.0, 105.0))
+    loop = ServiceLoop(
+        kodi,
+        date_provider=lambda: date(2026, 7, 29),
+        monotonic_provider=lambda: next(clock),
+        monitor=monitor,
+    )
+    loop._runtime_parts = lambda: (kodi.settings, initial_catalog, object())
+
+    monkeypatch.setattr(service_loop, "DatabaseEngine", FakeEngine)
+    monkeypatch.setattr(service_loop, "Catalog", lambda _engine, _log: scan_catalog)
+
+    class PlaybackTransitionScanner:
+        def __init__(
+            self,
+            _catalog,
+            _filesystem,
+            _settings,
+            _logger,
+            cancelled,
+            progress,
+            started,
+        ):
+            self.progress = progress
+            self.started = started
+
+        def scan_sources(self):
+            self.started(SimpleNamespace())
+            self.progress(
+                SimpleNamespace(label="Family photos"),
+                "smb://nas/photos/first.jpg",
+                SimpleNamespace(pictures_seen=100),
+            )
+            kodi.playing = True
+            self.progress(
+                SimpleNamespace(label="Family photos"),
+                "smb://nas/photos/during-tv.jpg",
+                SimpleNamespace(pictures_seen=200),
+            )
+            kodi.playing = False
+            self.progress(
+                SimpleNamespace(label="Family photos"),
+                "smb://nas/photos/after-tv.jpg",
+                SimpleNamespace(pictures_seen=300),
+            )
+            monitor.aborted = True
+            return SimpleNamespace(cancelled=False, pictures_seen=300, errors=0)
+
+    monkeypatch.setattr(service_loop, "Scanner", PlaybackTransitionScanner)
+
+    loop.run()
+
+    assert len(kodi.dialogs) == 2
+    assert kodi.dialogs[0].closed is True
+    assert kodi.dialogs[1].closed is True
+    assert "Pictures found: 100" in kodi.dialogs[0].updates[-1][2]
+    assert all("Pictures found: 200" not in update[2] for update in kodi.dialogs[0].updates)
+    assert "Pictures found: 300" in kodi.dialogs[1].updates[-1][2]
+    assert sum(1 for event in kodi.scan_events if event[0] == "dialog") == 2

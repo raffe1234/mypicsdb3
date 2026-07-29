@@ -750,6 +750,20 @@ def test_album_items_do_not_duplicate_global_save_view_context_action(monkeypatc
     )
 
 
+
+def test_picture_widget_item_exposes_direct_show_picture_path(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("recent-taken", {"widget": "1"}))
+
+    url, item, is_folder = calls.items[0]
+    assert url == "smb://server/photos/image.jpg"
+    assert item.properties["MyPicsDB3.MediaType"] == "picture"
+    assert item.properties["MyPicsDB3.WidgetPath"] == url
+    assert is_folder is False
+
 def test_video_node_and_video_list_item_are_playable_when_enabled(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -777,6 +791,7 @@ def test_video_node_and_video_list_item_are_playable_when_enabled(monkeypatch) -
     assert url.endswith("clip.mp4")
     assert item.properties["IsPlayable"] == "true"
     assert item.properties["MyPicsDB3.MediaType"] == "video"
+    assert item.properties["MyPicsDB3.WidgetPath"] == "smb://server/photos/clip.mp4"
     assert item.art["thumb"] == (
         "image://video@smb%3A%2F%2Fserver%2Fphotos%2Fclip.mp4/"
     )
@@ -834,6 +849,10 @@ def test_video_only_folder_uses_generated_frame_art(monkeypatch) -> None:
     )
     assert item.art["poster"] == item.art["thumb"]
     assert item.art["landscape"] == item.art["thumb"]
+    assert item.properties["MyPicsDB3.MediaType"] == "folder"
+    assert item.properties["MyPicsDB3.WidgetPath"] == (
+        "plugin://plugin.image.mypicsdb3/folder?id=12"
+    )
     assert is_folder is True
 
 

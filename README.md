@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.3.2 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.3.3 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -20,7 +20,8 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
   unfinished folder.
 - Session-visible scan progress for manual and automatic scans, with a
   confirmation-protected **Stop scan** action that cancels at the next safe
-  file or folder checkpoint.
+  file or folder checkpoint. Automatic scan progress is hidden while Live TV,
+  TV episodes, movies or other media are playing and returns after playback.
 - SQLite by default, using WAL mode and a local add-on profile database.
 - Optional shared MySQL/MariaDB catalogue through PyMySQL.
 - EXIF capture date, camera, orientation, dimensions, rating and optional GPS.
@@ -177,7 +178,9 @@ to Kodi's generated video frame. Widget items also publish filenames and album n
 MyPicsDB 3 uses a dedicated picture-poster widget that reserves a caption area
 under each thumbnail, shows a subdued label normally and a brighter scrolling
 label while focused. Standard Estuary movie and TV widgets remain unchanged.
-No rescan is required for these display choices. Use **Play slideshow from here** on
+Widget pictures open through Kodi's picture viewer, videos keep normal
+playback and album tiles open in the Pictures window. No rescan is required for
+these display choices. Use **Play slideshow from here** on
 a media item or **Play mixed
 slideshow** on an album. Video-only results use Kodi's video playlist.
 Picture-only album trees use Kodi's native recursive slideshow. Mixed album
@@ -527,7 +530,11 @@ The background service waits for the configured startup delay and then runs an
 incremental scan. By default, automatic scanning is disabled and scans are
 deferred while Kodi is playing media. Automatic scans now use the same non-modal
 background progress indicator as manual scans. The main menu and **Scan status**
-show the current source, file and number of discovered media items.
+show the current source, file and number of discovered media items. If **Pause
+scans during media playback** is disabled, scanning may continue silently while
+Live TV, a TV episode, a movie or other media is playing. The background
+progress dialog closes during playback and returns automatically after playback
+stops. **Scan status** still exposes the current source and count.
 
 Both **Scan now** and **Scan selected source** use Kodi's non-modal background
 progress indicator, so the interface remains available. When **Pause scans
@@ -695,14 +702,14 @@ authors. Contributions and issue reports are welcome.
 Update the MyPicsDB 3 plug-in version with:
 
 ```bash
-python3 tools/set_version.py 0.3.2
+python3 tools/set_version.py 0.3.3
 ```
 
 The repository add-on keeps its existing version during normal plug-in
 releases. Bump it only when `repository.mypicsdb3` itself changes:
 
 ```bash
-python3 tools/set_version.py 0.3.2 --repository-version 0.3.2
+python3 tools/set_version.py 0.3.3 --repository-version 0.3.3
 ```
 
 The skin version and pinned upstream Kodi tag are maintained separately in
