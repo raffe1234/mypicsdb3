@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.45" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.2.46" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Add confirmation-protected scan cancellation, shared manual and automatic scan progress, graceful overlapping-scan handling, and safe malformed folder-route handling.</news>
+    <news>Add lazy Kodi-generated video frame thumbnails for media items and video-only folder/date artwork, while preserving explicit image artwork when available.</news>
   </extension>
 </addon>

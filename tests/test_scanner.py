@@ -264,6 +264,7 @@ def test_video_scan_skips_picture_metadata_and_stores_media_type(tmp_path: Path)
     }
     video = next(row for row in rows if row["media_type"] == "video")
     assert video["mime_type"] == "video/mp4"
+    assert video["thumb_uri"] is None
     assert video["taken_source"] == "File mtime fallback"
 
 

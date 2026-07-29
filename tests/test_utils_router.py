@@ -1,7 +1,15 @@
 from __future__ import annotations
 
 from mypicsdb3.router import parse_request
-from mypicsdb3.utils import join_uri, normalize_uri, plugin_url, safe_limit, split_csv, split_pipe
+from mypicsdb3.utils import (
+    join_uri,
+    kodi_generated_video_thumbnail_uri,
+    normalize_uri,
+    plugin_url,
+    safe_limit,
+    split_csv,
+    split_pipe,
+)
 
 
 def test_parse_request_prefers_explicit_query() -> None:
@@ -28,3 +36,13 @@ def test_plugin_url_and_setting_parsers() -> None:
     assert safe_limit("9999", 15) == 500
     assert split_csv(".JPG, png, JPG") == ("jpg", "png")
     assert split_pipe("@eaDir| #recycle |") == ("@eadir", "#recycle")
+
+
+def test_kodi_generated_video_thumbnail_uri_encodes_network_and_unicode_paths() -> None:
+    assert kodi_generated_video_thumbnail_uri("smb://server/Home videos/clip #1.mp4") == (
+        "image://video@smb%3A%2F%2Fserver%2FHome%20videos%2Fclip%20%231.mp4/"
+    )
+    assert kodi_generated_video_thumbnail_uri("nfs://nas/Åland/film.mov") == (
+        "image://video@nfs%3A%2F%2Fnas%2F%C3%85land%2Ffilm.mov/"
+    )
+    assert kodi_generated_video_thumbnail_uri("") == ""

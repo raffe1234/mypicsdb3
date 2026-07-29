@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.46 - 2026-07-29
+
+- Request video previews through Kodi's native `image://video@...` generated-frame
+  loader instead of assigning the video file itself as picture artwork. This
+  uses Kodi's existing thumbnail cache and requires no add-on FFmpeg process or
+  duplicate thumbnail tree.
+- Apply the same generated-frame artwork to video-only album and date-group
+  representatives while preserving an explicit image thumbnail when one is
+  supplied.
+- Leave video `thumb_uri` empty for newly scanned catalogue rows. Existing rows
+  remain compatible because the browser replaces a legacy self-referencing video
+  thumbnail at display time.
+- Keep the original media path, MIME type, direct playback, mixed-slideshow
+  behaviour, database schema 5 and repository add-on version 0.2.26 unchanged.
+- Document that the first preview can take a few seconds over SMB/NFS and that
+  isolated still-picture preview failures remain Kodi texture-cache issues, not
+  a reason to generate a second add-on-managed image cache.
+
 ## 0.2.45 - 2026-07-29
 
 - Replace **Scan now** with a confirmation-protected **Stop scan** action while

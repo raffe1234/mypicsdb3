@@ -138,6 +138,7 @@ class FakeKodi:
             album_view_mode=55,
             minimum_rating_policy="all",
             include_videos=False,
+            video_extensions=("mp4", "mov", "m4v", "mkv", "avi"),
         )
         self.debug_messages = []
         self.info_messages = []
@@ -757,8 +758,61 @@ def test_video_node_and_video_list_item_are_playable_when_enabled(monkeypatch) -
     assert url.endswith("clip.mp4")
     assert item.properties["IsPlayable"] == "true"
     assert item.properties["MyPicsDB3.MediaType"] == "video"
+    assert item.art["thumb"] == (
+        "image://video@smb%3A%2F%2Fserver%2Fphotos%2Fclip.mp4/"
+    )
+    assert item.art["icon"] == item.art["thumb"]
     assert "video" in item.info
     assert is_folder is False
+
+
+
+def test_video_item_keeps_explicit_image_thumbnail(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.include_videos = True
+    video = dict(runtime.catalog.recent_taken(1)[0])
+    video.update(
+        {
+            "id": 9,
+            "uri": "smb://server/photos/clip.mp4",
+            "thumb_uri": "smb://server/photos/clip-thumb.jpg",
+            "filename": "clip.mp4",
+            "media_type": "video",
+            "mime_type": "video/mp4",
+        }
+    )
+    runtime.catalog.videos = lambda limit, offset=0: [video]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("videos", {}))
+
+    _url, item, _is_folder = calls.items[0]
+    assert item.art["thumb"] == "smb://server/photos/clip-thumb.jpg"
+
+
+
+def test_video_only_folder_uses_generated_frame_art(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.include_videos = True
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    _url, item, is_folder = ui._folder_item(
+        {
+            "id": 12,
+            "source_id": 7,
+            "name": "Home videos",
+            "picture_count": 3,
+            "representative_uri": "nfs://nas/Home videos/clip.mov",
+            "representative_thumb": "nfs://nas/Home videos/clip.mov",
+        }
+    )
+
+    assert item.art["thumb"] == (
+        "image://video@nfs%3A%2F%2Fnas%2FHome%20videos%2Fclip.mov/"
+    )
+    assert is_folder is True
 
 
 def test_video_items_prefer_info_tag_video_setters(monkeypatch) -> None:

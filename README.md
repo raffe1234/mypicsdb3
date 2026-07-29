@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.45 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.46 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -27,7 +27,8 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
   available.
 - Missing-source safety: an unavailable SMB/NFS source or incomplete directory
   traversal is never interpreted as deletion of unseen media.
-- Lazy Kodi thumbnail caching; no duplicate thumbnail tree is generated.
+- Lazy Kodi thumbnail caching, including native generated-frame previews for
+  indexed videos; no duplicate thumbnail tree is generated.
 - Global Unicode-normalized AND search across filename, caption, keywords,
   path parts, camera and stored location fields.
 - Favorites, ratings, keywords, cameras, year/month/day and geotagged views.
@@ -138,12 +139,16 @@ dedicated **Videos** node. Camera, keyword, geolocation and embedded-rating
 views remain picture-only. Minimum-picture-rating policies still include videos
 without assigning a fake rating to them.
 
-Kodi plays an individual video directly. Use **Play slideshow from here** on a
-media item or **Play mixed slideshow** on an album. Video-only results use Kodi's
-video playlist. Picture-only album trees use Kodi's native recursive slideshow.
-Mixed album playback includes descendants and is capped at 5,000 media files.
-A lightweight service monitor advances a compatible picture playlist after an
-indexed video finishes.
+Kodi plays an individual video directly. MyPicsDB 3 asks Kodi's native
+`image://video@...` loader for a representative frame when no explicit image
+thumbnail exists. Generation is lazy and device-local, so the first view can
+take a few seconds for large SMB/NFS videos; no frames are extracted during the
+catalogue scan. Use **Play slideshow from here** on a media item or **Play mixed
+slideshow** on an album. Video-only results use Kodi's video playlist.
+Picture-only album trees use Kodi's native recursive slideshow. Mixed album
+playback includes descendants and is capped at 5,000 media files. A lightweight
+service monitor advances a compatible picture playlist after an indexed video
+finishes.
 
 Kodi builds do not all route picture playlist 2 through the picture player.
 MyPicsDB 3 therefore probes one known picture before constructing a potentially

@@ -41,7 +41,13 @@ from .slideshow import (
     start_video_playlist,
     stop_active_media_players,
 )
-from .utils import parse_bool, plugin_url, safe_limit
+from .utils import (
+    extension_of,
+    kodi_generated_video_thumbnail_uri,
+    parse_bool,
+    plugin_url,
+    safe_limit,
+)
 from .view_mode import set_view_mode_when_container_ready
 
 
@@ -110,6 +116,25 @@ class PluginUI:
         else:
             policy = self.text(30069, "Minimum rating: %s") % self._rating_label(effective)
         return "%s  [COLOR=grey](%s)[/COLOR]" % (category, policy)
+
+    def _media_art_uri(
+        self,
+        uri: Any,
+        thumb_uri: Any = None,
+        media_type: Any = None,
+    ) -> str:
+        media_uri = str(uri or "")
+        thumbnail = str(thumb_uri or "")
+        configured_video_extensions = tuple(
+            getattr(self.kodi.settings, "video_extensions", ()) or ()
+        )
+        is_video = str(media_type or "") == "video" or (
+            bool(media_uri)
+            and extension_of(media_uri) in configured_video_extensions
+        )
+        if is_video and (not thumbnail or thumbnail == media_uri):
+            return kodi_generated_video_thumbnail_uri(media_uri)
+        return thumbnail or media_uri
 
     def _item(self, label: str, art: Optional[str] = None, path: Optional[str] = None) -> xbmcgui.ListItem:
         item = xbmcgui.ListItem(label=label, path=path or "")
@@ -381,8 +406,13 @@ class PluginUI:
     ) -> Tuple[str, xbmcgui.ListItem, bool]:
         date_text = str(row.get("taken_at") or row.get("discovered_at") or "")
         label = row.get("filename") or date_text or self.text(30031, "Picture")
-        item = self._item(label, row.get("thumb_uri") or row.get("uri"), row.get("uri"))
-        info: Dict[str, Any] = {"title": label, "picturepath": row.get("uri", ""), "date": date_text}
+        media_type = str(row.get("media_type") or "picture")
+        media_uri = str(row.get("uri") or "")
+        art_uri = self._media_art_uri(
+            media_uri, row.get("thumb_uri"), media_type
+        )
+        item = self._item(label, art_uri, media_uri)
+        info: Dict[str, Any] = {"title": label, "picturepath": media_uri, "date": date_text}
         if row.get("width") and row.get("height"):
             info["resolution"] = "%sx%s" % (row["width"], row["height"])
         if row.get("camera_make"):
@@ -391,7 +421,6 @@ class PluginUI:
             info["cameramodel"] = row["camera_model"]
         if row.get("caption"):
             info["exifcomment"] = row["caption"]
-        media_type = str(row.get("media_type") or "picture")
         try:
             if media_type == "video":
                 self._set_video_info(item, str(label), date_text)
@@ -445,7 +474,9 @@ class PluginUI:
     ) -> Tuple[str, xbmcgui.ListItem, bool]:
         count = int(row.get("picture_count") or 0)
         label = "%s  [COLOR=grey](%d)[/COLOR]" % (row.get("name") or self.text(30032, "Album"), count)
-        art = row.get("representative_thumb") or row.get("representative_uri") or self.icon
+        art = self._media_art_uri(
+            row.get("representative_uri"), row.get("representative_thumb")
+        ) or self.icon
         context = [(self.text(30021, "Scan selected source"), "RunPlugin(%s)" % self.url("action/scan", source=row.get("source_id")))]
         if row.get("id"):
             context.append(
@@ -579,7 +610,7 @@ class PluginUI:
                 self.add_folder(
                     label,
                     "year",
-                    art=row.get("thumb_uri") or row.get("uri"),
+                    art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")),
                     year=row["year"],
                     **rating_params,
                 )
@@ -594,7 +625,7 @@ class PluginUI:
                 self.add_folder(
                     label,
                     "no-date",
-                    art=undated.get("thumb_uri") or undated.get("uri"),
+                    art=self._media_art_uri(undated.get("uri"), undated.get("thumb_uri")),
                     **rating_params,
                 )
             )
@@ -617,7 +648,7 @@ class PluginUI:
                 self.add_folder(
                     label,
                     "month",
-                    art=row.get("thumb_uri") or row.get("uri"),
+                    art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")),
                     year=year,
                     month=month,
                     **rating_params,
@@ -642,7 +673,7 @@ class PluginUI:
                 self.add_folder(
                     label,
                     "day",
-                    art=row.get("thumb_uri") or row.get("uri"),
+                    art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")),
                     year=year,
                     month=month,
                     day=day,
@@ -663,7 +694,7 @@ class PluginUI:
         for row in self.catalog.cameras():
             name = " ".join(filter(None, [row.get("camera_make"), row.get("camera_model")])) or self.text(30033, "Unknown camera")
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (name, row["picture_count"])
-            items.append(self.add_folder(label, "camera", art=row.get("thumb_uri") or row.get("uri"), make=row.get("camera_make", ""), model=row.get("camera_model", ""), **rating_params))
+            items.append(self.add_folder(label, "camera", art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")), make=row.get("camera_make", ""), model=row.get("camera_model", ""), **rating_params))
         self.finish(
             items,
             content="images",
@@ -677,7 +708,7 @@ class PluginUI:
         items = []
         for row in self.catalog.tags():
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (row["name"], row["picture_count"])
-            items.append(self.add_folder(label, "tag", art=row.get("thumb_uri") or row.get("uri"), id=row["id"], **rating_params))
+            items.append(self.add_folder(label, "tag", art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")), id=row["id"], **rating_params))
         self.finish(
             items,
             content="images",

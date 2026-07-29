@@ -265,8 +265,10 @@ class Scanner:
                                 "sublocation": location.get("sublocation"),
                                 "caption": metadata.caption,
                                 "metadata_hash": metadata.metadata_hash,
-                                # The original URI is intentionally used. Kodi creates a device-local texture cache lazily.
-                                "thumb_uri": picture_uri,
+                                # Still pictures use their original URI. Videos leave the
+                                # artwork field empty so the browser can request Kodi's
+                                # native ``image://video@...`` generated-frame loader.
+                                "thumb_uri": picture_uri if media_type == "picture" else None,
                             }
                             if existing:
                                 self.catalog.update_picture(connection, int(existing["id"]), record, metadata.keywords)
