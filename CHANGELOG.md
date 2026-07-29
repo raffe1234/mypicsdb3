@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.1 - 2026-07-29
+
+- Publish each picture filename and album label through both `ListItem.Label` and
+  `ListItem.Title`, restoring the subdued text used by Estuary poster widgets
+  after poster artwork was added in 0.2.47.
+- Keep a `MyPicsDB3.WidgetLabel` list-item property for skin integrations that
+  prefer an explicit, stable widget label.
+- Prefer common still-image formats such as JPEG, PNG, WebP and TIFF when
+  choosing album artwork, before trying RAW/HEIF pictures or a video frame.
+- Clear Estuary's remembered horizontal widget position before refreshing
+  random selections so a new result set does not reopen with its first tile
+  mostly outside the visible row.
+- Require no catalogue rescan or schema migration; database schema 5, Query
+  Model version 1 and repository add-on version 0.2.26 remain unchanged.
+
 ## 0.3.0 - 2026-07-29
 
 - Add **Create smart collection** to the MyPicsDB 3 main menu. The Kodi dialog

@@ -670,6 +670,7 @@ class Catalog:
         representative_filter = " AND " + representative_predicate if representative_predicate else ""
         query = """SELECT f.*, p.uri AS representative_uri, p.thumb_uri AS representative_thumb,
                    p.media_type AS representative_media_type,
+                   p.extension AS representative_extension,
                    (SELECT COUNT(*) FROM pictures pc WHERE pc.folder_id=f.id AND pc.is_missing=0%s) AS picture_count,
                    s.label AS source_label
                    FROM folders f
@@ -677,7 +678,12 @@ class Catalog:
                    LEFT JOIN pictures p ON p.id=(
                        SELECT pr.id FROM pictures pr
                        WHERE pr.folder_id=f.id AND pr.is_missing=0%s
-                       ORDER BY CASE WHEN pr.media_type='picture' THEN 0 ELSE 1 END,
+                       ORDER BY CASE
+                                  WHEN pr.media_type='picture' AND LOWER(COALESCE(pr.extension,'')) IN
+                                       ('jpg','jpeg','png','webp','bmp','gif','tif','tiff') THEN 0
+                                  WHEN pr.media_type='picture' THEN 1
+                                  ELSE 2
+                                END,
                                 COALESCE(pr.taken_at, pr.discovered_at) DESC, pr.id DESC LIMIT 1
                    )
                    WHERE f.is_missing=0""" % (count_filter, representative_filter)

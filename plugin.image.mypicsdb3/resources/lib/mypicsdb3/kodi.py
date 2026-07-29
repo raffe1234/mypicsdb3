@@ -278,6 +278,10 @@ class KodiContext:
         xbmc.executebuiltin("Container.Refresh")
         skin_id = xbmc.getSkinDir() if hasattr(xbmc, "getSkinDir") else ""
         if skin_id == "skin.estuary.mypicsdb3":
+            # Estuary remembers one horizontal widget position globally. A
+            # fresh random result set can otherwise reopen with its first item
+            # mostly outside the viewport, which looks like an empty tile.
+            xbmc.executebuiltin("ClearProperty(listposition,home)")
             xbmc.executebuiltin("ReloadSkin()")
 
     @staticmethod

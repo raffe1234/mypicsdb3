@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.3.0 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.3.1 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -34,7 +34,8 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
 - Global Unicode-normalized AND search across filename, caption, keywords,
   path parts, camera and stored location fields.
 - Favorites, ratings, keywords, cameras, year/month/day and geotagged views.
-- Picture-first album artwork, with video fallback for video-only albums.
+- Picture-first album artwork, preferring broadly supported still formats,
+  with RAW/HEIF and video fallback for collections that need them.
 - Guarded album-view activation that waits for the active, stable Pictures
   container, skips empty results and never changes a background window or widget
   layout.
@@ -169,9 +170,13 @@ Kodi plays an individual video directly. MyPicsDB 3 asks Kodi's native
 thumbnail exists. Generation is lazy and device-local, so the first view can
 take a few seconds for large SMB/NFS videos; no frames are extracted during the
 catalogue scan. Album and date widgets publish the selected representative
-artwork as thumb, icon, poster and landscape. A still picture is preferred;
-a video-only collection falls back to Kodi's generated video frame without
-requiring a rescan. Use **Play slideshow from here** on a media item or **Play mixed
+artwork as thumb, icon, poster and landscape. Common still formats such as JPEG,
+PNG, WebP and TIFF are preferred for album covers; RAW/HEIF pictures remain
+available when no common still exists, and a video-only collection falls back
+to Kodi's generated video frame. Widget items also publish filenames and album
+names as titles so Estuary can keep the subdued caption under each poster. No
+rescan is required for these display choices. Use **Play slideshow from here** on
+a media item or **Play mixed
 slideshow** on an album. Video-only results use Kodi's video playlist.
 Picture-only album trees use Kodi's native recursive slideshow. Mixed album
 playback includes descendants and is capped at 5,000 media files. A lightweight
@@ -397,9 +402,10 @@ After the first successful scan, the add-on main menu provides:
   preview the current result count and save the validated filter.
 
 Select **Refresh random selections** to request new results for Random memories,
-Random albums and On this day - random. With Estuary MyPicsDB 3, the action also
-reloads the skin so the random home-screen rows are queried again. It does not
-scan the filesystem or change the catalogue.
+Random albums and On this day - random. With Estuary MyPicsDB 3, the action clears
+the remembered horizontal row position before reloading the skin, so the fresh
+selection starts at its first tile. It does not scan the filesystem or change
+the catalogue.
 
 Open **Settings > General > Configure add-on menu** to show or hide the
 configurable catalogue browsing nodes. Search, Saved searches, Create smart
@@ -687,14 +693,14 @@ authors. Contributions and issue reports are welcome.
 Update the MyPicsDB 3 plug-in version with:
 
 ```bash
-python3 tools/set_version.py 0.3.0
+python3 tools/set_version.py 0.3.1
 ```
 
 The repository add-on keeps its existing version during normal plug-in
 releases. Bump it only when `repository.mypicsdb3` itself changes:
 
 ```bash
-python3 tools/set_version.py 0.3.0 --repository-version 0.3.0
+python3 tools/set_version.py 0.3.1 --repository-version 0.3.1
 ```
 
 The skin version and pinned upstream Kodi tag are maintained separately in

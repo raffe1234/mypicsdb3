@@ -137,8 +137,30 @@ class PluginUI:
             return kodi_generated_video_thumbnail_uri(media_uri)
         return thumbnail or media_uri
 
+    @staticmethod
+    def _set_widget_title(item, label: str) -> None:
+        """Expose a stable title for Estuary poster widgets.
+
+        Kodi's poster layout reads ``ListItem.Title`` while picture plug-ins
+        traditionally only populated ``ListItem.Label``. Publishing both keeps
+        filenames and album names visible after poster artwork is supplied.
+        """
+
+        title = str(label or "")
+        try:
+            item.setProperty("MyPicsDB3.WidgetLabel", title)
+        except Exception:
+            pass
+        try:
+            getter = getattr(item, "getVideoInfoTag", None)
+            if callable(getter):
+                getter().setTitle(title)
+        except Exception:
+            pass
+
     def _item(self, label: str, art: Optional[str] = None, path: Optional[str] = None) -> xbmcgui.ListItem:
         item = xbmcgui.ListItem(label=label, path=path or "")
+        self._set_widget_title(item, label)
         image = art or self.icon
         item.setArt({
             "thumb": image,

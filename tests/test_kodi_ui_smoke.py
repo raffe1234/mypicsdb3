@@ -837,6 +837,53 @@ def test_video_only_folder_uses_generated_frame_art(monkeypatch) -> None:
     assert is_folder is True
 
 
+def test_widget_items_publish_titles_for_estuary_poster_rows(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+
+    class WidgetVideoTag:
+        def __init__(self):
+            self.title = None
+
+        def setTitle(self, value):
+            self.title = value
+
+        def setDateAdded(self, _value):
+            pass
+
+    class WidgetListItem(FakeListItem):
+        def __init__(self, label="", path=""):
+            super().__init__(label, path)
+            self.video_tag = WidgetVideoTag()
+
+        def getVideoInfoTag(self):
+            return self.video_tag
+
+    views.xbmcgui.ListItem = WidgetListItem
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("recent-taken", {}))
+
+    _url, picture, _is_folder = calls.items[0]
+    assert picture.video_tag.title == "image.jpg"
+    assert picture.properties["MyPicsDB3.WidgetLabel"] == "image.jpg"
+
+    _url, album, is_folder = ui._folder_item(
+        {
+            "id": 12,
+            "source_id": 7,
+            "name": "Summer album",
+            "picture_count": 3,
+            "representative_uri": "smb://server/photos/cover.jpg",
+            "representative_thumb": "smb://server/photos/cover.jpg",
+            "representative_media_type": "picture",
+        }
+    )
+    assert album.video_tag.title == "Summer album  [COLOR=grey](3)[/COLOR]"
+    assert album.properties["MyPicsDB3.WidgetLabel"] == album.label
+    assert is_folder is True
+
+
 def test_video_items_prefer_info_tag_video_setters(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
 

@@ -182,7 +182,11 @@ def test_random_refresh_reloads_custom_estuary_and_current_container(monkeypatch
 
     kodi.KodiContext.refresh_random_views()
 
-    assert commands == ["Container.Refresh", "ReloadSkin()"]
+    assert commands == [
+        "Container.Refresh",
+        "ClearProperty(listposition,home)",
+        "ReloadSkin()",
+    ]
 
 
 def test_random_refresh_only_refreshes_container_for_other_skins(monkeypatch) -> None:
