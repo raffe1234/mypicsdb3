@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import contextlib
+import io
 import struct
+from types import SimpleNamespace
 
-from mypicsdb3.metadata import image_dimensions, parse_xmp
+from mypicsdb3 import metadata
+from mypicsdb3.metadata import extract_metadata, image_dimensions, parse_xmp
 
 
 def test_image_dimensions_for_png_gif_bmp_and_webp() -> None:
@@ -35,3 +39,76 @@ def test_parse_xmp_extracts_date_keywords_rating_location_and_caption() -> None:
     assert "Family" in result["keywords"]
     assert "Summer" in result["keywords"]
     assert result["caption"] == "At the lake"
+
+
+class _IndexedOnlyIPTCInfo:
+    def __init__(self, _path: str, force: bool = False):
+        assert force is True
+        self.values = {
+            "keywords": [b"Family", b"Summer"],
+            "city": b"Stockholm",
+            "province/state": b"Stockholm County",
+            "country/primary location name": b"Sweden",
+            "sub-location": b"At the lake",
+            "caption/abstract": b"A summer caption",
+            "date created": b"2026-07-29",
+        }
+
+    def __getitem__(self, key: str):
+        return self.values[key]
+
+
+def test_read_iptc_does_not_require_dictionary_get(monkeypatch) -> None:
+    monkeypatch.setattr(metadata, "IPTCInfo", _IndexedOnlyIPTCInfo)
+
+    result = metadata._read_iptc("picture.jpg")
+
+    assert result["keywords"] == ["Family", "Summer"]
+    assert result["location"] == {
+        "city": "Stockholm",
+        "state": "Stockholm County",
+        "country": "Sweden",
+        "sublocation": "At the lake",
+    }
+    assert result["caption"] == "A summer caption"
+    assert result["date_created"] == "2026-07-29 00:00:00"
+
+
+class _NonJpegFilesystem:
+    def __init__(self):
+        self.materialized_calls = 0
+
+    def read_prefix(self, _path: str, _max_bytes: int) -> bytes:
+        return b"\x89PNG\r\n\x1a\n" + b"\x00" * 24
+
+    def open_binary(self, _path: str):
+        return io.BytesIO(b"")
+
+    @contextlib.contextmanager
+    def materialized(self, _path: str, _max_bytes: int):
+        self.materialized_calls += 1
+        yield "/tmp/should-not-be-used.png"
+
+
+def test_extract_metadata_skips_iptc_for_non_jpeg(monkeypatch) -> None:
+    filesystem = _NonJpegFilesystem()
+    settings = SimpleNamespace(
+        metadata_prefix_mb=1,
+        deep_metadata_max_mb=64,
+        store_gps=False,
+        read_xmp=False,
+        read_iptc=True,
+    )
+    monkeypatch.setattr(metadata, "exifread", None)
+    monkeypatch.setattr(
+        metadata,
+        "IPTCInfo",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("IPTCInfo must not inspect non-JPEG files")
+        ),
+    )
+
+    result = extract_metadata("picture.png", filesystem, settings, file_size=32)
+
+    assert result.mime_type == "image/png"
+    assert filesystem.materialized_calls == 0

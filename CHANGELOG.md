@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.43 - 2026-07-29
+
+- Read IPTCInfo3 fields through indexed access instead of calling the unsupported
+  dictionary-style `get()` method, preventing per-JPEG scan failures on Kodi 22.
+- Attempt IPTC extraction only for files identified as JPEG. Prefer the JPEG
+  signature when the metadata prefix is available, preventing PNG, HEIC and
+  other image formats from reaching IPTCInfo3's blind scanner.
+- Add regression coverage for IPTCInfo3 objects without `get()` and for skipping
+  IPTC materialization on non-JPEG images.
+- Keep database schema 5, Query Model version 1, slideshow behaviour and
+  repository add-on version 0.2.26 unchanged.
+
 ## 0.2.42 - 2026-07-28
 
 - Treat an inconclusive picture-player compatibility check as incompatible

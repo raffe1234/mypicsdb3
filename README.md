@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.42 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.43 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -20,7 +20,8 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
 - Optional shared MySQL/MariaDB catalogue through PyMySQL.
 - EXIF capture date, camera, orientation, dimensions, rating and optional GPS.
 - Basic embedded XMP keywords, rating, location and capture date.
-- IPTC keywords, caption and location through IPTCInfo3 when available.
+- IPTC keywords, caption and location from JPEG files through IPTCInfo3 when
+  available.
 - Missing-source safety: an unavailable SMB/NFS source or incomplete directory
   traversal is never interpreted as deletion of unseen media.
 - Lazy Kodi thumbnail caching; no duplicate thumbnail tree is generated.
@@ -243,7 +244,8 @@ MyPicsDB 3 dependency when Kodi can resolve that dependency from an enabled
 repository.
 
 Kodi resolves ExifRead and PyMySQL from its add-on repositories. IPTCInfo3 is an
-optional dependency; EXIF and XMP indexing continue if it is unavailable.
+optional dependency and is used only for files identified as JPEG; EXIF and XMP
+indexing continue if it is unavailable.
 
 ## Using MyPicsDB 3 in Kodi
 

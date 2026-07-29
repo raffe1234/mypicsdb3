@@ -256,6 +256,29 @@ def parse_xmp(data: bytes) -> Dict[str, Any]:
     }
 
 
+def _is_jpeg_metadata_candidate(path: str, mime_type: str, prefix: bytes) -> bool:
+    """Return whether IPTCInfo3 should inspect this picture.
+
+    Prefer the file signature when a prefix was read successfully. Fall back to
+    the MIME type or filename only when the prefix could not be read, so normal
+    PNG, HEIC and other non-JPEG files never reach IPTCInfo3's blind scanner.
+    """
+    if prefix:
+        return prefix.startswith(b"\xff\xd8\xff")
+    if str(mime_type or "").strip().casefold() in {"image/jpeg", "image/pjpeg"}:
+        return True
+    clean_path = str(path or "").split("?", 1)[0].split("#", 1)[0].casefold()
+    return clean_path.endswith((".jpg", ".jpeg", ".jpe"))
+
+
+def _iptc_value(info: Any, key: str) -> Any:
+    """Read one IPTCInfo3 field without assuming dictionary ``get`` support."""
+    try:
+        return info[key]
+    except Exception:
+        return None
+
+
 def _read_iptc(path: str) -> Dict[str, Any]:
     if IPTCInfo is None:
         return {}
@@ -263,19 +286,19 @@ def _read_iptc(path: str) -> Dict[str, Any]:
         info = IPTCInfo(path, force=True)
     except Exception:
         return {}
-    keywords = info.get("keywords") or []
+    keywords = _iptc_value(info, "keywords") or []
     if not isinstance(keywords, (list, tuple)):
         keywords = [keywords]
     location = {}
     for output, iptc_key in (("city", "city"), ("state", "province/state"), ("country", "country/primary location name"), ("sublocation", "sub-location")):
-        value = decode_text(info.get(iptc_key))
+        value = decode_text(_iptc_value(info, iptc_key))
         if value:
             location[output] = value
     return {
         "keywords": unique_strings(keywords),
         "location": location,
-        "caption": decode_text(info.get("caption/abstract")) or None,
-        "date_created": _normalise_date(info.get("date created")),
+        "caption": decode_text(_iptc_value(info, "caption/abstract")) or None,
+        "date_created": _normalise_date(_iptc_value(info, "date created")),
     }
 
 
@@ -351,7 +374,11 @@ def extract_metadata(path: str, filesystem: Filesystem, settings: Settings, file
         result.location.update(xmp.get("location", {}))
         result.caption = xmp.get("caption") or result.caption
 
-    if settings.read_iptc and (not file_size or file_size <= settings.deep_metadata_max_mb * 1024 * 1024):
+    if (
+        settings.read_iptc
+        and _is_jpeg_metadata_candidate(path, result.mime_type, prefix)
+        and (not file_size or file_size <= settings.deep_metadata_max_mb * 1024 * 1024)
+    ):
         with filesystem.materialized(path, settings.deep_metadata_max_mb * 1024 * 1024) as local_path:
             if local_path:
                 iptc = _read_iptc(local_path)
