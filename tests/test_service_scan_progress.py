@@ -67,6 +67,7 @@ class FakeKodi:
         self.log = FakeLog()
         self.dialog = FakeProgressDialog()
         self.scan_events = []
+        self.cancel_requested = False
         self.settings = SimpleNamespace(
             auto_scan=True,
             pause_during_playback=False,
@@ -105,7 +106,7 @@ class FakeKodi:
         self.scan_events.append(("finish", token))
 
     def scan_cancel_requested(self, _token):
-        return False
+        return self.cancel_requested
 
     def create_background_progress(self, heading, message):
         self.scan_events.append(("dialog", heading, message))
@@ -208,3 +209,96 @@ def test_overlapping_automatic_scan_is_logged_as_skipped(monkeypatch) -> None:
     ) in kodi.log.messages
     assert not any(level == "error" for level, _message in kodi.log.messages)
     assert kodi.scan_events == []
+
+def test_automatic_scan_logs_service_interruption_separately(monkeypatch) -> None:
+    monitor = FakeMonitor()
+    kodi = FakeKodi(monitor)
+    initial_catalog = FakeCatalog()
+    scan_catalog = FakeCatalog()
+    loop = ServiceLoop(
+        kodi,
+        date_provider=lambda: date(2026, 7, 29),
+        monotonic_provider=lambda: 100.0,
+        monitor=monitor,
+    )
+    loop._runtime_parts = lambda: (kodi.settings, initial_catalog, object())
+
+    monkeypatch.setattr(service_loop, "DatabaseEngine", FakeEngine)
+    monkeypatch.setattr(service_loop, "Catalog", lambda _engine, _log: scan_catalog)
+
+    class InterruptedScanner:
+        def __init__(
+            self,
+            _catalog,
+            _filesystem,
+            _settings,
+            _logger,
+            cancelled,
+            progress,
+            started,
+        ):
+            self.cancelled = cancelled
+            self.started = started
+
+        def scan_sources(self):
+            self.started(SimpleNamespace())
+            monitor.aborted = True
+            assert self.cancelled() is True
+            return SimpleNamespace(cancelled=True, pictures_seen=25, errors=0)
+
+    monkeypatch.setattr(service_loop, "Scanner", InterruptedScanner)
+
+    loop.run()
+
+    assert (
+        "info",
+        "Automatic scan interrupted because Kodi or the add-on service stopped",
+    ) in kodi.log.messages
+    assert not any(
+        message == "Automatic scan cancelled by user"
+        for _level, message in kodi.log.messages
+    )
+
+
+def test_automatic_scan_logs_user_requested_cancellation(monkeypatch) -> None:
+    monitor = FakeMonitor()
+    kodi = FakeKodi(monitor)
+    kodi.cancel_requested = True
+    initial_catalog = FakeCatalog()
+    scan_catalog = FakeCatalog()
+    loop = ServiceLoop(
+        kodi,
+        date_provider=lambda: date(2026, 7, 29),
+        monotonic_provider=lambda: 100.0,
+        monitor=monitor,
+    )
+    loop._runtime_parts = lambda: (kodi.settings, initial_catalog, object())
+
+    monkeypatch.setattr(service_loop, "DatabaseEngine", FakeEngine)
+    monkeypatch.setattr(service_loop, "Catalog", lambda _engine, _log: scan_catalog)
+
+    class CancelledScanner:
+        def __init__(
+            self,
+            _catalog,
+            _filesystem,
+            _settings,
+            _logger,
+            cancelled,
+            progress,
+            started,
+        ):
+            self.cancelled = cancelled
+            self.started = started
+
+        def scan_sources(self):
+            self.started(SimpleNamespace())
+            assert self.cancelled() is True
+            monitor.aborted = True
+            return SimpleNamespace(cancelled=True, pictures_seen=25, errors=0)
+
+    monkeypatch.setattr(service_loop, "Scanner", CancelledScanner)
+
+    loop.run()
+
+    assert ("info", "Automatic scan cancelled by user") in kodi.log.messages

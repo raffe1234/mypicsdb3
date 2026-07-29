@@ -970,3 +970,11 @@ msgstr "Current file"
 msgctxt "#32737"
 msgid "The album could not be opened"
 msgstr "The album could not be opened"
+
+msgctxt "#32738"
+msgid "Refresh random selections"
+msgstr "Refresh random selections"
+
+msgctxt "#32739"
+msgid "Random selections refreshed"
+msgstr "Random selections refreshed"

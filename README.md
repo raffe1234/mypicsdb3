@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.47 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.48 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -125,6 +125,27 @@ releases yourself and install newer packages manually.
    - **Metadata** — XMP, IPTC, GPS storage and metadata read limits;
    - **Database** — local SQLite or a shared MySQL/MariaDB catalogue;
    - **Maintenance** — missing-record retention and debug logging.
+
+### Optional RAW and HEIF image decoders
+
+MyPicsDB 3 can index supported file extensions, but Kodi must also have an
+image decoder installed to display the files and create thumbnails. Open:
+
+```text
+Add-ons
+  > Install from repository
+  > Kodi Add-on repository
+  > Image decoders
+```
+
+- Install **Libraw image decoder** for Nikon NEF and other RAW formats supported
+  by Libraw.
+- Install **HEIF image decoder** for HEIC and HEIF pictures.
+
+Restart Kodi after installing a decoder. A new catalogue scan is needed only
+when the file extension was not enabled during the earlier scan. Media that is
+already indexed does not need to be rescanned merely because a decoder was
+installed.
 
 ## Optional video support
 
@@ -318,7 +339,10 @@ cancels the scan safely. While a scan is active, **Scan now** is replaced by
 operation is allowed to finish before the scan records its cancelled state.
 
 The first scan can take time on a large local collection or NAS. Subsequent
-scans are incremental: unchanged files are not read and indexed again.
+scans are incremental: unchanged files are not read and indexed again. Installing
+or updating the add-on stops its background service, so an active automatic scan
+is safely interrupted. The next automatic scan traverses enabled sources from the
+beginning, but already stored unchanged files are skipped during metadata indexing.
 
 If a folder cannot be listed, Scan status reports `partial`. MyPicsDB 3 still
 indexes folders that were read successfully, but it skips missing-record
@@ -358,9 +382,15 @@ After the first successful scan, the add-on main menu provides:
 - **Saved searches** — named global searches that can be reopened with normal
   pagination and slideshow support.
 
+Select **Refresh random selections** to request new results for Random memories,
+Random albums and On this day - random. With Estuary MyPicsDB 3, the action also
+reloads the skin so the random home-screen rows are queried again. It does not
+scan the filesystem or change the catalogue.
+
 Open **Settings > General > Configure add-on menu** to show or hide the
-configurable catalogue browsing nodes. Search, Saved searches, Picture
-sources, Scan now, Scan status and Settings always remain visible.
+configurable catalogue browsing nodes. Search, Saved searches, Picture sources,
+Refresh random selections, Scan now, Scan status and Settings always remain
+visible.
 
 Open the context menu on a picture and select **Toggle favorite** to add or
 remove it from Favorites. **Open containing album** opens the indexed folder.
@@ -373,9 +403,10 @@ before the relevant pictures are scanned again.
 The default picture-extension list includes Nikon NEF RAW files as well as HEIC,
 HEIF and AVIF. Existing installations that still use the unchanged pre-0.2.44
 default are upgraded automatically to include `nef`; custom extension lists are
-left unchanged. Kodi must have **Libraw image decoder** installed to display NEF
-files. Indexing an extension does not guarantee that every Kodi platform or
-installed image decoder can display that format.
+left unchanged. Kodi needs **Libraw image decoder** to display supported RAW
+files such as NEF and **HEIF image decoder** to display HEIC/HEIF. AVIF support
+depends on the Kodi build and installed decoders. Indexing an extension does not
+guarantee that every Kodi platform can display it.
 
 Synology `@eaDir` metadata directories are always ignored, even if the custom
 exclusion setting is empty. A rescan marks thumbnails that were indexed by an
@@ -473,7 +504,8 @@ folder checkpoint after playback starts and resumes automatically after playback
 stops. This applies to movies, TV episodes, music and other media playback. The
 background indicator itself does not provide a cancel button, but the MyPicsDB 3
 main menu and **Scan status** expose **Stop scan** with a confirmation prompt.
-Exiting Kodi also cancels the scan safely.
+Exiting Kodi also interrupts the scan safely. The log distinguishes a user
+request from an interruption caused by Kodi shutdown or an add-on service restart.
 
 For one Kodi device, keep the default SQLite backend. Configure MySQL/MariaDB
 only when multiple Kodi devices need to share the same catalogue and all clients

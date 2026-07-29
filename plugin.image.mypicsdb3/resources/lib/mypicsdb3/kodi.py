@@ -265,6 +265,22 @@ class KodiContext:
         self.addon.openSettings()
 
     @staticmethod
+    def refresh_random_views() -> None:
+        """Request fresh random plug-in results and home-screen widgets.
+
+        Random routes are database-only and are deliberately not persisted.
+        Refresh the active plug-in container, then reload the optional Estuary
+        fork so its content-provider rows invoke those routes again.
+        """
+
+        if xbmc is None:
+            return
+        xbmc.executebuiltin("Container.Refresh")
+        skin_id = xbmc.getSkinDir() if hasattr(xbmc, "getSkinDir") else ""
+        if skin_id == "skin.estuary.mypicsdb3":
+            xbmc.executebuiltin("ReloadSkin()")
+
+    @staticmethod
     def refresh_date_sensitive_views() -> bool:
         """Refresh views whose contents depend on the local calendar date.
 

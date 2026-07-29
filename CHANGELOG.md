@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.48 - 2026-07-29
+
+- Add **Refresh random selections** to the MyPicsDB 3 main menu. It refreshes
+  the active plug-in container and reloads Estuary MyPicsDB 3 so Random
+  memories, Random albums and On this day - random request new database rows
+  without scanning or changing the catalogue.
+- Document how to install Kodi's **Libraw image decoder** for NEF/RAW and
+  **HEIF image decoder** for HEIC/HEIF, including when a rescan is and is not
+  required.
+- Distinguish a user-requested scan cancellation from a scan interrupted by
+  Kodi shutdown, add-on update or another service restart in `kodi.log`.
+- Document that an interrupted scan restarts source traversal on the next run
+  while incremental metadata checks still skip unchanged indexed files.
+- Keep database schema 5, Query Model version 1, repository add-on version
+  0.2.26 and the 0.2.47 collection-artwork behaviour unchanged.
+
 ## 0.2.47 - 2026-07-29
 
 - Carry the catalogue's exact representative `media_type` into album, year,

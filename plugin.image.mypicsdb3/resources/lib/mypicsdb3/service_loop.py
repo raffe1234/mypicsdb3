@@ -225,6 +225,7 @@ class ServiceLoop:
                         scan_started = False
                         progress_dialog = None
                         last_progress_at = 0.0
+                        user_cancelled = False
 
                         def begin_status(_stats) -> None:
                             nonlocal scan_started, progress_dialog
@@ -244,15 +245,18 @@ class ServiceLoop:
                                 )
 
                         def scan_cancelled() -> bool:
+                            nonlocal user_cancelled
+                            if self._abort_requested():
+                                return True
                             requested = getattr(
                                 self.kodi,
                                 "scan_cancel_requested",
                                 None,
                             )
-                            return bool(
-                                self._abort_requested()
-                                or (callable(requested) and requested(scan_token))
+                            user_cancelled = bool(
+                                callable(requested) and requested(scan_token)
                             )
+                            return user_cancelled
 
                         def scan_progress(source, path, stats) -> None:
                             nonlocal last_progress_at
@@ -310,7 +314,16 @@ class ServiceLoop:
                             )
                             stats = scanner.scan_sources()
                             if stats.cancelled:
-                                self.kodi.log.info("Automatic scan cancelled")
+                                if user_cancelled:
+                                    self.kodi.log.info(
+                                        "Automatic scan cancelled by user"
+                                    )
+                                elif self._abort_requested():
+                                    self.kodi.log.info(
+                                        "Automatic scan interrupted because Kodi or the add-on service stopped"
+                                    )
+                                else:
+                                    self.kodi.log.info("Automatic scan cancelled")
                             else:
                                 self.kodi.log.info(
                                     "Automatic scan finished: %d pictures, %d errors",

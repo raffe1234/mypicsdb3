@@ -157,6 +157,7 @@ class FakeKodi:
         self.picture_playlist_compatibility_updates = []
         self.scan_state = {}
         self.scan_cancel_requests = 0
+        self.random_refreshes = 0
 
     def localize(self, string_id, fallback):
         return fallback
@@ -192,6 +193,9 @@ class FakeKodi:
         self.scan_cancel_requests += 1
         self.scan_state["state"] = "cancelling"
         return True
+
+    def refresh_random_views(self):
+        self.random_refreshes += 1
 
 
 class FakeCatalog:
@@ -345,7 +349,7 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 19
+    assert len(calls.items) == 20
     assert calls.items[0][0].endswith("/search")
     assert calls.items[1][0].endswith("/saved-searches")
     assert calls.items[2][0].endswith("/sources")
@@ -373,13 +377,14 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     ui.root()
 
     urls = [url for url, _item, _is_folder in calls.items]
-    assert len(urls) == 16
+    assert len(urls) == 17
     assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
     assert "plugin://plugin.image.mypicsdb3/years" not in urls
     assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
     assert "plugin://plugin.image.mypicsdb3/search" in urls
     assert "plugin://plugin.image.mypicsdb3/saved-searches" in urls
     assert "plugin://plugin.image.mypicsdb3/sources" in urls
+    assert "plugin://plugin.image.mypicsdb3/action/refresh-random" in urls
     assert "plugin://plugin.image.mypicsdb3/action/scan" in urls
     assert "plugin://plugin.image.mypicsdb3/status" in urls
     assert "plugin://plugin.image.mypicsdb3/action/settings" in urls
@@ -403,6 +408,18 @@ def test_root_replaces_scan_now_with_stop_scan_while_scan_is_active(monkeypatch)
     assert "plugin://plugin.image.mypicsdb3/action/scan" not in urls
     assert "plugin://plugin.image.mypicsdb3/action/stop-scan" in urls
     assert "Stop scan" in labels
+
+
+
+def test_refresh_random_selections_refreshes_widgets_without_scanning(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("action/refresh-random", {}))
+
+    assert runtime.kodi.random_refreshes == 1
+    assert runtime.kodi.notifications[-1] == ("Random selections refreshed", False)
 
 
 def test_stop_scan_requires_confirmation_and_requests_soft_cancel(monkeypatch) -> None:

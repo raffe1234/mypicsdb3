@@ -175,3 +175,27 @@ def test_picture_playlist_compatibility_uses_home_window_property(monkeypatch) -
 
     context.set_picture_playlist_compatibility(None)
     assert kodi.KodiContext.picture_playlist_compatibility() is None
+
+def test_random_refresh_reloads_custom_estuary_and_current_container(monkeypatch) -> None:
+    commands = []
+    monkeypatch.setattr(kodi, "xbmc", fake_xbmc(commands))
+
+    kodi.KodiContext.refresh_random_views()
+
+    assert commands == ["Container.Refresh", "ReloadSkin()"]
+
+
+def test_random_refresh_only_refreshes_container_for_other_skins(monkeypatch) -> None:
+    commands = []
+    monkeypatch.setattr(
+        kodi,
+        "xbmc",
+        types.SimpleNamespace(
+            getSkinDir=lambda: "skin.estuary",
+            executebuiltin=commands.append,
+        ),
+    )
+
+    kodi.KodiContext.refresh_random_views()
+
+    assert commands == ["Container.Refresh"]

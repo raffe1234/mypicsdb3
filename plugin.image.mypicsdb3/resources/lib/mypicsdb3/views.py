@@ -218,6 +218,10 @@ class PluginUI:
         )
         items.extend(
             [
+                self.add_action(
+                    self.text(32738, "Refresh random selections"),
+                    "action/refresh-random",
+                ),
                 scan_action,
                 self.add_folder(self.text(30014, "Scan status"), "status"),
                 self.add_action(self.text(30015, "Settings"), "action/settings"),
@@ -1355,6 +1359,14 @@ class PluginUI:
             self.kodi.notify("%s: %d" % (self.text(30062, "Missing records cleaned"), count))
             xbmc.executebuiltin("Container.Refresh")
             return
+        if route == "action/refresh-random":
+            refresher = getattr(self.kodi, "refresh_random_views", None)
+            if callable(refresher):
+                refresher()
+            else:
+                xbmc.executebuiltin("Container.Refresh")
+            self.kodi.notify(self.text(32739, "Random selections refreshed"))
+            return
         if route == "action/stop-scan":
             active = self._scan_status()
             if not active:
@@ -1487,8 +1499,12 @@ class PluginUI:
         try:
             stats = scanner.scan_sources(source_ids)
             if abort_requested():
+                self.kodi.log.info(
+                    "Manual scan interrupted because Kodi or the add-on service stopped"
+                )
                 return
             if stats.cancelled:
+                self.kodi.log.info("Manual scan cancelled by user")
                 self.kodi.notify(self.text(30042, "Scan cancelled"))
             else:
                 message = "%s: %d, %s: %d" % (
