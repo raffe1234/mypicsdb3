@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.3.2 - 2026-07-29
+
+- Add a dedicated `WidgetListPosterMyPicsDB` include to the generated Estuary
+  fork instead of relying on the movie-poster widget, which does not render
+  picture filenames or album names below its artwork.
+- Reserve a caption area below every MyPicsDB home-screen thumbnail, using the
+  explicit `MyPicsDB3.WidgetLabel` property with `ListItem.Label` as a fallback.
+- Show subdued caption text while unfocused and brighter scrolling text while
+  focused, without changing Estuary's standard movie, TV or music widgets.
+- Switch all MyPicsDB picture rows to the new include and bump the generated
+  Estuary package revisions, including Kodi 21.3 skin 21.3.7 and Kodi 22 beta 1
+  skin 22.0.0~beta1.5, so existing installations receive the XML change.
+- Require no catalogue rescan or database migration; database schema 5, Query
+  Model version 1 and repository add-on version 0.2.26 remain unchanged.
+
 ## 0.3.1 - 2026-07-29
 
 - Publish each picture filename and album label through both `ListItem.Label` and

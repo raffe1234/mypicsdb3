@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.3.1 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.3.2 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -173,9 +173,11 @@ catalogue scan. Album and date widgets publish the selected representative
 artwork as thumb, icon, poster and landscape. Common still formats such as JPEG,
 PNG, WebP and TIFF are preferred for album covers; RAW/HEIF pictures remain
 available when no common still exists, and a video-only collection falls back
-to Kodi's generated video frame. Widget items also publish filenames and album
-names as titles so Estuary can keep the subdued caption under each poster. No
-rescan is required for these display choices. Use **Play slideshow from here** on
+to Kodi's generated video frame. Widget items also publish filenames and album names as titles. Estuary
+MyPicsDB 3 uses a dedicated picture-poster widget that reserves a caption area
+under each thumbnail, shows a subdued label normally and a brighter scrolling
+label while focused. Standard Estuary movie and TV widgets remain unchanged.
+No rescan is required for these display choices. Use **Play slideshow from here** on
 a media item or **Play mixed
 slideshow** on an album. Video-only results use Kodi's video playlist.
 Picture-only album trees use Kodi's native recursive slideshow. Mixed album
@@ -693,14 +695,14 @@ authors. Contributions and issue reports are welcome.
 Update the MyPicsDB 3 plug-in version with:
 
 ```bash
-python3 tools/set_version.py 0.3.1
+python3 tools/set_version.py 0.3.2
 ```
 
 The repository add-on keeps its existing version during normal plug-in
 releases. Bump it only when `repository.mypicsdb3` itself changes:
 
 ```bash
-python3 tools/set_version.py 0.3.1 --repository-version 0.3.1
+python3 tools/set_version.py 0.3.2 --repository-version 0.3.2
 ```
 
 The skin version and pinned upstream Kodi tag are maintained separately in

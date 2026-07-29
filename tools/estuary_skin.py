@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT / "contrib" / "estuary" / "upstream.json"
 FRAGMENT_PATH = ROOT / "contrib" / "estuary" / "Home-pictures-group.xml"
 PICTURES_FRAGMENT_PATH = ROOT / "contrib" / "estuary" / "MyPics-save-album-view.xml"
+MY_PICS_WIDGET_FRAGMENT_PATH = ROOT / "contrib" / "estuary" / "MyPicsDB-widget-poster.xml"
 DEFAULT_CACHE = ROOT / ".cache" / "estuary"
 DEFAULT_OUTPUT = ROOT / "build" / "skin.estuary.mypicsdb3"
 
@@ -391,6 +392,47 @@ def patch_widget_poster_limit(includes_home_path: Path) -> None:
         handle.write(patched)
 
 
+def patch_mypicsdb_widget_poster(
+    includes_home_path: Path,
+    fragment_path: Path = MY_PICS_WIDGET_FRAGMENT_PATH,
+) -> None:
+    """Add a MyPicsDB-only poster widget with a visible caption.
+
+    Estuary's stock ``WidgetListPoster`` uses the movie poster layout, which
+    deliberately omits a title below the artwork. MyPicsDB picture rows need a
+    subdued filename or album caption, so the fork adds a separate include
+    without changing Estuary's movie and TV widgets.
+    """
+    fragment_document = fragment_path.read_text(encoding="utf-8").strip().splitlines()
+    if (
+        len(fragment_document) < 3
+        or fragment_document[0].strip() != "<includes>"
+        or fragment_document[-1].strip() != "</includes>"
+    ):
+        raise RuntimeError("MyPicsDB poster fragment must use an <includes> root")
+    fragment = "\n".join(fragment_document[1:-1]).rstrip() + "\n"
+    includes = includes_home_path.read_text(encoding="utf-8-sig")
+    if 'include name="WidgetListPosterMyPicsDB"' in includes:
+        raise RuntimeError("MyPicsDB poster widget is already present")
+
+    pattern = re.compile(
+        r'(?ms)^(?P<indent>[ \t]*)<include name="WidgetListPoster">.*?'
+        r'(?=^(?P=indent)<include name="[^"]+">)'
+    )
+    match = pattern.search(includes)
+    if match is None:
+        raise RuntimeError("Could not locate Estuary WidgetListPoster include")
+
+    indent = match.group("indent")
+    indented_fragment = "\n".join(
+        indent + line if line else line
+        for line in fragment.rstrip().splitlines()
+    ) + "\n"
+    patched = includes[: match.end()] + indented_fragment + includes[match.end() :]
+    with includes_home_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(patched)
+
+
 def patch_pictures_xml(
     pictures_path: Path,
     fragment_path: Path = PICTURES_FRAGMENT_PATH,
@@ -439,6 +481,7 @@ def patch_skin(
     patch_addon_xml(output_dir / "addon.xml", config, plugin_version)
     patch_home_xml(output_dir / "xml" / "Home.xml")
     patch_widget_poster_limit(output_dir / "xml" / "Includes_Home.xml")
+    patch_mypicsdb_widget_poster(output_dir / "xml" / "Includes_Home.xml")
     patch_pictures_xml(output_dir / "xml" / "MyPics.xml")
     notice = """# Estuary MyPicsDB 3
 

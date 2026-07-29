@@ -102,7 +102,7 @@ def test_diagnostic_log_action_bypasses_database_and_reports_current_setting(mon
     )
 
     assert context.log.messages == [
-        ("info", "Diagnostic log entry: version=0.3.1 debug_logging=true")
+        ("info", "Diagnostic log entry: version=0.3.2 debug_logging=true")
     ]
     assert context.notifications == [
         (entrypoints.DIAGNOSTIC_LOG_FALLBACK, False, 4000, True)
