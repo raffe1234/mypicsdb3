@@ -3,8 +3,8 @@
 MyPicsDB 3 version 0.2.18 introduced an internal, versioned Query Model for
 search, smart filters, saved views and smart collections. Version 0.2.19 uses
 it for Kodi global search. Version 0.2.34 stores canonical version-1 Query
-Model JSON for named saved searches in database schema 5. Kodi still does not
-expose a general smart-filter editor.
+Model JSON for named saved searches in database schema 5. Version 0.3.0 adds a
+Kodi smart-filter editor for a safe, flat all/any subset of the model.
 
 ## Goals
 
@@ -89,6 +89,7 @@ adding operator-specific raw fragments.
 | `camera` | object with `make` and/or `model` | `eq` |
 | `keyword` | exact keyword or keyword list | `eq`, `in` |
 | `text` | normalized free text | `contains_tokens` |
+| `media_type` | `picture`, `video`, or a list of both | `eq`, `in` |
 
 Keyword matching is exact after `casefold()`, matching the normalized keyword
 stored by the scanner. A single `keyword in [...]` rule means any listed
@@ -143,13 +144,19 @@ The public compiler result contains reusable `where_sql`, `params` and
 `order_by_sql` fragments. Future preview and facet consumers must build on
 these fragments rather than introduce separate user-defined SQL paths.
 
-## Deliberately not included in 0.2.34
+## Kodi editor scope in 0.3.0
 
-- no Kodi query-builder dialog;
-- no phrase, fuzzy, prefix or relevance-ranked search;
-- no general smart-filter editor or arbitrary saved smart collection;
-- no raw SQL compatibility mode;
-- no query JSON in saved-search plugin URLs; they reference a database ID.
+The editor exposes one flat group using **all criteria** or **any criterion**.
+It supports text, date range, minimum rating, favorite state, source, camera,
+keyword and media type, plus sort order and the global-rating-policy toggle. It
+previews the count and up to ten filenames before saving the query in schema 5.
+
+Deliberately not included:
+
+- nested or negated groups in the Kodi dialog;
+- phrase, fuzzy, prefix or relevance-ranked search;
+- raw SQL compatibility mode;
+- query JSON in saved-search plugin URLs; they reference a database ID.
 
 Those features can be added in separate reviewable releases while retaining
 Query Model version 1 or introducing an explicit later version.

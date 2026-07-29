@@ -349,10 +349,11 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 20
+    assert len(calls.items) == 21
     assert calls.items[0][0].endswith("/search")
     assert calls.items[1][0].endswith("/saved-searches")
-    assert calls.items[2][0].endswith("/sources")
+    assert calls.items[2][0].endswith("/action/create-smart-collection")
+    assert calls.items[3][0].endswith("/sources")
 
     calls.ended = False
     ui.dispatch(views.Request("recent-taken", {"limit": "15"}))
@@ -377,12 +378,13 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     ui.root()
 
     urls = [url for url, _item, _is_folder in calls.items]
-    assert len(urls) == 17
+    assert len(urls) == 18
     assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
     assert "plugin://plugin.image.mypicsdb3/years" not in urls
     assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
     assert "plugin://plugin.image.mypicsdb3/search" in urls
     assert "plugin://plugin.image.mypicsdb3/saved-searches" in urls
+    assert "plugin://plugin.image.mypicsdb3/action/create-smart-collection" in urls
     assert "plugin://plugin.image.mypicsdb3/sources" in urls
     assert "plugin://plugin.image.mypicsdb3/action/refresh-random" in urls
     assert "plugin://plugin.image.mypicsdb3/action/scan" in urls
@@ -485,14 +487,14 @@ def test_rating_policy_is_visible_and_can_be_temporarily_bypassed(monkeypatch) -
     assert calls.items[0][1].label == "Minimum rating: 3+"
     assert calls.items[1][1].label == "Show all pictures temporarily"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/?rating_policy=all"
-    assert calls.items[5][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
+    assert calls.items[6][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
 
     ui.dispatch(views.Request("", {"rating_policy": "all"}))
 
     assert runtime.catalog.rating_policy == "all"
     assert calls.items[1][1].label == "Use configured rating filter"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/"
-    assert calls.items[5][0] == (
+    assert calls.items[6][0] == (
         "plugin://plugin.image.mypicsdb3/recent-taken?rating_policy=all"
     )
 
@@ -1441,4 +1443,28 @@ def test_cached_incompatible_folder_tree_skips_picture_playlist_probe(monkeypatc
     assert any(
         "reason=cached-picture-playlist-incompatible" in message
         for message in runtime.kodi.info_messages
+    )
+
+
+def test_create_smart_collection_saves_validated_query_and_opens_it(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    query = views.build_global_search_request("sommar").query
+
+    class FakeEditor:
+        def __init__(self, catalog, dialog, localize):
+            assert catalog is runtime.catalog
+
+        def run(self):
+            return types.SimpleNamespace(name="Sommarfavoriter", query=query)
+
+    monkeypatch.setattr(views, "SmartFilterEditor", FakeEditor)
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("action/create-smart-collection", {}))
+
+    assert runtime.catalog.created_saved_searches == [("Sommarfavoriter", query)]
+    assert runtime.kodi.notifications[-1] == ("Smart collection saved", False)
+    assert calls.builtins[-1] == (
+        "Container.Update(plugin://plugin.image.mypicsdb3/saved-search?id=1)"
     )

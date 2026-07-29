@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.3.0 - 2026-07-29
+
+- Add **Create smart collection** to the MyPicsDB 3 main menu. The Kodi dialog
+  editor builds a validated Query Model without exposing SQL or placing query
+  JSON in plug-in URLs.
+- Support flat **all criteria** and **any criterion** groups with editable rules
+  for text, capture-date range, minimum rating, favorite state, picture source,
+  camera, keyword and media type.
+- Add result previews showing the matching count and up to ten filenames before
+  a collection is saved.
+- Add selectable result ordering and a per-collection choice to apply or bypass
+  the configured global minimum-rating display policy.
+- Store smart collections in the existing schema-5 `saved_searches` table so
+  they retain pagination, slideshow support, rename and delete actions, and
+  automatically include newly indexed matching media.
+- Extend Query Model version 1 with the allowlisted `media_type` field for exact
+  picture/video selection. Existing version-1 saved searches remain valid.
+- Keep database schema 5 and repository add-on version 0.2.26 unchanged.
+
 ## 0.2.49 - 2026-07-29
 
 - Save a local, atomic scan checkpoint after each fully processed folder so an

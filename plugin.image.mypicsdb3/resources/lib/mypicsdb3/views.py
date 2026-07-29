@@ -32,6 +32,7 @@ from .rating_policy import (
 from .router import Request
 from .search import build_global_search_request
 from .saved_searches import SavedSearchValidationError
+from .smart_filter_editor import SmartFilterEditor
 from .scanner import Scanner
 from .slideshow import (
     SlideshowError,
@@ -195,6 +196,10 @@ class PluginUI:
         items = [
             self.add_folder(self.text(32500, "Search"), "search", **rating_params),
             self.add_folder(self.text(32700, "Saved searches"), "saved-searches", **rating_params),
+            self.add_action(
+                self.text(32740, "Create smart collection"),
+                "action/create-smart-collection",
+            ),
             self.add_folder(self.text(30000, "Picture sources"), "sources", **rating_params),
         ]
         hidden_nodes = parse_hidden_main_menu_nodes(
@@ -1256,6 +1261,28 @@ class PluginUI:
             return
         if route == "action/save-album-view":
             self._save_current_album_view()
+            return
+        if route == "action/create-smart-collection":
+            try:
+                editor = SmartFilterEditor(
+                    self.catalog,
+                    xbmcgui.Dialog(),
+                    self.text,
+                )
+                result = editor.run()
+                if result is None:
+                    return
+                saved_id = self.catalog.create_saved_search(result.name, result.query)
+                self.kodi.notify(self.text(32769, "Smart collection saved"))
+                xbmc.executebuiltin(
+                    "Container.Update(%s)" % self.url("saved-search", id=saved_id)
+                )
+            except (ValueError, SavedSearchValidationError) as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(32770, "Could not save smart collection"), exc),
+                    error=True,
+                )
             return
         if route == "action/save-search":
             try:

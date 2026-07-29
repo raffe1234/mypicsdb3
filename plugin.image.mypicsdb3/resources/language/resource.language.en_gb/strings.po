@@ -978,3 +978,167 @@ msgstr "Refresh random selections"
 msgctxt "#32739"
 msgid "Random selections refreshed"
 msgstr "Random selections refreshed"
+
+msgctxt "#32740"
+msgid "Create smart collection"
+msgstr "Create smart collection"
+
+msgctxt "#32741"
+msgid "Smart filter editor"
+msgstr "Smart filter editor"
+
+msgctxt "#32742"
+msgid "Match"
+msgstr "Match"
+
+msgctxt "#32743"
+msgid "All criteria"
+msgstr "All criteria"
+
+msgctxt "#32744"
+msgid "Any criterion"
+msgstr "Any criterion"
+
+msgctxt "#32745"
+msgid "Sort"
+msgstr "Sort"
+
+msgctxt "#32746"
+msgid "Use global minimum rating"
+msgstr "Use global minimum rating"
+
+msgctxt "#32747"
+msgid "Add criterion"
+msgstr "Add criterion"
+
+msgctxt "#32748"
+msgid "Preview results"
+msgstr "Preview results"
+
+msgctxt "#32749"
+msgid "Save smart collection"
+msgstr "Save smart collection"
+
+msgctxt "#32750"
+msgid "Cancel"
+msgstr "Cancel"
+
+msgctxt "#32751"
+msgid "Text contains words"
+msgstr "Text contains words"
+
+msgctxt "#32752"
+msgid "Date range"
+msgstr "Date range"
+
+msgctxt "#32753"
+msgid "Minimum rating"
+msgstr "Minimum rating"
+
+msgctxt "#32754"
+msgid "Favorite"
+msgstr "Favorite"
+
+msgctxt "#32755"
+msgid "Picture source"
+msgstr "Picture source"
+
+msgctxt "#32756"
+msgid "Camera"
+msgstr "Camera"
+
+msgctxt "#32757"
+msgid "Keyword"
+msgstr "Keyword"
+
+msgctxt "#32758"
+msgid "Media type"
+msgstr "Media type"
+
+msgctxt "#32759"
+msgid "Pictures"
+msgstr "Pictures"
+
+msgctxt "#32760"
+msgid "Videos"
+msgstr "Videos"
+
+msgctxt "#32761"
+msgid "Favorites only"
+msgstr "Favorites only"
+
+msgctxt "#32762"
+msgid "Not favorites"
+msgstr "Not favorites"
+
+msgctxt "#32763"
+msgid "From date (YYYY-MM-DD)"
+msgstr "From date (YYYY-MM-DD)"
+
+msgctxt "#32764"
+msgid "To date (YYYY-MM-DD)"
+msgstr "To date (YYYY-MM-DD)"
+
+msgctxt "#32765"
+msgid "Filter text"
+msgstr "Filter text"
+
+msgctxt "#32766"
+msgid "No values available"
+msgstr "No values available"
+
+msgctxt "#32767"
+msgid "%d matching media items"
+msgstr "%d matching media items"
+
+msgctxt "#32768"
+msgid "Smart collection name"
+msgstr "Smart collection name"
+
+msgctxt "#32769"
+msgid "Smart collection saved"
+msgstr "Smart collection saved"
+
+msgctxt "#32770"
+msgid "Could not save smart collection"
+msgstr "Could not save smart collection"
+
+msgctxt "#32771"
+msgid "No media matches. Save anyway?"
+msgstr "No media matches. Save anyway?"
+
+msgctxt "#32772"
+msgid "Edit criterion"
+msgstr "Edit criterion"
+
+msgctxt "#32773"
+msgid "Remove criterion"
+msgstr "Remove criterion"
+
+msgctxt "#32775"
+msgid "Yes"
+msgstr "Yes"
+
+msgctxt "#32776"
+msgid "No"
+msgstr "No"
+
+msgctxt "#32777"
+msgid "Newest taken first"
+msgstr "Newest taken first"
+
+msgctxt "#32778"
+msgid "Oldest taken first"
+msgstr "Oldest taken first"
+
+msgctxt "#32779"
+msgid "Recently added first"
+msgstr "Recently added first"
+
+msgctxt "#32780"
+msgid "Highest rating first"
+msgstr "Highest rating first"
+
+msgctxt "#32781"
+msgid "Filename A-Z"
+msgstr "Filename A-Z"

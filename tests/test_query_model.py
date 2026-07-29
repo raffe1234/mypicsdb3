@@ -339,3 +339,89 @@ def test_catalog_query_model_page_count_scope_policy_and_pagination(tmp_path: Pa
         catalog.query_pictures(all_nonmissing_query, 0)
     with pytest.raises(ValueError, match="offset"):
         catalog.query_pictures(all_nonmissing_query, 10, offset=-1)
+
+
+def test_media_type_rule_is_validated_compiled_and_canonicalized() -> None:
+    query = empty_query(
+        root={
+            "type": "group",
+            "children": [rule("media_type", "in", ["video", "picture", "video"])],
+        }
+    )
+
+    parsed = parse_picture_query(query)
+    normalized = picture_query_to_dict(parsed)
+    compiled = compile_picture_query(parsed)
+
+    assert normalized["root"]["children"][0]["value"] == ["picture", "video"]
+    assert "p.media_type IN (?,?)" in compiled.where_sql
+    assert compiled.params == ("picture", "video")
+
+    with pytest.raises(QueryValidationError, match="picture.*video"):
+        parse_picture_query(
+            empty_query(
+                root={
+                    "type": "group",
+                    "children": [rule("media_type", "eq", "audio")],
+                }
+            )
+        )
+
+
+def test_catalog_media_type_filter_selects_only_requested_kind(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    source = catalog.sync_sources([{"label": "Photos", "uri": "/srv/photos"}])[0]
+    now = utc_now()
+    with catalog.engine.transaction() as connection:
+        folder_id = catalog.upsert_folder(
+            connection,
+            source.id,
+            "/srv/photos/",
+            "",
+            "Photos",
+            now,
+        )
+
+    picture_id = insert_picture(
+        catalog,
+        source.id,
+        folder_id,
+        "/srv/photos/",
+        "picture.jpg",
+        5,
+        False,
+        "2024-01-01 10:00:00",
+        "Canon",
+        "R6",
+        [],
+    )
+    video_id = insert_picture(
+        catalog,
+        source.id,
+        folder_id,
+        "/srv/photos/",
+        "video.jpg",
+        None,
+        False,
+        "2024-01-02 10:00:00",
+        "",
+        "",
+        [],
+    )
+    with catalog.engine.transaction(immediate=True) as connection:
+        catalog.engine.execute(
+            connection,
+            "UPDATE pictures SET media_type='video', extension='mp4', filename='video.mp4' WHERE id=?",
+            (video_id,),
+        ).close()
+
+    query = empty_query(
+        root={
+            "type": "group",
+            "children": [rule("media_type", "eq", "video")],
+        },
+        default_policy={"apply_min_rating": True},
+    )
+
+    assert [row["id"] for row in catalog.query_pictures(query, 10)] == [video_id]
+    assert picture_id != video_id

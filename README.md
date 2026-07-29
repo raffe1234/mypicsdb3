@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.49 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.3.0 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -47,6 +47,8 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
   views, with a temporary all-pictures override.
 - Save, reopen, rename and delete named global searches, with normal
   pagination and slideshow support.
+- Kodi smart-filter editor with all/any matching, metadata criteria, result
+  preview and saved smart collections.
 - Versioned, validated Query Model used by global and saved searches; stored
   queries are revalidated when opened and never expose raw SQL.
 - Stable widget endpoints for configurable skins.
@@ -389,8 +391,10 @@ After the first successful scan, the add-on main menu provides:
 - **Rated pictures** — pictures with an embedded metadata rating;
 - **Geotagged pictures** — pictures with stored GPS coordinates;
 - **Videos** — all indexed home videos, when optional video indexing is enabled;
-- **Saved searches** — named global searches that can be reopened with normal
-  pagination and slideshow support.
+- **Saved searches** — named global searches and smart collections that can be
+  reopened with normal pagination and slideshow support;
+- **Create smart collection** — combine metadata criteria in a Kodi dialog,
+  preview the current result count and save the validated filter.
 
 Select **Refresh random selections** to request new results for Random memories,
 Random albums and On this day - random. With Estuary MyPicsDB 3, the action also
@@ -398,9 +402,9 @@ reloads the skin so the random home-screen rows are queried again. It does not
 scan the filesystem or change the catalogue.
 
 Open **Settings > General > Configure add-on menu** to show or hide the
-configurable catalogue browsing nodes. Search, Saved searches, Picture sources,
-Refresh random selections, Scan now, Scan status and Settings always remain
-visible.
+configurable catalogue browsing nodes. Search, Saved searches, Create smart
+collection, Picture sources, Refresh random selections, Scan now, Scan status
+and Settings always remain visible.
 
 Open the context menu on a picture and select **Toggle favorite** to add or
 remove it from Favorites. **Open containing album** opens the indexed folder.
@@ -448,6 +452,14 @@ here** support. Use a saved search's context menu to rename or delete it. The
 add-on stores the validated query rather than a frozen copy of the results, so
 newly indexed matching media can appear the next time the search is opened.
 
+Select **Create smart collection** to build a reusable filter without writing a
+text query. Choose whether all criteria or any criterion must match, then add
+rules for text, date range, rating, favorite state, source, camera, keyword or
+pictures/videos. You can remove or edit criteria, choose the result order,
+preview the matching count and up to ten filenames, and decide whether the
+collection should use the configured global minimum-rating policy. Saving the
+collection opens it immediately and makes it available under **Saved searches**.
+
 The configured minimum-rating policy also applies to search results and saved
 searches. Use **Show all pictures temporarily** from the main menu before
 searching or opening a saved search to bypass the policy for that browsing
@@ -476,17 +488,19 @@ add-on main menu to bypass the configured policy for that browsing session.
 
 Version 0.2.19 extended Query Model version 1 with the allowlisted `text` /
 `contains_tokens` rule used by Kodi global search. Version 0.2.34 added named
-saved searches backed by canonical Query Model JSON in schema 5. The model also
-validates nested all/any/not rules for rating, favorite, source, album, date
-range, camera and keyword, and compiles only trusted SQL with bound parameters
-for SQLite and MySQL/MariaDB.
+saved searches backed by canonical Query Model JSON in schema 5. Version 0.3.0
+adds the first Kodi smart-filter editor and the allowlisted `media_type` field.
+The model validates nested all/any/not rules for rating, favorite, source,
+album, date range, camera, keyword, text and picture/video type, and compiles
+only trusted SQL with bound parameters for SQLite and MySQL/MariaDB.
 
 Search text is never copied into SQL. It is converted to normalized tokens and
 matched against schema-3 search documents maintained by scans and the schema-2
 to schema-3 migration. Saved-search plugin URLs contain only a database row ID;
 the stored query version and JSON are parsed and validated every time the search
-is opened. Kodi still does not expose a general smart-filter editor or smart
-collections. See [Query Model version 1](docs/QUERY_MODEL.md),
+is opened. The 0.3.0 editor intentionally creates one flat all/any group;
+nested and negated groups remain supported by the underlying model but are not yet exposed
+in the Kodi dialog. See [Query Model version 1](docs/QUERY_MODEL.md),
 [Global search](docs/GLOBAL_SEARCH.md) and
 [Database migrations](docs/DATABASE_MIGRATIONS.md).
 

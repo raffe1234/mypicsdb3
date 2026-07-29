@@ -102,6 +102,7 @@ _FIELD_OPERATORS = {
     "camera": frozenset({"eq"}),
     "keyword": frozenset({"eq", "in"}),
     "text": frozenset({"contains_tokens"}),
+    "media_type": frozenset({"eq", "in"}),
 }
 
 
@@ -256,6 +257,20 @@ def _parse_rule(value: Any, path: str, rule_counter: List[int]) -> QueryRule:
         parsed = _camera_value(raw, path + ".value")
     elif field == "keyword":
         parsed = _keyword_list(raw, path + ".value") if operator == "in" else _string(raw, path + ".value", maximum=191).casefold()
+    elif field == "media_type":
+        if operator == "eq":
+            parsed = _string(raw, path + ".value", maximum=16).lower()
+            if parsed not in {"picture", "video"}:
+                raise _path_message(path + ".value", "must be 'picture' or 'video'")
+        else:
+            if not isinstance(raw, list):
+                raise _path_message(path + ".value", "must be a list")
+            if not raw:
+                raise _path_message(path + ".value", "must not be empty")
+            values = tuple(sorted({_string(item, "%s.value[%d]" % (path, index), maximum=16).lower() for index, item in enumerate(raw)}))
+            if any(item not in {"picture", "video"} for item in values):
+                raise _path_message(path + ".value", "values must be 'picture' or 'video'")
+            parsed = values
     elif field == "text":
         try:
             normalized_text, tokens = normalize_search_query(raw)
@@ -519,6 +534,11 @@ def _compile_rule(rule: QueryRule) -> Tuple[str, Tuple[Any, ...]]:
             "WHERE pt.picture_id=p.id AND %s)" % predicate,
             params,
         )
+
+    if field == "media_type":
+        if operator == "eq":
+            return "p.media_type=?", (value,)
+        return "p.media_type IN (" + _placeholders(value) + ")", tuple(value)
 
     if field == "text":
         search: TextSearchValue = value
