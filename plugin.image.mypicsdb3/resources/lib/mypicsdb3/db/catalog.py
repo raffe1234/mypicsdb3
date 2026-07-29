@@ -669,6 +669,7 @@ class Catalog:
         count_filter = " AND " + count_predicate if count_predicate else ""
         representative_filter = " AND " + representative_predicate if representative_predicate else ""
         query = """SELECT f.*, p.uri AS representative_uri, p.thumb_uri AS representative_thumb,
+                   p.media_type AS representative_media_type,
                    (SELECT COUNT(*) FROM pictures pc WHERE pc.folder_id=f.id AND pc.is_missing=0%s) AS picture_count,
                    s.label AS source_label
                    FROM folders f
@@ -726,7 +727,7 @@ class Catalog:
             for group in groups:
                 rep = self.engine.fetchone(
                     connection,
-                    "SELECT uri, thumb_uri FROM pictures "
+                    "SELECT uri, thumb_uri, media_type FROM pictures "
                     "WHERE is_missing=0 AND taken_year=?%s "
                     "ORDER BY taken_at DESC, id DESC LIMIT 1" % policy_sql,
                     (group["year"], *policy_params),
@@ -751,7 +752,7 @@ class Catalog:
                 month = int(group["date_value"])
                 rep = self.engine.fetchone(
                     connection,
-                    "SELECT uri, thumb_uri FROM pictures "
+                    "SELECT uri, thumb_uri, media_type FROM pictures "
                     "WHERE is_missing=0 AND taken_year=? AND taken_month=?%s "
                     "ORDER BY taken_at DESC, id DESC LIMIT 1" % policy_sql,
                     (year, month, *policy_params),
@@ -778,7 +779,7 @@ class Catalog:
                 day = int(group["date_value"])
                 rep = self.engine.fetchone(
                     connection,
-                    "SELECT uri, thumb_uri FROM pictures "
+                    "SELECT uri, thumb_uri, media_type FROM pictures "
                     "WHERE is_missing=0 AND taken_year=? AND taken_month=? AND taken_day=?%s "
                     "ORDER BY taken_at DESC, id DESC LIMIT 1" % policy_sql,
                     (year, month, day, *policy_params),
@@ -803,7 +804,7 @@ class Catalog:
                 return None
             rep = self.engine.fetchone(
                 connection,
-                "SELECT uri, thumb_uri FROM pictures "
+                "SELECT uri, thumb_uri, media_type FROM pictures "
                 "WHERE is_missing=0 AND taken_at IS NULL%s "
                 "ORDER BY discovered_at DESC, id DESC LIMIT 1" % policy_sql,
                 policy_params,
@@ -820,7 +821,7 @@ class Catalog:
                 FROM pictures WHERE is_missing=0 AND media_type='picture' AND (camera_make IS NOT NULL OR camera_model IS NOT NULL)
                 %s GROUP BY COALESCE(camera_make,''), COALESCE(camera_model,'') ORDER BY picture_count DESC, camera_make, camera_model""" % policy_sql, policy_params)
             for group in groups:
-                rep = self.engine.fetchone(connection, "SELECT uri, thumb_uri FROM pictures WHERE is_missing=0 AND media_type='picture' AND COALESCE(camera_make,'')=? AND COALESCE(camera_model,'')=?%s ORDER BY COALESCE(taken_at, discovered_at) DESC LIMIT 1" % policy_sql, (group["camera_make"], group["camera_model"], *policy_params))
+                rep = self.engine.fetchone(connection, "SELECT uri, thumb_uri, media_type FROM pictures WHERE is_missing=0 AND media_type='picture' AND COALESCE(camera_make,'')=? AND COALESCE(camera_model,'')=?%s ORDER BY COALESCE(taken_at, discovered_at) DESC LIMIT 1" % policy_sql, (group["camera_make"], group["camera_model"], *policy_params))
                 group.update(rep or {})
             return groups
 
@@ -832,7 +833,7 @@ class Catalog:
                 FROM tags t JOIN picture_tags pt ON pt.tag_id=t.id JOIN pictures p ON p.id=pt.picture_id
                 WHERE p.is_missing=0 AND p.media_type='picture'%s GROUP BY t.id, t.name ORDER BY picture_count DESC, t.name""" % policy_sql, policy_params)
             for group in groups:
-                rep = self.engine.fetchone(connection, """SELECT p.uri, p.thumb_uri FROM pictures p JOIN picture_tags pt ON pt.picture_id=p.id
+                rep = self.engine.fetchone(connection, """SELECT p.uri, p.thumb_uri, p.media_type FROM pictures p JOIN picture_tags pt ON pt.picture_id=p.id
                     WHERE p.is_missing=0 AND p.media_type='picture' AND pt.tag_id=?%s ORDER BY COALESCE(p.taken_at, p.discovered_at) DESC LIMIT 1""" % policy_sql, (group["id"], *policy_params))
                 group.update(rep or {})
             return groups

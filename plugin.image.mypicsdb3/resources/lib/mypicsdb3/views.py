@@ -139,7 +139,13 @@ class PluginUI:
     def _item(self, label: str, art: Optional[str] = None, path: Optional[str] = None) -> xbmcgui.ListItem:
         item = xbmcgui.ListItem(label=label, path=path or "")
         image = art or self.icon
-        item.setArt({"thumb": image, "icon": image, "fanart": self.fanart})
+        item.setArt({
+            "thumb": image,
+            "icon": image,
+            "poster": image,
+            "landscape": image,
+            "fanart": self.fanart,
+        })
         return item
 
     def add_folder(self, label: str, route: str, art: Optional[str] = None, context: Optional[List[Tuple[str, str]]] = None, **params: Any):
@@ -475,7 +481,9 @@ class PluginUI:
         count = int(row.get("picture_count") or 0)
         label = "%s  [COLOR=grey](%d)[/COLOR]" % (row.get("name") or self.text(30032, "Album"), count)
         art = self._media_art_uri(
-            row.get("representative_uri"), row.get("representative_thumb")
+            row.get("representative_uri"),
+            row.get("representative_thumb"),
+            row.get("representative_media_type"),
         ) or self.icon
         context = [(self.text(30021, "Scan selected source"), "RunPlugin(%s)" % self.url("action/scan", source=row.get("source_id")))]
         if row.get("id"):
@@ -610,7 +618,7 @@ class PluginUI:
                 self.add_folder(
                     label,
                     "year",
-                    art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")),
+                    art=self._media_art_uri(row.get("uri"), row.get("thumb_uri"), row.get("media_type")),
                     year=row["year"],
                     **rating_params,
                 )
@@ -625,7 +633,7 @@ class PluginUI:
                 self.add_folder(
                     label,
                     "no-date",
-                    art=self._media_art_uri(undated.get("uri"), undated.get("thumb_uri")),
+                    art=self._media_art_uri(undated.get("uri"), undated.get("thumb_uri"), undated.get("media_type")),
                     **rating_params,
                 )
             )
@@ -648,7 +656,7 @@ class PluginUI:
                 self.add_folder(
                     label,
                     "month",
-                    art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")),
+                    art=self._media_art_uri(row.get("uri"), row.get("thumb_uri"), row.get("media_type")),
                     year=year,
                     month=month,
                     **rating_params,
@@ -673,7 +681,7 @@ class PluginUI:
                 self.add_folder(
                     label,
                     "day",
-                    art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")),
+                    art=self._media_art_uri(row.get("uri"), row.get("thumb_uri"), row.get("media_type")),
                     year=year,
                     month=month,
                     day=day,
@@ -694,7 +702,7 @@ class PluginUI:
         for row in self.catalog.cameras():
             name = " ".join(filter(None, [row.get("camera_make"), row.get("camera_model")])) or self.text(30033, "Unknown camera")
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (name, row["picture_count"])
-            items.append(self.add_folder(label, "camera", art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")), make=row.get("camera_make", ""), model=row.get("camera_model", ""), **rating_params))
+            items.append(self.add_folder(label, "camera", art=self._media_art_uri(row.get("uri"), row.get("thumb_uri"), row.get("media_type")), make=row.get("camera_make", ""), model=row.get("camera_model", ""), **rating_params))
         self.finish(
             items,
             content="images",
@@ -708,7 +716,7 @@ class PluginUI:
         items = []
         for row in self.catalog.tags():
             label = "%s  [COLOR=grey](%s)[/COLOR]" % (row["name"], row["picture_count"])
-            items.append(self.add_folder(label, "tag", art=self._media_art_uri(row.get("uri"), row.get("thumb_uri")), id=row["id"], **rating_params))
+            items.append(self.add_folder(label, "tag", art=self._media_art_uri(row.get("uri"), row.get("thumb_uri"), row.get("media_type")), id=row["id"], **rating_params))
         self.finish(
             items,
             content="images",

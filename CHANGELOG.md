@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.2.47 - 2026-07-29
+
+- Carry the catalogue's exact representative `media_type` into album, year,
+  month, day and undated collection artwork instead of relying only on the file
+  extension. Video-only collections therefore use Kodi's generated-frame
+  thumbnail even when the source uses an uncommon or user-added video suffix.
+- Expose representative artwork through `thumb`, `icon`, `poster` and
+  `landscape` so Estuary home-screen rows such as **Recent albums** do not fall
+  back to the add-on camera icon merely because a widget asks for poster art.
+- Continue to prefer a real still picture as an album cover when one exists,
+  and use a generated video frame only as the fallback for video-only albums.
+- Require no database migration or media rescan; existing schema-5 rows already
+  contain the media-type information used by the new queries.
+- Keep Kodi-owned lazy thumbnail generation, scan control, mixed slideshows and
+  repository add-on version 0.2.26 unchanged.
+
 ## 0.2.46 - 2026-07-29
 
 - Request video previews through Kodi's native `image://video@...` generated-frame

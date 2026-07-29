@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.46 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.47 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -143,7 +143,10 @@ Kodi plays an individual video directly. MyPicsDB 3 asks Kodi's native
 `image://video@...` loader for a representative frame when no explicit image
 thumbnail exists. Generation is lazy and device-local, so the first view can
 take a few seconds for large SMB/NFS videos; no frames are extracted during the
-catalogue scan. Use **Play slideshow from here** on a media item or **Play mixed
+catalogue scan. Album and date widgets publish the selected representative
+artwork as thumb, icon, poster and landscape. A still picture is preferred;
+a video-only collection falls back to Kodi's generated video frame without
+requiring a rescan. Use **Play slideshow from here** on a media item or **Play mixed
 slideshow** on an album. Video-only results use Kodi's video playlist.
 Picture-only album trees use Kodi's native recursive slideshow. Mixed album
 playback includes descendants and is capped at 5,000 media files. A lightweight

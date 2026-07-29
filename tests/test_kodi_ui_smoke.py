@@ -804,14 +804,17 @@ def test_video_only_folder_uses_generated_frame_art(monkeypatch) -> None:
             "source_id": 7,
             "name": "Home videos",
             "picture_count": 3,
-            "representative_uri": "nfs://nas/Home videos/clip.mov",
-            "representative_thumb": "nfs://nas/Home videos/clip.mov",
+            "representative_uri": "nfs://nas/Home videos/clip.vcamera",
+            "representative_thumb": "nfs://nas/Home videos/clip.vcamera",
+            "representative_media_type": "video",
         }
     )
 
     assert item.art["thumb"] == (
-        "image://video@nfs%3A%2F%2Fnas%2FHome%20videos%2Fclip.mov/"
+        "image://video@nfs%3A%2F%2Fnas%2FHome%20videos%2Fclip.vcamera/"
     )
+    assert item.art["poster"] == item.art["thumb"]
+    assert item.art["landscape"] == item.art["thumb"]
     assert is_folder is True
 
 
