@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.44 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.45 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -16,6 +16,9 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
 
 - Select one or more existing Kodi picture sources.
 - Incremental manual and scheduled background scanning.
+- Session-visible scan progress for manual and automatic scans, with a
+  confirmation-protected **Stop scan** action that cancels at the next safe
+  file or folder checkpoint.
 - SQLite by default, using WAL mode and a local add-on profile database.
 - Optional shared MySQL/MariaDB catalogue through PyMySQL.
 - EXIF capture date, camera, orientation, dimensions, rating and optional GPS.
@@ -302,7 +305,9 @@ Return to the MyPicsDB 3 main menu and select **Scan now**. The scan is
 recursive. It visits enabled sources, indexes supported media files and stores
 the catalogue in the selected database. It uses Kodi's non-modal background
 progress indicator, so you can continue using the interface. Exiting Kodi
-cancels the scan safely.
+cancels the scan safely. While a scan is active, **Scan now** is replaced by
+**Stop scan**. Confirming that action requests a soft stop; the current file
+operation is allowed to finish before the scan records its cancelled state.
 
 The first scan can take time on a large local collection or NAS. Subsequent
 scans are incremental: unchanged files are not read and indexed again.
@@ -449,15 +454,18 @@ to 720. Common choices are:
 
 The background service waits for the configured startup delay and then runs an
 incremental scan. By default, automatic scanning is disabled and scans are
-paused while Kodi is playing media. **Scan now** remains available at any time.
+deferred while Kodi is playing media. Automatic scans now use the same non-modal
+background progress indicator as manual scans. The main menu and **Scan status**
+show the current source, file and number of discovered media items.
 
 Both **Scan now** and **Scan selected source** use Kodi's non-modal background
 progress indicator, so the interface remains available. When **Pause scans
 during media playback** is enabled, a manual scan pauses at the next file or
 folder checkpoint after playback starts and resumes automatically after playback
 stops. This applies to movies, TV episodes, music and other media playback. The
-background indicator does not provide a cancel button; exiting Kodi cancels the
-scan safely.
+background indicator itself does not provide a cancel button, but the MyPicsDB 3
+main menu and **Scan status** expose **Stop scan** with a confirmation prompt.
+Exiting Kodi also cancels the scan safely.
 
 For one Kodi device, keep the default SQLite backend. Configure MySQL/MariaDB
 only when multiple Kodi devices need to share the same catalogue and all clients

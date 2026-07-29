@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import time
+import uuid
 from datetime import date
 from typing import Callable
 
 from .db import Catalog, DatabaseEngine
 from .db.migrations import MigrationLockError
 from .filesystem import KodiFilesystem
-from .scanner import Scanner
+from .scanner import ScanAlreadyRunning, Scanner
 
 
 DATE_REFRESH_DELAY_SECONDS = 60.0
@@ -220,6 +221,79 @@ class ServiceLoop:
                     if not (settings.pause_during_playback and self.kodi.is_playing()):
                         if self._abort_requested():
                             break
+                        scan_token = uuid.uuid4().hex
+                        scan_started = False
+                        progress_dialog = None
+                        last_progress_at = 0.0
+
+                        def begin_status(_stats) -> None:
+                            nonlocal scan_started, progress_dialog
+                            scan_started = True
+                            publisher = getattr(self.kodi, "begin_scan_status", None)
+                            if callable(publisher):
+                                publisher(scan_token, "automatic")
+                            creator = getattr(
+                                self.kodi,
+                                "create_background_progress",
+                                None,
+                            )
+                            if callable(creator):
+                                progress_dialog = creator(
+                                    self.kodi.localize(30056, "MyPicsDB 3"),
+                                    self.kodi.localize(32731, "Automatic scan"),
+                                )
+
+                        def scan_cancelled() -> bool:
+                            requested = getattr(
+                                self.kodi,
+                                "scan_cancel_requested",
+                                None,
+                            )
+                            return bool(
+                                self._abort_requested()
+                                or (callable(requested) and requested(scan_token))
+                            )
+
+                        def scan_progress(source, path, stats) -> None:
+                            nonlocal last_progress_at
+                            progress_now = self.monotonic_provider()
+                            if (
+                                progress_now - last_progress_at < 0.5
+                                and int(stats.pictures_seen or 0) % 100
+                            ):
+                                return
+                            last_progress_at = progress_now
+                            publisher = getattr(
+                                self.kodi,
+                                "update_scan_status",
+                                None,
+                            )
+                            if callable(publisher):
+                                publisher(
+                                    scan_token,
+                                    source.label,
+                                    path,
+                                    stats.pictures_seen,
+                                )
+                            if progress_dialog is not None:
+                                message = "%s\n%s\n%s: %d" % (
+                                    source.label,
+                                    path,
+                                    self.kodi.localize(30047, "Pictures found"),
+                                    stats.pictures_seen,
+                                )
+                                try:
+                                    progress_dialog.update(
+                                        0,
+                                        self.kodi.localize(30056, "MyPicsDB 3"),
+                                        message,
+                                    )
+                                except Exception as exc:
+                                    if not self._abort_requested():
+                                        self.kodi.log.warning(
+                                            "Automatic scan progress update failed: %s",
+                                            exc,
+                                        )
                         try:
                             engine = DatabaseEngine(settings, self.kodi.log)
                             catalog = Catalog(engine, self.kodi.log)
@@ -230,7 +304,9 @@ class ServiceLoop:
                                 filesystem,
                                 settings,
                                 self.kodi.log,
-                                cancelled=self._abort_requested,
+                                cancelled=scan_cancelled,
+                                progress=scan_progress,
+                                started=begin_status,
                             )
                             stats = scanner.scan_sources()
                             if stats.cancelled:
@@ -241,8 +317,26 @@ class ServiceLoop:
                                     stats.pictures_seen,
                                     stats.errors,
                                 )
+                        except ScanAlreadyRunning:
+                            self.kodi.log.info(
+                                "Automatic scan skipped: another scan is already running"
+                            )
                         except Exception as exc:
                             self.kodi.log.error("Automatic scan failed: %s", exc)
+                        finally:
+                            if scan_started:
+                                finisher = getattr(
+                                    self.kodi,
+                                    "finish_scan_status",
+                                    None,
+                                )
+                                if callable(finisher):
+                                    finisher(scan_token)
+                            if progress_dialog is not None:
+                                try:
+                                    progress_dialog.close()
+                                except Exception:
+                                    pass
                         if self._abort_requested():
                             break
                         self.next_scan_at = (

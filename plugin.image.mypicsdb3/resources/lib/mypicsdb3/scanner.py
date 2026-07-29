@@ -20,6 +20,10 @@ class ScanCancelled(Exception):
     pass
 
 
+class ScanAlreadyRunning(RuntimeError):
+    pass
+
+
 class ScanLockLost(RuntimeError):
     pass
 
@@ -38,6 +42,7 @@ class Scanner:
         metadata_reader: Callable[[str, Filesystem, Settings, int], MetadataResult] = extract_metadata,
         cancelled: Optional[Callable[[], bool]] = None,
         progress: Optional[Callable[[Source, str, ScanStats], None]] = None,
+        started: Optional[Callable[[ScanStats], None]] = None,
     ):
         self.catalog = catalog
         self.settings = settings
@@ -45,6 +50,7 @@ class Scanner:
         self.metadata_reader = metadata_reader
         self.cancelled = cancelled or (lambda: False)
         self.progress = progress
+        self.started = started
         self.owner = "%s:%s:%s" % (socket.gethostname(), os.getpid(), uuid.uuid4().hex[:12])
         self._scan_lock_active = False
         self._scan_lock_refreshed_at = 0.0
@@ -113,10 +119,12 @@ class Scanner:
             overall.duration_seconds = time.monotonic() - started_monotonic
             return overall
         if not self.catalog.acquire_lock(SCAN_LOCK_NAME, self.owner, SCAN_LOCK_TTL_SECONDS):
-            raise RuntimeError("Another scan is already running")
+            raise ScanAlreadyRunning("Another scan is already running")
         self._scan_lock_active = True
         self._scan_lock_refreshed_at = time.monotonic()
         try:
+            if self.started:
+                self.started(overall)
             self._check_cancelled()
             for source in sources:
                 self._check_cancelled()

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import calendar
 import sys
+import time
+import uuid
 from datetime import datetime
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
@@ -58,6 +60,17 @@ class PluginUI:
 
     def text(self, string_id: int, fallback: str) -> str:
         return self.kodi.localize(string_id, fallback)
+
+    def _scan_status(self) -> Dict[str, Any]:
+        getter = getattr(self.kodi, "scan_status", None)
+        if not callable(getter):
+            return {}
+        try:
+            value = getter()
+        except Exception as exc:
+            self.kodi.log.warning("Could not read scan status: %s", exc)
+            return {}
+        return value if isinstance(value, dict) else {}
 
     def url(self, route: str, **params: Any) -> str:
         return plugin_url(self.base_url, route, **params)
@@ -166,9 +179,15 @@ class PluginUI:
             if node.key not in hidden_nodes
             and (node.key != "videos" or self.kodi.settings.include_videos)
         )
+        scan_status = self._scan_status()
+        scan_action = (
+            self.add_action(self.text(32726, "Stop scan"), "action/stop-scan")
+            if scan_status
+            else self.add_action(self.text(30013, "Scan now"), "action/scan")
+        )
         items.extend(
             [
-                self.add_action(self.text(30013, "Scan now"), "action/scan"),
+                scan_action,
                 self.add_folder(self.text(30014, "Scan status"), "status"),
                 self.add_action(self.text(30015, "Settings"), "action/settings"),
             ]
@@ -1125,6 +1144,7 @@ class PluginUI:
     def status(self):
         overview = self.catalog.overview()
         latest = self.catalog.latest_scan()
+        active = self._scan_status()
         values = [
             "%s: %s" % (self.text(30041, "Database backend"), overview["backend"]),
             "%s: %s" % (self.text(30038, "Indexed media"), overview["pictures"]),
@@ -1133,6 +1153,36 @@ class PluginUI:
             "%s: %s" % (self.text(30040, "Indexed albums"), overview["folders"]),
             "%s: %s" % (self.text(30036, "Last scan"), latest.get("finished_at") if latest else self.text(30037, "Never")),
         ]
+        if active:
+            kind = (
+                self.text(32731, "Automatic scan")
+                if active.get("kind") == "automatic"
+                else self.text(32732, "Manual scan")
+            )
+            state = (
+                self.text(32735, "Stopping scan")
+                if active.get("state") == "cancelling"
+                else self.text(32733, "Scan in progress")
+            )
+            values.extend(
+                [
+                    "%s: %s" % (state, kind),
+                    "%s: %s" % (
+                        self.text(30047, "Pictures found"),
+                        int(active.get("pictures_seen") or 0),
+                    ),
+                ]
+            )
+            if active.get("source"):
+                values.append(
+                    "%s: %s"
+                    % (self.text(32734, "Current source"), active.get("source"))
+                )
+            if active.get("path"):
+                values.append(
+                    "%s: %s"
+                    % (self.text(32736, "Current file"), active.get("path"))
+                )
         if latest:
             values.extend([
                 "Status: %s" % latest.get("status"),
@@ -1142,6 +1192,8 @@ class PluginUI:
                 "%s: %s" % (self.text(30050, "Errors"), latest.get("errors", 0)),
             ])
         items = [("", self._item(value), False) for value in values]
+        if active:
+            items.append(self.add_action(self.text(32726, "Stop scan"), "action/stop-scan"))
         items.append(self.add_action(self.text(30060, "Test database connection"), "action/test-db"))
         items.append(self.add_action(self.text(30061, "Clean missing records"), "action/cleanup"))
         self.finish(items, content="files", category=self.text(30014, "Scan status"))
@@ -1264,6 +1316,30 @@ class PluginUI:
             self.kodi.notify("%s: %d" % (self.text(30062, "Missing records cleaned"), count))
             xbmc.executebuiltin("Container.Refresh")
             return
+        if route == "action/stop-scan":
+            active = self._scan_status()
+            if not active:
+                self.kodi.notify(self.text(32730, "No scan is running"))
+                xbmc.executebuiltin("Container.Refresh")
+                return
+            confirmed = xbmcgui.Dialog().yesno(
+                self.text(32727, "Stop scan?"),
+                self.text(
+                    32728,
+                    "A scan is currently running. Are you sure you want to stop it?",
+                ),
+            )
+            if not confirmed:
+                return
+            requester = getattr(self.kodi, "request_scan_cancel", None)
+            requested = bool(callable(requester) and requester())
+            self.kodi.notify(
+                self.text(32729, "Stopping scan")
+                if requested
+                else self.text(32730, "No scan is running")
+            )
+            xbmc.executebuiltin("Container.Refresh")
+            return
         if route == "action/scan":
             self._manual_scan(params.get("source"))
             return
@@ -1278,6 +1354,9 @@ class PluginUI:
         paused_message = self.text(30065, "Scan paused during playback")
         resumed_message = self.text(30066, "Scan resumed")
         monitor = self.kodi.abort_monitor()
+        scan_token = uuid.uuid4().hex
+        scan_started = False
+        last_progress_at = 0.0
 
         def abort_requested() -> bool:
             return bool(monitor and monitor.abortRequested())
@@ -1291,6 +1370,15 @@ class PluginUI:
         settings = self.kodi.refresh_settings()
         paused = False
 
+        def begin_status(_stats) -> None:
+            nonlocal scan_started
+            scan_started = True
+            publisher = getattr(self.kodi, "begin_scan_status", None)
+            if callable(publisher):
+                publisher(scan_token, "manual")
+            if not abort_requested():
+                xbmc.executebuiltin("Container.Refresh")
+
         def update_dialog(percent: int, message: str) -> None:
             if abort_requested():
                 return
@@ -1302,8 +1390,18 @@ class PluginUI:
 
         def cancelled() -> bool:
             nonlocal paused
+            stop_requested = getattr(self.kodi, "scan_cancel_requested", None)
+
+            def soft_cancelled() -> bool:
+                return bool(
+                    callable(stop_requested) and stop_requested(scan_token)
+                )
+
+            if soft_cancelled():
+                return True
             while (
                 not abort_requested()
+                and not soft_cancelled()
                 and settings.pause_during_playback
                 and self.kodi.is_playing()
             ):
@@ -1314,20 +1412,28 @@ class PluginUI:
                 if monitor.waitForAbort(1):
                     return True
 
-            if paused and not abort_requested():
+            if paused and not abort_requested() and not soft_cancelled():
                 paused = False
                 update_dialog(0, resumed_message)
                 self.kodi.log.info("Manual scan resumed after playback")
 
-            return abort_requested()
+            return bool(abort_requested() or soft_cancelled())
 
         def progress(source, path, stats):
+            nonlocal last_progress_at
+            now = time.monotonic()
+            if now - last_progress_at < 0.5 and int(stats.pictures_seen or 0) % 100:
+                return
+            last_progress_at = now
             message = "%s\n%s\n%s: %d" % (
                 source.label,
                 path,
                 self.text(30047, "Pictures found"),
                 stats.pictures_seen,
             )
+            publisher = getattr(self.kodi, "update_scan_status", None)
+            if callable(publisher):
+                publisher(scan_token, source.label, path, stats.pictures_seen)
             update_dialog(0, message)
 
         scanner = Scanner(
@@ -1337,6 +1443,7 @@ class PluginUI:
             self.kodi.log,
             cancelled=cancelled,
             progress=progress,
+            started=begin_status,
         )
         try:
             stats = scanner.scan_sources(source_ids)
@@ -1356,6 +1463,10 @@ class PluginUI:
             if not abort_requested():
                 self.kodi.notify(str(exc), error=True)
         finally:
+            if scan_started:
+                finisher = getattr(self.kodi, "finish_scan_status", None)
+                if callable(finisher):
+                    finisher(scan_token)
             if not abort_requested():
                 dialog.close()
                 xbmc.executebuiltin("Container.Refresh")
@@ -1380,7 +1491,26 @@ class PluginUI:
         if route == "source":
             return self.source(int(params["id"]), params)
         if route == "folder":
-            return self.folder(int(params["id"]), params)
+            raw_folder_id = params.get("id")
+            try:
+                folder_id = int(raw_folder_id) if raw_folder_id is not None else 0
+            except (TypeError, ValueError):
+                folder_id = 0
+            if folder_id <= 0:
+                self.kodi.log.warning(
+                    "Folder route ignored because its id is missing or invalid"
+                )
+                self.kodi.notify(
+                    self.text(32737, "The album could not be opened"),
+                    error=True,
+                )
+                return self.finish(
+                    [],
+                    content="images",
+                    cache=False,
+                    category=self.text(30054, "Root album"),
+                )
+            return self.folder(folder_id, params)
         if route == "recent-taken":
             return self.pictures(route, self.catalog.recent_taken, params, self.text(30001, "Recently taken"))
         if route == "recent-added":

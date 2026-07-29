@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.2.45 - 2026-07-29
+
+- Replace **Scan now** with a confirmation-protected **Stop scan** action while
+  a manual or automatic scan is active. Cancellation is cooperative and stops
+  at the next filesystem, metadata or catalogue checkpoint.
+- Publish session-local scan state between Kodi's service and plug-in Python
+  interpreters, including scan type, current source, current path and the number
+  of discovered media items. Show that information in **Scan status**.
+- Give automatic scans the same non-modal Kodi background progress indicator as
+  manual scans, with progress updates throttled to avoid excessive GUI work on
+  large libraries.
+- Log an overlapping scheduled scan as skipped instead of failed when another
+  catalogue scan already owns the scan lock.
+- Handle malformed legacy `folder` plug-in URLs without an `id` parameter as an
+  empty, completed directory request instead of raising `KeyError`.
+- Keep NEF/Libraw support, database schema 5, Query Model version 1 and
+  repository add-on version 0.2.26 unchanged.
+
 ## 0.2.44 - 2026-07-29
 
 - Add Nikon NEF to the default picture-extension list and to still-picture

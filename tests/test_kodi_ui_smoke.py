@@ -154,6 +154,8 @@ class FakeKodi:
         self.mixed_slideshow_updates = []
         self.picture_playlist_compatibility_value = True
         self.picture_playlist_compatibility_updates = []
+        self.scan_state = {}
+        self.scan_cancel_requests = 0
 
     def localize(self, string_id, fallback):
         return fallback
@@ -179,6 +181,16 @@ class FakeKodi:
     def set_picture_playlist_compatibility(self, compatible):
         self.picture_playlist_compatibility_value = compatible
         self.picture_playlist_compatibility_updates.append(compatible)
+
+    def scan_status(self):
+        return dict(self.scan_state)
+
+    def request_scan_cancel(self):
+        if not self.scan_state:
+            return False
+        self.scan_cancel_requests += 1
+        self.scan_state["state"] = "cancelling"
+        return True
 
 
 class FakeCatalog:
@@ -370,6 +382,61 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     assert "plugin://plugin.image.mypicsdb3/action/scan" in urls
     assert "plugin://plugin.image.mypicsdb3/status" in urls
     assert "plugin://plugin.image.mypicsdb3/action/settings" in urls
+
+
+def test_root_replaces_scan_now_with_stop_scan_while_scan_is_active(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.scan_state = {
+        "token": "scan-1",
+        "kind": "automatic",
+        "state": "running",
+        "pictures_seen": 123,
+    }
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.root()
+
+    urls = [url for url, _item, _is_folder in calls.items]
+    labels = [item.label for _url, item, _is_folder in calls.items]
+    assert "plugin://plugin.image.mypicsdb3/action/scan" not in urls
+    assert "plugin://plugin.image.mypicsdb3/action/stop-scan" in urls
+    assert "Stop scan" in labels
+
+
+def test_stop_scan_requires_confirmation_and_requests_soft_cancel(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.scan_state = {
+        "token": "scan-1",
+        "kind": "manual",
+        "state": "running",
+        "pictures_seen": 12,
+    }
+    FakeDialog.responses = [True]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("action/stop-scan", {}))
+
+    assert runtime.kodi.scan_cancel_requests == 1
+    assert runtime.kodi.notifications[-1] == ("Stopping scan", False)
+    assert calls.builtins[-1] == "Container.Refresh"
+
+
+def test_folder_route_without_id_finishes_cleanly(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("folder", {}))
+
+    assert calls.ended is True
+    assert calls.content == "images"
+    assert calls.items == []
+    assert runtime.kodi.notifications[-1] == (
+        "The album could not be opened",
+        True,
+    )
 
 
 def test_main_menu_editor_persists_hidden_nodes(monkeypatch) -> None:

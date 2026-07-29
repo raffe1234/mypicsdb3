@@ -25,6 +25,8 @@ MIXED_SLIDESHOW_PROPERTY = "MyPicsDB3.MixedSlideshowActive"
 PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY = "MyPicsDB3.PicturePlaylistCompatibilityV2"
 SLIDESHOW_START_PROPERTY = "MyPicsDB3.SlideshowStart"
 SLIDESHOW_START_TTL_SECONDS = 180.0
+SCAN_STATUS_PROPERTY = "MyPicsDB3.ScanStatusV1"
+SCAN_CANCEL_PROPERTY = "MyPicsDB3.ScanCancelV1"
 
 
 def create_abort_monitor(xbmc_module=None):
@@ -107,6 +109,139 @@ class KodiContext:
             return
         icon = xbmcgui.NOTIFICATION_ERROR if error else xbmcgui.NOTIFICATION_INFO
         xbmcgui.Dialog().notification(self.name, message, icon, milliseconds)
+
+    @staticmethod
+    def _home_window():
+        if xbmcgui is None:
+            return None
+        try:
+            return xbmcgui.Window(HOME_WINDOW_ID)
+        except Exception:
+            return None
+
+    def scan_status(self) -> Dict[str, Any]:
+        """Return the current cross-interpreter scan state.
+
+        Kodi runs the plug-in actions and the background service in separate
+        Python interpreters. A Home-window property is therefore used as a
+        lightweight session-local hand-off for menu state, progress and soft
+        cancellation requests.
+        """
+
+        window = self._home_window()
+        if window is None:
+            return {}
+        try:
+            raw = str(window.getProperty(SCAN_STATUS_PROPERTY) or "")
+            value = json.loads(raw) if raw else {}
+        except Exception:
+            return {}
+        if not isinstance(value, dict) or not str(value.get("token") or ""):
+            return {}
+        return value
+
+    def begin_scan_status(self, token: str, kind: str) -> None:
+        window = self._home_window()
+        if window is None:
+            return
+        value = {
+            "token": str(token),
+            "kind": str(kind or "manual"),
+            "state": "running",
+            "pictures_seen": 0,
+            "source": "",
+            "path": "",
+            "started_at": time.time(),
+        }
+        try:
+            window.clearProperty(SCAN_CANCEL_PROPERTY)
+            window.setProperty(
+                SCAN_STATUS_PROPERTY,
+                json.dumps(value, ensure_ascii=False, separators=(",", ":")),
+            )
+        except Exception as exc:
+            self.log.warning("Could not publish scan start: %s", exc)
+
+    def update_scan_status(
+        self,
+        token: str,
+        source: str,
+        path: str,
+        pictures_seen: int,
+    ) -> None:
+        window = self._home_window()
+        if window is None:
+            return
+        current = self.scan_status()
+        if str(current.get("token") or "") != str(token):
+            return
+        current.update(
+            {
+                "source": str(source or ""),
+                "path": str(path or ""),
+                "pictures_seen": max(0, int(pictures_seen or 0)),
+            }
+        )
+        try:
+            window.setProperty(
+                SCAN_STATUS_PROPERTY,
+                json.dumps(current, ensure_ascii=False, separators=(",", ":")),
+            )
+        except Exception as exc:
+            self.log.warning("Could not publish scan progress: %s", exc)
+
+    def scan_cancel_requested(self, token: str) -> bool:
+        window = self._home_window()
+        if window is None:
+            return False
+        try:
+            return str(window.getProperty(SCAN_CANCEL_PROPERTY) or "") == str(token)
+        except Exception:
+            return False
+
+    def request_scan_cancel(self) -> bool:
+        window = self._home_window()
+        if window is None:
+            return False
+        current = self.scan_status()
+        token = str(current.get("token") or "")
+        if not token:
+            return False
+        current["state"] = "cancelling"
+        try:
+            window.setProperty(SCAN_CANCEL_PROPERTY, token)
+            window.setProperty(
+                SCAN_STATUS_PROPERTY,
+                json.dumps(current, ensure_ascii=False, separators=(",", ":")),
+            )
+            return True
+        except Exception as exc:
+            self.log.warning("Could not request scan cancellation: %s", exc)
+            return False
+
+    def finish_scan_status(self, token: str) -> None:
+        window = self._home_window()
+        if window is None:
+            return
+        try:
+            current = self.scan_status()
+            if str(current.get("token") or "") == str(token):
+                window.clearProperty(SCAN_STATUS_PROPERTY)
+            if str(window.getProperty(SCAN_CANCEL_PROPERTY) or "") == str(token):
+                window.clearProperty(SCAN_CANCEL_PROPERTY)
+        except Exception as exc:
+            self.log.warning("Could not clear scan status: %s", exc)
+
+    def create_background_progress(self, heading: str, message: str):
+        if xbmcgui is None:
+            return None
+        try:
+            dialog = xbmcgui.DialogProgressBG()
+            dialog.create(heading, message)
+            return dialog
+        except Exception as exc:
+            self.log.warning("Could not create background progress dialog: %s", exc)
+            return None
 
     def execute_jsonrpc(self, method: str, params: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         request = {"jsonrpc": "2.0", "id": 1, "method": method}

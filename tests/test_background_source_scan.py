@@ -80,6 +80,8 @@ class FakeKodi:
         self.monitor = FakeMonitor(self)
         self.notifications = []
         self.log_messages = []
+        self.scan_state = {}
+        self.cancel_token = ""
         self.log = types.SimpleNamespace(
             info=lambda message, *args: self.log_messages.append(
                 message % args if args else message
@@ -101,6 +103,32 @@ class FakeKodi:
 
     def notify(self, message, **kwargs):
         self.notifications.append((message, kwargs))
+
+    def scan_status(self):
+        return dict(self.scan_state)
+
+    def begin_scan_status(self, token, kind):
+        self.scan_state = {
+            "token": token,
+            "kind": kind,
+            "state": "running",
+            "pictures_seen": 0,
+        }
+
+    def update_scan_status(self, token, source, path, pictures_seen):
+        if self.scan_state.get("token") == token:
+            self.scan_state.update(
+                source=source,
+                path=path,
+                pictures_seen=pictures_seen,
+            )
+
+    def scan_cancel_requested(self, token):
+        return self.cancel_token == token
+
+    def finish_scan_status(self, token):
+        if self.scan_state.get("token") == token:
+            self.scan_state = {}
 
 
 class FakeRuntime:
@@ -145,12 +173,15 @@ def test_selected_source_scan_runs_in_background_and_pauses(monkeypatch):
             logger,
             cancelled,
             progress,
+            started,
         ):
             captured["cancelled"] = cancelled
             captured["progress"] = progress
+            captured["started"] = started
 
         def scan_sources(self, source_ids=None):
             captured["source_ids"] = source_ids
+            captured["started"](types.SimpleNamespace())
             assert captured["cancelled"]() is False
             captured["progress"](
                 types.SimpleNamespace(label="Photographs"),
@@ -191,12 +222,14 @@ def test_full_scan_runs_in_background(monkeypatch):
     captured = {}
 
     class FakeScanner:
-        def __init__(self, catalog, filesystem, settings, logger, cancelled, progress):
+        def __init__(self, catalog, filesystem, settings, logger, cancelled, progress, started):
             captured["cancelled"] = cancelled
             captured["progress"] = progress
+            captured["started"] = started
 
         def scan_sources(self, source_ids=None):
             captured["source_ids"] = source_ids
+            captured["started"](types.SimpleNamespace())
             return types.SimpleNamespace(cancelled=False, pictures_seen=4, errors=0)
 
     monkeypatch.setattr(views, "Scanner", FakeScanner)
@@ -230,9 +263,11 @@ def test_full_scan_stops_without_gui_calls_when_kodi_aborts(monkeypatch):
             logger,
             cancelled,
             progress,
+            started,
         ):
             captured["cancelled"] = cancelled
             captured["progress"] = progress
+            captured["started"] = started
 
         def scan_sources(self, source_ids=None):
             captured["source_ids"] = source_ids
@@ -282,9 +317,11 @@ def test_selected_source_scan_stops_without_gui_calls_when_kodi_aborts(monkeypat
             logger,
             cancelled,
             progress,
+            started,
         ):
             captured["cancelled"] = cancelled
             captured["progress"] = progress
+            captured["started"] = started
 
         def scan_sources(self, source_ids=None):
             runtime.kodi.monitor.abort_requested = True

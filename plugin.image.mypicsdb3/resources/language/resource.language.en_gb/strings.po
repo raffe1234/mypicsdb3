@@ -922,3 +922,51 @@ msgstr "This Kodi installation cannot play a cross-folder picture slideshow. Ope
 msgctxt "#32725"
 msgid "A slideshow is already being prepared"
 msgstr "A slideshow is already being prepared"
+
+msgctxt "#32726"
+msgid "Stop scan"
+msgstr "Stop scan"
+
+msgctxt "#32727"
+msgid "Stop scan?"
+msgstr "Stop scan?"
+
+msgctxt "#32728"
+msgid "A scan is currently running. Are you sure you want to stop it?"
+msgstr "A scan is currently running. Are you sure you want to stop it?"
+
+msgctxt "#32729"
+msgid "Stopping scan"
+msgstr "Stopping scan"
+
+msgctxt "#32730"
+msgid "No scan is running"
+msgstr "No scan is running"
+
+msgctxt "#32731"
+msgid "Automatic scan"
+msgstr "Automatic scan"
+
+msgctxt "#32732"
+msgid "Manual scan"
+msgstr "Manual scan"
+
+msgctxt "#32733"
+msgid "Scan in progress"
+msgstr "Scan in progress"
+
+msgctxt "#32734"
+msgid "Current source"
+msgstr "Current source"
+
+msgctxt "#32735"
+msgid "Stopping scan"
+msgstr "Stopping scan"
+
+msgctxt "#32736"
+msgid "Current file"
+msgstr "Current file"
+
+msgctxt "#32737"
+msgid "The album could not be opened"
+msgstr "The album could not be opened"
