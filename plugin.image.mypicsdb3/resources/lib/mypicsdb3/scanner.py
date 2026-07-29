@@ -13,6 +13,7 @@ from .db.locks import SCAN_LOCK_NAME
 from .filesystem import CancellationAwareFilesystem, Filesystem
 from .metadata import extract_metadata
 from .models import MetadataResult, ScanStats, Source
+from .scan_checkpoint import ScanCheckpointStore
 from .utils import basename_uri, extension_of, join_uri, local_datetime_from_timestamp, normalize_uri, utc_now
 
 
@@ -43,6 +44,7 @@ class Scanner:
         cancelled: Optional[Callable[[], bool]] = None,
         progress: Optional[Callable[[Source, str, ScanStats], None]] = None,
         started: Optional[Callable[[ScanStats], None]] = None,
+        checkpoint_store: Optional[ScanCheckpointStore] = None,
     ):
         self.catalog = catalog
         self.settings = settings
@@ -51,6 +53,7 @@ class Scanner:
         self.cancelled = cancelled or (lambda: False)
         self.progress = progress
         self.started = started
+        self.checkpoints = checkpoint_store or ScanCheckpointStore(settings, logger)
         self.owner = "%s:%s:%s" % (socket.gethostname(), os.getpid(), uuid.uuid4().hex[:12])
         self._scan_lock_active = False
         self._scan_lock_refreshed_at = 0.0
@@ -122,17 +125,30 @@ class Scanner:
             raise ScanAlreadyRunning("Another scan is already running")
         self._scan_lock_active = True
         self._scan_lock_refreshed_at = time.monotonic()
+        scan_completed = False
         try:
+            overall = self.checkpoints.prepare(sources, overall)
+            completed_sources = self.checkpoints.completed_source_ids()
             if self.started:
                 self.started(overall)
             self._check_cancelled()
             for source in sources:
+                if int(source.id) in completed_sources:
+                    continue
                 self._check_cancelled()
                 source_stats = self.scan_source(source)
                 overall.merge(source_stats)
+                self.checkpoints.complete_source(source.id, overall)
+                completed_sources.add(int(source.id))
+            scan_completed = True
         except ScanCancelled:
+            partial = self.checkpoints.current_stats()
+            if partial is not None:
+                overall.merge(partial)
             overall.cancelled = True
         finally:
+            if scan_completed:
+                self.checkpoints.finish()
             try:
                 self.catalog.release_lock(SCAN_LOCK_NAME, self.owner)
             finally:
@@ -142,14 +158,28 @@ class Scanner:
         return overall
 
     def scan_source(self, source: Source) -> ScanStats:
-        stats = ScanStats(sources_total=1, started_at=utc_now())
         started_monotonic = time.monotonic()
         scan_id = self.catalog.begin_scan_run(source.id)
-        stats.scan_id = scan_id
         root = normalize_uri(source.uri, directory=True)
+        restored = self.checkpoints.restore_source(source)
+        if restored is None:
+            scan_started_at = utc_now()
+            stats = ScanStats(sources_total=1, started_at=scan_started_at)
+            stack: List[Tuple[str, str, str]] = [(root, "", source.label)]
+            traversal_complete = True
+        else:
+            scan_started_at, stack, stats, traversal_complete = restored
+            stats.sources_total = max(1, int(stats.sources_total or 0))
+            if self.logger:
+                self.logger.info(
+                    "Resuming source scan for %s with %d folders pending",
+                    source.label,
+                    len(stack),
+                )
+        stats.scan_id = scan_id
         if not self.filesystem.exists(root):
             stats.sources_unavailable = 1
-            stats.errors = 1
+            stats.errors += 1
             message = "Source unavailable: %s" % root
             stats.error_messages.append(message)
             self.catalog.set_source_scan_state(source.id, False, "unavailable", message)
@@ -160,20 +190,40 @@ class Scanner:
 
         connection = self.catalog.open_scan_connection()
         self._scan_connection = connection
-        scan_started_at = utc_now()
         changed_since_commit = 0
-        traversal_complete = True
         try:
-            stack: List[Tuple[str, str, str]] = [(root, "", source.label)]
+            if restored is None:
+                self.checkpoints.begin_source(
+                    source,
+                    scan_started_at,
+                    stack,
+                    stats,
+                    traversal_complete,
+                )
             visited = set()
+
+            def save_folder_checkpoint() -> None:
+                nonlocal changed_since_commit
+                connection.commit()
+                changed_since_commit = 0
+                self.checkpoints.update_source(
+                    source,
+                    scan_started_at,
+                    stack,
+                    stats,
+                    traversal_complete,
+                )
+
             while stack:
                 self._check_cancelled()
                 folder_uri, parent_uri, folder_name = stack.pop()
                 folder_uri = normalize_uri(folder_uri, directory=True)
                 if folder_uri in visited:
+                    save_folder_checkpoint()
                     continue
                 visited.add(folder_uri)
                 if self._is_excluded_directory(folder_uri, folder_name):
+                    save_folder_checkpoint()
                     continue
                 folder_id = self.catalog.upsert_folder(connection, source.id, folder_uri, parent_uri, folder_name, scan_started_at)
                 stats.folders_seen += 1
@@ -186,6 +236,7 @@ class Scanner:
                     stats.error_messages.append("Cannot list %s: %s" % (folder_uri, exc))
                     if self.logger:
                         self.logger.warning("Cannot list %s: %s", folder_uri, exc)
+                    save_folder_checkpoint()
                     continue
 
                 for directory in sorted(directories, reverse=True):
@@ -301,6 +352,12 @@ class Scanner:
                         stats.error_messages.append(message)
                         if self.logger:
                             self.logger.warning("Media scan error for %s: %s", picture_uri, exc)
+
+                # A checkpoint is only advanced after every catalogue change
+                # for this folder has been committed. If Kodi stops during the
+                # next folder, the saved stack still contains that folder and
+                # it is safely processed again on the next matching scan.
+                save_folder_checkpoint()
 
             self._check_cancelled()
             if traversal_complete:

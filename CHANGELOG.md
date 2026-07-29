@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.2.49 - 2026-07-29
+
+- Save a local, atomic scan checkpoint after each fully processed folder so an
+  interrupted manual or automatic scan can continue from the first unfinished
+  folder instead of traversing every enabled source from its root.
+- Preserve the original source-scan timestamp and aggregate counters across a
+  resumed run, allowing missing-record detection to remain correct after Kodi
+  or the add-on service restarts.
+- Skip sources that were completed before the interruption and resume the
+  pending source with its saved depth-first folder frontier.
+- Discard checkpoints older than 24 hours or incompatible with the current
+  source list, database identity, extension lists, video option, exclusions or
+  metadata settings. This makes settings changes such as adding NEF trigger a
+  clean traversal instead of reusing an unsuitable checkpoint.
+- Keep incomplete-traversal safety across restarts: if any folder could not be
+  listed before the interruption, the resumed source remains `partial` and
+  source-wide missing-record marking is still skipped.
+- Store checkpoints only in the local Kodi add-on profile, even with a shared
+  MySQL/MariaDB catalogue. No database migration is required; schema 5, Query
+  Model version 1 and repository add-on version 0.2.26 remain unchanged.
+
 ## 0.2.48 - 2026-07-29
 
 - Add **Refresh random selections** to the MyPicsDB 3 main menu. It refreshes

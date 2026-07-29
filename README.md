@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.2.48 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.2.49 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -15,7 +15,9 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
 ## Features
 
 - Select one or more existing Kodi picture sources.
-- Incremental manual and scheduled background scanning.
+- Incremental manual and scheduled background scanning, with local folder
+  checkpoints that resume a compatible interrupted scan from the first
+  unfinished folder.
 - Session-visible scan progress for manual and automatic scans, with a
   confirmation-protected **Stop scan** action that cancels at the next safe
   file or folder checkpoint.
@@ -339,10 +341,18 @@ cancels the scan safely. While a scan is active, **Scan now** is replaced by
 operation is allowed to finish before the scan records its cancelled state.
 
 The first scan can take time on a large local collection or NAS. Subsequent
-scans are incremental: unchanged files are not read and indexed again. Installing
-or updating the add-on stops its background service, so an active automatic scan
-is safely interrupted. The next automatic scan traverses enabled sources from the
-beginning, but already stored unchanged files are skipped during metadata indexing.
+scans are incremental: unchanged files are not read and indexed again. MyPicsDB 3
+also saves an atomic local checkpoint after each fully processed folder. If Kodi
+exits, the add-on is updated or **Stop scan** is used, the next scan with the same
+enabled sources and scan settings continues from the first unfinished folder.
+Sources completed before the interruption are skipped.
+
+Checkpoints are stored in the local Kodi add-on profile and expire after 24
+hours. They are discarded when the source selection, database identity, picture
+or video extensions, exclusions or metadata settings change. For example, adding
+`nef` after stopping a scan deliberately starts a fresh traversal so earlier
+folders are checked for NEF files. With a shared MySQL/MariaDB catalogue, each
+Kodi device still keeps its own local traversal checkpoint.
 
 If a folder cannot be listed, Scan status reports `partial`. MyPicsDB 3 still
 indexes folders that were read successfully, but it skips missing-record
@@ -506,6 +516,8 @@ background indicator itself does not provide a cancel button, but the MyPicsDB 3
 main menu and **Scan status** expose **Stop scan** with a confirmation prompt.
 Exiting Kodi also interrupts the scan safely. The log distinguishes a user
 request from an interruption caused by Kodi shutdown or an add-on service restart.
+The next compatible scan resumes from the saved folder checkpoint; an expired or
+incompatible checkpoint is logged and discarded before a clean traversal starts.
 
 For one Kodi device, keep the default SQLite backend. Configure MySQL/MariaDB
 only when multiple Kodi devices need to share the same catalogue and all clients
