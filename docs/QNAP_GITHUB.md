@@ -41,29 +41,44 @@ git push origin v0.1.0
 The release workflow verifies the project, runs tests, builds all archives and
 attaches them to the GitHub release.
 
-## Later updates
+## Later updates with a supplied patch
+
+The QNAP does not need Python, pytest or the Kodi skin builder. Run those checks
+in GitHub Actions. Apply the supplied version-to-version patch from the parent
+directory and inspect the staged change before committing:
 
 ```bash
 cd /share/Public/Temp/work/Github/mypicsdb3
 
-git pull --rebase
-# Edit files and run tests.
-python3 tools/verify.py
-python3 -m pytest
-python3 tools/build.py
+git status --short --branch
+git pull --ff-only origin main
+git log -3 --oneline --decorate
+
+sha256sum ../mypicsdb3-X-from-Y.patch
+git apply --check ../mypicsdb3-X-from-Y.patch
+git apply ../mypicsdb3-X-from-Y.patch
+
+git diff --check
+git diff --stat
+git status --short
 
 git add -A
-git status
-git commit -m "Describe the change"
-git push
+git diff --cached --check
+git diff --cached --stat
+
+git commit -m "Prepare MyPicsDB 3 vX"
+git push origin main
 ```
 
-For a new release, update the version first:
+Wait for the GitHub test and package workflows to pass, then tag the exact
+commit:
 
 ```bash
-python3 tools/set_version.py 0.2.0
-# Add --repository-version 0.2.0 only when repository.mypicsdb3 changed.
-# Update CHANGELOG.md, test, commit and push.
-git tag -a v0.2.0 -m "MyPicsDB 3 0.2.0"
-git push origin v0.2.0
+git tag -a vX -m "MyPicsDB 3 vX"
+git push origin vX
 ```
+
+Use `--ff-only` rather than rebasing a dirty work tree. If `git apply --check`
+fails, stop and compare the checked-out version with the patch's `from-Y`
+version instead of forcing the patch. The repository add-on version changes
+only when `repository.mypicsdb3` itself changes.

@@ -45,6 +45,7 @@ from .slideshow import (
 from .utils import (
     extension_of,
     kodi_generated_video_thumbnail_uri,
+    kodi_image_uri,
     parse_bool,
     plugin_url,
     safe_limit,
@@ -53,6 +54,11 @@ from .view_mode import set_view_mode_when_container_ready
 
 
 MAX_SLIDESHOW_ITEMS = 5000
+HOME_FAST_IMAGE_EXTENSIONS = frozenset(
+    ("jpg", "jpeg", "png", "webp", "bmp", "gif", "tif", "tiff")
+)
+HOME_WIDGET_CANDIDATE_MULTIPLIER = 4
+HOME_WIDGET_CANDIDATE_MAXIMUM = 160
 
 
 class PluginUI:
@@ -135,7 +141,60 @@ class PluginUI:
         )
         if is_video and (not thumbnail or thumbnail == media_uri):
             return kodi_generated_video_thumbnail_uri(media_uri)
-        return thumbnail or media_uri
+        return kodi_image_uri(thumbnail or media_uri)
+
+    @staticmethod
+    def _is_home_widget(params: Optional[Dict[str, str]]) -> bool:
+        values = params or {}
+        return parse_bool(values.get("widget"), False) and parse_bool(
+            values.get("home"), False
+        )
+
+    def _widget_default_limit(self, params: Optional[Dict[str, str]]) -> int:
+        if self._is_home_widget(params):
+            return int(getattr(self.kodi.settings, "home_widget_limit", 10))
+        return int(self.kodi.settings.widget_limit)
+
+    def _result_limit(self, params: Optional[Dict[str, str]], default: int) -> int:
+        values = params or {}
+        limit = safe_limit(values.get("limit"), default)
+        if self._is_home_widget(values):
+            home_limit = int(getattr(self.kodi.settings, "home_widget_limit", 10))
+            limit = min(limit, home_limit)
+        return limit
+
+    @staticmethod
+    def _home_art_priority(row: Dict[str, Any]) -> int:
+        media_type = str(row.get("media_type") or "picture").lower()
+        extension = str(
+            row.get("extension") or extension_of(str(row.get("uri") or ""))
+        ).lower()
+        if media_type == "picture" and extension in HOME_FAST_IMAGE_EXTENSIONS:
+            return 0
+        if media_type == "picture":
+            return 1
+        return 2
+
+    def _home_candidates_limit(self, limit: int) -> int:
+        return min(
+            HOME_WIDGET_CANDIDATE_MAXIMUM,
+            max(limit, limit * HOME_WIDGET_CANDIDATE_MULTIPLIER),
+        )
+
+    def _prioritize_home_rows(
+        self,
+        rows: Sequence[Dict[str, Any]],
+        params: Optional[Dict[str, str]],
+        limit: int,
+    ) -> List[Dict[str, Any]]:
+        values = list(rows)
+        if not self._is_home_widget(params):
+            return values
+        # Python's sort is stable, so date/random order is preserved inside
+        # each render-cost class. Standard stills reach Kodi's visible image
+        # queue before RAW/HEIF files and generated video frames.
+        values.sort(key=self._home_art_priority)
+        return values[:limit]
 
     @staticmethod
     def _set_widget_title(item, label: str) -> None:
@@ -437,6 +496,35 @@ class PluginUI:
             return
         item.setInfo("video", {"title": title, "dateadded": date_added})
 
+    @staticmethod
+    def _set_picture_info(
+        item,
+        info: Dict[str, Any],
+        date_text: str,
+        width: Any,
+        height: Any,
+    ) -> None:
+        """Use Kodi's picture InfoTag where available, retaining a safe fallback."""
+
+        getter = getattr(item, "getPictureInfoTag", None)
+        if callable(getter):
+            tag = getter()
+            if width and height and hasattr(tag, "setResolution"):
+                tag.setResolution(int(width), int(height))
+            if date_text and hasattr(tag, "setDateTimeTaken"):
+                tag.setDateTimeTaken(str(date_text))
+            # InfoTagPicture does not expose title, camera, comment or path
+            # setters yet, so keep only those compatibility fields here.
+            compatibility = {
+                key: value
+                for key, value in info.items()
+                if key not in {"resolution", "date"}
+            }
+            if compatibility:
+                item.setInfo("pictures", compatibility)
+            return
+        item.setInfo("pictures", info)
+
     def _media_item(
         self,
         row: Dict[str, Any],
@@ -468,7 +556,9 @@ class PluginUI:
                 if row.get("mime_type") and hasattr(item, "setMimeType"):
                     item.setMimeType(str(row["mime_type"]))
             else:
-                item.setInfo("pictures", info)
+                self._set_picture_info(
+                    item, info, date_text, row.get("width"), row.get("height")
+                )
         except Exception:
             pass
         item.setProperty("MyPicsDB3.MediaType", media_type)
@@ -571,13 +661,20 @@ class PluginUI:
     ):
         is_widget = parse_bool(params.get("widget"), False)
         default_limit = (
-            self.kodi.settings.widget_limit
+            self._widget_default_limit(params)
             if is_widget
             else self.kodi.settings.browser_page_size
         )
-        limit = safe_limit(params.get("limit"), default_limit)
+        limit = self._result_limit(params, default_limit)
         offset = int(params.get("offset", "0") or 0)
-        rows = getter(limit, offset)
+        query_limit = (
+            self._home_candidates_limit(limit)
+            if self._is_home_widget(params)
+            else limit
+        )
+        rows = self._prioritize_home_rows(
+            getter(query_limit, offset), params, limit
+        )
         items = list(prefix_items or ())
         items.extend(
             self._media_item(row, browse_params=params, slideshow_route=route)
@@ -1700,22 +1797,30 @@ class PluginUI:
         if route == "recent-added":
             return self.pictures(route, self.catalog.recent_added, params, self.text(30002, "Recently added"))
         if route == "random":
-            limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit)
+            limit = self._result_limit(params, self._widget_default_limit(params))
+            query_limit = (
+                self._home_candidates_limit(limit)
+                if self._is_home_widget(params)
+                else limit
+            )
+            rows = self._prioritize_home_rows(
+                self.catalog.random_pictures(query_limit), params, limit
+            )
             return self.finish(
-                [self._media_item(row, browse_params=params) for row in self.catalog.random_pictures(limit)],
+                [self._media_item(row, browse_params=params) for row in rows],
                 category=self._rating_category(self.text(30003, "Random memories"), params),
                 view_mode=self._browser_view_mode(params),
             )
         if route == "recent-folders":
             default_limit = (
-                self.kodi.settings.widget_limit
+                self._widget_default_limit(params)
                 if parse_bool(params.get("widget"), False)
                 else self.kodi.settings.browser_page_size
             )
-            limit = safe_limit(params.get("limit"), default_limit)
+            limit = self._result_limit(params, default_limit)
             return self.folders(route, self.catalog.recent_folders(limit), self.text(30004, "Recent albums"), params)
         if route == "random-folders":
-            limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit)
+            limit = self._result_limit(params, self._widget_default_limit(params))
             return self.folders(route, self.catalog.random_folders(limit), self.text(30005, "Random albums"), params)
         if route == "on-this-day":
             now = datetime.now()
@@ -1723,8 +1828,17 @@ class PluginUI:
             return self.pictures(route, getter, params, self.text(30006, "On this day"))
         if route == "on-this-day-random":
             now = datetime.now()
-            limit = safe_limit(params.get("limit"), self.kodi.settings.widget_limit)
-            rows = self.catalog.random_on_this_day(now.month, now.day, now.year, limit)
+            limit = self._result_limit(params, self._widget_default_limit(params))
+            query_limit = (
+                self._home_candidates_limit(limit)
+                if self._is_home_widget(params)
+                else limit
+            )
+            rows = self._prioritize_home_rows(
+                self.catalog.random_on_this_day(now.month, now.day, now.year, query_limit),
+                params,
+                limit,
+            )
             return self.finish(
                 [
                     self._media_item(

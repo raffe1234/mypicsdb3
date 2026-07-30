@@ -82,6 +82,15 @@
     </category>
     <category id="home_screen" label="32070" help="32170">
       <group id="1">
+        <setting id="home_widget_limit" type="integer" label="32782" help="32783">
+          <level>0</level>
+          <default>10</default>
+          <constraints>
+            <minimum>4</minimum>
+            <maximum>40</maximum>
+          </constraints>
+          <control type="spinner" format="string" />
+        </setting>
         <setting id="show_media_sources" type="boolean" label="32071" help="32171">
           <level>0</level>
           <default>true</default>

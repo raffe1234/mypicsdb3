@@ -20,7 +20,14 @@ All widget views are read-only and never start a scan. They use the local
 | Geotagged | `plugin://plugin.image.mypicsdb3/geotagged?widget=1&limit=15` |
 
 The `widget=1` marker lets MyPicsDB 3 distinguish background widget loading
-from interactive browsing. The optional `limit` is restricted to 1–500.
+from interactive browsing.
+The bundled Estuary home rows add `home=1` and omit an explicit `limit`, for
+example `plugin://plugin.image.mypicsdb3/on-this-day?widget=1&home=1`. That
+marker applies the separate **Home-screen pictures per row** setting (default
+10, range 4–40) and prioritizes standard still formats before RAW/HEIF files
+and generated video frames. Third-party widgets should omit `home=1` when they
+want the general widget limit and original media order.
+ The optional `limit` is restricted to 1–500.
 Interactive views use pagination.
 Random views use indexed random keys rather than `ORDER BY RANDOM()` across the
 whole table. **On this day - random** also shuffles the selected rows before they

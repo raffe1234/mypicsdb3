@@ -18,20 +18,23 @@ def settings_by_id():
 
 def test_general_numeric_settings_show_labels_and_values():
     settings = settings_by_id()
-    for setting_id, label in (("widget_limit", "32011"), ("browser_page_size", "32012")):
+    for setting_id, label in (("widget_limit", "32011"), ("home_widget_limit", "32782"), ("browser_page_size", "32012")):
         setting = settings[setting_id]
         assert setting.attrib["label"] == label
         control = setting.find("control")
         assert control is not None
         assert control.attrib == {"type": "spinner", "format": "string"}
     assert settings["widget_limit"].findtext("./constraints/maximum") == "50"
+    assert settings["home_widget_limit"].findtext("default") == "10"
+    assert settings["home_widget_limit"].findtext("./constraints/maximum") == "40"
 
 
-def test_home_widget_limit_clamps_legacy_values_to_50():
-    values = {"widget_limit": "100"}
+def test_widget_limits_clamp_independently():
+    values = {"widget_limit": "100", "home_widget_limit": "100"}
     settings = from_getter(lambda key: values.get(key, ""), "/tmp/mypicsdb3")
 
     assert settings.widget_limit == 50
+    assert settings.home_widget_limit == 40
 
 
 def test_home_screen_uses_editor_and_internal_legacy_slots():
@@ -75,6 +78,7 @@ def test_english_catalogue_is_separated_and_has_clear_labels():
     for label in (
         "Default items per home-screen row",
         "Pictures per browser page",
+        "Home-screen pictures per row",
         "Default album view",
         "Configure home-screen rows",
         "Minimum picture rating",

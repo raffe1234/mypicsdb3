@@ -1,5 +1,37 @@
 # Changelog
 
+## 0.3.5 - 2026-07-30
+
+- Reduce home-screen artwork stalls by giving the Estuary rows a separate
+  **Home-screen pictures per row** limit. It defaults to 10 and can be set from
+  4 to 40 without changing normal browser page sizes.
+- Mark every bundled home provider with `home=1`, fetch a small candidate pool
+  and place JPEG, PNG, WebP, BMP, GIF and TIFF pictures before RAW/HEIF files
+  and generated video frames while preserving the original order inside each
+  class. This keeps slow NEF/HEIC/video artwork out of the first visible slots
+  whenever faster stills are available.
+- Supply one canonical `image://` texture-cache URI and make the custom Estuary
+  widget read `ListItem.Art(thumb)` directly instead of probing Estuary's movie
+  artwork variables. Existing catalogue rows benefit without a rescan.
+- Replace the automatic local-date `ReloadSkin()` with a lightweight
+  `Container.Refresh`, avoiding a full invalidation and reload of all home
+  widgets at midnight. Explicit user-driven random refreshes still rebuild the
+  skin so their selections definitely change.
+- Use Kodi's picture InfoTag for resolution and capture time where available,
+  retain compatibility metadata for fields Kodi does not yet expose, and keep
+  the fallback compatible with Kodi 21 and Kodi 22.
+- Avoid querying `Player.Filenameandpath` when Kodi reports that no media is
+  active, preventing the spurious **Kodi is not playing any file** exception
+  seen during slideshow/player transitions.
+- Log directory listings and picture metadata reads that take at least five
+  seconds, making slow SMB/NFS folders and individual files visible in the log
+  without failing the scan.
+- Update the QNAP instructions to the tested patch-and-GitHub-Actions workflow,
+  and make the bundled widget URL convention explicit.
+- Bump the generated Estuary revisions to Kodi 21 revision 9 and Kodi 22
+  revision 7. Database schema 5, Query Model version 1 and repository add-on
+  version 0.2.26 remain unchanged; no catalogue rescan is required.
+
 ## 0.3.4 - 2026-07-29
 
 - Fix the Kodi GUI lock that could occur after **Stop scan** by removing

@@ -32,16 +32,16 @@ DEFAULT_ROWS = [
 ]
 
 ROUTES = [
-    "recent-taken?widget=1",
-    "recent-added?widget=1",
-    "random?widget=1",
-    "recent-folders?widget=1",
-    "random-folders?widget=1",
-    "on-this-day?widget=1",
-    "on-this-day-random?widget=1",
-    "favorites?widget=1",
-    "rated?widget=1",
-    "geotagged?widget=1",
+    "recent-taken?widget=1&amp;home=1",
+    "recent-added?widget=1&amp;home=1",
+    "random?widget=1&amp;home=1",
+    "recent-folders?widget=1&amp;home=1",
+    "random-folders?widget=1&amp;home=1",
+    "on-this-day?widget=1&amp;home=1",
+    "on-this-day-random?widget=1&amp;home=1",
+    "favorites?widget=1&amp;home=1",
+    "rated?widget=1&amp;home=1",
+    "geotagged?widget=1&amp;home=1",
 ]
 
 HEADINGS = [
@@ -65,6 +65,9 @@ def test_home_screen_settings_offer_nine_ordered_slots() -> None:
 
     assert settings["show_media_sources"].findtext("default") == "true"
     assert settings["widget_limit"].findtext("./constraints/maximum") == "50"
+    assert settings["home_widget_limit"].findtext("default") == "10"
+    assert settings["home_widget_limit"].findtext("./constraints/minimum") == "4"
+    assert settings["home_widget_limit"].findtext("./constraints/maximum") == "40"
     configure = settings["configure_home_screen"]
     assert configure.attrib["type"] == "action"
     assert configure.findtext("data") == (
@@ -133,5 +136,6 @@ def test_home_fragment_has_visible_titles_and_all_routes() -> None:
         assert f"plugin://plugin.image.mypicsdb3/{route}" in home
     for heading in HEADINGS:
         assert f'value="{heading}"' in home
-    assert home.count('<param name="widget_limit" value="50"/>') == 90
+    assert home.count('<param name="widget_limit" value="40"/>') == 90
+    assert home.count("widget=1&amp;home=1") == 90
     assert "$ADDON[plugin.image.mypicsdb3" not in home

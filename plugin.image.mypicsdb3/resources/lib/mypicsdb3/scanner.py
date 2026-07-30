@@ -33,6 +33,9 @@ SCAN_LOCK_TTL_SECONDS = 1800
 SCAN_LOCK_REFRESH_SECONDS = 60
 
 
+SLOW_IO_WARNING_SECONDS = 5.0
+
+
 class Scanner:
     def __init__(
         self,
@@ -229,7 +232,15 @@ class Scanner:
                 stats.folders_seen += 1
                 changed_since_commit += 1
                 try:
+                    list_started = time.monotonic()
                     directories, files = self.filesystem.listdir(folder_uri)
+                    list_duration = time.monotonic() - list_started
+                    if self.logger and list_duration >= SLOW_IO_WARNING_SECONDS:
+                        self.logger.warning(
+                            "Slow directory listing: %.1fs for %s",
+                            list_duration,
+                            folder_uri,
+                        )
                 except Exception as exc:
                     traversal_complete = False
                     stats.errors += 1
@@ -272,12 +283,20 @@ class Scanner:
                             stats.pictures_unchanged += 1
                         else:
                             if media_type == "picture":
+                                metadata_started = time.monotonic()
                                 metadata = self.metadata_reader(
                                     picture_uri,
                                     self.filesystem,
                                     self.settings,
                                     file_stat.size,
                                 )
+                                metadata_duration = time.monotonic() - metadata_started
+                                if self.logger and metadata_duration >= SLOW_IO_WARNING_SECONDS:
+                                    self.logger.warning(
+                                        "Slow media inspection: %.1fs for %s",
+                                        metadata_duration,
+                                        picture_uri,
+                                    )
                                 self._check_cancelled()
                             else:
                                 metadata = MetadataResult(

@@ -134,6 +134,7 @@ class FakeKodi:
         self.addon = FakeAddon()
         self.settings = types.SimpleNamespace(
             widget_limit=15,
+            home_widget_limit=10,
             browser_page_size=100,
             album_view_mode=55,
             minimum_rating_policy="all",
@@ -365,7 +366,7 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert len(calls.items) == 1
     url, item, is_folder = calls.items[0]
     assert url == "smb://server/photos/image.jpg"
-    assert item.art["thumb"] == url
+    assert item.art["thumb"] == "image://smb%3A%2F%2Fserver%2Fphotos%2Fimage.jpg/"
     assert item.properties["MyPicsDB3.Camera"] == "Canon EOS R6"
     assert is_folder is False
 
@@ -825,7 +826,7 @@ def test_video_item_keeps_explicit_image_thumbnail(monkeypatch) -> None:
     ui.dispatch(views.Request("videos", {}))
 
     _url, item, _is_folder = calls.items[0]
-    assert item.art["thumb"] == "smb://server/photos/clip-thumb.jpg"
+    assert item.art["thumb"] == "image://smb%3A%2F%2Fserver%2Fphotos%2Fclip-thumb.jpg/"
 
 
 
@@ -1537,3 +1538,78 @@ def test_create_smart_collection_saves_validated_query_and_opens_it(monkeypatch)
     assert calls.builtins[-1] == (
         "Container.Update(plugin://plugin.image.mypicsdb3/saved-search?id=1)"
     )
+
+
+def test_home_widget_uses_small_limit_and_prioritizes_standard_stills(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    requested = []
+    original_recent_taken = runtime.catalog.recent_taken
+
+    def rows(limit, offset=0):
+        requested.append((limit, offset))
+        base = original_recent_taken(1)[0]
+        result = []
+        for number, (extension, media_type) in enumerate(
+            (("nef", "picture"), ("mp4", "video"), ("jpg", "picture"), ("heic", "picture")),
+            start=1,
+        ):
+            row = dict(base)
+            row.update(
+                id=number,
+                filename=f"item-{number}.{extension}",
+                uri=f"smb://server/photos/item-{number}.{extension}",
+                thumb_uri=(f"smb://server/photos/item-{number}.{extension}" if media_type == "picture" else None),
+                extension=extension,
+                media_type=media_type,
+            )
+            result.append(row)
+        return result
+
+    runtime.catalog.recent_taken = rows
+    runtime.kodi.settings.home_widget_limit = 3
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("recent-taken", {"widget": "1", "home": "1"}))
+
+    assert requested == [(12, 0)]
+    assert [item.label for _url, item, _folder in calls.items] == [
+        "item-3.jpg",
+        "item-1.nef",
+        "item-4.heic",
+    ]
+
+
+def test_picture_info_uses_picture_info_tag_when_available(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+
+    class PictureTag:
+        def __init__(self):
+            self.resolution = None
+            self.date = None
+
+        def setResolution(self, width, height):
+            self.resolution = (width, height)
+
+        def setDateTimeTaken(self, value):
+            self.date = value
+
+    original = views.xbmcgui.ListItem
+
+    class TaggedListItem(original):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.picture_tag = PictureTag()
+
+        def getPictureInfoTag(self):
+            return self.picture_tag
+
+    views.xbmcgui.ListItem = TaggedListItem
+    ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
+    ui.dispatch(views.Request("recent-taken", {}))
+
+    item = calls.items[0][1]
+    assert item.picture_tag.resolution == (1920, 1080)
+    assert item.picture_tag.date == "2020-07-17 12:00:00"
+    assert item.info["pictures"]["title"] == "image.jpg"
+    assert "resolution" not in item.info["pictures"]

@@ -28,7 +28,7 @@
 				<top>10</top>
 				<width>250</width>
 				<height>350</height>
-				<texture border="2" background="true">$VAR[InfoWallThumbVar]</texture>
+				<texture border="2" background="true">$INFO[ListItem.Art(thumb)]</texture>
 				<aspectratio>keep</aspectratio>
 			</control>
 			<control type="label">
@@ -64,7 +64,7 @@
 	<include name="WidgetListPosterMyPicsDB">
 		<param name="onclick_condition">false</param>
 		<param name="browse_mode">auto</param>
-		<param name="widget_limit">15</param>
+		<param name="widget_limit">40</param>
 		<definition>
 			<include content="CategoryLabel">
 				<param name="label">$PARAM[widget_header]</param>

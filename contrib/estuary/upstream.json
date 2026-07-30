@@ -13,27 +13,27 @@
       "include_prereleases": false,
       "minversion": "21.0.0",
       "maxversion": "21.89.999",
-      "patch_revision": 8,
+      "patch_revision": 9,
       "releases": [
         {
           "ref": "21.3-Omega",
           "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/21.3-Omega.zip",
-          "skin_version": "21.3.8"
+          "skin_version": "21.3.9"
         },
         {
           "ref": "21.2-Omega",
           "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/21.2-Omega.zip",
-          "skin_version": "21.2.8"
+          "skin_version": "21.2.9"
         },
         {
           "ref": "21.1-Omega",
           "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/21.1-Omega.zip",
-          "skin_version": "21.1.8"
+          "skin_version": "21.1.9"
         },
         {
           "ref": "21.0-Omega",
           "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/21.0-Omega.zip",
-          "skin_version": "21.0.8"
+          "skin_version": "21.0.9"
         }
       ]
     },
@@ -44,27 +44,27 @@
       "include_prereleases": true,
       "minversion": "21.90.0",
       "maxversion": "22.99.99",
-      "patch_revision": 6,
+      "patch_revision": 7,
       "releases": [
         {
           "ref": "22.0b1-Piers",
           "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/22.0b1-Piers.zip",
-          "skin_version": "22.0.0~beta1.6"
+          "skin_version": "22.0.0~beta1.7"
         },
         {
           "ref": "22.0a3-Piers",
           "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/22.0a3-Piers.zip",
-          "skin_version": "22.0.0~alpha3.6"
+          "skin_version": "22.0.0~alpha3.7"
         },
         {
           "ref": "22.0a2-Piers",
           "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/22.0a2-Piers.zip",
-          "skin_version": "22.0.0~alpha2.6"
+          "skin_version": "22.0.0~alpha2.7"
         },
         {
           "ref": "22.0a1-Piers",
           "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/22.0a1-Piers.zip",
-          "skin_version": "22.0.0~alpha1.6"
+          "skin_version": "22.0.0~alpha1.7"
         }
       ]
     }

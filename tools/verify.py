@@ -199,7 +199,7 @@ def verify_addon(addon: Path) -> None:
         if not home.is_file():
             fail("Generated skin is missing xml/Home.xml")
         home_text = home.read_text(encoding="utf-8")
-        if "plugin://plugin.image.mypicsdb3/recent-taken?widget=1" not in home_text:
+        if "plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1" not in home_text:
             fail("Generated skin does not contain the MyPicsDB 3 Pictures widgets")
         includes_home = addon / "xml" / "Includes_Home.xml"
         if not includes_home.is_file():

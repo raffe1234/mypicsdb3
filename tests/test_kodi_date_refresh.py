@@ -16,7 +16,7 @@ def fake_xbmc(commands, *, blocked=()):
     )
 
 
-def test_custom_estuary_home_reloads_skin_when_idle(monkeypatch) -> None:
+def test_custom_estuary_home_refreshes_container_when_idle(monkeypatch) -> None:
     commands = []
     monkeypatch.setattr(kodi, "xbmc", fake_xbmc(commands))
     monkeypatch.setattr(
@@ -28,12 +28,13 @@ def test_custom_estuary_home_reloads_skin_when_idle(monkeypatch) -> None:
     refreshed = kodi.KodiContext.refresh_date_sensitive_views()
 
     assert refreshed is True
-    assert commands == ["ReloadSkin()"]
+    assert commands == ["Container.Refresh"]
 
 
 @pytest.mark.parametrize(
     "condition",
     (
+        "Container.IsUpdating",
         "Library.IsScanning",
         "Player.HasMedia",
         "System.HasActiveModalDialog",
@@ -41,7 +42,7 @@ def test_custom_estuary_home_reloads_skin_when_idle(monkeypatch) -> None:
         "System.DPMSActive",
     ),
 )
-def test_custom_estuary_home_defers_reload_while_gui_is_busy(
+def test_custom_estuary_home_defers_refresh_while_gui_is_busy(
     monkeypatch,
     condition,
 ) -> None:
@@ -59,7 +60,7 @@ def test_custom_estuary_home_defers_reload_while_gui_is_busy(
     assert commands == []
 
 
-def test_custom_estuary_defers_reload_until_home_is_active(monkeypatch) -> None:
+def test_custom_estuary_defers_refresh_until_home_is_active(monkeypatch) -> None:
     commands = []
     monkeypatch.setattr(kodi, "xbmc", fake_xbmc(commands))
     monkeypatch.setattr(
@@ -290,6 +291,21 @@ def test_notification_failure_is_logged_instead_of_escaping(monkeypatch) -> None
     context.notify("Done")
 
     assert warnings == ["Could not show notification: GUI shutting down"]
+
+
+def test_playing_file_skips_info_label_when_kodi_has_no_media(monkeypatch) -> None:
+    calls = []
+    monkeypatch.setattr(
+        kodi,
+        "xbmc",
+        types.SimpleNamespace(
+            getCondVisibility=lambda condition: condition == "Player.HasMedia" and False,
+            getInfoLabel=lambda label: calls.append(label) or "unexpected",
+        ),
+    )
+
+    assert kodi.KodiContext.playing_file() == ""
+    assert calls == []
 
 
 def test_playing_file_uses_info_label_without_querying_player(monkeypatch) -> None:

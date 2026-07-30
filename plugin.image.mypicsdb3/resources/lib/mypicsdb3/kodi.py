@@ -289,12 +289,11 @@ class KodiContext:
 
     @staticmethod
     def refresh_date_sensitive_views() -> bool:
-        """Refresh views whose contents depend on the local calendar date.
+        """Request a lightweight refresh for local-date-dependent views.
 
-        The custom Estuary home rows are cached until the skin is rebuilt.
-        Reloading a skin while Kodi is scanning, playing media, displaying a
-        modal dialog or running a screen saver can destabilize the GUI, so the
-        background service must defer and retry until the home window is idle.
+        A full ``ReloadSkin`` invalidates every home widget and makes Kodi
+        recreate network and RAW artwork. The service now refreshes only the
+        active container after the GUI becomes idle.
         """
         if xbmc is None:
             return True
@@ -332,6 +331,7 @@ class KodiContext:
 
         if hasattr(xbmc, "getCondVisibility"):
             unsafe_conditions = (
+                "Container.IsUpdating",
                 "Library.IsScanning",
                 "Player.HasMedia",
                 "System.HasActiveModalDialog",
@@ -341,7 +341,7 @@ class KodiContext:
             if any(xbmc.getCondVisibility(condition) for condition in unsafe_conditions):
                 return False
 
-        xbmc.executebuiltin("ReloadSkin()")
+        xbmc.executebuiltin("Container.Refresh")
         return True
 
     def acquire_slideshow_start(self) -> Optional[str]:
@@ -484,6 +484,10 @@ class KodiContext:
         if xbmc is None:
             return ""
         try:
+            if hasattr(xbmc, "getCondVisibility") and not xbmc.getCondVisibility(
+                "Player.HasMedia"
+            ):
+                return ""
             if hasattr(xbmc, "getInfoLabel"):
                 return normalize_uri(
                     str(xbmc.getInfoLabel("Player.Filenameandpath") or "")

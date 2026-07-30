@@ -1142,3 +1142,11 @@ msgstr "Highest rating first"
 msgctxt "#32781"
 msgid "Filename A-Z"
 msgstr "Filename A-Z"
+
+msgctxt "#32782"
+msgid "Home-screen pictures per row"
+msgstr "Home-screen pictures per row"
+
+msgctxt "#32783"
+msgid "Choose 4–40 pictures for each MyPicsDB 3 home-screen row. A lower value makes network and RAW collections appear sooner."
+msgstr "Choose 4–40 pictures for each MyPicsDB 3 home-screen row. A lower value makes network and RAW collections appear sooner."

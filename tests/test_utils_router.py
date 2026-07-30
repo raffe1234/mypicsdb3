@@ -3,6 +3,7 @@ from __future__ import annotations
 from mypicsdb3.router import parse_request
 from mypicsdb3.utils import (
     join_uri,
+    kodi_image_uri,
     kodi_generated_video_thumbnail_uri,
     normalize_uri,
     plugin_url,
@@ -46,3 +47,11 @@ def test_kodi_generated_video_thumbnail_uri_encodes_network_and_unicode_paths() 
         "image://video@nfs%3A%2F%2Fnas%2F%C3%85land%2Ffilm.mov/"
     )
     assert kodi_generated_video_thumbnail_uri("") == ""
+
+
+def test_kodi_image_uri_creates_one_stable_texture_cache_key() -> None:
+    assert kodi_image_uri("smb://server/Home pictures/image #1.jpg") == (
+        "image://smb%3A%2F%2Fserver%2FHome%20pictures%2Fimage%20%231.jpg/"
+    )
+    assert kodi_image_uri("image://already%2Fencoded/") == "image://already%2Fencoded/"
+    assert kodi_image_uri("") == ""
