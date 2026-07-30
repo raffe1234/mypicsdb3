@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.2 - 2026-07-30
+
+- Restore the original `widget_limit` setting as the single source of truth for
+  MyPicsDB home-screen row counts. Version 0.3.5 accidentally introduced a
+  second visible setting whose default of 10 masked existing values such as 39.
+- Move the original setting to the Home screen category, keep the temporary
+  0.3.5 setting hidden for compatibility, and migrate either stored value once.
+- Clamp the unified home-screen row count to 4-40 and log the one-time migration
+  inputs and result so installations can be diagnosed without debug logging.
+
 ## 0.4.1 - 2026-07-30
 
 - Fix the home-screen row count regression introduced in 0.3.5. Kodi 20 and

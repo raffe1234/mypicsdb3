@@ -6,9 +6,9 @@ import time
 import uuid
 from typing import Any, Dict, List, Optional
 
-from .config import Settings, from_getter
+from .config import Settings, from_getter, resolve_home_widget_limit
 from .log import Logger
-from .utils import is_indexable_picture_source_uri, normalize_uri
+from .utils import is_indexable_picture_source_uri, normalize_uri, parse_bool
 
 try:
     import xbmc  # type: ignore
@@ -58,6 +58,7 @@ BOOLEAN_SETTING_IDS = frozenset(
         "store_gps",
         "mysql_auto_create",
         "debug_logging",
+        "home_widget_limit_migrated_v2",
     }
 )
 
@@ -105,8 +106,19 @@ class KodiContext:
         self.profile_path = self.translate(self.addon.getAddonInfo("profile"))
         if xbmcvfs and not xbmcvfs.exists(self.profile_path):
             xbmcvfs.mkdirs(self.profile_path)
+        migration = self._migrate_home_widget_limit_setting()
         self.settings = self.load_settings()
         self.log = Logger(self.name, self.settings.debug_logging, xbmc)
+        if migration is not None:
+            old_widget, old_home, effective, saved = migration
+            self.log.info(
+                "Home-screen row-count migration: widget_limit=%d, "
+                "home_widget_limit=%d, effective=%d, saved=%s",
+                old_widget,
+                old_home,
+                effective,
+                str(bool(saved)).lower(),
+            )
         self.publish_home_widget_limit()
 
     @staticmethod
@@ -116,6 +128,70 @@ class KodiContext:
         if xbmc is not None and hasattr(xbmc, "translatePath"):
             return xbmc.translatePath(path)
         return path
+
+    def _set_integer_setting(self, setting_id: str, value: int) -> bool:
+        get_settings = getattr(self.addon, "getSettings", None)
+        if callable(get_settings):
+            try:
+                get_settings().setInt(setting_id, int(value))
+                return True
+            except Exception:
+                pass
+        typed_setter = getattr(self.addon, "setSettingInt", None)
+        if callable(typed_setter):
+            try:
+                return bool(typed_setter(setting_id, int(value)))
+            except Exception:
+                pass
+        try:
+            result = self.addon.setSetting(setting_id, str(int(value)))
+            return True if result is None else bool(result)
+        except Exception:
+            return False
+
+    def _set_boolean_setting(self, setting_id: str, value: bool) -> bool:
+        get_settings = getattr(self.addon, "getSettings", None)
+        if callable(get_settings):
+            try:
+                get_settings().setBool(setting_id, bool(value))
+                return True
+            except Exception:
+                pass
+        typed_setter = getattr(self.addon, "setSettingBool", None)
+        if callable(typed_setter):
+            try:
+                return bool(typed_setter(setting_id, bool(value)))
+            except Exception:
+                pass
+        try:
+            result = self.addon.setSetting(
+                setting_id, "true" if value else "false"
+            )
+            return True if result is None else bool(result)
+        except Exception:
+            return False
+
+    def _migrate_home_widget_limit_setting(self):
+        getter = self._setting_getter()
+        migration_complete = parse_bool(
+            getter("home_widget_limit_migrated_v2"), False
+        )
+        if migration_complete:
+            return None
+        old_widget = int(
+            resolve_home_widget_limit(getter("widget_limit"), 10, True)
+        )
+        try:
+            old_home = max(4, min(40, int(getter("home_widget_limit"))))
+        except (TypeError, ValueError):
+            old_home = 10
+        effective = resolve_home_widget_limit(old_widget, old_home, False)
+        saved = (
+            self._set_integer_setting("widget_limit", effective)
+            and self._set_integer_setting("home_widget_limit", effective)
+            and self._set_boolean_setting("home_widget_limit_migrated_v2", True)
+        )
+        return old_widget, old_home, effective, saved
 
     def _setting_getter(self):
         legacy_getter = self.addon.getSetting

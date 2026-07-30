@@ -36,7 +36,7 @@ def _picture_extensions(value: Any) -> Tuple[str, ...]:
 class Settings:
     profile_path: str
     database_backend: str = "sqlite"
-    widget_limit: int = 15
+    widget_limit: int = 10
     home_widget_limit: int = 10
     browser_page_size: int = 100
     show_notifications: bool = True
@@ -72,15 +72,41 @@ class Settings:
         return self.profile_path.rstrip("/\\") + "/mypicsdb3.sqlite"
 
 
+def resolve_home_widget_limit(
+    widget_value: Any, legacy_home_value: Any, migration_complete: Any
+) -> int:
+    """Resolve the single home-row count across the 0.3.5 compatibility split.
+
+    Version 0.3.5 introduced ``home_widget_limit`` beside the original
+    ``widget_limit`` setting. Existing installations therefore often retained
+    the user's real value in ``widget_limit`` while the new setting stayed at
+    its default of 10. During the one-time migration, a non-default newer value
+    wins only when the original setting is still at an old/default value.
+    Afterwards ``widget_limit`` is the sole source of truth.
+    """
+    widget_limit = parse_int(widget_value, 10, 4, 40)
+    legacy_home_limit = parse_int(legacy_home_value, 10, 4, 40)
+    if parse_bool(migration_complete, False):
+        return widget_limit
+    if legacy_home_limit != 10 and widget_limit in {10, 15}:
+        return legacy_home_limit
+    return widget_limit
+
+
 def from_getter(getter: Callable[[str], Any], profile_path: str) -> Settings:
     backend = str(getter("database_backend") or "sqlite").strip().lower()
     if backend not in {"sqlite", "mysql"}:
         backend = "sqlite"
+    home_widget_limit = resolve_home_widget_limit(
+        getter("widget_limit"),
+        getter("home_widget_limit"),
+        getter("home_widget_limit_migrated_v2"),
+    )
     return Settings(
         profile_path=profile_path,
         database_backend=backend,
-        widget_limit=parse_int(getter("widget_limit"), 15, 1, 50),
-        home_widget_limit=parse_int(getter("home_widget_limit"), 10, 4, 40),
+        widget_limit=home_widget_limit,
+        home_widget_limit=home_widget_limit,
         browser_page_size=parse_int(getter("browser_page_size"), 100, 10, 500),
         show_notifications=parse_bool(getter("show_notifications"), True),
         minimum_rating_policy=normalize_rating_policy(getter("minimum_rating_policy")),

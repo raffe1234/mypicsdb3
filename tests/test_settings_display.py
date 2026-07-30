@@ -18,23 +18,45 @@ def settings_by_id():
 
 def test_general_numeric_settings_show_labels_and_values():
     settings = settings_by_id()
-    for setting_id, label in (("widget_limit", "32011"), ("home_widget_limit", "32782"), ("browser_page_size", "32012")):
+    for setting_id, label in (("widget_limit", "32782"), ("home_widget_limit", "32782"), ("browser_page_size", "32012")):
         setting = settings[setting_id]
         assert setting.attrib["label"] == label
         control = setting.find("control")
         assert control is not None
         assert control.attrib == {"type": "spinner", "format": "integer"}
-    assert settings["widget_limit"].findtext("./constraints/maximum") == "50"
-    assert settings["home_widget_limit"].findtext("default") == "10"
-    assert settings["home_widget_limit"].findtext("./constraints/maximum") == "40"
+    assert settings["widget_limit"].findtext("default") == "10"
+    assert settings["widget_limit"].findtext("./constraints/minimum") == "4"
+    assert settings["widget_limit"].findtext("./constraints/maximum") == "40"
+    assert settings["home_widget_limit"].findtext("visible") == "false"
+    assert settings["home_widget_limit_migrated_v2"].findtext("visible") == "false"
 
 
-def test_widget_limits_clamp_independently():
-    values = {"widget_limit": "100", "home_widget_limit": "100"}
+def test_home_widget_limit_is_unified_and_clamped():
+    values = {
+        "widget_limit": "100",
+        "home_widget_limit": "4",
+        "home_widget_limit_migrated_v2": "true",
+    }
     settings = from_getter(lambda key: values.get(key, ""), "/tmp/mypicsdb3")
 
-    assert settings.widget_limit == 50
+    assert settings.widget_limit == 40
     assert settings.home_widget_limit == 40
+
+
+def test_pre_035_widget_value_wins_over_temporary_default_ten():
+    values = {"widget_limit": "39", "home_widget_limit": "10"}
+    settings = from_getter(lambda key: values.get(key, ""), "/tmp/mypicsdb3")
+
+    assert settings.widget_limit == 39
+    assert settings.home_widget_limit == 39
+
+
+def test_035_home_value_is_migrated_when_original_is_still_default():
+    values = {"widget_limit": "15", "home_widget_limit": "27"}
+    settings = from_getter(lambda key: values.get(key, ""), "/tmp/mypicsdb3")
+
+    assert settings.widget_limit == 27
+    assert settings.home_widget_limit == 27
 
 
 def test_home_screen_uses_editor_and_internal_legacy_slots():

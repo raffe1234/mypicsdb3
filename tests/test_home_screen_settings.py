@@ -65,10 +65,11 @@ def test_home_screen_settings_offer_nine_ordered_slots() -> None:
     settings = {node.attrib["id"]: node for node in root.findall(".//setting")}
 
     assert settings["show_media_sources"].findtext("default") == "true"
-    assert settings["widget_limit"].findtext("./constraints/maximum") == "50"
-    assert settings["home_widget_limit"].findtext("default") == "10"
-    assert settings["home_widget_limit"].findtext("./constraints/minimum") == "4"
-    assert settings["home_widget_limit"].findtext("./constraints/maximum") == "40"
+    assert settings["widget_limit"].findtext("default") == "10"
+    assert settings["widget_limit"].findtext("./constraints/minimum") == "4"
+    assert settings["widget_limit"].findtext("./constraints/maximum") == "40"
+    assert settings["home_widget_limit"].findtext("visible") == "false"
+    assert settings["home_widget_limit_migrated_v2"].findtext("visible") == "false"
     configure = settings["configure_home_screen"]
     assert configure.attrib["type"] == "action"
     assert configure.findtext("data") == (

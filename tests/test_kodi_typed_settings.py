@@ -45,7 +45,7 @@ def test_kodi_20_typed_integer_setting_wins_over_stale_legacy_string():
     settings = context_for(AddonWithTypedSettings()).load_settings()
 
     assert settings.home_widget_limit == 39
-    assert settings.widget_limit == 15
+    assert settings.widget_limit == 39
     assert settings.browser_page_size == 100
 
 
@@ -53,3 +53,4 @@ def test_legacy_setting_reader_remains_supported():
     settings = context_for(LegacyAddon()).load_settings()
 
     assert settings.home_widget_limit == 27
+    assert settings.widget_limit == 27

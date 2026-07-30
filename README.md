@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.4.1 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.4.2 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -719,14 +719,14 @@ authors. Contributions and issue reports are welcome.
 Update the MyPicsDB 3 plug-in version with:
 
 ```bash
-python3 tools/set_version.py 0.4.1
+python3 tools/set_version.py 0.4.2
 ```
 
 The repository add-on keeps its existing version during normal plug-in
 releases. Bump it only when `repository.mypicsdb3` itself changes:
 
 ```bash
-python3 tools/set_version.py 0.4.1 --repository-version 0.2.27
+python3 tools/set_version.py 0.4.2 --repository-version 0.2.27
 ```
 
 The skin version and pinned upstream Kodi tag are maintained separately in
