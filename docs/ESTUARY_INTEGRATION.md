@@ -36,7 +36,7 @@ larger 4–40 value and lets scans invalidate only MyPicsDB 3 providers. The
 combined editor remains in the picture add-on; the skin only consumes the nine
 slots.
 
-The 0.4.0 patch uses Omega patch revision 10 and Piers patch revision 8.
+The 0.4.1 patch uses Omega patch revision 11 and Piers patch revision 9.
 
 ## Automatic upstream refresh
 

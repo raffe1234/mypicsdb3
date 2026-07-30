@@ -1591,7 +1591,7 @@ def test_home_widget_uses_small_limit_and_prioritizes_standard_stills(monkeypatc
     ]
 
 
-def test_home_widget_honours_explicit_live_limit_even_with_stale_settings(monkeypatch) -> None:
+def test_home_widget_ignores_stale_url_limit_and_uses_typed_setting(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
     requested = []
@@ -1614,7 +1614,7 @@ def test_home_widget_honours_explicit_live_limit_even_with_stale_settings(monkey
         return result
 
     runtime.catalog.recent_taken = rows
-    runtime.kodi.settings.home_widget_limit = 10
+    runtime.kodi.settings.home_widget_limit = 39
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
     ui.dispatch(
@@ -1627,9 +1627,9 @@ def test_home_widget_honours_explicit_live_limit_even_with_stale_settings(monkey
     assert requested == [(156, 0)]
     assert len(calls.items) == 39
     assert ui._result_limit(
-        {"widget": "1", "home": "1", "limit": "100"},
+        {"widget": "1", "home": "1", "limit": "10"},
         10,
-    ) == 40
+    ) == 39
 
 
 def test_picture_info_uses_picture_info_tag_when_available(monkeypatch) -> None:

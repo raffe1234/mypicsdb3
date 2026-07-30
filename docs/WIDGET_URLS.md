@@ -20,22 +20,21 @@ All widget views are read-only and never start a scan. They use the local
 | Geotagged | `plugin://plugin.image.mypicsdb3/geotagged?widget=1&limit=15` |
 
 The `widget=1` marker lets MyPicsDB 3 distinguish background widget loading
-from interactive browsing.
-The bundled Estuary home rows add `home=1`, the live 4–40 setting and a
+from interactive browsing. The bundled Estuary home rows add `home=1` and a
 Home-window generation value, for example:
 
 ```text
-plugin://plugin.image.mypicsdb3/on-this-day?widget=1&home=1&limit=<setting>&generation=<generation>
+plugin://plugin.image.mypicsdb3/on-this-day?widget=1&home=1&generation=<generation>
 ```
 
-`home=1` applies home-art prioritization, placing standard still formats before
-RAW/HEIF files and generated video frames. The explicit `limit` is honoured
-directly within 4–40. The generation changes when that setting changes or a scan
-changes catalogue rows, making Kodi request fresh provider results without a
-complete skin reload. Third-party widgets should omit `home=1` when they want
-the general widget limit and original media order.
-The optional `limit` is restricted to 1–500 for ordinary widgets; bundled
-home providers clamp it to 4–40.
+`home=1` applies home-art prioritization and makes the provider read the typed
+`home_widget_limit` setting directly. Cached URL values such as `limit=10` are
+ignored for bundled home rows. The generation changes when that setting changes
+or a scan changes catalogue rows, making Kodi request fresh provider results
+without a complete skin reload. Third-party widgets should omit `home=1` when
+they want the general widget limit and original media order.
+The optional `limit` is restricted to 1–500 for ordinary widgets; bundled home
+providers use the configured 4–40 home limit instead.
 Interactive views use pagination.
 Random views use indexed random keys rather than `ORDER BY RANDOM()` across the
 whole table. **On this day - random** also shuffles the selected rows before they
@@ -47,7 +46,7 @@ home screen offers **On this day** and **On this day - random** as separate rows
 A saved collection can be used as a read-only widget source:
 
 ```text
-plugin://plugin.image.mypicsdb3/saved-search?id=42&widget=1&home=1&limit=10
+plugin://plugin.image.mypicsdb3/saved-search?id=42&widget=1&home=1
 ```
 
 The URL contains the database ID, not raw Query Model JSON. MyPicsDB 3 loads and

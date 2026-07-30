@@ -345,6 +345,7 @@ def test_home_widget_invalidation_increments_home_window_generation(monkeypatch)
         types.SimpleNamespace(Window=lambda window_id: FakeWindow()),
     )
     context = kodi.KodiContext.__new__(kodi.KodiContext)
+    context.settings = types.SimpleNamespace(home_widget_limit=39)
     context.log = types.SimpleNamespace(
         debug=lambda *args: None,
         warning=lambda *args: None,
@@ -353,3 +354,4 @@ def test_home_widget_invalidation_increments_home_window_generation(monkeypatch)
     assert context.invalidate_home_widgets("test") == 1
     assert context.invalidate_home_widgets("test") == 2
     assert properties[kodi.HOME_WIDGET_GENERATION_PROPERTY] == "2"
+    assert properties[kodi.HOME_WIDGET_LIMIT_PROPERTY] == "39"

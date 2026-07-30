@@ -145,7 +145,8 @@ def test_home_fragment_has_visible_titles_and_all_routes() -> None:
     assert home.count('<param name="widget_limit" value="40"/>') == 117
     assert home.count("widget=1&amp;home=1") == 117
     assert home.count("saved-search?id=$INFO[Addon.SettingInt") == 27
-    assert "Addon.SettingInt(plugin.image.mypicsdb3,home_widget_limit)" in home
+    assert "Addon.SettingInt(plugin.image.mypicsdb3,home_widget_limit)" not in home
+    assert "&amp;limit=" not in home
     assert "Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)" in home
     assert "WidgetListSquareMyPicsDB" in home
     assert "WidgetListLandscapeMyPicsDB" in home

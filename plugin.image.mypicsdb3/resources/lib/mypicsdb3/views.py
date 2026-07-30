@@ -165,20 +165,13 @@ class PluginUI:
     def _result_limit(self, params: Optional[Dict[str, str]], default: int) -> int:
         values = params or {}
         if self._is_home_widget(values):
-            configured = max(
+            # The add-on setting is the single source of truth. Older cached
+            # Estuary provider URLs may still carry limit=10, so a URL value
+            # must never override the freshly loaded typed integer setting.
+            return max(
                 4,
                 min(40, int(getattr(self.kodi.settings, "home_widget_limit", 10))),
             )
-            raw_limit = str(values.get("limit") or "").strip()
-            if not raw_limit:
-                return configured
-
-            # The bundled Estuary URL carries the live integer setting. Honour
-            # that explicit value directly instead of capping it against a
-            # possibly stale settings snapshot from an already-running Kodi
-            # interpreter. This is what makes a change such as 10 -> 39 take
-            # effect when the content-provider URL is regenerated.
-            return max(4, min(40, safe_limit(raw_limit, configured)))
 
         return safe_limit(values.get("limit"), default)
 

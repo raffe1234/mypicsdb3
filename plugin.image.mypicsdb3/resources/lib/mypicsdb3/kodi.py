@@ -28,6 +28,38 @@ SLIDESHOW_START_TTL_SECONDS = 180.0
 SCAN_STATUS_PROPERTY = "MyPicsDB3.ScanStatusV1"
 SCAN_CANCEL_PROPERTY = "MyPicsDB3.ScanCancelV1"
 HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.HomeWidgetGeneration"
+HOME_WIDGET_LIMIT_PROPERTY = "MyPicsDB3.HomeWidgetLimit"
+
+INTEGER_SETTING_IDS = frozenset(
+    {
+        "widget_limit",
+        "home_widget_limit",
+        "browser_page_size",
+        "album_view_mode",
+        "scan_interval_hours",
+        "startup_delay_seconds",
+        "batch_size",
+        "metadata_prefix_mb",
+        "deep_metadata_max_mb",
+        "mysql_port",
+        "mysql_connect_timeout",
+        "missing_retention_days",
+    }
+)
+BOOLEAN_SETTING_IDS = frozenset(
+    {
+        "show_notifications",
+        "auto_scan",
+        "pause_during_playback",
+        "include_videos",
+        "exclude_hidden",
+        "read_xmp",
+        "read_iptc",
+        "store_gps",
+        "mysql_auto_create",
+        "debug_logging",
+    }
+)
 
 
 def create_abort_monitor(xbmc_module=None):
@@ -75,6 +107,7 @@ class KodiContext:
             xbmcvfs.mkdirs(self.profile_path)
         self.settings = self.load_settings()
         self.log = Logger(self.name, self.settings.debug_logging, xbmc)
+        self.publish_home_widget_limit()
 
     @staticmethod
     def translate(path: str) -> str:
@@ -84,12 +117,35 @@ class KodiContext:
             return xbmc.translatePath(path)
         return path
 
+    def _setting_getter(self):
+        legacy_getter = self.addon.getSetting
+        get_settings = getattr(self.addon, "getSettings", None)
+        if not callable(get_settings):
+            return legacy_getter
+        try:
+            settings_api = get_settings()
+        except Exception:
+            return legacy_getter
+
+        def getter(setting_id: str):
+            try:
+                if setting_id in INTEGER_SETTING_IDS:
+                    return settings_api.getInt(setting_id)
+                if setting_id in BOOLEAN_SETTING_IDS:
+                    return settings_api.getBool(setting_id)
+                return settings_api.getString(setting_id)
+            except Exception:
+                return legacy_getter(setting_id)
+
+        return getter
+
     def load_settings(self) -> Settings:
-        return from_getter(self.addon.getSetting, self.profile_path)
+        return from_getter(self._setting_getter(), self.profile_path)
 
     def refresh_settings(self) -> Settings:
         self.settings = self.load_settings()
         self.log.debug_enabled = self.settings.debug_logging
+        self.publish_home_widget_limit()
         return self.settings
 
     def localize(self, string_id: int, fallback: str = "") -> str:
@@ -236,6 +292,20 @@ class KodiContext:
         except Exception as exc:
             self.log.warning("Could not clear scan status: %s", exc)
 
+    def publish_home_widget_limit(self) -> int:
+        settings = getattr(self, "settings", None)
+        limit = max(4, min(40, int(getattr(settings, "home_widget_limit", 10))))
+        window = self._home_window()
+        if window is None:
+            return limit
+        try:
+            window.setProperty(HOME_WIDGET_LIMIT_PROPERTY, str(limit))
+        except Exception as exc:
+            logger = getattr(self, "log", None)
+            if logger is not None:
+                logger.warning("Could not publish home-screen widget limit: %s", exc)
+        return limit
+
     def invalidate_home_widgets(self, reason: str = "") -> int:
         """Change the home content-provider URL without reloading the skin.
 
@@ -245,6 +315,7 @@ class KodiContext:
         texture cache.
         """
 
+        self.publish_home_widget_limit()
         window = self._home_window()
         if window is None:
             return 0

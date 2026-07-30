@@ -23,7 +23,7 @@ def test_general_numeric_settings_show_labels_and_values():
         assert setting.attrib["label"] == label
         control = setting.find("control")
         assert control is not None
-        assert control.attrib == {"type": "spinner", "format": "string"}
+        assert control.attrib == {"type": "spinner", "format": "integer"}
     assert settings["widget_limit"].findtext("./constraints/maximum") == "50"
     assert settings["home_widget_limit"].findtext("default") == "10"
     assert settings["home_widget_limit"].findtext("./constraints/maximum") == "40"

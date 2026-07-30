@@ -201,6 +201,10 @@ class ServiceLoop:
         previous_home_widget_limit = int(
             getattr(settings, "home_widget_limit", 10)
         )
+        self.kodi.log.info(
+            "Home-screen widget limit loaded: %d",
+            previous_home_widget_limit,
+        )
         if self._abort_requested():
             return
         try:
@@ -222,7 +226,13 @@ class ServiceLoop:
                     getattr(settings, "home_widget_limit", 10)
                 )
                 if current_home_widget_limit != previous_home_widget_limit:
+                    old_home_widget_limit = previous_home_widget_limit
                     previous_home_widget_limit = current_home_widget_limit
+                    self.kodi.log.info(
+                        "Home-screen widget limit changed: %d -> %d",
+                        old_home_widget_limit,
+                        current_home_widget_limit,
+                    )
                     invalidator = getattr(
                         self.kodi, "invalidate_home_widgets", None
                     )

@@ -66,8 +66,8 @@ The skin is responsible for:
 
 Keep the `widget=1` marker on widget URLs so transient database-busy handling
 can return an empty row without showing a notification. The general widget
-default is fifteen. The Estuary MyPicsDB 3 home integration uses a separate
-4–40 setting and passes it explicitly with `home=1`.
+default is fifteen. The Estuary MyPicsDB 3 home integration uses `home=1`; the
+plug-in then reads its separate typed 4–40 setting directly.
 
 Random endpoints should normally disable Kodi 21's synthetic "more" item by
 using `browse="never"` or the equivalent parameter in the skin's widget
@@ -174,7 +174,7 @@ the selected plugin path as a skin setting instead.
 The bundled home URLs also include:
 
 ```xml
-limit="$INFO[Addon.SettingInt(plugin.image.mypicsdb3,home_widget_limit)]"
+limit="$INFO[the typed `home_widget_limit` add-on setting]"
 generation="$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"
 ```
 

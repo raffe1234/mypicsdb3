@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.4.1 - 2026-07-30
+
+- Fix the home-screen row count regression introduced in 0.3.5. Kodi 20 and
+  newer now read integer settings through the typed `Settings.getInt()` API,
+  with the legacy string API retained as a compatibility fallback.
+- Make the configured `home_widget_limit` the sole source of truth for home
+  providers. Cached provider URLs carrying an old `limit=10` value can no
+  longer override a newly selected value such as 39.
+- Remove the dynamic limit expression from Estuary provider URLs. The skin
+  keeps a fixed safe capacity of 40 while the plug-in returns exactly the
+  configured 4–40 items; the generation parameter still invalidates cached
+  providers when the setting changes.
+- Correct the numeric spinner controls to use integer formatting and publish
+  the loaded home limit on the Home window for diagnostics. The service logs
+  the value at startup and whenever it changes.
+- Bump generated Estuary revisions to Kodi 21 revision 11 and Kodi 22 revision
+  9. Database schema 5, Query Model version 1 and repository add-on version
+  0.2.26 remain unchanged; no catalogue rescan is required.
+
 ## 0.4.0 - 2026-07-30
 
 - Fix **Home-screen pictures per row** values above ten not taking effect. Every
