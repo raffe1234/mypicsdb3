@@ -17,6 +17,7 @@ VIEW_VALUES = {
     "favorites",
     "rated",
     "geotagged",
+    "smart",
 }
 
 DEFAULT_ROWS = [
@@ -77,6 +78,8 @@ def test_home_screen_settings_offer_nine_ordered_slots() -> None:
     assert configure.findtext("./control/close") == "true"
     assert settings["home_layout"].findtext("level") == "4"
     assert settings["home_layout"].findtext("visible") == "false"
+    assert settings["home_layout_v2"].findtext("level") == "4"
+    assert settings["home_layout_v2"].findtext("visible") == "false"
     for position, expected_default in enumerate(DEFAULT_ROWS, start=1):
         setting = settings[f"home_row_{position}"]
         assert setting.findtext("default") == expected_default
@@ -84,6 +87,9 @@ def test_home_screen_settings_offer_nine_ordered_slots() -> None:
         assert setting.findtext("visible") == "false"
         values = {option.text for option in setting.findall("./constraints/options/option")}
         assert values == VIEW_VALUES
+        assert settings[f"home_smart_id_{position}"].attrib["type"] == "integer"
+        assert settings[f"home_smart_name_{position}"].attrib["type"] == "string"
+        assert settings[f"home_smart_mode_{position}"].findtext("default") == "poster"
 
 
 def test_general_settings_offer_estuary_album_views() -> None:
@@ -136,6 +142,11 @@ def test_home_fragment_has_visible_titles_and_all_routes() -> None:
         assert f"plugin://plugin.image.mypicsdb3/{route}" in home
     for heading in HEADINGS:
         assert f'value="{heading}"' in home
-    assert home.count('<param name="widget_limit" value="40"/>') == 90
-    assert home.count("widget=1&amp;home=1") == 90
+    assert home.count('<param name="widget_limit" value="40"/>') == 117
+    assert home.count("widget=1&amp;home=1") == 117
+    assert home.count("saved-search?id=$INFO[Addon.SettingInt") == 27
+    assert "Addon.SettingInt(plugin.image.mypicsdb3,home_widget_limit)" in home
+    assert "Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)" in home
+    assert "WidgetListSquareMyPicsDB" in home
+    assert "WidgetListLandscapeMyPicsDB" in home
     assert "$ADDON[plugin.image.mypicsdb3" not in home

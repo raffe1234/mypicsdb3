@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.3.5 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.4.0 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -22,8 +22,9 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
   confirmation-protected **Stop scan** action that cancels at the next safe
   file or folder checkpoint. Scan progress is hidden while Live TV, TV
   episodes, movies or other media are playing and returns after playback.
-- Faster home rows with a separate 4–40 item limit, direct Kodi texture-cache
-  artwork and render-friendly stills ahead of RAW/HEIF and video thumbnails.
+- Faster home rows with a separate 4–40 item limit that updates live, direct
+  Kodi texture-cache artwork and render-friendly stills ahead of RAW/HEIF and
+  video thumbnails.
 - SQLite by default, using WAL mode and a local add-on profile database.
 - Optional shared MySQL/MariaDB catalogue through PyMySQL.
 - EXIF capture date, camera, orientation, dimensions, rating and optional GPS.
@@ -52,7 +53,8 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
 - Save, reopen, rename and delete named global searches, with normal
   pagination and slideshow support.
 - Kodi smart-filter editor with all/any matching, metadata criteria, result
-  preview and saved smart collections.
+  preview and saved smart collections. Saved smart collections can be placed as
+  ordered Pictures-home rows in poster, square or wide format.
 - Versioned, validated Query Model used by global and saved searches; stored
   queries are revalidated when opened and never expose raw SQL.
 - Stable widget endpoints for configurable skins.
@@ -253,20 +255,26 @@ The skin can show **Media sources** plus nine configurable MyPicsDB 3 rows. Ten 
 Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings > Home screen** to:
 
 - show or hide Media sources;
+- choose **Home-screen pictures per row** from 4 to 40;
 - open **Configure home-screen rows**;
-- enable or disable each available view;
-- move a view up or down to change the order.
+- enable or disable built-in rows;
+- add a saved smart collection as its own row;
+- move built-in and smart rows up or down in one shared order;
+- choose **Poster**, **Square** or **Wide** for each smart row.
 
-The visual editor lists every view once in the same order used on the Pictures
-home screen. Every row has its own **On/Off**, **Move up** and **Move down**
-controls. The first six views are enabled by default through **On this day**.
-On this day - random, Favorites, Rated pictures and Geotagged pictures are
-disabled by default, so the initial home screen stays compact. At most nine
-views can be enabled at the same time. Existing Row 1 through Row 9 choices are
-migrated automatically the first time the editor is opened.
+The editor lists all built-in views and any smart collections already added to
+the home screen. The first six built-in views are enabled by default through
+**On this day**. On this day - random, Favorites, Rated pictures and Geotagged
+pictures are disabled by default, so the initial home screen stays compact. At
+most nine rows can be visible at the same time. Existing Row 1 through Row 9
+choices are migrated automatically the first time the editor is opened.
 
-Rows with no indexed results disappear until matching pictures have been
-indexed.
+Changing the per-row value changes the provider URL and invalidates only the
+MyPicsDB 3 rows; a choice such as 39 is therefore no longer capped by an old
+ten-item widget result. Smart rows run the saved Query Model again whenever the
+widget reloads, so newly scanned matching media appears automatically. Renaming
+or deleting a saved collection updates or removes its home row. Rows with no
+indexed results disappear until matching media has been indexed.
 
 ### Default album view
 
@@ -443,8 +451,9 @@ older version as missing; the normal missing-record cleanup can then remove
 their retained database rows.
 
 The background service detects a local date change while Kodi is running and
-refreshes date-sensitive views. On the Estuary MyPicsDB 3 home screen, the skin
-is reloaded once after midnight so both **On this day** views change without manual action.
+refreshes date-sensitive views without reloading the complete skin. Both
+**On this day** rows therefore change without forcing every home image to be
+decoded again.
 
 ### 5. Search the whole catalogue
 
@@ -474,6 +483,8 @@ pictures/videos. You can remove or edit criteria, choose the result order,
 preview the matching count and up to ten filenames, and decide whether the
 collection should use the configured global minimum-rating policy. Saving the
 collection opens it immediately and makes it available under **Saved searches**.
+Open **Settings > Home screen > Configure home-screen rows** to add that saved
+collection as a Pictures-home row and choose its order and display mode.
 
 The configured minimum-rating policy also applies to search results and saved
 searches. Use **Show all pictures temporarily** from the main menu before
@@ -708,14 +719,14 @@ authors. Contributions and issue reports are welcome.
 Update the MyPicsDB 3 plug-in version with:
 
 ```bash
-python3 tools/set_version.py 0.3.5
+python3 tools/set_version.py 0.4.0
 ```
 
 The repository add-on keeps its existing version during normal plug-in
 releases. Bump it only when `repository.mypicsdb3` itself changes:
 
 ```bash
-python3 tools/set_version.py 0.3.5 --repository-version 0.2.27
+python3 tools/set_version.py 0.4.0 --repository-version 0.2.27
 ```
 
 The skin version and pinned upstream Kodi tag are maintained separately in
@@ -727,16 +738,17 @@ builds all three Kodi packages and attaches the archives to the GitHub release.
 
 In **Settings > General**, the numeric values are shown with descriptive labels:
 
-- **Default items per home-screen row** — 15 by default, configurable from 1 to 50
+- **Default items per widget** — 15 by default, configurable from 1 to 50
 - **Pictures per browser page**
 - **Default album view**
 
-**Configure add-on menu** opens a multi-select dialog for the twelve catalogue
-browsing nodes shown between Picture sources and the scan actions.
+**Configure add-on menu** opens a multi-select dialog for the catalogue browsing
+nodes shown between Picture sources and the scan actions.
 
-In **Settings > Home screen**, **Configure home-screen rows** opens a visual
-nine-row editor. Each row has an **On/Off** control plus buttons for moving the
-view up or down.
+In **Settings > Home screen**, **Home-screen pictures per row** is separate from
+the general widget size and accepts 4–40. **Configure home-screen rows** opens
+the combined built-in/smart editor. It supports visibility, ordering, adding or
+removing saved smart collections and Poster/Square/Wide mode for smart rows.
 
 ### Repository artwork paths
 

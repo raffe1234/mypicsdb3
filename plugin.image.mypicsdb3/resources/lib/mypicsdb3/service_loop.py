@@ -198,6 +198,9 @@ class ServiceLoop:
         if runtime_parts is None:
             return
         settings, catalog, filesystem = runtime_parts
+        previous_home_widget_limit = int(
+            getattr(settings, "home_widget_limit", 10)
+        )
         if self._abort_requested():
             return
         try:
@@ -215,6 +218,22 @@ class ServiceLoop:
             if now >= next_maintenance_at:
                 self._refresh_after_date_change()
                 settings = self.kodi.refresh_settings()
+                current_home_widget_limit = int(
+                    getattr(settings, "home_widget_limit", 10)
+                )
+                if current_home_widget_limit != previous_home_widget_limit:
+                    previous_home_widget_limit = current_home_widget_limit
+                    invalidator = getattr(
+                        self.kodi, "invalidate_home_widgets", None
+                    )
+                    if callable(invalidator):
+                        try:
+                            invalidator("home widget limit changed")
+                        except Exception as exc:
+                            self.kodi.log.warning(
+                                "Could not refresh home widgets after setting change: %s",
+                                exc,
+                            )
                 if self._abort_requested():
                     break
                 if settings.auto_scan and now >= self.next_scan_at:
@@ -371,6 +390,23 @@ class ServiceLoop:
                                 started=begin_status,
                             )
                             stats = scanner.scan_sources()
+                            if (
+                                int(getattr(stats, "pictures_added", 0) or 0)
+                                + int(getattr(stats, "pictures_updated", 0) or 0)
+                                + int(getattr(stats, "missing_marked", 0) or 0)
+                                > 0
+                            ):
+                                invalidator = getattr(
+                                    self.kodi, "invalidate_home_widgets", None
+                                )
+                                if callable(invalidator):
+                                    try:
+                                        invalidator("automatic scan changed pictures")
+                                    except Exception as exc:
+                                        self.kodi.log.warning(
+                                            "Could not refresh home widgets after automatic scan: %s",
+                                            exc,
+                                        )
                             if stats.cancelled:
                                 if user_cancelled:
                                     self.kodi.log.info(

@@ -70,6 +70,7 @@ class FakeKodi:
         self.scan_events = []
         self.cancel_requested = False
         self.playing = False
+        self.invalidations = []
         self.settings = SimpleNamespace(
             auto_scan=True,
             pause_during_playback=False,
@@ -109,6 +110,10 @@ class FakeKodi:
 
     def scan_cancel_requested(self, _token):
         return self.cancel_requested
+
+    def invalidate_home_widgets(self, reason):
+        self.invalidations.append(reason)
+        return len(self.invalidations)
 
     def create_background_progress(self, heading, message):
         if self.dialog.closed:
@@ -568,3 +573,42 @@ def test_automatic_cancel_while_paused_closes_progress_without_waiting_forever(
     assert monitor.wait_calls == 1
     assert all(dialog.closed for dialog in kodi.dialogs)
     assert ("info", "Automatic scan cancelled by user") in kodi.log.messages
+
+
+def test_automatic_scan_invalidates_home_widgets_when_database_changes(monkeypatch) -> None:
+    monitor = FakeMonitor()
+    kodi = FakeKodi(monitor)
+    initial_catalog = FakeCatalog()
+    scan_catalog = FakeCatalog()
+    loop = ServiceLoop(
+        kodi,
+        date_provider=lambda: date(2026, 7, 29),
+        monotonic_provider=lambda: 100.0,
+        monitor=monitor,
+    )
+    loop._runtime_parts = lambda: (kodi.settings, initial_catalog, object())
+
+    monkeypatch.setattr(service_loop, "DatabaseEngine", FakeEngine)
+    monkeypatch.setattr(service_loop, "Catalog", lambda _engine, _log: scan_catalog)
+
+    class ChangedScanner:
+        def __init__(self, _catalog, _filesystem, _settings, _logger, cancelled, progress, started):
+            self.started = started
+
+        def scan_sources(self):
+            self.started(SimpleNamespace())
+            monitor.aborted = True
+            return SimpleNamespace(
+                cancelled=False,
+                pictures_seen=2,
+                pictures_added=1,
+                pictures_updated=1,
+                missing_marked=0,
+                errors=0,
+            )
+
+    monkeypatch.setattr(service_loop, "Scanner", ChangedScanner)
+
+    loop.run()
+
+    assert kodi.invalidations == ["automatic scan changed pictures"]

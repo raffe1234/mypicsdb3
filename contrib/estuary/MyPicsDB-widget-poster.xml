@@ -4,116 +4,150 @@
 		<param name="label_color">grey</param>
 		<definition>
 			<control type="image">
-				<left>15</left>
-				<top>-10</top>
-				<width>290</width>
-				<height>440</height>
-				<texture>dialogs/dialog-bg-nobo.png</texture>
-				<bordertexture border="21">overlays/shadow.png</bordertexture>
-				<bordersize>20</bordersize>
+				<left>15</left><top>-10</top><width>290</width><height>440</height>
+				<texture>dialogs/dialog-bg-nobo.png</texture><bordertexture border="21">overlays/shadow.png</bordertexture><bordersize>20</bordersize>
 			</control>
 			<control type="image">
-				<left>11</left>
-				<top>-14</top>
-				<width>298</width>
-				<height>448</height>
-				<texture colordiffuse="button_focus">colors/grey.png</texture>
-				<bordertexture border="21">overlays/shadow.png</bordertexture>
-				<bordersize>20</bordersize>
-				<visible>$PARAM[focused]</visible>
-				<include condition="$PARAM[focused]">Animation_FocusTextureFade</include>
+				<left>11</left><top>-14</top><width>298</width><height>448</height>
+				<texture colordiffuse="button_focus">colors/grey.png</texture><bordertexture border="21">overlays/shadow.png</bordertexture><bordersize>20</bordersize>
+				<visible>$PARAM[focused]</visible><include condition="$PARAM[focused]">Animation_FocusTextureFade</include>
 			</control>
 			<control type="image">
-				<left>35</left>
-				<top>10</top>
-				<width>250</width>
-				<height>350</height>
-				<texture border="2" background="true">$INFO[ListItem.Art(thumb)]</texture>
-				<aspectratio>keep</aspectratio>
+				<left>35</left><top>10</top><width>250</width><height>350</height>
+				<texture border="2" background="true">$INFO[ListItem.Art(thumb)]</texture><aspectratio>keep</aspectratio>
 			</control>
 			<control type="label">
-				<left>25</left>
-				<top>368</top>
-				<width>270</width>
-				<height>45</height>
-				<font>font12</font>
-				<textcolor>$PARAM[label_color]</textcolor>
-				<shadowcolor>text_shadow</shadowcolor>
-				<align>center</align>
-				<aligny>center</aligny>
-				<scroll>$PARAM[focused]</scroll>
-				<label>$INFO[ListItem.Property(MyPicsDB3.WidgetLabel)]</label>
-				<visible>!String.IsEmpty(ListItem.Property(MyPicsDB3.WidgetLabel))</visible>
+				<left>25</left><top>368</top><width>270</width><height>45</height><font>font12</font>
+				<textcolor>$PARAM[label_color]</textcolor><shadowcolor>text_shadow</shadowcolor><align>center</align><aligny>center</aligny><scroll>$PARAM[focused]</scroll>
+				<label>$INFO[ListItem.Property(MyPicsDB3.WidgetLabel)]</label><visible>!String.IsEmpty(ListItem.Property(MyPicsDB3.WidgetLabel))</visible>
 			</control>
 			<control type="label">
-				<left>25</left>
-				<top>368</top>
-				<width>270</width>
-				<height>45</height>
-				<font>font12</font>
-				<textcolor>$PARAM[label_color]</textcolor>
-				<shadowcolor>text_shadow</shadowcolor>
-				<align>center</align>
-				<aligny>center</aligny>
-				<scroll>$PARAM[focused]</scroll>
-				<label>$INFO[ListItem.Label]</label>
-				<visible>String.IsEmpty(ListItem.Property(MyPicsDB3.WidgetLabel))</visible>
+				<left>25</left><top>368</top><width>270</width><height>45</height><font>font12</font>
+				<textcolor>$PARAM[label_color]</textcolor><shadowcolor>text_shadow</shadowcolor><align>center</align><aligny>center</aligny><scroll>$PARAM[focused]</scroll>
+				<label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(MyPicsDB3.WidgetLabel))</visible>
 			</control>
 		</definition>
 	</include>
 	<include name="WidgetListPosterMyPicsDB">
-		<param name="onclick_condition">false</param>
-		<param name="browse_mode">auto</param>
-		<param name="widget_limit">40</param>
+		<param name="onclick_condition">false</param><param name="browse_mode">auto</param><param name="widget_limit">40</param>
 		<definition>
-			<include content="CategoryLabel">
-				<param name="label">$PARAM[widget_header]</param>
-				<param name="list_id" value="$PARAM[list_id]"/>
-			</include>
-			<include content="BusyListSpinner">
-				<param name="list_id" value="$PARAM[list_id]"/>
-				<param name="posy" value="250"/>
-			</include>
+			<include content="CategoryLabel"><param name="label">$PARAM[widget_header]</param><param name="list_id" value="$PARAM[list_id]"/></include>
+			<include content="BusyListSpinner"><param name="list_id" value="$PARAM[list_id]"/><param name="posy" value="250"/></include>
 			<control type="panel" id="$PARAM[list_id]">
-				<left>0</left>
-				<top>115</top>
-				<visible>Integer.IsGreater(Container($PARAM[list_id]).NumItems,0) | Container($PARAM[list_id]).IsUpdating</visible>
-				<right>0</right>
-				<height>518</height>
+				<left>0</left><top>115</top><visible>Integer.IsGreater(Container($PARAM[list_id]).NumItems,0) | Container($PARAM[list_id]).IsUpdating</visible><right>0</right><height>518</height>
 				<onclick condition="$PARAM[onclick_condition]">$PARAM[onclick_action]</onclick>
 				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),picture)">ShowPicture($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>
 				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),video)">PlayMedia($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>
 				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),folder)">ActivateWindow(Pictures,$ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)],return)</onclick>
-				<include content="WidgetListCommon">
-					<param name="list_id" value="$PARAM[list_id]"/>
-				</include>
-				<itemlayout width="310" height="486">
-					<control type="group">
-						<left>68</left>
-						<top>10</top>
-						<include content="MyPicsDBWidgetPosterLayout">
-							<param name="focused" value="false"/>
-							<param name="label_color" value="grey"/>
-						</include>
-					</control>
-				</itemlayout>
-				<focusedlayout width="310" height="486">
-					<control type="group">
-						<depth>DepthContentPopout</depth>
-						<left>68</left>
-						<top>10</top>
-						<animation type="Focus">
-							<effect type="zoom" start="100" end="110" time="200" tween="sine" easing="inout" center="230,130" />
-						</animation>
-						<animation type="Unfocus">
-							<effect type="zoom" start="110" end="100" time="200" tween="sine" easing="inout" center="230,130" />
-						</animation>
-						<include content="MyPicsDBWidgetPosterLayout">
-							<param name="focused" value="true"/>
-							<param name="label_color" value="white"/>
-						</include>
-					</control>
-				</focusedlayout>
+				<include content="WidgetListCommon"><param name="list_id" value="$PARAM[list_id]"/></include>
+				<itemlayout width="310" height="486"><control type="group"><left>68</left><top>10</top><include content="MyPicsDBWidgetPosterLayout"><param name="focused" value="false"/><param name="label_color" value="grey"/></include></control></itemlayout>
+				<focusedlayout width="310" height="486"><control type="group"><depth>DepthContentPopout</depth><left>68</left><top>10</top>
+					<animation type="Focus"><effect type="zoom" start="100" end="110" time="200" tween="sine" easing="inout" center="230,130" /></animation>
+					<animation type="Unfocus"><effect type="zoom" start="110" end="100" time="200" tween="sine" easing="inout" center="230,130" /></animation>
+					<include content="MyPicsDBWidgetPosterLayout"><param name="focused" value="true"/><param name="label_color" value="white"/></include>
+				</control></focusedlayout>
+				<content target="$PARAM[widget_target]" limit="$PARAM[widget_limit]" browse="$PARAM[browse_mode]">$PARAM[content_path]</content>
+			</control>
+		</definition>
+	</include>
+	<include name="MyPicsDBWidgetSquareLayout">
+		<param name="focused">false</param>
+		<param name="label_color">grey</param>
+		<definition>
+			<control type="image">
+				<left>15</left><top>-10</top><width>360</width><height>440</height>
+				<texture>dialogs/dialog-bg-nobo.png</texture><bordertexture border="21">overlays/shadow.png</bordertexture><bordersize>20</bordersize>
+			</control>
+			<control type="image">
+				<left>11</left><top>-14</top><width>368</width><height>448</height>
+				<texture colordiffuse="button_focus">colors/grey.png</texture><bordertexture border="21">overlays/shadow.png</bordertexture><bordersize>20</bordersize>
+				<visible>$PARAM[focused]</visible><include condition="$PARAM[focused]">Animation_FocusTextureFade</include>
+			</control>
+			<control type="image">
+				<left>35</left><top>20</top><width>320</width><height>320</height>
+				<texture border="2" background="true">$INFO[ListItem.Art(thumb)]</texture><aspectratio>keep</aspectratio>
+			</control>
+			<control type="label">
+				<left>25</left><top>355</top><width>340</width><height>45</height><font>font12</font>
+				<textcolor>$PARAM[label_color]</textcolor><shadowcolor>text_shadow</shadowcolor><align>center</align><aligny>center</aligny><scroll>$PARAM[focused]</scroll>
+				<label>$INFO[ListItem.Property(MyPicsDB3.WidgetLabel)]</label><visible>!String.IsEmpty(ListItem.Property(MyPicsDB3.WidgetLabel))</visible>
+			</control>
+			<control type="label">
+				<left>25</left><top>355</top><width>340</width><height>45</height><font>font12</font>
+				<textcolor>$PARAM[label_color]</textcolor><shadowcolor>text_shadow</shadowcolor><align>center</align><aligny>center</aligny><scroll>$PARAM[focused]</scroll>
+				<label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(MyPicsDB3.WidgetLabel))</visible>
+			</control>
+		</definition>
+	</include>
+	<include name="WidgetListSquareMyPicsDB">
+		<param name="onclick_condition">false</param><param name="browse_mode">auto</param><param name="widget_limit">40</param>
+		<definition>
+			<include content="CategoryLabel"><param name="label">$PARAM[widget_header]</param><param name="list_id" value="$PARAM[list_id]"/></include>
+			<include content="BusyListSpinner"><param name="list_id" value="$PARAM[list_id]"/><param name="posy" value="250"/></include>
+			<control type="panel" id="$PARAM[list_id]">
+				<left>0</left><top>115</top><visible>Integer.IsGreater(Container($PARAM[list_id]).NumItems,0) | Container($PARAM[list_id]).IsUpdating</visible><right>0</right><height>518</height>
+				<onclick condition="$PARAM[onclick_condition]">$PARAM[onclick_action]</onclick>
+				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),picture)">ShowPicture($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>
+				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),video)">PlayMedia($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>
+				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),folder)">ActivateWindow(Pictures,$ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)],return)</onclick>
+				<include content="WidgetListCommon"><param name="list_id" value="$PARAM[list_id]"/></include>
+				<itemlayout width="390" height="486"><control type="group"><left>45</left><top>10</top><include content="MyPicsDBWidgetSquareLayout"><param name="focused" value="false"/><param name="label_color" value="grey"/></include></control></itemlayout>
+				<focusedlayout width="390" height="486"><control type="group"><depth>DepthContentPopout</depth><left>45</left><top>10</top>
+					<animation type="Focus"><effect type="zoom" start="100" end="110" time="200" tween="sine" easing="inout" center="225,210" /></animation>
+					<animation type="Unfocus"><effect type="zoom" start="110" end="100" time="200" tween="sine" easing="inout" center="225,210" /></animation>
+					<include content="MyPicsDBWidgetSquareLayout"><param name="focused" value="true"/><param name="label_color" value="white"/></include>
+				</control></focusedlayout>
+				<content target="$PARAM[widget_target]" limit="$PARAM[widget_limit]" browse="$PARAM[browse_mode]">$PARAM[content_path]</content>
+			</control>
+		</definition>
+	</include>
+	<include name="MyPicsDBWidgetLandscapeLayout">
+		<param name="focused">false</param>
+		<param name="label_color">grey</param>
+		<definition>
+			<control type="image">
+				<left>15</left><top>-10</top><width>430</width><height>360</height>
+				<texture>dialogs/dialog-bg-nobo.png</texture><bordertexture border="21">overlays/shadow.png</bordertexture><bordersize>20</bordersize>
+			</control>
+			<control type="image">
+				<left>11</left><top>-14</top><width>438</width><height>368</height>
+				<texture colordiffuse="button_focus">colors/grey.png</texture><bordertexture border="21">overlays/shadow.png</bordertexture><bordersize>20</bordersize>
+				<visible>$PARAM[focused]</visible><include condition="$PARAM[focused]">Animation_FocusTextureFade</include>
+			</control>
+			<control type="image">
+				<left>35</left><top>20</top><width>390</width><height>235</height>
+				<texture border="2" background="true">$INFO[ListItem.Art(thumb)]</texture><aspectratio>keep</aspectratio>
+			</control>
+			<control type="label">
+				<left>25</left><top>270</top><width>410</width><height>45</height><font>font12</font>
+				<textcolor>$PARAM[label_color]</textcolor><shadowcolor>text_shadow</shadowcolor><align>center</align><aligny>center</aligny><scroll>$PARAM[focused]</scroll>
+				<label>$INFO[ListItem.Property(MyPicsDB3.WidgetLabel)]</label><visible>!String.IsEmpty(ListItem.Property(MyPicsDB3.WidgetLabel))</visible>
+			</control>
+			<control type="label">
+				<left>25</left><top>270</top><width>410</width><height>45</height><font>font12</font>
+				<textcolor>$PARAM[label_color]</textcolor><shadowcolor>text_shadow</shadowcolor><align>center</align><aligny>center</aligny><scroll>$PARAM[focused]</scroll>
+				<label>$INFO[ListItem.Label]</label><visible>String.IsEmpty(ListItem.Property(MyPicsDB3.WidgetLabel))</visible>
+			</control>
+		</definition>
+	</include>
+	<include name="WidgetListLandscapeMyPicsDB">
+		<param name="onclick_condition">false</param><param name="browse_mode">auto</param><param name="widget_limit">40</param>
+		<definition>
+			<include content="CategoryLabel"><param name="label">$PARAM[widget_header]</param><param name="list_id" value="$PARAM[list_id]"/></include>
+			<include content="BusyListSpinner"><param name="list_id" value="$PARAM[list_id]"/><param name="posy" value="250"/></include>
+			<control type="panel" id="$PARAM[list_id]">
+				<left>0</left><top>115</top><visible>Integer.IsGreater(Container($PARAM[list_id]).NumItems,0) | Container($PARAM[list_id]).IsUpdating</visible><right>0</right><height>518</height>
+				<onclick condition="$PARAM[onclick_condition]">$PARAM[onclick_action]</onclick>
+				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),picture)">ShowPicture($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>
+				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),video)">PlayMedia($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>
+				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),folder)">ActivateWindow(Pictures,$ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)],return)</onclick>
+				<include content="WidgetListCommon"><param name="list_id" value="$PARAM[list_id]"/></include>
+				<itemlayout width="460" height="486"><control type="group"><left>30</left><top>60</top><include content="MyPicsDBWidgetLandscapeLayout"><param name="focused" value="false"/><param name="label_color" value="grey"/></include></control></itemlayout>
+				<focusedlayout width="460" height="486"><control type="group"><depth>DepthContentPopout</depth><left>30</left><top>60</top>
+					<animation type="Focus"><effect type="zoom" start="100" end="110" time="200" tween="sine" easing="inout" center="245,180" /></animation>
+					<animation type="Unfocus"><effect type="zoom" start="110" end="100" time="200" tween="sine" easing="inout" center="245,180" /></animation>
+					<include content="MyPicsDBWidgetLandscapeLayout"><param name="focused" value="true"/><param name="label_color" value="white"/></include>
+				</control></focusedlayout>
 				<content target="$PARAM[widget_target]" limit="$PARAM[widget_limit]" browse="$PARAM[browse_mode]">$PARAM[content_path]</content>
 			</control>
 		</definition>

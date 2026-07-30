@@ -221,3 +221,241 @@ def show_home_layout_editor(
             del dialog
 
     return _show_fallback_editor(state, labels, text, xbmcgui)
+
+
+@dataclass(frozen=True)
+class SmartHomeEditorText:
+    heading: str
+    on: str
+    off: str
+    move_up: str
+    move_down: str
+    save: str
+    cancel: str
+    defaults: str
+    add_collection: str
+    remove_collection: str
+    display_mode: str
+    poster: str
+    square: str
+    landscape: str
+    maximum_rows: str
+    no_collections: str
+
+
+class SmartHomeLayoutState:
+    """Mutable mixed built-in/saved-search home layout state."""
+
+    def __init__(self, items):
+        from .preferences import HOME_ROW_COUNT, HomeLayoutItem
+
+        self.items = [
+            HomeLayoutItem(
+                kind=item.kind,
+                key=item.key,
+                saved_search_id=item.saved_search_id,
+                enabled=bool(item.enabled),
+                mode=item.mode,
+            )
+            for item in items
+        ]
+        enabled_seen = 0
+        normalized = []
+        for item in self.items:
+            enabled = bool(item.enabled) and enabled_seen < HOME_ROW_COUNT
+            if enabled:
+                enabled_seen += 1
+            normalized.append(
+                HomeLayoutItem(
+                    kind=item.kind,
+                    key=item.key,
+                    saved_search_id=item.saved_search_id,
+                    enabled=enabled,
+                    mode=item.mode,
+                )
+            )
+        self.items = normalized
+
+    def toggle(self, index: int) -> bool:
+        from .preferences import HOME_ROW_COUNT, HomeLayoutItem
+
+        item = self.items[index]
+        if item.enabled:
+            enabled = False
+        else:
+            if sum(1 for value in self.items if value.enabled) >= HOME_ROW_COUNT:
+                return False
+            enabled = True
+        self.items[index] = HomeLayoutItem(
+            kind=item.kind,
+            key=item.key,
+            saved_search_id=item.saved_search_id,
+            enabled=enabled,
+            mode=item.mode,
+        )
+        return True
+
+    def move(self, index: int, offset: int) -> int:
+        target = index + offset
+        if target < 0 or target >= len(self.items):
+            return index
+        self.items[index], self.items[target] = self.items[target], self.items[index]
+        return target
+
+    def add_smart(self, saved_search_id: int, mode: str = "poster") -> bool:
+        from .preferences import HOME_ROW_COUNT, HomeLayoutItem, normalize_smart_home_mode
+
+        if any(
+            item.kind == "smart" and item.saved_search_id == saved_search_id
+            for item in self.items
+        ):
+            return False
+        enabled = sum(1 for item in self.items if item.enabled) < HOME_ROW_COUNT
+        self.items.append(
+            HomeLayoutItem(
+                kind="smart",
+                saved_search_id=int(saved_search_id),
+                enabled=enabled,
+                mode=normalize_smart_home_mode(mode),
+            )
+        )
+        return True
+
+    def remove(self, index: int) -> bool:
+        if self.items[index].kind != "smart":
+            return False
+        del self.items[index]
+        return True
+
+    def set_mode(self, index: int, mode: str) -> None:
+        from .preferences import HomeLayoutItem, normalize_smart_home_mode
+
+        item = self.items[index]
+        if item.kind != "smart":
+            return
+        self.items[index] = HomeLayoutItem(
+            kind=item.kind,
+            key=item.key,
+            saved_search_id=item.saved_search_id,
+            enabled=item.enabled,
+            mode=normalize_smart_home_mode(mode),
+        )
+
+    def reset(self) -> None:
+        from .preferences import default_home_layout_items
+
+        self.items = list(default_home_layout_items())
+
+    def snapshot(self):
+        return tuple(self.items)
+
+
+def show_smart_home_layout_editor(
+    items,
+    builtin_labels: Dict[str, str],
+    saved_search_names: Dict[int, str],
+    text: SmartHomeEditorText,
+    xbmcgui_module=None,
+):
+    """Edit built-in and saved smart-collection rows with standard Kodi dialogs.
+
+    Standard dialogs handle an arbitrary number of saved collections and avoid a
+    fixed-size XML window. Selecting a row exposes visibility/order actions; a
+    saved collection also exposes display mode and remove actions.
+    """
+
+    if xbmcgui_module is None:
+        import xbmcgui as xbmcgui_module  # type: ignore
+
+    from .preferences import SMART_HOME_MODES
+
+    dialog = xbmcgui_module.Dialog()
+    state = SmartHomeLayoutState(items)
+    mode_labels = {
+        "poster": text.poster,
+        "square": text.square,
+        "landscape": text.landscape,
+    }
+
+    def item_label(item) -> str:
+        if item.kind == "smart":
+            name = saved_search_names.get(item.saved_search_id, "#%d" % item.saved_search_id)
+            return "%s  %s  [COLOR=grey](%s)[/COLOR]" % (
+                text.on if item.enabled else text.off,
+                name,
+                mode_labels.get(item.mode, text.poster),
+            )
+        return "%s  %s" % (
+            text.on if item.enabled else text.off,
+            builtin_labels.get(item.key, item.key),
+        )
+
+    while True:
+        rows = [item_label(item) for item in state.items]
+        actions = [text.add_collection, text.save, text.defaults, text.cancel]
+        selected = dialog.select(text.heading, rows + actions)
+        if selected < 0 or selected == len(rows) + 3:
+            return None
+        if selected == len(rows):
+            existing = {
+                item.saved_search_id
+                for item in state.items
+                if item.kind == "smart"
+            }
+            available = [
+                (saved_id, name)
+                for saved_id, name in saved_search_names.items()
+                if saved_id not in existing
+            ]
+            if not available:
+                dialog.ok(text.heading, text.no_collections)
+                continue
+            choice = dialog.select(
+                text.add_collection,
+                [name for _saved_id, name in available],
+            )
+            if choice < 0:
+                continue
+            mode_choice = dialog.select(
+                text.display_mode,
+                [mode_labels[mode] for mode in SMART_HOME_MODES],
+            )
+            if mode_choice < 0:
+                mode_choice = 0
+            state.add_smart(available[choice][0], SMART_HOME_MODES[mode_choice])
+            continue
+        if selected == len(rows) + 1:
+            return state.snapshot()
+        if selected == len(rows) + 2:
+            state.reset()
+            continue
+
+        index = selected
+        item = state.items[index]
+        row_actions = [
+            text.off if item.enabled else text.on,
+            text.move_up,
+            text.move_down,
+        ]
+        if item.kind == "smart":
+            row_actions.extend([text.display_mode, text.remove_collection])
+        action = dialog.select(item_label(item), row_actions)
+        if action == 0:
+            if not state.toggle(index):
+                dialog.ok(text.heading, text.maximum_rows)
+        elif action == 1:
+            state.move(index, -1)
+        elif action == 2:
+            state.move(index, 1)
+        elif item.kind == "smart" and action == 3:
+            current_mode = item.mode if item.mode in SMART_HOME_MODES else "poster"
+            preselect = SMART_HOME_MODES.index(current_mode)
+            mode_choice = dialog.select(
+                text.display_mode,
+                [mode_labels[mode] for mode in SMART_HOME_MODES],
+                preselect=preselect,
+            )
+            if mode_choice >= 0:
+                state.set_mode(index, SMART_HOME_MODES[mode_choice])
+        elif item.kind == "smart" and action == 4:
+            state.remove(index)

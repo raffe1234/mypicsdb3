@@ -27,6 +27,7 @@ SLIDESHOW_START_PROPERTY = "MyPicsDB3.SlideshowStart"
 SLIDESHOW_START_TTL_SECONDS = 180.0
 SCAN_STATUS_PROPERTY = "MyPicsDB3.ScanStatusV1"
 SCAN_CANCEL_PROPERTY = "MyPicsDB3.ScanCancelV1"
+HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.HomeWidgetGeneration"
 
 
 def create_abort_monitor(xbmc_module=None):
@@ -234,6 +235,38 @@ class KodiContext:
                 window.clearProperty(SCAN_CANCEL_PROPERTY)
         except Exception as exc:
             self.log.warning("Could not clear scan status: %s", exc)
+
+    def invalidate_home_widgets(self, reason: str = "") -> int:
+        """Change the home content-provider URL without reloading the skin.
+
+        The Estuary integration includes this Home-window generation value in
+        every MyPicsDB 3 widget URL. Updating it makes Kodi request fresh
+        database results while preserving the rest of the home screen and its
+        texture cache.
+        """
+
+        window = self._home_window()
+        if window is None:
+            return 0
+        try:
+            current = int(
+                str(window.getProperty(HOME_WIDGET_GENERATION_PROPERTY) or "0")
+            )
+        except (TypeError, ValueError):
+            current = 0
+        generation = 1 if current >= 2147483646 else current + 1
+        try:
+            window.setProperty(HOME_WIDGET_GENERATION_PROPERTY, str(generation))
+            if reason:
+                self.log.debug(
+                    "Home-screen widgets invalidated (%s), generation=%d",
+                    reason,
+                    generation,
+                )
+            return generation
+        except Exception as exc:
+            self.log.warning("Could not invalidate home-screen widgets: %s", exc)
+            return current
 
     def create_background_progress(self, heading: str, message: str):
         if xbmcgui is None:

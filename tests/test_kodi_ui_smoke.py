@@ -728,11 +728,21 @@ def test_home_screen_editor_enables_a_hidden_row(monkeypatch) -> None:
     runtime = FakeRuntime()
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
-    monkeypatch.setattr(
-        views,
-        "show_home_layout_editor",
-        lambda order, enabled, labels, text: (tuple(order), frozenset(set(enabled) | {"favorites"})),
-    )
+    def enable_favorites(items, _labels, _saved_names, _text):
+        from mypicsdb3.preferences import HomeLayoutItem
+
+        return tuple(
+            HomeLayoutItem(
+                kind=item.kind,
+                key=item.key,
+                saved_search_id=item.saved_search_id,
+                enabled=item.enabled or item.key == "favorites",
+                mode=item.mode,
+            )
+            for item in items
+        )
+
+    monkeypatch.setattr(views, "show_smart_home_layout_editor", enable_favorites)
     ui.action("action/configure-home", {})
 
     assert runtime.kodi.addon.settings["home_row_7"] == "favorites"
@@ -1567,17 +1577,59 @@ def test_home_widget_uses_small_limit_and_prioritizes_standard_stills(monkeypatc
         return result
 
     runtime.catalog.recent_taken = rows
-    runtime.kodi.settings.home_widget_limit = 3
+    runtime.kodi.settings.home_widget_limit = 4
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
     ui.dispatch(views.Request("recent-taken", {"widget": "1", "home": "1"}))
 
-    assert requested == [(12, 0)]
+    assert requested == [(16, 0)]
     assert [item.label for _url, item, _folder in calls.items] == [
         "item-3.jpg",
         "item-1.nef",
         "item-4.heic",
+        "item-2.mp4",
     ]
+
+
+def test_home_widget_honours_explicit_live_limit_even_with_stale_settings(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    requested = []
+    base = runtime.catalog.recent_taken(1)[0]
+
+    def rows(limit, offset=0):
+        requested.append((limit, offset))
+        result = []
+        for number in range(limit):
+            row = dict(base)
+            row.update(
+                id=number + 1,
+                filename=f"item-{number + 1}.jpg",
+                uri=f"smb://server/photos/item-{number + 1}.jpg",
+                thumb_uri=f"smb://server/photos/item-{number + 1}.jpg",
+                extension="jpg",
+                media_type="picture",
+            )
+            result.append(row)
+        return result
+
+    runtime.catalog.recent_taken = rows
+    runtime.kodi.settings.home_widget_limit = 10
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "recent-taken",
+            {"widget": "1", "home": "1", "limit": "39"},
+        )
+    )
+
+    assert requested == [(156, 0)]
+    assert len(calls.items) == 39
+    assert ui._result_limit(
+        {"widget": "1", "home": "1", "limit": "100"},
+        10,
+    ) == 40
 
 
 def test_picture_info_uses_picture_info_tag_when_available(monkeypatch) -> None:

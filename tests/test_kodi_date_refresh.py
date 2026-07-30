@@ -327,3 +327,29 @@ def test_playing_file_uses_info_label_without_querying_player(monkeypatch) -> No
     )
 
     assert kodi.KodiContext.playing_file() == "smb://nas/photos/clip 01.mp4"
+
+
+def test_home_widget_invalidation_increments_home_window_generation(monkeypatch) -> None:
+    properties = {}
+
+    class FakeWindow:
+        def getProperty(self, key):
+            return properties.get(key, "")
+
+        def setProperty(self, key, value):
+            properties[key] = value
+
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(Window=lambda window_id: FakeWindow()),
+    )
+    context = kodi.KodiContext.__new__(kodi.KodiContext)
+    context.log = types.SimpleNamespace(
+        debug=lambda *args: None,
+        warning=lambda *args: None,
+    )
+
+    assert context.invalidate_home_widgets("test") == 1
+    assert context.invalidate_home_widgets("test") == 2
+    assert properties[kodi.HOME_WIDGET_GENERATION_PROPERTY] == "2"

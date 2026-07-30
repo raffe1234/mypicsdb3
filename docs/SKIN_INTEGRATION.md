@@ -65,9 +65,9 @@ The skin is responsible for:
 | Keywords | `plugin://plugin.image.mypicsdb3/keywords?widget=1` | Folders |
 
 Keep the `widget=1` marker on widget URLs so transient database-busy handling
-can return an empty row without showing a notification. Keep home-screen limits
-small. Fifteen items is the project default. The Estuary MyPicsDB 3 integration
-supports 1–50 items per row.
+can return an empty row without showing a notification. The general widget
+default is fifteen. The Estuary MyPicsDB 3 home integration uses a separate
+4–40 setting and passes it explicitly with `home=1`.
 
 Random endpoints should normally disable Kodi 21's synthetic "more" item by
 using `browse="never"` or the equivalent parameter in the skin's widget
@@ -117,6 +117,7 @@ Supported values are:
 | Value | View |
 |---|---|
 | `none` | No row |
+| `smart` | Saved smart collection described by the matching slot settings |
 | `recent_taken` | Recently taken |
 | `recent_added` | Recently added |
 | `random_memories` | Random memories |
@@ -127,6 +128,19 @@ Supported values are:
 | `favorites` | Favorites |
 | `rated` | Rated pictures |
 | `geotagged` | Geotagged pictures |
+
+For a row whose value is `smart`, read the same numbered settings:
+
+```text
+home_smart_id_1
+home_smart_name_1
+home_smart_mode_1
+```
+
+The ID is an integer saved-search ID, the name is the row heading and the mode
+is `poster`, `square` or `landscape`. The pattern continues through slot 9. The
+combined layout editor owns these hidden materialized values; skins should treat
+them as read-only.
 
 The Media sources visibility setting is:
 
@@ -156,6 +170,18 @@ Media sources can use:
 
 A skin with its own widget editor can ignore these row settings and store
 the selected plugin path as a skin setting instead.
+
+The bundled home URLs also include:
+
+```xml
+limit="$INFO[Addon.SettingInt(plugin.image.mypicsdb3,home_widget_limit)]"
+generation="$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"
+```
+
+In practice these are query parameters inside `content_path`. They make the URL
+change when the 4–40 setting or catalogue generation changes. A third-party skin
+may use its own invalidation method, but should avoid caching one fixed provider
+URL forever.
 
 ## Estuary-derived skins
 

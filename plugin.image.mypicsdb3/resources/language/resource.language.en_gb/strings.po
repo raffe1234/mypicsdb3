@@ -1150,3 +1150,47 @@ msgstr "Home-screen pictures per row"
 msgctxt "#32783"
 msgid "Choose 4–40 pictures for each MyPicsDB 3 home-screen row. A lower value makes network and RAW collections appear sooner."
 msgstr "Choose 4–40 pictures for each MyPicsDB 3 home-screen row. A lower value makes network and RAW collections appear sooner."
+
+msgctxt "#32784"
+msgid "Smart collection"
+msgstr "Smart collection"
+
+msgctxt "#32785"
+msgid "Add smart collection"
+msgstr "Add smart collection"
+
+msgctxt "#32786"
+msgid "Remove smart collection"
+msgstr "Remove smart collection"
+
+msgctxt "#32787"
+msgid "Display mode"
+msgstr "Display mode"
+
+msgctxt "#32788"
+msgid "Poster"
+msgstr "Poster"
+
+msgctxt "#32789"
+msgid "Square"
+msgstr "Square"
+
+msgctxt "#32790"
+msgid "Wide"
+msgstr "Wide"
+
+msgctxt "#32791"
+msgid "A maximum of nine home-screen rows can be shown."
+msgstr "A maximum of nine home-screen rows can be shown."
+
+msgctxt "#32792"
+msgid "There are no additional saved smart collections to add."
+msgstr "There are no additional saved smart collections to add."
+
+msgctxt "#32793"
+msgid "Saved smart collection used by this home-screen row."
+msgstr "Saved smart collection used by this home-screen row."
+
+msgctxt "#32794"
+msgid "Layout used for this saved smart collection on the home screen."
+msgstr "Layout used for this saved smart collection on the home screen."

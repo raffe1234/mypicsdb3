@@ -22,6 +22,22 @@ The Piers lower boundary is `21.90.0`, matching the `xbmc.addon` API range
 used by Kodi 22 preview builds. Omega ends at `21.89.999`, so only one channel
 matches at a time.
 
+
+## MyPicsDB 3 home-row contract
+
+The generated skin patches the Pictures home group with up to nine materialized
+rows. Built-in rows use the existing poster include. Saved smart collections can
+select dedicated Poster, Square or Wide includes and obtain their heading and
+saved-search ID from the matching hidden add-on settings.
+
+Every MyPicsDB 3 provider path includes the live `home_widget_limit` value and
+`MyPicsDB3.HomeWidgetGeneration`. This fixes stale ten-item rows after choosing a
+larger 4–40 value and lets scans invalidate only MyPicsDB 3 providers. The
+combined editor remains in the picture add-on; the skin only consumes the nine
+slots.
+
+The 0.4.0 patch uses Omega patch revision 10 and Piers patch revision 8.
+
 ## Automatic upstream refresh
 
 `.github/workflows/estuary-upstream.yml` runs once per day and can also be

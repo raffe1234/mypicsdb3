@@ -12,16 +12,23 @@ import xbmcgui  # type: ignore
 import xbmcplugin  # type: ignore
 
 from .album_view import save_current_album_view
-from .home_layout_editor import HomeLayoutEditorText, show_home_layout_editor
+from .home_layout_editor import (
+    SmartHomeEditorText,
+    show_smart_home_layout_editor,
+)
 from .preferences import (
     DEFAULT_HOME_ROWS,
     HOME_VIEW_BY_KEY,
     MAIN_MENU_NODES,
+    home_layout_slots,
+    migrate_home_layout_items,
     normalize_home_layout,
     parse_hidden_main_menu_nodes,
+    parse_home_layout_v2,
     parse_persisted_home_layout,
+    remove_saved_search_from_home_layout,
     serialize_hidden_main_menu_nodes,
-    serialize_home_layout,
+    serialize_home_layout_v2,
     serialize_persisted_home_layout,
 )
 from .rating_policy import (
@@ -157,11 +164,23 @@ class PluginUI:
 
     def _result_limit(self, params: Optional[Dict[str, str]], default: int) -> int:
         values = params or {}
-        limit = safe_limit(values.get("limit"), default)
         if self._is_home_widget(values):
-            home_limit = int(getattr(self.kodi.settings, "home_widget_limit", 10))
-            limit = min(limit, home_limit)
-        return limit
+            configured = max(
+                4,
+                min(40, int(getattr(self.kodi.settings, "home_widget_limit", 10))),
+            )
+            raw_limit = str(values.get("limit") or "").strip()
+            if not raw_limit:
+                return configured
+
+            # The bundled Estuary URL carries the live integer setting. Honour
+            # that explicit value directly instead of capping it against a
+            # possibly stale settings snapshot from an already-running Kodi
+            # interpreter. This is what makes a change such as 10 -> 39 take
+            # effect when the content-provider URL is regenerated.
+            return max(4, min(40, safe_limit(raw_limit, configured)))
+
+        return safe_limit(values.get("limit"), default)
 
     @staticmethod
     def _home_art_priority(row: Dict[str, Any]) -> int:
@@ -856,7 +875,20 @@ class PluginUI:
             view_mode=self._browser_view_mode(params),
         )
 
-    def _configure_home_screen(self) -> None:
+    def _saved_search_name_map(self) -> Dict[int, str]:
+        return {
+            int(row["id"]): str(row["name"])
+            for row in self.catalog.list_saved_searches()
+        }
+
+    def _load_home_layout_items(self, saved_names: Dict[int, str]):
+        parsed = parse_home_layout_v2(
+            self.kodi.addon.getSetting("home_layout_v2"),
+            saved_names.keys(),
+        )
+        if parsed is not None:
+            return parsed
+
         persisted_layout = parse_persisted_home_layout(
             self.kodi.addon.getSetting("home_layout")
         )
@@ -869,19 +901,63 @@ class PluginUI:
             order, enabled = normalize_home_layout(saved_rows)
         else:
             order, enabled = persisted_layout
+        return migrate_home_layout_items(order, enabled)
 
-        result = show_home_layout_editor(
-            order,
-            enabled,
+    def _write_home_layout_items(
+        self, items, saved_names: Dict[int, str]
+    ) -> None:
+        self.kodi.addon.setSetting(
+            "home_layout_v2", serialize_home_layout_v2(items)
+        )
+        slots = home_layout_slots(items, saved_names)
+        for position, slot in enumerate(slots, start=1):
+            self.kodi.addon.setSetting(
+                "home_row_%d" % position, str(slot["row"])
+            )
+            self.kodi.addon.setSetting(
+                "home_smart_id_%d" % position, str(slot["smart_id"])
+            )
+            self.kodi.addon.setSetting(
+                "home_smart_name_%d" % position, str(slot["smart_name"])
+            )
+            self.kodi.addon.setSetting(
+                "home_smart_mode_%d" % position, str(slot["smart_mode"])
+            )
+
+        # Preserve the old built-in-only layout for downgrade compatibility.
+        builtin_order = [item.key for item in items if item.kind == "builtin"]
+        builtin_enabled = [
+            item.key
+            for item in items
+            if item.kind == "builtin" and item.enabled
+        ]
+        self.kodi.addon.setSetting(
+            "home_layout",
+            serialize_persisted_home_layout(builtin_order, builtin_enabled),
+        )
+
+    def _invalidate_home_widgets(self, reason: str) -> None:
+        invalidator = getattr(self.kodi, "invalidate_home_widgets", None)
+        if callable(invalidator):
+            try:
+                invalidator(reason)
+            except Exception as exc:
+                self.kodi.log.warning(
+                    "Could not invalidate home-screen widgets: %s", exc
+                )
+
+    def _configure_home_screen(self) -> None:
+        saved_names = self._saved_search_name_map()
+        items = self._load_home_layout_items(saved_names)
+        result = show_smart_home_layout_editor(
+            items,
             {
                 key: self.text(view.string_id, view.fallback)
                 for key, view in HOME_VIEW_BY_KEY.items()
             },
-            HomeLayoutEditorText(
+            saved_names,
+            SmartHomeEditorText(
                 heading=self.text(32208, "Configure home-screen rows"),
-                view_heading=self.text(32220, "View"),
-                visible_heading=self.text(32221, "Shown"),
-                order_heading=self.text(32222, "Order"),
                 on=self.text(32223, "On"),
                 off=self.text(32224, "Off"),
                 move_up=self.text(32211, "Move up"),
@@ -889,23 +965,56 @@ class PluginUI:
                 save=self.text(32225, "Save"),
                 cancel=self.text(32226, "Cancel"),
                 defaults=self.text(32227, "Defaults"),
+                add_collection=self.text(32785, "Add smart collection"),
+                remove_collection=self.text(32786, "Remove smart collection"),
+                display_mode=self.text(32787, "Display mode"),
+                poster=self.text(32788, "Poster"),
+                square=self.text(32789, "Square"),
+                landscape=self.text(32790, "Wide"),
+                maximum_rows=self.text(32791, "A maximum of nine home-screen rows can be shown."),
+                no_collections=self.text(32792, "There are no additional saved smart collections to add."),
             ),
         )
         if result is None:
             return
 
-        order, enabled = result
-        for position, value in enumerate(
-            serialize_home_layout(order, enabled),
-            start=1,
-        ):
-            self.kodi.addon.setSetting("home_row_%d" % position, value)
-        self.kodi.addon.setSetting(
-            "home_layout",
-            serialize_persisted_home_layout(order, enabled),
-        )
+        self._write_home_layout_items(result, saved_names)
+        self._invalidate_home_widgets("home layout changed")
         self.kodi.notify(self.text(32214, "Home-screen layout saved"))
         xbmc.executebuiltin("ReloadSkin()")
+
+    def _sync_saved_search_home_rows(
+        self, removed_saved_search_id: Optional[int] = None
+    ) -> bool:
+        saved_names = self._saved_search_name_map()
+        items = self._load_home_layout_items(saved_names)
+        if removed_saved_search_id is not None:
+            items = remove_saved_search_from_home_layout(
+                items, removed_saved_search_id
+            )
+        before = tuple(
+            (
+                self.kodi.addon.getSetting("home_smart_id_%d" % position),
+                self.kodi.addon.getSetting("home_smart_name_%d" % position),
+                self.kodi.addon.getSetting("home_smart_mode_%d" % position),
+            )
+            for position in range(1, 10)
+            if self.kodi.addon.getSetting("home_row_%d" % position) == "smart"
+        )
+        self._write_home_layout_items(items, saved_names)
+        after = tuple(
+            (
+                self.kodi.addon.getSetting("home_smart_id_%d" % position),
+                self.kodi.addon.getSetting("home_smart_name_%d" % position),
+                self.kodi.addon.getSetting("home_smart_mode_%d" % position),
+            )
+            for position in range(1, 10)
+            if self.kodi.addon.getSetting("home_row_%d" % position) == "smart"
+        )
+        changed = before != after
+        if changed:
+            self._invalidate_home_widgets("smart collection home rows changed")
+        return changed
 
     def _configure_main_menu(self) -> None:
         hidden = parse_hidden_main_menu_nodes(
@@ -1371,7 +1480,11 @@ class PluginUI:
 
     def action(self, route: str, params: Dict[str, str]):
         if route == "action/settings":
+            previous_limit = int(getattr(self.kodi.settings, "home_widget_limit", 10))
             self.kodi.open_settings()
+            current = self.kodi.refresh_settings()
+            if int(getattr(current, "home_widget_limit", 10)) != previous_limit:
+                self._invalidate_home_widgets("home widget limit changed")
             return
         if route == "action/start-slideshow":
             self._start_slideshow(params)
@@ -1441,8 +1554,11 @@ class PluginUI:
                 if not name or name.strip() == current_name:
                     return
                 self.catalog.rename_saved_search(int(saved["id"]), name)
+                home_changed = self._sync_saved_search_home_rows()
                 self.kodi.notify(self.text(32707, "Saved search renamed"))
-                xbmc.executebuiltin("Container.Refresh")
+                xbmc.executebuiltin(
+                    "ReloadSkin()" if home_changed else "Container.Refresh"
+                )
             except SavedSearchValidationError as exc:
                 self.kodi.notify(
                     "%s: %s" % (self.text(32711, "Could not rename saved search"), exc),
@@ -1464,9 +1580,13 @@ class PluginUI:
                 )
                 if not confirmed:
                     return
-                self.catalog.delete_saved_search(int(saved["id"]))
+                saved_id = int(saved["id"])
+                self.catalog.delete_saved_search(saved_id)
+                home_changed = self._sync_saved_search_home_rows(saved_id)
                 self.kodi.notify(self.text(32708, "Saved search deleted"))
-                xbmc.executebuiltin("Container.Refresh")
+                xbmc.executebuiltin(
+                    "ReloadSkin()" if home_changed else "Container.Refresh"
+                )
             except SavedSearchValidationError as exc:
                 self.kodi.notify(
                     "%s: %s" % (self.text(32710, "Invalid saved search"), exc),
@@ -1706,6 +1826,13 @@ class PluginUI:
                 started=begin_status,
             )
             stats = scanner.scan_sources(source_ids)
+            if (
+                int(getattr(stats, "pictures_added", 0) or 0)
+                + int(getattr(stats, "pictures_updated", 0) or 0)
+                + int(getattr(stats, "missing_marked", 0) or 0)
+                > 0
+            ):
+                self._invalidate_home_widgets("manual scan changed pictures")
             if abort_requested():
                 self.kodi.log.info(
                     "Manual scan interrupted because Kodi or the add-on service stopped"

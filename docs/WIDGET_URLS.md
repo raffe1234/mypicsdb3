@@ -21,15 +21,36 @@ All widget views are read-only and never start a scan. They use the local
 
 The `widget=1` marker lets MyPicsDB 3 distinguish background widget loading
 from interactive browsing.
-The bundled Estuary home rows add `home=1` and omit an explicit `limit`, for
-example `plugin://plugin.image.mypicsdb3/on-this-day?widget=1&home=1`. That
-marker applies the separate **Home-screen pictures per row** setting (default
-10, range 4–40) and prioritizes standard still formats before RAW/HEIF files
-and generated video frames. Third-party widgets should omit `home=1` when they
-want the general widget limit and original media order.
- The optional `limit` is restricted to 1–500.
+The bundled Estuary home rows add `home=1`, the live 4–40 setting and a
+Home-window generation value, for example:
+
+```text
+plugin://plugin.image.mypicsdb3/on-this-day?widget=1&home=1&limit=<setting>&generation=<generation>
+```
+
+`home=1` applies home-art prioritization, placing standard still formats before
+RAW/HEIF files and generated video frames. The explicit `limit` is honoured
+directly within 4–40. The generation changes when that setting changes or a scan
+changes catalogue rows, making Kodi request fresh provider results without a
+complete skin reload. Third-party widgets should omit `home=1` when they want
+the general widget limit and original media order.
+The optional `limit` is restricted to 1–500 for ordinary widgets; bundled
+home providers clamp it to 4–40.
 Interactive views use pagination.
 Random views use indexed random keys rather than `ORDER BY RANDOM()` across the
 whole table. **On this day - random** also shuffles the selected rows before they
 are returned, so the visible order is not chronological. The Estuary MyPicsDB 3
 home screen offers **On this day** and **On this day - random** as separate rows.
+
+## Saved smart collection providers
+
+A saved collection can be used as a read-only widget source:
+
+```text
+plugin://plugin.image.mypicsdb3/saved-search?id=42&widget=1&home=1&limit=10
+```
+
+The URL contains the database ID, not raw Query Model JSON. MyPicsDB 3 loads and
+validates the stored query on every request. The bundled Estuary integration
+materializes up to nine configured rows and offers Poster, Square and Wide
+layouts for saved smart collections.

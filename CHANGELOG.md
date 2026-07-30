@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.4.0 - 2026-07-30
+
+- Fix **Home-screen pictures per row** values above ten not taking effect. Every
+  bundled provider URL now carries both the live integer setting and a
+  Home-window generation value, while the plug-in honours the explicit 4–40
+  value even if an already-running interpreter still has an older settings
+  snapshot. Changing 10 to 39 therefore produces a 39-item request rather than
+  being silently capped at ten.
+- Add saved smart collections to **Configure home-screen rows**. A saved Query
+  Model can be added as its own Pictures-home row, enabled or disabled, moved
+  among built-in rows and removed again without deleting the saved collection.
+- Add per-smart-row **Poster**, **Square** and **Wide** display modes through
+  dedicated Estuary widget includes. Built-in rows retain their existing poster
+  presentation and click behaviour.
+- Store the mixed layout in a versioned hidden setting and materialize it into
+  nine skin slots. Legacy built-in Row 1–Row 9 layouts migrate automatically,
+  invalid or deleted saved-search IDs are discarded, and at most nine rows are
+  enabled.
+- Keep smart home rows synchronized when a saved collection is renamed or
+  deleted. The home screen uses the current collection name and removes deleted
+  rows instead of retaining a broken provider.
+- Invalidate only MyPicsDB 3 home providers after a manual or automatic scan
+  actually adds, updates or marks media missing. Standard and smart rows then
+  rerun against the current catalogue without a full skin reload.
+- Bump generated Estuary revisions to Kodi 21 revision 10 and Kodi 22 revision
+  8. Database schema 5, Query Model version 1 and repository add-on version
+  0.2.26 remain unchanged; no catalogue rescan is required.
+
 ## 0.3.5 - 2026-07-30
 
 - Reduce home-screen artwork stalls by giving the Estuary rows a separate

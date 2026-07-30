@@ -4,6 +4,11 @@ from mypicsdb3.preferences import (
     DEFAULT_ALBUM_VIEW_MODE,
     HOME_VIEW_KEYS,
     MAIN_MENU_NODE_KEYS,
+    HomeLayoutItem,
+    home_layout_slots,
+    parse_home_layout_v2,
+    remove_saved_search_from_home_layout,
+    serialize_home_layout_v2,
     normalize_album_view_mode,
     normalize_home_layout,
     parse_hidden_main_menu_nodes,
@@ -83,3 +88,59 @@ def test_home_layout_offers_both_on_this_day_variants() -> None:
         "on_this_day",
         "on_this_day_random",
     )
+
+
+def test_smart_home_layout_roundtrip_materializes_dynamic_slots() -> None:
+    items = (
+        HomeLayoutItem(kind="builtin", key="recent_taken", enabled=True),
+        HomeLayoutItem(kind="smart", saved_search_id=42, enabled=True, mode="square"),
+        HomeLayoutItem(kind="builtin", key="recent_added", enabled=False),
+    )
+
+    encoded = serialize_home_layout_v2(items)
+    decoded = parse_home_layout_v2(encoded, {42})
+    slots = home_layout_slots(decoded or (), {42: "Spain favorites"})
+
+    assert decoded is not None
+    assert decoded[0].key == "recent_taken"
+    assert decoded[1].saved_search_id == 42
+    assert decoded[1].mode == "square"
+    assert slots[0]["row"] == "recent_taken"
+    assert slots[1] == {
+        "row": "smart",
+        "smart_id": 42,
+        "smart_name": "Spain favorites",
+        "smart_mode": "square",
+    }
+    assert len(slots) == 9
+
+
+def test_smart_home_layout_drops_deleted_collection_and_invalid_modes() -> None:
+    items = (
+        HomeLayoutItem(kind="smart", saved_search_id=7, enabled=True, mode="unknown"),
+        HomeLayoutItem(kind="smart", saved_search_id=8, enabled=True, mode="landscape"),
+    )
+    encoded = serialize_home_layout_v2(items)
+
+    decoded = parse_home_layout_v2(encoded, {8})
+    removed = remove_saved_search_from_home_layout(decoded or (), 8)
+
+    assert decoded is not None
+    assert all(item.saved_search_id != 7 for item in decoded if item.kind == "smart")
+    assert next(item for item in decoded if item.kind == "smart").mode == "landscape"
+    assert all(item.kind != "smart" for item in removed)
+
+
+def test_smart_home_layout_drops_all_smart_rows_when_no_saved_searches_exist() -> None:
+    encoded = serialize_home_layout_v2(
+        (
+            HomeLayoutItem(kind="smart", saved_search_id=12, enabled=True),
+            HomeLayoutItem(kind="builtin", key="recent_taken", enabled=True),
+        )
+    )
+
+    decoded = parse_home_layout_v2(encoded, set())
+
+    assert decoded is not None
+    assert all(item.kind != "smart" for item in decoded)
+    assert next(item for item in decoded if item.key == "recent_taken").enabled is True
