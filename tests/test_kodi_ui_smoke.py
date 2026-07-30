@@ -197,6 +197,9 @@ class FakeKodi:
     def refresh_random_views(self):
         self.random_refreshes += 1
 
+    def is_playing(self):
+        return False
+
 
 class FakeCatalog:
     def __init__(self):
@@ -440,7 +443,7 @@ def test_stop_scan_requires_confirmation_and_requests_soft_cancel(monkeypatch) -
 
     assert runtime.kodi.scan_cancel_requests == 1
     assert runtime.kodi.notifications[-1] == ("Stopping scan", False)
-    assert calls.builtins[-1] == "Container.Refresh"
+    assert calls.builtins == []
 
 
 def test_folder_route_without_id_finishes_cleanly(monkeypatch) -> None:

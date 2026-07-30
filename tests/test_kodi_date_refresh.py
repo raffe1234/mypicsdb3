@@ -74,10 +74,16 @@ def test_custom_estuary_defers_reload_until_home_is_active(monkeypatch) -> None:
     assert commands == []
 
 
-def test_other_skin_refreshes_current_container(monkeypatch) -> None:
+def test_other_skin_refreshes_current_mypicsdb_container(monkeypatch) -> None:
     commands = []
     fake = types.SimpleNamespace(
         getSkinDir=lambda: "skin.estuary",
+        getInfoLabel=lambda label: (
+            "plugin://plugin.image.mypicsdb3/recent-taken"
+            if label == "Container.FolderPath"
+            else ""
+        ),
+        getCondVisibility=lambda _condition: False,
         executebuiltin=commands.append,
     )
     monkeypatch.setattr(kodi, "xbmc", fake)
@@ -203,3 +209,105 @@ def test_random_refresh_only_refreshes_container_for_other_skins(monkeypatch) ->
     kodi.KodiContext.refresh_random_views()
 
     assert commands == ["Container.Refresh"]
+
+
+def test_other_skin_does_not_refresh_unrelated_container(monkeypatch) -> None:
+    commands = []
+    fake = types.SimpleNamespace(
+        getSkinDir=lambda: "skin.estuary",
+        getInfoLabel=lambda _label: "pvr://channels/tv/",
+        getCondVisibility=lambda _condition: False,
+        executebuiltin=commands.append,
+    )
+    monkeypatch.setattr(kodi, "xbmc", fake)
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(getCurrentWindowId=lambda: 10002),
+    )
+
+    assert kodi.KodiContext.refresh_date_sensitive_views() is True
+    assert commands == []
+
+
+def test_other_skin_defers_mypicsdb_refresh_while_container_updates(monkeypatch) -> None:
+    commands = []
+    fake = types.SimpleNamespace(
+        getSkinDir=lambda: "skin.estuary",
+        getInfoLabel=lambda _label: "plugin://plugin.image.mypicsdb3/recent-taken",
+        getCondVisibility=lambda condition: condition == "Container.IsUpdating",
+        executebuiltin=commands.append,
+    )
+    monkeypatch.setattr(kodi, "xbmc", fake)
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(getCurrentWindowId=lambda: 10002),
+    )
+
+    assert kodi.KodiContext.refresh_date_sensitive_views() is False
+    assert commands == []
+
+
+def test_is_playing_returns_false_when_kodi_player_raises(monkeypatch) -> None:
+    class BrokenPlayer:
+        def isPlaying(self):
+            raise RuntimeError("player unavailable")
+
+    monkeypatch.setattr(
+        kodi,
+        "xbmc",
+        types.SimpleNamespace(Player=lambda: BrokenPlayer()),
+    )
+
+    assert kodi.KodiContext.is_playing() is False
+
+
+def test_notification_failure_is_logged_instead_of_escaping(monkeypatch) -> None:
+    class BrokenDialog:
+        def notification(self, *_args):
+            raise RuntimeError("GUI shutting down")
+
+    warnings = []
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(
+            NOTIFICATION_ERROR="error",
+            NOTIFICATION_INFO="info",
+            Dialog=lambda: BrokenDialog(),
+        ),
+    )
+    context = kodi.KodiContext.__new__(kodi.KodiContext)
+    context.settings = types.SimpleNamespace(show_notifications=True)
+    context.name = "MyPicsDB 3"
+    context.log = types.SimpleNamespace(
+        warning=lambda message, *args: warnings.append(
+            message % args if args else message
+        )
+    )
+
+    context.notify("Done")
+
+    assert warnings == ["Could not show notification: GUI shutting down"]
+
+
+def test_playing_file_uses_info_label_without_querying_player(monkeypatch) -> None:
+    class UnexpectedPlayer:
+        def __init__(self):
+            raise AssertionError("Player() should not be used when getInfoLabel exists")
+
+    monkeypatch.setattr(
+        kodi,
+        "xbmc",
+        types.SimpleNamespace(
+            getInfoLabel=lambda label: (
+                "smb://nas/photos/clip 01.mp4"
+                if label == "Player.Filenameandpath"
+                else ""
+            ),
+            Player=UnexpectedPlayer,
+        ),
+    )
+
+    assert kodi.KodiContext.playing_file() == "smb://nas/photos/clip 01.mp4"

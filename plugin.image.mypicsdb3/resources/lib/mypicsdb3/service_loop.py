@@ -226,6 +226,7 @@ class ServiceLoop:
                         progress_dialog = None
                         last_progress_at = 0.0
                         user_cancelled = False
+                        playback_paused = False
 
                         def close_progress_dialog() -> None:
                             nonlocal progress_dialog
@@ -239,7 +240,7 @@ class ServiceLoop:
 
                         def ensure_progress_dialog():
                             nonlocal progress_dialog
-                            if self.kodi.is_playing():
+                            if self._abort_requested() or self.kodi.is_playing():
                                 close_progress_dialog()
                                 return None
                             if progress_dialog is not None:
@@ -265,18 +266,54 @@ class ServiceLoop:
                             ensure_progress_dialog()
 
                         def scan_cancelled() -> bool:
-                            nonlocal user_cancelled
-                            if self._abort_requested():
+                            nonlocal user_cancelled, playback_paused
+
+                            def soft_cancelled() -> bool:
+                                nonlocal user_cancelled
+                                requested = getattr(
+                                    self.kodi,
+                                    "scan_cancel_requested",
+                                    None,
+                                )
+                                user_cancelled = bool(
+                                    callable(requested) and requested(scan_token)
+                                )
+                                return user_cancelled
+
+                            if self._abort_requested() or soft_cancelled():
+                                close_progress_dialog()
                                 return True
-                            requested = getattr(
-                                self.kodi,
-                                "scan_cancel_requested",
-                                None,
-                            )
-                            user_cancelled = bool(
-                                callable(requested) and requested(scan_token)
-                            )
-                            return user_cancelled
+
+                            while (
+                                settings.pause_during_playback
+                                and self.kodi.is_playing()
+                                and not self._abort_requested()
+                                and not soft_cancelled()
+                            ):
+                                close_progress_dialog()
+                                if not playback_paused:
+                                    playback_paused = True
+                                    self.kodi.log.info(
+                                        "Automatic scan paused during playback"
+                                    )
+                                if self.monitor.waitForAbort(1):
+                                    return True
+
+                            if self._abort_requested() or soft_cancelled():
+                                close_progress_dialog()
+                                return True
+
+                            if playback_paused:
+                                playback_paused = False
+                                self.kodi.log.info(
+                                    "Automatic scan resumed after playback"
+                                )
+
+                            if self.kodi.is_playing():
+                                close_progress_dialog()
+                            elif scan_started:
+                                ensure_progress_dialog()
+                            return False
 
                         def scan_progress(source, path, stats) -> None:
                             nonlocal last_progress_at
@@ -358,6 +395,7 @@ class ServiceLoop:
                         except Exception as exc:
                             self.kodi.log.error("Automatic scan failed: %s", exc)
                         finally:
+                            close_progress_dialog()
                             if scan_started:
                                 finisher = getattr(
                                     self.kodi,
@@ -365,8 +403,13 @@ class ServiceLoop:
                                     None,
                                 )
                                 if callable(finisher):
-                                    finisher(scan_token)
-                            close_progress_dialog()
+                                    try:
+                                        finisher(scan_token)
+                                    except Exception as exc:
+                                        self.kodi.log.warning(
+                                            "Could not clear automatic scan status: %s",
+                                            exc,
+                                        )
                         if self._abort_requested():
                             break
                         self.next_scan_at = (

@@ -108,7 +108,10 @@ class KodiContext:
         ):
             return
         icon = xbmcgui.NOTIFICATION_ERROR if error else xbmcgui.NOTIFICATION_INFO
-        xbmcgui.Dialog().notification(self.name, message, icon, milliseconds)
+        try:
+            xbmcgui.Dialog().notification(self.name, message, icon, milliseconds)
+        except Exception as exc:
+            self.log.warning("Could not show notification: %s", exc)
 
     @staticmethod
     def _home_window():
@@ -303,6 +306,24 @@ class KodiContext:
         )
         skin_id = xbmc.getSkinDir() if hasattr(xbmc, "getSkinDir") else ""
         if skin_id != "skin.estuary.mypicsdb3":
+            folder_path = (
+                str(xbmc.getInfoLabel("Container.FolderPath") or "")
+                if hasattr(xbmc, "getInfoLabel")
+                else ""
+            )
+            if current_window != 10002 or not folder_path.startswith(
+                "plugin://plugin.image.mypicsdb3"
+            ):
+                return True
+            if hasattr(xbmc, "getCondVisibility") and any(
+                xbmc.getCondVisibility(condition)
+                for condition in (
+                    "Container.IsUpdating",
+                    "Player.HasMedia",
+                    "System.HasActiveModalDialog",
+                )
+            ):
+                return False
             xbmc.executebuiltin("Container.Refresh")
             return True
 
@@ -451,13 +472,22 @@ class KodiContext:
 
     @staticmethod
     def is_playing() -> bool:
-        return bool(xbmc and xbmc.Player().isPlaying())
+        if xbmc is None:
+            return False
+        try:
+            return bool(xbmc.Player().isPlaying())
+        except Exception:
+            return False
 
     @staticmethod
     def playing_file() -> str:
         if xbmc is None:
             return ""
         try:
+            if hasattr(xbmc, "getInfoLabel"):
+                return normalize_uri(
+                    str(xbmc.getInfoLabel("Player.Filenameandpath") or "")
+                )
             player = xbmc.Player()
             if not player.isPlaying():
                 return ""

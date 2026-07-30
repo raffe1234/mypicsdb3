@@ -1424,7 +1424,6 @@ class PluginUI:
             active = self._scan_status()
             if not active:
                 self.kodi.notify(self.text(32730, "No scan is running"))
-                xbmc.executebuiltin("Container.Refresh")
                 return
             confirmed = xbmcgui.Dialog().yesno(
                 self.text(32727, "Stop scan?"),
@@ -1437,16 +1436,26 @@ class PluginUI:
                 return
             requester = getattr(self.kodi, "request_scan_cancel", None)
             requested = bool(callable(requester) and requester())
-            self.kodi.notify(
-                self.text(32729, "Stopping scan")
-                if requested
-                else self.text(32730, "No scan is running")
-            )
-            xbmc.executebuiltin("Container.Refresh")
+            if not self._playback_active():
+                self.kodi.notify(
+                    self.text(32729, "Stopping scan")
+                    if requested
+                    else self.text(32730, "No scan is running")
+                )
             return
         if route == "action/scan":
             self._manual_scan(params.get("source"))
             return
+
+    def _playback_active(self) -> bool:
+        checker = getattr(self.kodi, "is_playing", None)
+        if not callable(checker):
+            return False
+        try:
+            return bool(checker())
+        except Exception as exc:
+            self.kodi.log.warning("Could not read playback state: %s", exc)
+            return False
 
     def _manual_scan(self, source_id: Optional[str]):
         source_ids = [int(source_id)] if source_id else None
@@ -1455,12 +1464,23 @@ class PluginUI:
     def _background_scan(self, source_ids: Optional[List[int]] = None):
         heading = self.text(30056, "MyPicsDB 3")
         scanning_message = self.text(30026, "Scanning started")
-        paused_message = self.text(30065, "Scan paused during playback")
-        resumed_message = self.text(30066, "Scan resumed")
         monitor = self.kodi.abort_monitor()
         scan_token = uuid.uuid4().hex
         scan_started = False
         last_progress_at = 0.0
+        dialog = None
+        try:
+            settings = self.kodi.refresh_settings()
+        except Exception as exc:
+            self.kodi.log.error("Could not load scan settings: %s", exc)
+            if not self._playback_active():
+                self.kodi.notify(
+                    "%s: %s" % (self.text(30028, "Scanning failed"), exc),
+                    error=True,
+                    milliseconds=7000,
+                )
+            return
+        playback_paused = False
 
         def abort_requested() -> bool:
             return bool(monitor and monitor.abortRequested())
@@ -1468,11 +1488,57 @@ class PluginUI:
         if abort_requested():
             return
 
-        dialog = xbmcgui.DialogProgressBG()
-        dialog.create(heading, scanning_message)
+        def close_progress_dialog() -> None:
+            nonlocal dialog
+            if dialog is None:
+                return
+            try:
+                dialog.close()
+            except Exception as exc:
+                if not abort_requested():
+                    self.kodi.log.warning(
+                        "Could not close manual scan progress dialog: %s", exc
+                    )
+            dialog = None
 
-        settings = self.kodi.refresh_settings()
-        paused = False
+        def ensure_progress_dialog(message: str = scanning_message):
+            nonlocal dialog
+            if abort_requested() or self._playback_active():
+                close_progress_dialog()
+                return None
+            if dialog is not None:
+                return dialog
+            creator = getattr(self.kodi, "create_background_progress", None)
+            try:
+                if callable(creator):
+                    dialog = creator(heading, message)
+                else:
+                    dialog = xbmcgui.DialogProgressBG()
+                    dialog.create(heading, message)
+            except Exception as exc:
+                dialog = None
+                if not abort_requested():
+                    self.kodi.log.warning(
+                        "Could not create manual scan progress dialog: %s", exc
+                    )
+            return dialog
+
+        def update_dialog(message: str) -> None:
+            current = ensure_progress_dialog(message)
+            if current is None:
+                return
+            try:
+                current.update(0, heading, message)
+            except Exception as exc:
+                if not abort_requested():
+                    self.kodi.log.warning(
+                        "Manual scan progress update failed: %s", exc
+                    )
+                close_progress_dialog()
+
+        def soft_cancelled() -> bool:
+            stop_requested = getattr(self.kodi, "scan_cancel_requested", None)
+            return bool(callable(stop_requested) and stop_requested(scan_token))
 
         def begin_status(_stats) -> None:
             nonlocal scan_started
@@ -1480,48 +1546,40 @@ class PluginUI:
             publisher = getattr(self.kodi, "begin_scan_status", None)
             if callable(publisher):
                 publisher(scan_token, "manual")
-            if not abort_requested():
-                xbmc.executebuiltin("Container.Refresh")
-
-        def update_dialog(percent: int, message: str) -> None:
-            if abort_requested():
-                return
-            try:
-                dialog.update(percent, heading, message)
-            except Exception:
-                if not abort_requested():
-                    raise
+            ensure_progress_dialog()
 
         def cancelled() -> bool:
-            nonlocal paused
-            stop_requested = getattr(self.kodi, "scan_cancel_requested", None)
-
-            def soft_cancelled() -> bool:
-                return bool(
-                    callable(stop_requested) and stop_requested(scan_token)
-                )
-
-            if soft_cancelled():
+            nonlocal playback_paused
+            if abort_requested() or soft_cancelled():
+                close_progress_dialog()
                 return True
+
             while (
-                not abort_requested()
+                settings.pause_during_playback
+                and self._playback_active()
+                and not abort_requested()
                 and not soft_cancelled()
-                and settings.pause_during_playback
-                and self.kodi.is_playing()
             ):
-                if not paused:
-                    paused = True
-                    update_dialog(0, paused_message)
+                close_progress_dialog()
+                if not playback_paused:
+                    playback_paused = True
                     self.kodi.log.info("Manual scan paused during playback")
-                if monitor.waitForAbort(1):
+                if monitor and monitor.waitForAbort(1):
                     return True
 
-            if paused and not abort_requested() and not soft_cancelled():
-                paused = False
-                update_dialog(0, resumed_message)
+            if abort_requested() or soft_cancelled():
+                close_progress_dialog()
+                return True
+
+            if playback_paused:
+                playback_paused = False
                 self.kodi.log.info("Manual scan resumed after playback")
 
-            return bool(abort_requested() or soft_cancelled())
+            if self._playback_active():
+                close_progress_dialog()
+            elif scan_started:
+                ensure_progress_dialog()
+            return False
 
         def progress(source, path, stats):
             nonlocal last_progress_at
@@ -1538,18 +1596,18 @@ class PluginUI:
             publisher = getattr(self.kodi, "update_scan_status", None)
             if callable(publisher):
                 publisher(scan_token, source.label, path, stats.pictures_seen)
-            update_dialog(0, message)
+            update_dialog(message)
 
-        scanner = Scanner(
-            self.catalog,
-            self.runtime.filesystem,
-            settings,
-            self.kodi.log,
-            cancelled=cancelled,
-            progress=progress,
-            started=begin_status,
-        )
         try:
+            scanner = Scanner(
+                self.catalog,
+                self.runtime.filesystem,
+                settings,
+                self.kodi.log,
+                cancelled=cancelled,
+                progress=progress,
+                started=begin_status,
+            )
             stats = scanner.scan_sources(source_ids)
             if abort_requested():
                 self.kodi.log.info(
@@ -1558,7 +1616,8 @@ class PluginUI:
                 return
             if stats.cancelled:
                 self.kodi.log.info("Manual scan cancelled by user")
-                self.kodi.notify(self.text(30042, "Scan cancelled"))
+                if not self._playback_active():
+                    self.kodi.notify(self.text(30042, "Scan cancelled"))
             else:
                 message = "%s: %d, %s: %d" % (
                     self.text(30047, "Pictures found"),
@@ -1566,18 +1625,35 @@ class PluginUI:
                     self.text(30050, "Errors"),
                     stats.errors,
                 )
-                self.kodi.notify(message, error=stats.errors > 0, milliseconds=6000)
+                if not self._playback_active():
+                    self.kodi.notify(
+                        message,
+                        error=stats.errors > 0,
+                        milliseconds=6000,
+                    )
         except RuntimeError as exc:
-            if not abort_requested():
+            self.kodi.log.warning("Manual scan could not run: %s", exc)
+            if not abort_requested() and not self._playback_active():
                 self.kodi.notify(str(exc), error=True)
+        except Exception as exc:
+            self.kodi.log.error("Manual scan failed: %s", exc)
+            if not abort_requested() and not self._playback_active():
+                self.kodi.notify(
+                    "%s: %s" % (self.text(30028, "Scanning failed"), exc),
+                    error=True,
+                    milliseconds=7000,
+                )
         finally:
+            close_progress_dialog()
             if scan_started:
                 finisher = getattr(self.kodi, "finish_scan_status", None)
                 if callable(finisher):
-                    finisher(scan_token)
-            if not abort_requested():
-                dialog.close()
-                xbmc.executebuiltin("Container.Refresh")
+                    try:
+                        finisher(scan_token)
+                    except Exception as exc:
+                        self.kodi.log.warning(
+                            "Could not clear manual scan status: %s", exc
+                        )
 
     def dispatch(self, request: Request):
         route = request.route

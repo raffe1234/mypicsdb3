@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.3.4 - 2026-07-29
+
+- Fix the Kodi GUI lock that could occur after **Stop scan** by removing
+  `Container.Refresh` from both the stop action and the manual scan completion
+  path. Scan cancellation now closes its progress dialog and clears shared scan
+  state without asking the still-updating Pictures container to refresh itself.
+- Keep manual as well as automatic scan progress completely hidden during Live
+  TV, TV episodes, movies, music or other playback. Completion, cancellation
+  and failure notifications are also suppressed while media is playing.
+- Make **Pause scans during media playback** apply when playback starts in the
+  middle of an automatic scan, not only when the scheduled scan is about to
+  begin. A cancel request is still honoured immediately while the scan waits.
+- Recreate the non-modal progress dialog after playback ends, while keeping the
+  cross-interpreter **Scan status** data available throughout the hidden or
+  paused period.
+- Treat progress-dialog creation, update and close failures as non-fatal, catch
+  unexpected manual scanner setup/runtime failures, and always close the dialog
+  before clearing shared scan state.
+- Guard notification and player-state calls during Kodi shutdown, and avoid a
+  midnight `Container.Refresh` on unrelated PVR, video or other add-on windows
+  when the standard Estuary skin is active.
+- Require no catalogue rescan, database migration or Estuary package update;
+  database schema 5, Query Model version 1, skin revisions and repository add-on
+  version 0.2.26 remain unchanged.
+
 ## 0.3.3 - 2026-07-29
 
 - Fix OK/Enter on MyPicsDB home-screen picture widgets by using Kodi's

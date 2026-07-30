@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.3.3 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.3.4 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search performance still require
@@ -20,8 +20,8 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
   unfinished folder.
 - Session-visible scan progress for manual and automatic scans, with a
   confirmation-protected **Stop scan** action that cancels at the next safe
-  file or folder checkpoint. Automatic scan progress is hidden while Live TV,
-  TV episodes, movies or other media are playing and returns after playback.
+  file or folder checkpoint. Scan progress is hidden while Live TV, TV
+  episodes, movies or other media are playing and returns after playback.
 - SQLite by default, using WAL mode and a local add-on profile database.
 - Optional shared MySQL/MariaDB catalogue through PyMySQL.
 - EXIF capture date, camera, orientation, dimensions, rating and optional GPS.
@@ -351,6 +351,8 @@ progress indicator, so you can continue using the interface. Exiting Kodi
 cancels the scan safely. While a scan is active, **Scan now** is replaced by
 **Stop scan**. Confirming that action requests a soft stop; the current file
 operation is allowed to finish before the scan records its cancelled state.
+The stop action does not refresh the active Kodi container while the scan
+plug-in call is still finishing, avoiding a Kodi GUI update race.
 
 The first scan can take time on a large local collection or NAS. Subsequent
 scans are incremental: unchanged files are not read and indexed again. MyPicsDB 3
@@ -528,7 +530,7 @@ to 720. Common choices are:
 
 The background service waits for the configured startup delay and then runs an
 incremental scan. By default, automatic scanning is disabled and scans are
-deferred while Kodi is playing media. Automatic scans now use the same non-modal
+deferred while Kodi is playing media. Automatic scans use the same non-modal
 background progress indicator as manual scans. The main menu and **Scan status**
 show the current source, file and number of discovered media items. If **Pause
 scans during media playback** is disabled, scanning may continue silently while
@@ -538,9 +540,11 @@ stops. **Scan status** still exposes the current source and count.
 
 Both **Scan now** and **Scan selected source** use Kodi's non-modal background
 progress indicator, so the interface remains available. When **Pause scans
-during media playback** is enabled, a manual scan pauses at the next file or
-folder checkpoint after playback starts and resumes automatically after playback
-stops. This applies to movies, TV episodes, music and other media playback. The
+during media playback** is enabled, both manual and automatic scans pause at the
+next file or folder checkpoint after playback starts and resume automatically
+after playback stops. This applies to movies, TV episodes, music and other media
+playback. The progress dialog is closed before playback and no pause, resume,
+completion or cancellation notification is shown over the playing media. The
 background indicator itself does not provide a cancel button, but the MyPicsDB 3
 main menu and **Scan status** expose **Stop scan** with a confirmation prompt.
 Exiting Kodi also interrupts the scan safely. The log distinguishes a user
@@ -702,14 +706,14 @@ authors. Contributions and issue reports are welcome.
 Update the MyPicsDB 3 plug-in version with:
 
 ```bash
-python3 tools/set_version.py 0.3.3
+python3 tools/set_version.py 0.3.4
 ```
 
 The repository add-on keeps its existing version during normal plug-in
 releases. Bump it only when `repository.mypicsdb3` itself changes:
 
 ```bash
-python3 tools/set_version.py 0.3.3 --repository-version 0.3.3
+python3 tools/set_version.py 0.3.4 --repository-version 0.3.4
 ```
 
 The skin version and pinned upstream Kodi tag are maintained separately in
