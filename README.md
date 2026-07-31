@@ -465,7 +465,7 @@ Unicode text is normalized and case-folded, so Swedish letters such as å, ä an
 
 Multiple words use AND semantics: every word must occur somewhere in the same
 picture's search document, but the words may come from different fields. For
-example, `fujifilm göteborg sommar` can match a camera make, a city and a
+example, `fujifilm london summer` can match a camera make, a city and a
 keyword on one picture. Search does not currently implement phrase search,
 fuzzy matching or prefix completion.
 
