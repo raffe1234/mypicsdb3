@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.3 - 2026-07-31
+
+- Add a clear developer onboarding path from the main README.
+- Add architecture and data-flow documentation for the plug-in, background
+  service, scanner, database, search, slideshows and Estuary integration.
+- Add local development instructions and practical Git, GitHub Actions and
+  QNAP/NAS workflows.
+- Expand the contribution guide with testing, documentation and release
+  guidance.
+
 ## 0.4.2 - 2026-07-30
 
 - Restore the original `widget_limit` setting as the single source of truth for

@@ -8,9 +8,29 @@ widgets for Kodi 21 Omega and Kodi 22 Piers.
 > Status: 0.4.2 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
-> mixed-media playlist integration, backup and restore, and large-library search performance still require
-> documented validation on real Kodi installations before calling the project
+> mixed-media playlist integration, backup and restore, and large-library search
+> performance still require documented validation on real Kodi installations before calling the project
 > production-stable.
+
+## Want to help develop MyPicsDB 3?
+
+New contributors do not need to read the whole repository before making a
+useful change. Start with [Start here: developing MyPicsDB 3](docs/START_HERE.md),
+which explains the two entry points, the main modules, the most important safety
+rules and where to begin for different types of work.
+
+A suitable reading order is:
+
+1. read this README for the user-facing purpose and behaviour;
+2. read [START_HERE.md](docs/START_HERE.md) for the system overview;
+3. choose the relevant guide in the [data-flow index](docs/flows/README.md);
+4. set up and test the project with
+   [LOCAL_DEVELOPMENT.md](docs/LOCAL_DEVELOPMENT.md);
+5. follow [CONTRIBUTING.md](CONTRIBUTING.md) for branches, commits, GitHub
+   Actions and pull requests.
+
+For the component boundaries and long-lived safety rules, see
+[ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Features
 

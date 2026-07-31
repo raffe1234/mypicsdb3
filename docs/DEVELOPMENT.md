@@ -1,5 +1,9 @@
 # Development notes
 
+New to the project? Read [Start here](START_HERE.md),
+[Architecture](ARCHITECTURE.md), the [data-flow index](flows/README.md) and
+[Local development](LOCAL_DEVELOPMENT.md) before using these specialist notes.
+
 ## Design boundaries
 
 - `filesystem.py` isolates Kodi VFS operations.
@@ -25,8 +29,10 @@ fresh-database schema, add one deterministic and checksummed migration step,
 and test upgrades from every supported schema. Never change a checksum after
 release. See `docs/DATABASE_MIGRATIONS.md`. Version 0.2.13 introduced the
 migration foundation while retaining schema version 1. Version 0.2.15 raised the
-catalogue to schema version 2. Version 0.2.19 raises it to schema version 3
-with normalized global-search documents.
+catalogue to schema version 2. Version 0.2.19 raised it to schema version 3
+with normalized global-search documents. Later migrations added mixed-media
+rows in schema 4 and saved searches in schema 5. See
+`docs/DATABASE_MIGRATIONS.md` for the current sequence.
 
 ## Building the Estuary skin
 
