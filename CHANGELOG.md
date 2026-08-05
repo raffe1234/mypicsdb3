@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.6 - 2026-08-05
+
+- Show **Scan duration** for the latest completed scan on the Scan status
+  screen.
+- Show **Elapsed time** when Scan status is opened or refreshed while a
+  manual or automatic scan is running.
+- Accept both SQLite timestamp strings and MariaDB/PyMySQL datetime values;
+  invalid or incomplete timestamps are omitted safely. No database migration or
+  rescan is required.
+
 ## 0.4.5 - 2026-08-05
 
 - Fix Random memories, Random albums and On this day - random changing whenever

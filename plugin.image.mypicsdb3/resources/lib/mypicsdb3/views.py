@@ -51,7 +51,9 @@ from .slideshow import (
     stop_active_media_players,
 )
 from .utils import (
+    duration_seconds,
     extension_of,
+    format_duration,
     kodi_generated_video_thumbnail_uri,
     kodi_image_uri,
     parse_bool,
@@ -1453,6 +1455,18 @@ class PluginUI:
             "%s: %s" % (self.text(30040, "Indexed albums"), overview["folders"]),
             "%s: %s" % (self.text(30036, "Last scan"), latest.get("finished_at") if latest else self.text(30037, "Never")),
         ]
+        if latest:
+            latest_duration = duration_seconds(
+                latest.get("started_at"), latest.get("finished_at")
+            )
+            if latest_duration is not None:
+                values.append(
+                    "%s: %s"
+                    % (
+                        self.text(32797, "Scan duration"),
+                        format_duration(latest_duration),
+                    )
+                )
         if active:
             kind = (
                 self.text(32731, "Automatic scan")
@@ -1473,6 +1487,15 @@ class PluginUI:
                     ),
                 ]
             )
+            try:
+                elapsed = max(0, time.time() - float(active.get("started_at")))
+            except (TypeError, ValueError):
+                elapsed = None
+            if elapsed is not None:
+                values.append(
+                    "%s: %s"
+                    % (self.text(32798, "Elapsed time"), format_duration(elapsed))
+                )
             if active.get("source"):
                 values.append(
                     "%s: %s"

@@ -224,6 +224,27 @@ class FakeCatalog:
     def sync_sources(self, sources):
         return []
 
+    def overview(self):
+        return {
+            "backend": "sqlite",
+            "pictures": 20,
+            "videos": 2,
+            "missing": 1,
+            "folders": 4,
+        }
+
+    def latest_scan(self):
+        return {
+            "started_at": "2026-08-05 12:00:00.000000",
+            "finished_at": "2026-08-05 12:04:18.000000",
+            "status": "completed",
+            "pictures_seen": 20,
+            "pictures_added": 3,
+            "pictures_updated": 2,
+            "pictures_unchanged": 15,
+            "errors": 0,
+        }
+
     def get_sources(self):
         return [types.SimpleNamespace(id=7, label="FotonTest", enabled=False)]
 
@@ -420,6 +441,26 @@ def test_root_replaces_scan_now_with_stop_scan_while_scan_is_active(monkeypatch)
     assert "plugin://plugin.image.mypicsdb3/action/stop-scan" in urls
     assert "Stop scan" in labels
 
+
+
+def test_scan_status_shows_completed_duration_and_active_elapsed_time(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.scan_state = {
+        "token": "scan-1",
+        "kind": "manual",
+        "state": "running",
+        "pictures_seen": 12,
+        "started_at": 1000.0,
+    }
+    monkeypatch.setattr(views.time, "time", lambda: 1125.0)
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.status()
+
+    labels = [item.label for _url, item, _is_folder in calls.items]
+    assert "Scan duration: 4 min 18 sec" in labels
+    assert "Elapsed time: 2 min 5 sec" in labels
 
 
 def test_refresh_random_selections_refreshes_widgets_without_scanning(monkeypatch) -> None:

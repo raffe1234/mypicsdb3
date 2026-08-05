@@ -418,7 +418,8 @@ Open **Scan status** after a scan to see:
 - active database backend;
 - indexed and missing-picture counts;
 - indexed-album count;
-- last scan time and status;
+- last scan time, duration and status;
+- elapsed time when Scan status is opened or refreshed during a running scan;
 - found, updated and unchanged-picture counts;
 - scan errors.
 

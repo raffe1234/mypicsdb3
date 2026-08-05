@@ -22,6 +22,58 @@ def local_datetime_from_timestamp(value: float) -> str:
     return datetime.fromtimestamp(value).strftime("%Y-%m-%d %H:%M:%S")
 
 
+def duration_seconds(started_at: Any, finished_at: Any) -> Optional[int]:
+    """Return whole elapsed seconds between two stored scan timestamps.
+
+    SQLite returns text values while PyMySQL may return ``datetime`` objects.
+    MyPicsDB 3 stores scan timestamps in UTC, so naive values are interpreted as
+    UTC before the difference is calculated. Invalid or incomplete timestamps
+    return ``None`` instead of breaking the Scan status screen.
+    """
+
+    def parse(value: Any) -> Optional[datetime]:
+        if isinstance(value, datetime):
+            parsed = value
+        else:
+            text = str(value or "").strip()
+            if not text:
+                return None
+            if text.endswith("Z"):
+                text = text[:-1] + "+00:00"
+            try:
+                parsed = datetime.fromisoformat(text)
+            except (TypeError, ValueError):
+                return None
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+        return parsed.astimezone(timezone.utc)
+
+    started = parse(started_at)
+    finished = parse(finished_at)
+    if started is None or finished is None:
+        return None
+    return max(0, int(round((finished - started).total_seconds())))
+
+
+def format_duration(seconds: Any) -> str:
+    """Format elapsed seconds compactly for Kodi list labels."""
+
+    try:
+        total = max(0, int(round(float(seconds))))
+    except (TypeError, ValueError):
+        total = 0
+    hours, remainder = divmod(total, 3600)
+    minutes, seconds_part = divmod(remainder, 60)
+    parts = []
+    if hours:
+        parts.append("%d h" % hours)
+    if minutes:
+        parts.append("%d min" % minutes)
+    if seconds_part or not parts:
+        parts.append("%d sec" % seconds_part)
+    return " ".join(parts)
+
+
 def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8", "surrogatepass")).hexdigest()
 
