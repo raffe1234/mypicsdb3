@@ -79,7 +79,11 @@ helpers so parameters are encoded consistently.
 - next-page items.
 
 Kodi metadata and artwork differ for pictures, videos and albums. Do not assume
-that a row from the historical `pictures` table is always a still image.
+that a row from the historical `pictures` table is always a still image. Still
+pictures must not receive a VideoInfoTag: Kodi can otherwise send their direct
+file paths to VideoPlayer instead of the native picture viewer. Publish
+`MyPicsDB3.WidgetLabel` independently for Estuary captions, and reserve
+VideoInfoTag metadata for actual videos and non-media display items.
 
 ## Rating display policy
 

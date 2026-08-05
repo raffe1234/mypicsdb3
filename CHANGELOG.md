@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.4.7 - 2026-08-05
+
+- Fix still pictures opened from Recent albums, Random albums and other indexed
+  album views being sent to Kodi's VideoPlayer and returning immediately to the
+  thumbnail grid instead of opening in the native picture viewer.
+- Keep `MyPicsDB3.WidgetLabel` available for Estuary captions while avoiding a
+  VideoInfoTag on still-picture rows. Video items and album tiles retain their
+  existing metadata and behaviour. No database migration or rescan is required.
+
 ## 0.4.6 - 2026-08-05
 
 - Show **Scan duration** for the latest completed scan on the Scan status

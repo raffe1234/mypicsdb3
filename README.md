@@ -202,9 +202,11 @@ to Kodi's generated video frame. Widget items also publish filenames and album n
 MyPicsDB 3 uses a dedicated picture-poster widget that reserves a caption area
 under each thumbnail, shows a subdued label normally and a brighter scrolling
 label while focused. Standard Estuary movie and TV widgets remain unchanged.
-Widget pictures open through Kodi's picture viewer, videos keep normal
-playback and album tiles open in the Pictures window. No rescan is required for
-these display choices. Use **Play slideshow from here** on
+Widget pictures and still pictures selected inside indexed albums open through
+Kodi's native picture viewer. Still-picture rows deliberately avoid a
+VideoInfoTag so Kodi does not route JPEG/PNG files through VideoPlayer; videos
+keep normal playback and album tiles open in the Pictures window. No rescan is
+required for these display choices. Use **Play slideshow from here** on
 a media item or **Play mixed
 slideshow** on an album. Video-only results use Kodi's video playlist.
 Picture-only album trees use Kodi's native recursive slideshow. Mixed album

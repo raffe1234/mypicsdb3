@@ -959,8 +959,10 @@ def test_widget_items_publish_titles_for_estuary_poster_rows(monkeypatch) -> Non
         def __init__(self, label="", path=""):
             super().__init__(label, path)
             self.video_tag = WidgetVideoTag()
+            self.video_tag_requests = 0
 
         def getVideoInfoTag(self):
+            self.video_tag_requests += 1
             return self.video_tag
 
     views.xbmcgui.ListItem = WidgetListItem
@@ -970,7 +972,8 @@ def test_widget_items_publish_titles_for_estuary_poster_rows(monkeypatch) -> Non
     ui.dispatch(views.Request("recent-taken", {}))
 
     _url, picture, _is_folder = calls.items[0]
-    assert picture.video_tag.title == "image.jpg"
+    assert picture.video_tag_requests == 0
+    assert picture.video_tag.title is None
     assert picture.properties["MyPicsDB3.WidgetLabel"] == "image.jpg"
 
     _url, album, is_folder = ui._folder_item(
@@ -984,6 +987,7 @@ def test_widget_items_publish_titles_for_estuary_poster_rows(monkeypatch) -> Non
             "representative_media_type": "picture",
         }
     )
+    assert album.video_tag_requests == 1
     assert album.video_tag.title == "Summer album  [COLOR=grey](3)[/COLOR]"
     assert album.properties["MyPicsDB3.WidgetLabel"] == album.label
     assert is_folder is True

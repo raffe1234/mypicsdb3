@@ -248,9 +248,21 @@ class PluginUI:
         except Exception:
             pass
 
-    def _item(self, label: str, art: Optional[str] = None, path: Optional[str] = None) -> xbmcgui.ListItem:
+    def _item(
+        self,
+        label: str,
+        art: Optional[str] = None,
+        path: Optional[str] = None,
+        publish_video_title: bool = True,
+    ) -> xbmcgui.ListItem:
         item = xbmcgui.ListItem(label=label, path=path or "")
-        self._set_widget_title(item, label)
+        if publish_video_title:
+            self._set_widget_title(item, label)
+        else:
+            try:
+                item.setProperty("MyPicsDB3.WidgetLabel", str(label or ""))
+            except Exception:
+                pass
         image = art or self.icon
         item.setArt({
             "thumb": image,
@@ -570,7 +582,15 @@ class PluginUI:
         art_uri = self._media_art_uri(
             media_uri, row.get("thumb_uri"), media_type
         )
-        item = self._item(label, art_uri, media_uri)
+        # Do not create a VideoInfoTag for ordinary still-picture rows. Kodi
+        # can otherwise route a direct JPEG/PNG path through VideoPlayer instead
+        # of the native picture viewer. Videos receive their VideoInfoTag below.
+        item = self._item(
+            label,
+            art_uri,
+            media_uri,
+            publish_video_title=False,
+        )
         info: Dict[str, Any] = {"title": label, "picturepath": media_uri, "date": date_text}
         if row.get("width") and row.get("height"):
             info["resolution"] = "%sx%s" % (row["width"], row["height"])
