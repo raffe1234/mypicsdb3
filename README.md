@@ -616,7 +616,9 @@ MyPicsDB 3 skin. The selected MyPicsDB 3 skin remains installed and receives its
 own updates through the MyPicsDB 3 repository.
 
 The repository maintains separate Estuary channels for Kodi 21 Omega and Kodi
-22 Piers. Kodi selects the matching channel from the repository add-on's
+22 Piers. Each generated skin pins the validated `xbmc.gui` compatibility
+version for its channel instead of inheriting a potentially changing upstream
+value. Kodi selects the matching channel from the repository add-on's
 `minversion` and `maxversion` ranges. A scheduled GitHub Actions workflow checks
 the official Kodi releases once per day, patches and validates a new Estuary
 source, and publishes it only if every test succeeds.

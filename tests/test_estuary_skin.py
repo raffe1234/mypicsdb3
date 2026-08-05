@@ -25,6 +25,7 @@ def config() -> EstuaryConfig:
         codename="Omega",
         minversion="21.0.0",
         maxversion="21.99.99",
+        xbmc_gui_version="5.17.0",
         ref="21.3-Omega",
         archive_url="https://example.invalid/xbmc.zip",
         source_addon_id="skin.estuary",
@@ -41,7 +42,7 @@ def create_estuary_fixture(path: Path) -> Path:
     (path / "addon.xml").write_text(
         """<?xml version="1.0" encoding="UTF-8"?>
 <addon id="skin.estuary" name="Estuary" version="4.0.0" provider-name="Kodi">
-  <requires><import addon="xbmc.gui" version="5.17.0" /></requires>
+  <requires><import addon="xbmc.gui" version="5.18.0" /></requires>
   <extension point="xbmc.gui.skin" debugging="false"><res width="1920" height="1080" aspect="16:9" default="true" folder="xml" /></extension>
   <extension point="xbmc.addon.metadata">
     <summary lang="en_GB">Estuary</summary>
@@ -234,9 +235,12 @@ def test_upstream_config_has_versioned_channels_and_history():
     assert project.retain_versions == 5
     assert set(project.channels) == {"omega", "piers"}
     assert project.channels["omega"].releases[0].ref == "21.3-Omega"
-    assert project.channels["omega"].patch_revision == 12
-    assert project.channels["omega"].releases[0].skin_version == "21.3.12"
-    assert project.channels["piers"].patch_revision == 10
+    assert project.channels["omega"].xbmc_gui_version == "5.17.0"
+    assert project.channels["omega"].patch_revision == 13
+    assert project.channels["omega"].releases[0].skin_version == "21.3.13"
+    assert project.channels["piers"].xbmc_gui_version == "5.17.0"
+    assert project.channels["piers"].patch_revision == 11
+    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.11"
     assert project.channels["piers"].releases[0].ref == "22.0b1-Piers"
     assert all(
         len(channel.releases) <= project.retain_versions
@@ -254,3 +258,4 @@ def test_upstream_config_is_valid_json():
     assert data["channels"]["omega"]["maxversion"] == "21.89.999"
     assert data["channels"]["piers"]["minversion"] == "21.90.0"
     assert data["channels"]["piers"]["kodi_major"] == 22
+    assert data["channels"]["piers"]["xbmc_gui_version"] == "5.17.0"

@@ -46,6 +46,7 @@ class EstuaryChannel:
     include_prereleases: bool
     minversion: str
     maxversion: str
+    xbmc_gui_version: str
     patch_revision: int
     releases: tuple[EstuaryRelease, ...]
 
@@ -66,6 +67,7 @@ class EstuaryChannel:
             include_prereleases=bool(data["include_prereleases"]),
             minversion=str(data["minversion"]),
             maxversion=str(data["maxversion"]),
+            xbmc_gui_version=str(data["xbmc_gui_version"]),
             patch_revision=int(data["patch_revision"]),
             releases=releases,
         )
@@ -120,6 +122,7 @@ class EstuaryProjectConfig:
             codename=channel.codename,
             minversion=channel.minversion,
             maxversion=channel.maxversion,
+            xbmc_gui_version=channel.xbmc_gui_version,
             ref=release.ref,
             archive_url=release.archive_url,
             source_addon_id=self.source_addon_id,
@@ -138,6 +141,7 @@ class EstuaryConfig:
     codename: str
     minversion: str
     maxversion: str
+    xbmc_gui_version: str
     ref: str
     archive_url: str
     source_addon_id: str
@@ -288,11 +292,19 @@ def patch_addon_xml(addon_path: Path, config: EstuaryConfig, plugin_version: str
     if requires is None:
         requires = ET.Element("requires")
         root.insert(0, requires)
+    gui_import = None
     plugin_import = None
     for dependency in requires.findall("import"):
-        if dependency.attrib.get("addon") == "plugin.image.mypicsdb3":
+        addon_id = dependency.attrib.get("addon")
+        if addon_id == "xbmc.gui":
+            gui_import = dependency
+        elif addon_id == "plugin.image.mypicsdb3":
             plugin_import = dependency
-            break
+    if gui_import is None:
+        gui_import = ET.Element("import")
+        requires.insert(0, gui_import)
+    gui_import.set("addon", "xbmc.gui")
+    gui_import.set("version", config.xbmc_gui_version)
     if plugin_import is None:
         plugin_import = ET.SubElement(requires, "import")
     plugin_import.set("addon", "plugin.image.mypicsdb3")

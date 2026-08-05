@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.8 - 2026-08-05
+
+- Pin the generated Omega and Piers Estuary packages to the validated
+  `xbmc.gui` compatibility level `5.17.0` instead of inheriting a changing
+  value from the upstream skin source. This removes the Piers compatibility
+  warning from `kodi-addon-checker`.
+- Bump generated Estuary revisions to Kodi 21 revision 13 and Kodi 22 revision
+  11 because their dependency metadata changes. The plug-in version is 0.4.8;
+  database schema 5 and repository add-on version 0.2.26 remain unchanged.
+
 ## 0.4.7 - 2026-08-05
 
 - Fix still pictures opened from Recent albums, Random albums and other indexed

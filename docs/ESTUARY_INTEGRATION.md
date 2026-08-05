@@ -158,9 +158,11 @@ Standard Estuary uses the add-on ID `skin.estuary`. The fork uses
 versions, settings and update records. Updating Kodi or standard Estuary cannot
 overwrite the fork.
 
-The generated skin keeps Estuary's original `xbmc.gui` dependency from the
-matching Kodi source and adds a dependency on the current
-`plugin.image.mypicsdb3` version.
+The generated skin pins `xbmc.gui` to the compatibility version configured
+for its Kodi channel and adds a dependency on the current
+`plugin.image.mypicsdb3` version. The explicit pin prevents a changing upstream
+Estuary declaration from producing checker warnings or silently changing the
+compatibility contract of an already configured channel.
 
 ## Returning to standard Estuary
 
