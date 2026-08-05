@@ -1958,6 +1958,29 @@ class PluginUI:
             return self.saved_searches(params)
         if route == "saved-search":
             return self.saved_search(int(params["id"]), params)
+        if route == "home-smart":
+            try:
+                slot = int(params.get("slot") or 0)
+            except (TypeError, ValueError):
+                slot = 0
+            if slot < 1 or slot > 9:
+                self.kodi.log.warning(
+                    "Smart home row ignored because its slot is invalid: %s",
+                    params.get("slot"),
+                )
+                return self.finish([], content="images", cache=False)
+            try:
+                saved_search_id = int(
+                    self.kodi.addon.getSetting("home_smart_id_%d" % slot) or 0
+                )
+            except (TypeError, ValueError):
+                saved_search_id = 0
+            if saved_search_id <= 0:
+                self.kodi.log.warning(
+                    "Smart home row %d has no saved collection", slot
+                )
+                return self.finish([], content="images", cache=False)
+            return self.saved_search(saved_search_id, params)
         if route == "sources":
             return self.sources(params)
         if route == "source":

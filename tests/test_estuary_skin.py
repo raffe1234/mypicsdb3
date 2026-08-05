@@ -236,11 +236,11 @@ def test_upstream_config_has_versioned_channels_and_history():
     assert set(project.channels) == {"omega", "piers"}
     assert project.channels["omega"].releases[0].ref == "21.3-Omega"
     assert project.channels["omega"].xbmc_gui_version == "5.17.0"
-    assert project.channels["omega"].patch_revision == 13
-    assert project.channels["omega"].releases[0].skin_version == "21.3.13"
+    assert project.channels["omega"].patch_revision == 14
+    assert project.channels["omega"].releases[0].skin_version == "21.3.14"
     assert project.channels["piers"].xbmc_gui_version == "5.17.0"
-    assert project.channels["piers"].patch_revision == 11
-    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.11"
+    assert project.channels["piers"].patch_revision == 12
+    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.12"
     assert project.channels["piers"].releases[0].ref == "22.0b1-Piers"
     assert all(
         len(channel.releases) <= project.retain_versions

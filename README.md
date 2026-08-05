@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.4.2 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.4.9 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search
@@ -516,7 +516,9 @@ preview the matching count and up to ten filenames, and decide whether the
 collection should use the configured global minimum-rating policy. Saving the
 collection opens it immediately and makes it available under **Saved searches**.
 Open **Settings > Home screen > Configure home-screen rows** to add that saved
-collection as a Pictures-home row and choose its order and display mode.
+collection as a Pictures-home row and choose its order and display mode. The
+editor keeps **Cancel**, **Save** and **Defaults** as dedicated buttons on the
+right, so they are not mixed into the scrolling row list.
 
 The configured minimum-rating policy also applies to search results and saved
 searches. Use **Show all pictures temporarily** from the main menu before
@@ -784,6 +786,8 @@ the general widget size and accepts 4–40. **Refresh random home-screen rows ev
 (hours)** defaults to 2 and accepts 1–720. **Configure home-screen rows** opens
 the combined built-in/smart editor. It supports visibility, ordering, adding or
 removing saved smart collections and Poster/Square/Wide mode for smart rows.
+Cancel, Save and Defaults remain visible as right-hand action buttons. The
+Smart filter editor uses the same pattern for Cancel and Save.
 
 ### Repository artwork paths
 

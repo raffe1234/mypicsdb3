@@ -129,7 +129,8 @@ Supported values are:
 | `rated` | Rated pictures |
 | `geotagged` | Geotagged pictures |
 
-For a row whose value is `smart`, read the same numbered settings:
+For a row whose value is `smart`, the add-on still materializes the same
+numbered settings for persistence and downgrade compatibility:
 
 ```text
 home_smart_id_1
@@ -139,8 +140,16 @@ home_smart_mode_1
 
 The ID is an integer saved-search ID, the name is the row heading and the mode
 is `poster`, `square` or `landscape`. The pattern continues through slot 9. The
-combined layout editor owns these hidden materialized values; skins should treat
-them as read-only.
+combined layout editor owns these hidden values; skins should treat them as
+read-only. For runtime skin XML, MyPicsDB 3 publishes comma-free Home-window
+properties instead:
+
+```text
+MyPicsDB3.HomeRow1
+MyPicsDB3.HomeSmartId1
+MyPicsDB3.HomeSmartName1
+MyPicsDB3.HomeSmartMode1
+```
 
 The Media sources visibility setting is:
 
@@ -148,17 +157,28 @@ The Media sources visibility setting is:
 show_media_sources
 ```
 
-Kodi 20 and later can read these values from skin XML:
+Kodi 20 and later can read the published row state from skin XML:
 
 ```xml
 <visible>
   System.HasAddon(plugin.image.mypicsdb3)
   + String.IsEqual(
-      Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),
+      Window(Home).Property(MyPicsDB3.HomeRow1),
       recent_taken
     )
 </visible>
 ```
+
+A smart row should use a fixed slot provider rather than nesting
+`Addon.SettingInt(addon_id,setting_id)` inside `$INFO[...]`, because commas in
+that nested label are parsed as `$INFO` separators:
+
+```text
+plugin://plugin.image.mypicsdb3/home-smart?slot=1&widget=1&home=1
+```
+
+Use `Window(Home).Property(MyPicsDB3.HomeSmartName1)` for the heading and
+`MyPicsDB3.HomeSmartMode1` to select Poster, Square or Wide layout.
 
 Media sources can use:
 

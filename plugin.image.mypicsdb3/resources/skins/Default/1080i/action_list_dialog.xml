@@ -1,0 +1,161 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<window type="dialog">
+  <defaultcontrol always="true">1000</defaultcontrol>
+  <coordinates>
+    <system>1</system>
+    <left>0</left>
+    <top>0</top>
+  </coordinates>
+  <controls>
+    <control type="image" id="1">
+      <left>0</left>
+      <top>0</top>
+      <width>1920</width>
+      <height>1080</height>
+      <texture>home-editor-background.png</texture>
+    </control>
+    <control type="image" id="2">
+      <left>0</left>
+      <top>0</top>
+      <width>1920</width>
+      <height>86</height>
+      <texture>home-editor-focus.png</texture>
+    </control>
+    <control type="label" id="100">
+      <left>42</left>
+      <top>18</top>
+      <width>1500</width>
+      <height>54</height>
+      <label />
+      <font>font20</font>
+      <textcolor>FFFFFFFF</textcolor>
+      <align>left</align>
+      <aligny>center</aligny>
+    </control>
+    <control type="image" id="3">
+      <left>18</left>
+      <top>112</top>
+      <width>1410</width>
+      <height>900</height>
+      <texture>home-editor-panel.png</texture>
+    </control>
+    <control type="image" id="4">
+      <left>1460</left>
+      <top>112</top>
+      <width>442</width>
+      <height>900</height>
+      <texture>home-editor-panel.png</texture>
+    </control>
+    <control type="list" id="1000">
+      <left>34</left>
+      <top>130</top>
+      <width>1378</width>
+      <height>864</height>
+      <onup>1000</onup>
+      <ondown>1000</ondown>
+      <onleft>1000</onleft>
+      <onright>1401</onright>
+      <pagecontrol>60</pagecontrol>
+      <scrolltime>180</scrolltime>
+      <itemlayout width="1378" height="72">
+        <control type="label">
+          <left>18</left>
+          <top>0</top>
+          <width>1320</width>
+          <height>72</height>
+          <font>font13</font>
+          <label>$INFO[ListItem.Label]</label>
+          <textcolor>FFB8C1C4</textcolor>
+          <align>left</align>
+          <aligny>center</aligny>
+        </control>
+      </itemlayout>
+      <focusedlayout width="1378" height="72">
+        <control type="image">
+          <left>0</left>
+          <top>0</top>
+          <width>1378</width>
+          <height>72</height>
+          <texture>home-editor-focus.png</texture>
+        </control>
+        <control type="label">
+          <left>18</left>
+          <top>0</top>
+          <width>1320</width>
+          <height>72</height>
+          <font>font13</font>
+          <label>$INFO[ListItem.Label]</label>
+          <textcolor>FFFFFFFF</textcolor>
+          <align>left</align>
+          <aligny>center</aligny>
+        </control>
+      </focusedlayout>
+    </control>
+    <control type="scrollbar" id="60">
+      <left>1394</left>
+      <top>130</top>
+      <width>14</width>
+      <height>864</height>
+      <orientation>vertical</orientation>
+      <texturesliderbar>home-editor-panel.png</texturesliderbar>
+      <texturesliderbarfocus>home-editor-panel.png</texturesliderbarfocus>
+      <textureslidernib>home-editor-focus.png</textureslidernib>
+      <textureslidernibfocus>home-editor-focus.png</textureslidernibfocus>
+      <showonepage>false</showonepage>
+    </control>
+    <control type="button" id="1401">
+      <left>1480</left>
+      <top>132</top>
+      <width>402</width>
+      <height>82</height>
+      <label />
+      <font>font13</font>
+      <textcolor>FFD8DDDF</textcolor>
+      <focusedcolor>FFFFFFFF</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus>home-editor-focus.png</texturefocus>
+      <texturenofocus>home-editor-panel.png</texturenofocus>
+      <onup>1403</onup>
+      <ondown>1402</ondown>
+      <onleft>1000</onleft>
+      <onright>1401</onright>
+    </control>
+    <control type="button" id="1402">
+      <left>1480</left>
+      <top>226</top>
+      <width>402</width>
+      <height>82</height>
+      <label />
+      <font>font13</font>
+      <textcolor>FFD8DDDF</textcolor>
+      <focusedcolor>FFFFFFFF</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus>home-editor-focus.png</texturefocus>
+      <texturenofocus>home-editor-panel.png</texturenofocus>
+      <onup>1401</onup>
+      <ondown>1403</ondown>
+      <onleft>1000</onleft>
+      <onright>1402</onright>
+    </control>
+    <control type="button" id="1403">
+      <left>1480</left>
+      <top>320</top>
+      <width>402</width>
+      <height>82</height>
+      <label />
+      <font>font13</font>
+      <textcolor>FFD8DDDF</textcolor>
+      <focusedcolor>FFFFFFFF</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus>home-editor-focus.png</texturefocus>
+      <texturenofocus>home-editor-panel.png</texturenofocus>
+      <onup>1402</onup>
+      <ondown>1401</ondown>
+      <onleft>1000</onleft>
+      <onright>1403</onright>
+    </control>
+  </controls>
+</window>

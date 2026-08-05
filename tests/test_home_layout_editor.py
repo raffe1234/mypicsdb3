@@ -250,3 +250,28 @@ def test_smart_home_editor_adds_collection_with_selected_mode() -> None:
     assert result[1].mode == "landscape"
     assert result[1].enabled is True
     assert gui.dialog.ok_calls == []
+
+
+def test_action_list_dialog_xml_has_dynamic_list_and_side_actions() -> None:
+    import xml.etree.ElementTree as ET
+
+    xml_path = (
+        Path(__file__).resolve().parents[1]
+        / "plugin.image.mypicsdb3"
+        / "resources"
+        / "skins"
+        / "Default"
+        / "1080i"
+        / "action_list_dialog.xml"
+    )
+    root = ET.parse(xml_path).getroot()
+    controls = {
+        int(node.attrib["id"]): node
+        for node in root.findall("./controls/control")
+        if "id" in node.attrib
+    }
+
+    assert controls[1000].attrib["type"] == "list"
+    assert all(controls[control_id].attrib["type"] == "button" for control_id in (1401, 1402, 1403))
+    assert controls[1000].findtext("onright") == "1401"
+    assert controls[1401].findtext("onleft") == "1000"

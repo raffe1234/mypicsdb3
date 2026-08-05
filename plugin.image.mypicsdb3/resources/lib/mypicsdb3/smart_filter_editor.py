@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from .action_list_dialog import ActionListDialogUnavailable, show_action_list_dialog
 from .query_model import PictureQuery, QueryValidationError, parse_picture_query
 
 
@@ -40,40 +41,84 @@ class SmartFilterEditor:
         self.text = localize
         self.draft = SmartFilterDraft()
 
-    def run(self) -> Optional[SmartFilterResult]:
-        while True:
-            rule_count = len(self.draft.rules)
-            options = [
-                "%s: %s" % (
-                    self.text(32742, "Match"),
-                    self.text(32743, "All criteria")
-                    if self.draft.match == "all"
-                    else self.text(32744, "Any criterion"),
-                ),
-                "%s: %s" % (self.text(32745, "Sort"), self._sort_label()),
-                "%s: %s" % (
-                    self.text(32746, "Use global minimum rating"),
-                    self.text(32775, "Yes")
-                    if self.draft.apply_min_rating
-                    else self.text(32776, "No"),
-                ),
+    def _main_rows(self) -> Tuple[List[str], int]:
+        rule_count = len(self.draft.rules)
+        rows = [
+            "%s: %s" % (
+                self.text(32742, "Match"),
+                self.text(32743, "All criteria")
+                if self.draft.match == "all"
+                else self.text(32744, "Any criterion"),
+            ),
+            "%s: %s" % (self.text(32745, "Sort"), self._sort_label()),
+            "%s: %s" % (
+                self.text(32746, "Use global minimum rating"),
+                self.text(32775, "Yes")
+                if self.draft.apply_min_rating
+                else self.text(32776, "No"),
+            ),
+        ]
+        rows.extend(self._rule_label(rule) for rule in self.draft.rules)
+        add_index = len(rows)
+        rows.extend(
+            [
+                self.text(32747, "Add criterion"),
+                self.text(32748, "Preview results"),
             ]
-            options.extend(self._rule_label(rule) for rule in self.draft.rules)
-            add_index = len(options)
-            options.extend(
-                [
-                    self.text(32747, "Add criterion"),
-                    self.text(32748, "Preview results"),
-                    self.text(32749, "Save smart collection"),
-                    self.text(32750, "Cancel"),
-                ]
-            )
-            selected = self.dialog.select(
-                self.text(32741, "Smart filter editor"),
-                options,
-            )
-            if selected < 0 or selected == add_index + 3:
-                return None
+        )
+        assert add_index == 3 + rule_count
+        return rows, add_index
+
+    def run(self) -> Optional[SmartFilterResult]:
+        custom_dialog = True
+        selected_index = 0
+        while True:
+            rows, add_index = self._main_rows()
+            selected = -1
+            save_requested = False
+
+            if custom_dialog:
+                try:
+                    selection = show_action_list_dialog(
+                        self.text(32741, "Smart filter editor"),
+                        rows,
+                        (
+                            ("cancel", self.text(32750, "Cancel")),
+                            ("save", self.text(32749, "Save smart collection")),
+                        ),
+                        selected_index=selected_index,
+                    )
+                except ActionListDialogUnavailable:
+                    custom_dialog = False
+                    continue
+
+                if selection is None:
+                    return None
+                kind, value = selection
+                if kind == "action":
+                    if value == "cancel":
+                        return None
+                    save_requested = value == "save"
+                elif kind == "row":
+                    selected = int(value)
+                    selected_index = selected
+            else:
+                # Kodi's native select dialog already displays Cancel. Keep only
+                # the primary Save action in the scrolling fallback list.
+                options = rows + [self.text(32749, "Save smart collection")]
+                selected = self.dialog.select(
+                    self.text(32741, "Smart filter editor"),
+                    options,
+                )
+                if selected < 0:
+                    return None
+                save_requested = selected == len(rows)
+
+            if save_requested:
+                result = self._save_result()
+                if result is not None:
+                    return result
+                continue
             if selected == 0:
                 self.draft.match = "any" if self.draft.match == "all" else "all"
                 continue
@@ -83,6 +128,7 @@ class SmartFilterEditor:
             if selected == 2:
                 self.draft.apply_min_rating = not self.draft.apply_min_rating
                 continue
+            rule_count = len(self.draft.rules)
             if 3 <= selected < 3 + rule_count:
                 self._edit_rule(selected - 3)
                 continue
@@ -93,11 +139,6 @@ class SmartFilterEditor:
                 continue
             if selected == add_index + 1:
                 self._preview()
-                continue
-            if selected == add_index + 2:
-                result = self._save_result()
-                if result is not None:
-                    return result
 
     def build_query(self) -> PictureQuery:
         return parse_picture_query(
@@ -178,7 +219,6 @@ class SmartFilterEditor:
             [
                 self.text(32772, "Edit criterion"),
                 self.text(32773, "Remove criterion"),
-                self.text(32750, "Cancel"),
             ],
         )
         if selected == 1:

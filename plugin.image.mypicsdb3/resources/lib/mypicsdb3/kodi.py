@@ -30,6 +30,11 @@ SCAN_CANCEL_PROPERTY = "MyPicsDB3.ScanCancelV1"
 HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.HomeWidgetGeneration"
 RANDOM_HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.RandomWidgetGeneration"
 HOME_WIDGET_LIMIT_PROPERTY = "MyPicsDB3.HomeWidgetLimit"
+HOME_LAYOUT_SLOT_COUNT = 9
+HOME_ROW_PROPERTY_FORMAT = "MyPicsDB3.HomeRow%d"
+HOME_SMART_ID_PROPERTY_FORMAT = "MyPicsDB3.HomeSmartId%d"
+HOME_SMART_NAME_PROPERTY_FORMAT = "MyPicsDB3.HomeSmartName%d"
+HOME_SMART_MODE_PROPERTY_FORMAT = "MyPicsDB3.HomeSmartMode%d"
 
 INTEGER_SETTING_IDS = frozenset(
     {
@@ -122,6 +127,7 @@ class KodiContext:
                 str(bool(saved)).lower(),
             )
         self.publish_home_widget_limit()
+        self.publish_home_layout_slots()
 
     @staticmethod
     def translate(path: str) -> str:
@@ -384,6 +390,48 @@ class KodiContext:
                 logger.warning("Could not publish home-screen widget limit: %s", exc)
         return limit
 
+    def publish_home_layout_slots(self) -> None:
+        """Publish home-row settings as comma-free Home-window properties.
+
+        Kodi's ``$INFO[...]`` label parser treats commas as prefix/suffix
+        separators, so a nested ``Addon.SettingStr(addon_id,setting_id)`` cannot
+        safely be embedded in widget URLs. The Estuary integration reads these
+        simple properties instead.
+        """
+
+        window = self._home_window()
+        addon = getattr(self, "addon", None)
+        if window is None or addon is None:
+            return
+        try:
+            for position in range(1, HOME_LAYOUT_SLOT_COUNT + 1):
+                row = str(addon.getSetting("home_row_%d" % position) or "none")
+                raw_smart_id = addon.getSetting("home_smart_id_%d" % position)
+                try:
+                    smart_id = max(0, int(raw_smart_id or 0))
+                except (TypeError, ValueError):
+                    smart_id = 0
+                smart_name = str(
+                    addon.getSetting("home_smart_name_%d" % position) or ""
+                )
+                smart_mode = str(
+                    addon.getSetting("home_smart_mode_%d" % position) or "poster"
+                )
+                window.setProperty(HOME_ROW_PROPERTY_FORMAT % position, row)
+                window.setProperty(
+                    HOME_SMART_ID_PROPERTY_FORMAT % position, str(smart_id)
+                )
+                window.setProperty(
+                    HOME_SMART_NAME_PROPERTY_FORMAT % position, smart_name
+                )
+                window.setProperty(
+                    HOME_SMART_MODE_PROPERTY_FORMAT % position, smart_mode
+                )
+        except Exception as exc:
+            logger = getattr(self, "log", None)
+            if logger is not None:
+                logger.warning("Could not publish home-screen layout: %s", exc)
+
     def _increment_home_window_counter(
         self, property_name: str, log_label: str, reason: str = ""
     ) -> int:
@@ -419,6 +467,7 @@ class KodiContext:
         """
 
         self.publish_home_widget_limit()
+        self.publish_home_layout_slots()
         return self._increment_home_window_counter(
             HOME_WIDGET_GENERATION_PROPERTY,
             "Home-screen widgets",

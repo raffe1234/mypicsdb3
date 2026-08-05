@@ -1741,3 +1741,27 @@ def test_picture_info_uses_picture_info_tag_when_available(monkeypatch) -> None:
     assert item.picture_tag.date == "2020-07-17 12:00:00"
     assert item.info["pictures"]["title"] == "image.jpg"
     assert "resolution" not in item.info["pictures"]
+
+
+def test_home_smart_route_resolves_saved_search_id_from_slot(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    query = views.build_global_search_request("spain").query
+    runtime.catalog.saved_search_objects[42] = types.SimpleNamespace(
+        id=42,
+        name="Spain",
+        query=query,
+    )
+    runtime.kodi.addon.setSetting("home_smart_id_8", "42")
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "home-smart",
+            {"slot": "8", "widget": "1", "home": "1", "generation": "4"},
+        )
+    )
+
+    assert calls.category == "Spain"
+    assert runtime.catalog.query_requests[-1][0] is query
+    assert calls.ended is True

@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.4.9 - 2026-08-05
+
+- Fix saved smart collections on the Pictures home screen. Estuary now uses
+  comma-free Home-window slot properties and fixed `home-smart?slot=N`
+  providers instead of embedding two-argument add-on setting labels inside
+  `$INFO[...]` URLs. This prevents malformed IDs such as `home_smart_id_8)`.
+- Replace the scrolling actions in **Configure home-screen rows** with a
+  dynamic XML dialog whose right-hand buttons are **Cancel**, **Save** and
+  **Defaults**. The list contains only rows and **Add smart collection**.
+- Give the Smart filter editor the same action layout: **Cancel** and **Save
+  smart collection** remain visible on the right while criteria and preview
+  actions stay in the list. Native select-dialog fallbacks no longer add a
+  second Cancel entry.
+- Bump generated Estuary revisions to Kodi 21 revision 14 and Kodi 22 revision
+  12. Database schema 5 and repository add-on version 0.2.26 remain unchanged;
+  no rescan or database migration is required.
+
 ## 0.4.8 - 2026-08-05
 
 - Pin the generated Omega and Piers Estuary packages to the validated

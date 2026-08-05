@@ -103,8 +103,9 @@ Preview packages use Kodi's supported pre-release ordering:
 ```
 
 Increase `patch_revision` in a channel when the MyPicsDB 3 patch itself changes
-without a new Kodi release. Then run the updater so all generated versions are
-recalculated.
+without a new Kodi release. Version 0.4.9 uses Omega revision 14 and Piers
+revision 12 because the home-row provider fragment changes. Then run the updater
+so all generated versions are recalculated.
 
 ## Build commands
 

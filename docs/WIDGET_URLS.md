@@ -62,13 +62,23 @@ home screen offers **On this day** and **On this day - random** as separate rows
 
 ## Saved smart collection providers
 
-A saved collection can be used as a read-only widget source:
+A third-party skin can use a saved collection directly as a read-only widget
+source:
 
 ```text
-plugin://plugin.image.mypicsdb3/saved-search?id=42&widget=1&home=1
+plugin://plugin.image.mypicsdb3/saved-search?id=42&widget=1
 ```
 
 The URL contains the database ID, not raw Query Model JSON. MyPicsDB 3 loads and
-validates the stored query on every request. The bundled Estuary integration
-materializes up to nine configured rows and offers Poster, Square and Wide
-layouts for saved smart collections.
+validates the stored query on every request.
+
+The bundled Estuary integration uses fixed slot providers instead:
+
+```text
+plugin://plugin.image.mypicsdb3/home-smart?slot=1&widget=1&home=1&generation=<generation>
+```
+
+The plug-in validates the slot and resolves its materialized saved-search ID.
+This avoids embedding a two-argument add-on setting label inside `$INFO[...]`,
+where its commas can be interpreted as label prefix/suffix separators. Up to
+nine configured slots are available, with Poster, Square and Wide layouts.

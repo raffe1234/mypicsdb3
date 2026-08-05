@@ -382,3 +382,40 @@ def test_random_home_widget_invalidation_uses_separate_generation(monkeypatch) -
     assert context.invalidate_random_home_widgets("test") == 2
     assert properties[kodi.RANDOM_HOME_WIDGET_GENERATION_PROPERTY] == "2"
     assert kodi.HOME_WIDGET_GENERATION_PROPERTY not in properties
+
+
+def test_home_layout_slots_are_published_as_home_window_properties(monkeypatch) -> None:
+    properties = {}
+
+    class FakeWindow:
+        def setProperty(self, key, value):
+            properties[key] = value
+
+    class FakeAddon:
+        values = {
+            "home_row_1": "smart",
+            "home_smart_id_1": "42",
+            "home_smart_name_1": "Spain",
+            "home_smart_mode_1": "square",
+        }
+
+        def getSetting(self, key):
+            return self.values.get(key, "")
+
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(Window=lambda window_id: FakeWindow()),
+    )
+    context = kodi.KodiContext.__new__(kodi.KodiContext)
+    context.addon = FakeAddon()
+    context.log = types.SimpleNamespace(warning=lambda *args: None)
+
+    context.publish_home_layout_slots()
+
+    assert properties["MyPicsDB3.HomeRow1"] == "smart"
+    assert properties["MyPicsDB3.HomeSmartId1"] == "42"
+    assert properties["MyPicsDB3.HomeSmartName1"] == "Spain"
+    assert properties["MyPicsDB3.HomeSmartMode1"] == "square"
+    assert properties["MyPicsDB3.HomeRow9"] == "none"
+    assert properties["MyPicsDB3.HomeSmartId9"] == "0"

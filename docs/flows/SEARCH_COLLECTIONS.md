@@ -96,7 +96,10 @@ home row does not silently point to a removed saved collection.
 
 `SmartFilterEditor` is a Kodi UI builder for Query Model rules. It does not
 construct SQL. It creates a draft, validates each candidate rule, previews the
-count through the catalogue and returns a valid `PictureQuery` for saving.
+count through the catalogue and returns a valid `PictureQuery` for saving. Its
+main XML dialog keeps Cancel and Save as persistent right-hand buttons while
+criteria, Add criterion and Preview results remain in the scrolling list. Small
+field/value choices continue to use native Kodi select dialogs.
 
 When adding a filter field:
 
@@ -112,7 +115,10 @@ When adding a filter field:
 A saved smart collection can be added to the Estuary MyPicsDB 3 home layout.
 The row stores a reference to the saved search, not a frozen set of picture
 IDs. Each widget reload runs the query again, so newly scanned matching media
-appears automatically.
+appears automatically. The editor uses a dynamic list with persistent Cancel,
+Save and Defaults buttons on the right. Estuary calls a fixed
+`home-smart?slot=N` provider; the plug-in resolves the saved-search ID from the
+materialized slot setting.
 
 Changes can span:
 
