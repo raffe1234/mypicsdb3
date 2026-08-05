@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.5 - 2026-08-05
+
+- Fix Random memories, Random albums and On this day - random changing whenever
+  Kodi re-queries an unchanged home provider during the configured interval.
+- Derive the database random pivot from the normal and random provider
+  generations, keeping each selection stable until a scheduled, scan, settings
+  or manual generation change.
+- Keep database schema 5, Estuary revisions 12/10 and repository add-on version
+  0.2.26 unchanged. No catalogue rescan is required.
+
 ## 0.4.4 - 2026-08-05
 
 - Add **Refresh random home-screen rows every (hours)** under **Settings > Home
@@ -7,9 +17,6 @@
 - Give Random memories, Random albums and On this day - random a separate
   Home-window generation value. Scheduled refreshes therefore rerun only the
   random providers instead of rebuilding unrelated MyPicsDB 3 rows.
-- Derive the database random pivot from the provider generations for home-screen
-  requests. Reopening or re-querying the same provider URL now returns the same
-  selection until a scheduled, scan, settings or manual generation change.
 - Keep existing early-refresh paths: catalogue-changing scans and relevant
   home-screen changes still invalidate all MyPicsDB 3 providers, while
   **Refresh random selections** also advances the random generation immediately.

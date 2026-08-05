@@ -41,6 +41,7 @@ combined editor remains in the picture add-on; the skin only consumes the nine
 slots.
 
 The 0.4.4 patch uses Omega patch revision 12 and Piers patch revision 10.
+The plugin-only 0.4.5 stability follow-up keeps those skin revisions unchanged.
 
 ## Automatic upstream refresh
 
