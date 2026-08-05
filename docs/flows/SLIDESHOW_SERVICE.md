@@ -101,6 +101,8 @@ session state safely.
 - notices a local date change and refreshes date-sensitive rows when Kodi is
   idle;
 - notices home-widget limit changes and invalidates MyPicsDB 3 rows;
+- schedules the separate random home-row generation without invalidating
+  non-random providers;
 - exits promptly when Kodi requests abort.
 
 A service change should be reviewed for both steady-state loops and shutdown

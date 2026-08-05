@@ -939,6 +939,16 @@ class PluginUI:
                     "Could not invalidate home-screen widgets: %s", exc
                 )
 
+    def _invalidate_random_home_widgets(self, reason: str) -> None:
+        invalidator = getattr(self.kodi, "invalidate_random_home_widgets", None)
+        if callable(invalidator):
+            try:
+                invalidator(reason)
+            except Exception as exc:
+                self.kodi.log.warning(
+                    "Could not invalidate random home-screen widgets: %s", exc
+                )
+
     def _configure_home_screen(self) -> None:
         saved_names = self._saved_search_name_map()
         items = self._load_home_layout_items(saved_names)
@@ -1623,6 +1633,7 @@ class PluginUI:
             xbmc.executebuiltin("Container.Refresh")
             return
         if route == "action/refresh-random":
+            self._invalidate_random_home_widgets("manual random refresh")
             refresher = getattr(self.kodi, "refresh_random_views", None)
             if callable(refresher):
                 refresher()

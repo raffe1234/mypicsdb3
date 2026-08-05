@@ -68,6 +68,9 @@ def test_home_screen_settings_offer_nine_ordered_slots() -> None:
     assert settings["widget_limit"].findtext("default") == "10"
     assert settings["widget_limit"].findtext("./constraints/minimum") == "4"
     assert settings["widget_limit"].findtext("./constraints/maximum") == "40"
+    assert settings["random_home_refresh_hours"].findtext("default") == "2"
+    assert settings["random_home_refresh_hours"].findtext("./constraints/minimum") == "1"
+    assert settings["random_home_refresh_hours"].findtext("./constraints/maximum") == "720"
     assert settings["home_widget_limit"].findtext("visible") == "false"
     assert settings["home_widget_limit_migrated_v2"].findtext("visible") == "false"
     configure = settings["configure_home_screen"]
@@ -149,6 +152,8 @@ def test_home_fragment_has_visible_titles_and_all_routes() -> None:
     assert "Addon.SettingInt(plugin.image.mypicsdb3,home_widget_limit)" not in home
     assert "&amp;limit=" not in home
     assert "Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)" in home
+    assert home.count("Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)") == 27
+    assert home.count("random_generation=") == 27
     assert "WidgetListSquareMyPicsDB" in home
     assert "WidgetListLandscapeMyPicsDB" in home
     assert "$ADDON[plugin.image.mypicsdb3" not in home

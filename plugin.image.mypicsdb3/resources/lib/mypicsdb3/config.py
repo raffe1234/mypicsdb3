@@ -38,6 +38,7 @@ class Settings:
     database_backend: str = "sqlite"
     widget_limit: int = 10
     home_widget_limit: int = 10
+    random_home_refresh_hours: int = 2
     browser_page_size: int = 100
     show_notifications: bool = True
     minimum_rating_policy: str = RATING_POLICY_ALL
@@ -107,6 +108,9 @@ def from_getter(getter: Callable[[str], Any], profile_path: str) -> Settings:
         database_backend=backend,
         widget_limit=home_widget_limit,
         home_widget_limit=home_widget_limit,
+        random_home_refresh_hours=parse_int(
+            getter("random_home_refresh_hours"), 2, 1, 720
+        ),
         browser_page_size=parse_int(getter("browser_page_size"), 100, 10, 500),
         show_notifications=parse_bool(getter("show_notifications"), True),
         minimum_rating_policy=normalize_rating_policy(getter("minimum_rating_policy")),

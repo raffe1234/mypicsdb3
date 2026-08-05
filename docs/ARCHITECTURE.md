@@ -171,8 +171,9 @@ catalogue query. Raw SQL is not accepted from Kodi routes or saved records.
 ### `service_loop.py`: long-running maintenance
 
 The service synchronizes sources, schedules automatic scans, reacts to local
-date changes, notices home-widget limit changes and advances compatible mixed
-slideshows after video playback. It must remain responsive to Kodi abort
+date changes, notices home-widget limit changes, advances the separate random
+home-row generation on its configured hourly interval and advances compatible
+mixed slideshows after video playback. It must remain responsive to Kodi abort
 requests and defer disruptive work while playback is active when configured.
 
 ### Estuary and build tools

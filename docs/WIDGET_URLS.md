@@ -33,6 +33,21 @@ ignored for bundled home rows. The generation changes when that setting changes
 or a scan changes catalogue rows, making Kodi request fresh provider results
 without a complete skin reload. Third-party widgets should omit `home=1` when
 they want the general widget limit and original media order.
+
+The three random home providers also include a second cache-key parameter:
+
+```text
+plugin://plugin.image.mypicsdb3/random?widget=1&home=1&generation=<generation>&random_generation=<random-generation>
+```
+
+`MyPicsDB3.RandomWidgetGeneration` advances at the interval configured under
+**Settings > Home screen**, two hours by default. It is also advanced by
+**Refresh random selections**. Because only Random memories, Random albums and
+On this day - random include this parameter, scheduled refreshes do not rerun
+the non-random home providers. Catalogue-changing scans still advance the common
+generation and therefore refresh every MyPicsDB 3 row, including the random
+ones.
+
 The optional `limit` is restricted to 1–500 for ordinary widgets; bundled home
 providers use the configured 4–40 home limit instead.
 Interactive views use pagination.

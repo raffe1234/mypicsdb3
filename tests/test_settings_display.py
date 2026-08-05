@@ -18,7 +18,12 @@ def settings_by_id():
 
 def test_general_numeric_settings_show_labels_and_values():
     settings = settings_by_id()
-    for setting_id, label in (("widget_limit", "32782"), ("home_widget_limit", "32782"), ("browser_page_size", "32012")):
+    for setting_id, label in (
+        ("widget_limit", "32782"),
+        ("home_widget_limit", "32782"),
+        ("random_home_refresh_hours", "32795"),
+        ("browser_page_size", "32012"),
+    ):
         setting = settings[setting_id]
         assert setting.attrib["label"] == label
         control = setting.find("control")
@@ -29,6 +34,9 @@ def test_general_numeric_settings_show_labels_and_values():
     assert settings["widget_limit"].findtext("./constraints/maximum") == "40"
     assert settings["home_widget_limit"].findtext("visible") == "false"
     assert settings["home_widget_limit_migrated_v2"].findtext("visible") == "false"
+    assert settings["random_home_refresh_hours"].findtext("default") == "2"
+    assert settings["random_home_refresh_hours"].findtext("./constraints/minimum") == "1"
+    assert settings["random_home_refresh_hours"].findtext("./constraints/maximum") == "720"
 
 
 def test_home_widget_limit_is_unified_and_clamped():
@@ -41,6 +49,22 @@ def test_home_widget_limit_is_unified_and_clamped():
 
     assert settings.widget_limit == 40
     assert settings.home_widget_limit == 40
+
+
+def test_random_home_refresh_interval_defaults_and_is_clamped():
+    defaults = from_getter(lambda _key: "", "/tmp/mypicsdb3")
+    assert defaults.random_home_refresh_hours == 2
+
+    low = from_getter(
+        lambda key: "0" if key == "random_home_refresh_hours" else "",
+        "/tmp/mypicsdb3",
+    )
+    high = from_getter(
+        lambda key: "1000" if key == "random_home_refresh_hours" else "",
+        "/tmp/mypicsdb3",
+    )
+    assert low.random_home_refresh_hours == 1
+    assert high.random_home_refresh_hours == 720
 
 
 def test_pre_035_widget_value_wins_over_temporary_default_ten():
@@ -101,6 +125,7 @@ def test_english_catalogue_is_separated_and_has_clear_labels():
         "Default items per home-screen row",
         "Pictures per browser page",
         "Home-screen pictures per row",
+        "Refresh random home-screen rows every (hours)",
         "Default album view",
         "Configure home-screen rows",
         "Minimum picture rating",

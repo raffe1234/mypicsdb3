@@ -276,6 +276,8 @@ Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings > Home screen** to:
 
 - show or hide Media sources;
 - choose **Home-screen pictures per row** from 4 to 40;
+- choose how often the three random rows receive a new selection, in hours
+  (two hours by default);
 - open **Configure home-screen rows**;
 - enable or disable built-in rows;
 - add a saved smart collection as its own row;
@@ -295,6 +297,12 @@ ten-item widget result. Smart rows run the saved Query Model again whenever the
 widget reloads, so newly scanned matching media appears automatically. Renaming
 or deleting a saved collection updates or removes its home row. Rows with no
 indexed results disappear until matching media has been indexed.
+
+Random memories, Random albums and On this day - random use a separate refresh
+generation. The background service advances it at the configured hourly
+interval, so non-random rows keep their current provider results. A scan that
+changes the catalogue, a relevant home-screen setting change or **Refresh random
+selections** can produce a new random selection before the interval expires.
 
 ### Default album view
 
@@ -766,7 +774,8 @@ In **Settings > General**, the numeric values are shown with descriptive labels:
 nodes shown between Picture sources and the scan actions.
 
 In **Settings > Home screen**, **Home-screen pictures per row** is separate from
-the general widget size and accepts 4–40. **Configure home-screen rows** opens
+the general widget size and accepts 4–40. **Refresh random home-screen rows every
+(hours)** defaults to 2 and accepts 1–720. **Configure home-screen rows** opens
 the combined built-in/smart editor. It supports visibility, ordering, adding or
 removing saved smart collections and Poster/Square/Wide mode for smart rows.
 

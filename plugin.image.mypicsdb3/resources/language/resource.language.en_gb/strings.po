@@ -1194,3 +1194,11 @@ msgstr "Saved smart collection used by this home-screen row."
 msgctxt "#32794"
 msgid "Layout used for this saved smart collection on the home screen."
 msgstr "Layout used for this saved smart collection on the home screen."
+
+msgctxt "#32795"
+msgid "Refresh random home-screen rows every (hours)"
+msgstr "Refresh random home-screen rows every (hours)"
+
+msgctxt "#32796"
+msgid "Choose how often Random memories, Random albums and On this day - random receive a new selection. Scans, relevant home-screen setting changes and Refresh random selections can update them sooner."
+msgstr "Choose how often Random memories, Random albums and On this day - random receive a new selection. Scans, relevant home-screen setting changes and Refresh random selections can update them sooner."

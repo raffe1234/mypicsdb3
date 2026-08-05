@@ -159,6 +159,7 @@ class FakeKodi:
         self.scan_state = {}
         self.scan_cancel_requests = 0
         self.random_refreshes = 0
+        self.random_invalidations = []
 
     def localize(self, string_id, fallback):
         return fallback
@@ -197,6 +198,10 @@ class FakeKodi:
 
     def refresh_random_views(self):
         self.random_refreshes += 1
+
+    def invalidate_random_home_widgets(self, reason):
+        self.random_invalidations.append(reason)
+        return len(self.random_invalidations)
 
     def is_playing(self):
         return False
@@ -425,6 +430,7 @@ def test_refresh_random_selections_refreshes_widgets_without_scanning(monkeypatc
     ui.dispatch(views.Request("action/refresh-random", {}))
 
     assert runtime.kodi.random_refreshes == 1
+    assert runtime.kodi.random_invalidations == ["manual random refresh"]
     assert runtime.kodi.notifications[-1] == ("Random selections refreshed", False)
 
 

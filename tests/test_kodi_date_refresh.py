@@ -355,3 +355,30 @@ def test_home_widget_invalidation_increments_home_window_generation(monkeypatch)
     assert context.invalidate_home_widgets("test") == 2
     assert properties[kodi.HOME_WIDGET_GENERATION_PROPERTY] == "2"
     assert properties[kodi.HOME_WIDGET_LIMIT_PROPERTY] == "39"
+
+
+def test_random_home_widget_invalidation_uses_separate_generation(monkeypatch) -> None:
+    properties = {}
+
+    class FakeWindow:
+        def getProperty(self, key):
+            return properties.get(key, "")
+
+        def setProperty(self, key, value):
+            properties[key] = value
+
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(Window=lambda window_id: FakeWindow()),
+    )
+    context = kodi.KodiContext.__new__(kodi.KodiContext)
+    context.log = types.SimpleNamespace(
+        debug=lambda *args: None,
+        warning=lambda *args: None,
+    )
+
+    assert context.invalidate_random_home_widgets("test") == 1
+    assert context.invalidate_random_home_widgets("test") == 2
+    assert properties[kodi.RANDOM_HOME_WIDGET_GENERATION_PROPERTY] == "2"
+    assert kodi.HOME_WIDGET_GENERATION_PROPERTY not in properties

@@ -71,11 +71,13 @@ class FakeKodi:
         self.cancel_requested = False
         self.playing = False
         self.invalidations = []
+        self.random_invalidations = []
         self.settings = SimpleNamespace(
             auto_scan=True,
             pause_during_playback=False,
             startup_delay_seconds=0,
             scan_interval_hours=24,
+            random_home_refresh_hours=2,
         )
 
     def abort_monitor(self):
@@ -115,6 +117,10 @@ class FakeKodi:
         self.invalidations.append(reason)
         return len(self.invalidations)
 
+    def invalidate_random_home_widgets(self, reason):
+        self.random_invalidations.append(reason)
+        return len(self.random_invalidations)
+
     def create_background_progress(self, heading, message):
         if self.dialog.closed:
             self.dialog = FakeProgressDialog()
@@ -126,6 +132,31 @@ class FakeKodi:
 class FakeEngine:
     def __init__(self, _settings, _log):
         pass
+
+
+def test_random_home_refresh_is_scheduled_changed_and_repeated() -> None:
+    monitor = FakeMonitor()
+    kodi = FakeKodi(monitor)
+    loop = ServiceLoop(kodi, monitor=monitor)
+
+    loop._maintain_random_home_refresh(kodi.settings, 100.0)
+    assert loop.next_random_home_refresh_at == 7300.0
+    assert kodi.random_invalidations == []
+
+    kodi.settings.random_home_refresh_hours = 4
+    loop._maintain_random_home_refresh(kodi.settings, 200.0)
+    assert loop.next_random_home_refresh_at == 14600.0
+    assert kodi.random_invalidations == ["random home refresh interval changed"]
+
+    loop._maintain_random_home_refresh(kodi.settings, 14599.0)
+    assert kodi.random_invalidations == ["random home refresh interval changed"]
+
+    loop._maintain_random_home_refresh(kodi.settings, 14600.0)
+    assert loop.next_random_home_refresh_at == 29000.0
+    assert kodi.random_invalidations == [
+        "random home refresh interval changed",
+        "scheduled random home refresh",
+    ]
 
 
 def test_automatic_scan_publishes_progress_and_closes_dialog(monkeypatch) -> None:

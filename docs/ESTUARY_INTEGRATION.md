@@ -30,13 +30,15 @@ rows. Built-in rows use the existing poster include. Saved smart collections can
 select dedicated Poster, Square or Wide includes and obtain their heading and
 saved-search ID from the matching hidden add-on settings.
 
-Every MyPicsDB 3 provider path includes the live `home_widget_limit` value and
-`MyPicsDB3.HomeWidgetGeneration`. This fixes stale ten-item rows after choosing a
-larger 4–40 value and lets scans invalidate only MyPicsDB 3 providers. The
+Every MyPicsDB 3 provider path includes `MyPicsDB3.HomeWidgetGeneration`. This
+fixes stale rows after changing the configured 4–40 item limit and lets scans
+invalidate only MyPicsDB 3 providers. Random memories, Random albums and On this
+day - random additionally include `MyPicsDB3.RandomWidgetGeneration`, allowing
+the service to refresh only those rows on the configured hourly schedule. The
 combined editor remains in the picture add-on; the skin only consumes the nine
 slots.
 
-The 0.4.1 patch uses Omega patch revision 11 and Piers patch revision 9.
+The 0.4.4 patch uses Omega patch revision 12 and Piers patch revision 10.
 
 ## Automatic upstream refresh
 

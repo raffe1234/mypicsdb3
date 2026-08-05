@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.4 - 2026-08-05
+
+- Add **Refresh random home-screen rows every (hours)** under **Settings > Home
+  screen**, with a default of two hours and a supported range of 1–720 hours.
+- Give Random memories, Random albums and On this day - random a separate
+  Home-window generation value. Scheduled refreshes therefore rerun only the
+  random providers instead of rebuilding unrelated MyPicsDB 3 rows.
+- Keep existing early-refresh paths: catalogue-changing scans and relevant
+  home-screen changes still invalidate all MyPicsDB 3 providers, while
+  **Refresh random selections** also advances the random generation immediately.
+- Add service scheduling and regression coverage for startup scheduling,
+  interval changes and elapsed intervals. No database migration or rescan is
+  required.
+- Bump generated Estuary revisions to Kodi 21 revision 12 and Kodi 22 revision
+  10. The repository add-on remains unchanged.
+
 ## 0.4.3 - 2026-07-31
 
 - Add a clear developer onboarding path from the main README.

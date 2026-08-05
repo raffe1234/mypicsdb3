@@ -82,6 +82,15 @@
           </constraints>
           <control type="spinner" format="integer" />
         </setting>
+        <setting id="random_home_refresh_hours" type="integer" label="32795" help="32796">
+          <level>0</level>
+          <default>2</default>
+          <constraints>
+            <minimum>1</minimum>
+            <maximum>720</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
         <setting id="home_widget_limit" type="integer" label="32782" help="32783">
           <level>4</level>
           <visible>false</visible>

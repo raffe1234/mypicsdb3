@@ -123,6 +123,52 @@ class ServiceLoop:
         self.pending_date_refresh = False
         self.date_refresh_not_before = 0.0
         self.date_refresh_deferred_logged = False
+        self.random_home_refresh_hours = 0
+        self.next_random_home_refresh_at = 0.0
+
+    def _maintain_random_home_refresh(self, settings, now: float) -> None:
+        hours = max(
+            1,
+            min(720, int(getattr(settings, "random_home_refresh_hours", 2))),
+        )
+        interval_seconds = float(hours * 3600)
+
+        if self.random_home_refresh_hours <= 0:
+            self.random_home_refresh_hours = hours
+            self.next_random_home_refresh_at = now + interval_seconds
+            self.kodi.log.info(
+                "Random home-screen refresh interval loaded: %d hours",
+                hours,
+            )
+            return
+
+        reason = ""
+        if hours != self.random_home_refresh_hours:
+            previous = self.random_home_refresh_hours
+            self.random_home_refresh_hours = hours
+            self.next_random_home_refresh_at = now + interval_seconds
+            reason = "random home refresh interval changed"
+            self.kodi.log.info(
+                "Random home-screen refresh interval changed: %d -> %d hours",
+                previous,
+                hours,
+            )
+        elif now >= self.next_random_home_refresh_at:
+            self.next_random_home_refresh_at = now + interval_seconds
+            reason = "scheduled random home refresh"
+
+        if not reason:
+            return
+        invalidator = getattr(self.kodi, "invalidate_random_home_widgets", None)
+        if not callable(invalidator):
+            return
+        try:
+            invalidator(reason)
+        except Exception as exc:
+            self.kodi.log.warning(
+                "Could not refresh random home-screen widgets: %s",
+                exc,
+            )
 
     def _refresh_after_date_change(self) -> None:
         today = self.date_provider()
@@ -213,6 +259,7 @@ class ServiceLoop:
             self.kodi.log.warning("Initial source synchronization failed: %s", exc)
         now = self.monotonic_provider()
         self.next_scan_at = now + settings.startup_delay_seconds
+        self._maintain_random_home_refresh(settings, now)
         next_maintenance_at = now
         slideshow_monitor = MixedSlideshowVideoMonitor(self.kodi, catalog)
 
@@ -222,6 +269,7 @@ class ServiceLoop:
             if now >= next_maintenance_at:
                 self._refresh_after_date_change()
                 settings = self.kodi.refresh_settings()
+                self._maintain_random_home_refresh(settings, now)
                 current_home_widget_limit = int(
                     getattr(settings, "home_widget_limit", 10)
                 )

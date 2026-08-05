@@ -28,12 +28,14 @@ SLIDESHOW_START_TTL_SECONDS = 180.0
 SCAN_STATUS_PROPERTY = "MyPicsDB3.ScanStatusV1"
 SCAN_CANCEL_PROPERTY = "MyPicsDB3.ScanCancelV1"
 HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.HomeWidgetGeneration"
+RANDOM_HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.RandomWidgetGeneration"
 HOME_WIDGET_LIMIT_PROPERTY = "MyPicsDB3.HomeWidgetLimit"
 
 INTEGER_SETTING_IDS = frozenset(
     {
         "widget_limit",
         "home_widget_limit",
+        "random_home_refresh_hours",
         "browser_page_size",
         "album_view_mode",
         "scan_interval_hours",
@@ -382,6 +384,31 @@ class KodiContext:
                 logger.warning("Could not publish home-screen widget limit: %s", exc)
         return limit
 
+    def _increment_home_window_counter(
+        self, property_name: str, log_label: str, reason: str = ""
+    ) -> int:
+        window = self._home_window()
+        if window is None:
+            return 0
+        try:
+            current = int(str(window.getProperty(property_name) or "0"))
+        except (TypeError, ValueError):
+            current = 0
+        generation = 1 if current >= 2147483646 else current + 1
+        try:
+            window.setProperty(property_name, str(generation))
+            if reason:
+                self.log.debug(
+                    "%s invalidated (%s), generation=%d",
+                    log_label,
+                    reason,
+                    generation,
+                )
+            return generation
+        except Exception as exc:
+            self.log.warning("Could not invalidate %s: %s", log_label.lower(), exc)
+            return current
+
     def invalidate_home_widgets(self, reason: str = "") -> int:
         """Change the home content-provider URL without reloading the skin.
 
@@ -392,28 +419,20 @@ class KodiContext:
         """
 
         self.publish_home_widget_limit()
-        window = self._home_window()
-        if window is None:
-            return 0
-        try:
-            current = int(
-                str(window.getProperty(HOME_WIDGET_GENERATION_PROPERTY) or "0")
-            )
-        except (TypeError, ValueError):
-            current = 0
-        generation = 1 if current >= 2147483646 else current + 1
-        try:
-            window.setProperty(HOME_WIDGET_GENERATION_PROPERTY, str(generation))
-            if reason:
-                self.log.debug(
-                    "Home-screen widgets invalidated (%s), generation=%d",
-                    reason,
-                    generation,
-                )
-            return generation
-        except Exception as exc:
-            self.log.warning("Could not invalidate home-screen widgets: %s", exc)
-            return current
+        return self._increment_home_window_counter(
+            HOME_WIDGET_GENERATION_PROPERTY,
+            "Home-screen widgets",
+            reason,
+        )
+
+    def invalidate_random_home_widgets(self, reason: str = "") -> int:
+        """Refresh only Estuary rows whose providers return random results."""
+
+        return self._increment_home_window_counter(
+            RANDOM_HOME_WIDGET_GENERATION_PROPERTY,
+            "Random home-screen widgets",
+            reason,
+        )
 
     def create_background_progress(self, heading: str, message: str):
         if xbmcgui is None:
