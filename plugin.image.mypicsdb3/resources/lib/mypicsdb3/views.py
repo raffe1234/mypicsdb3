@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import calendar
+import hashlib
 import sys
 import time
 import uuid
@@ -192,6 +193,22 @@ class PluginUI:
             HOME_WIDGET_CANDIDATE_MAXIMUM,
             max(limit, limit * HOME_WIDGET_CANDIDATE_MULTIPLIER),
         )
+
+    def _home_random_seed(
+        self, params: Optional[Dict[str, str]], route: str
+    ) -> Optional[float]:
+        if not self._is_home_widget(params):
+            return None
+        values = params or {}
+        token = "\x1f".join(
+            (
+                str(route or ""),
+                str(values.get("generation") or "0"),
+                str(values.get("random_generation") or "0"),
+            )
+        )
+        digest = hashlib.sha256(token.encode("utf-8")).digest()
+        return int.from_bytes(digest[:8], "big") / float(1 << 64)
 
     def _prioritize_home_rows(
         self,
@@ -1934,9 +1951,13 @@ class PluginUI:
                 if self._is_home_widget(params)
                 else limit
             )
-            rows = self._prioritize_home_rows(
-                self.catalog.random_pictures(query_limit), params, limit
+            seed = self._home_random_seed(params, route)
+            random_rows = (
+                self.catalog.random_pictures(query_limit)
+                if seed is None
+                else self.catalog.random_pictures(query_limit, seed)
             )
+            rows = self._prioritize_home_rows(random_rows, params, limit)
             return self.finish(
                 [self._media_item(row, browse_params=params) for row in rows],
                 category=self._rating_category(self.text(30003, "Random memories"), params),
@@ -1952,7 +1973,13 @@ class PluginUI:
             return self.folders(route, self.catalog.recent_folders(limit), self.text(30004, "Recent albums"), params)
         if route == "random-folders":
             limit = self._result_limit(params, self._widget_default_limit(params))
-            return self.folders(route, self.catalog.random_folders(limit), self.text(30005, "Random albums"), params)
+            seed = self._home_random_seed(params, route)
+            rows = (
+                self.catalog.random_folders(limit)
+                if seed is None
+                else self.catalog.random_folders(limit, seed)
+            )
+            return self.folders(route, rows, self.text(30005, "Random albums"), params)
         if route == "on-this-day":
             now = datetime.now()
             getter = lambda limit, offset: self.catalog.on_this_day(now.month, now.day, now.year, limit, offset)
@@ -1965,11 +1992,17 @@ class PluginUI:
                 if self._is_home_widget(params)
                 else limit
             )
-            rows = self._prioritize_home_rows(
-                self.catalog.random_on_this_day(now.month, now.day, now.year, query_limit),
-                params,
-                limit,
+            seed = self._home_random_seed(params, route)
+            random_rows = (
+                self.catalog.random_on_this_day(
+                    now.month, now.day, now.year, query_limit
+                )
+                if seed is None
+                else self.catalog.random_on_this_day(
+                    now.month, now.day, now.year, query_limit, seed
+                )
             )
+            rows = self._prioritize_home_rows(random_rows, params, limit)
             return self.finish(
                 [
                     self._media_item(

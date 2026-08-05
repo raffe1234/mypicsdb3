@@ -35,6 +35,8 @@ fixes stale rows after changing the configured 4–40 item limit and lets scans
 invalidate only MyPicsDB 3 providers. Random memories, Random albums and On this
 day - random additionally include `MyPicsDB3.RandomWidgetGeneration`, allowing
 the service to refresh only those rows on the configured hourly schedule. The
+plug-in hashes both generation values into a stable database pivot, so Estuary
+can re-query an unchanged provider without changing its visible selection. The
 combined editor remains in the picture add-on; the skin only consumes the nine
 slots.
 

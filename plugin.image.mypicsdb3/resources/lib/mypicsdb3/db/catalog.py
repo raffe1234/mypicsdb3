@@ -566,12 +566,28 @@ class Catalog:
     def on_this_day(self, month: int, day: int, current_year: int, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.taken_month=? AND p.taken_day=? AND p.taken_year<?", (month, day, current_year), "p.taken_year DESC, p.taken_at DESC", limit, offset)
 
-    def random_on_this_day(self, month: int, day: int, current_year: int, limit: int) -> List[Dict[str, Any]]:
-        seed = random.random()
+    @staticmethod
+    def _random_pivot(seed: Optional[float] = None) -> float:
+        if seed is None:
+            return random.random()
+        try:
+            return float(seed) % 1.0
+        except (TypeError, ValueError):
+            return 0.0
+
+    def random_on_this_day(
+        self,
+        month: int,
+        day: int,
+        current_year: int,
+        limit: int,
+        seed: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
+        pivot = self._random_pivot(seed)
         where = "p.taken_month=? AND p.taken_day=? AND p.taken_year<?"
         first = self._pictures(
             where + " AND p.random_key>=?",
-            (month, day, current_year, seed),
+            (month, day, current_year, pivot),
             "p.random_key",
             limit,
             0,
@@ -579,13 +595,16 @@ class Catalog:
         if len(first) < limit:
             second = self._pictures(
                 where + " AND p.random_key<?",
-                (month, day, current_year, seed),
+                (month, day, current_year, pivot),
                 "p.random_key",
                 limit - len(first),
                 0,
             )
             first.extend(second)
-        random.shuffle(first)
+        if seed is None:
+            random.shuffle(first)
+        else:
+            random.Random(pivot).shuffle(first)
         return first
 
     def media_type_for_uri(self, uri: str) -> Optional[str]:
@@ -655,11 +674,15 @@ class Catalog:
             0,
         )
 
-    def random_pictures(self, limit: int) -> List[Dict[str, Any]]:
-        seed = random.random()
-        first = self._pictures("p.random_key>=?", (seed,), "p.random_key", limit, 0)
+    def random_pictures(
+        self, limit: int, seed: Optional[float] = None
+    ) -> List[Dict[str, Any]]:
+        pivot = self._random_pivot(seed)
+        first = self._pictures("p.random_key>=?", (pivot,), "p.random_key", limit, 0)
         if len(first) < limit:
-            second = self._pictures("p.random_key<?", (seed,), "p.random_key", limit - len(first), 0)
+            second = self._pictures(
+                "p.random_key<?", (pivot,), "p.random_key", limit - len(first), 0
+            )
             first.extend(second)
         return first
 
@@ -700,11 +723,25 @@ class Catalog:
     def recent_folders(self, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._folder_rows("p.id IS NOT NULL", (), "f.latest_discovered_at DESC, f.id DESC", limit, offset)
 
-    def random_folders(self, limit: int) -> List[Dict[str, Any]]:
-        seed = random.random()
-        first = self._folder_rows("p.id IS NOT NULL AND f.random_key>=?", (seed,), "f.random_key", limit)
+    def random_folders(
+        self, limit: int, seed: Optional[float] = None
+    ) -> List[Dict[str, Any]]:
+        pivot = self._random_pivot(seed)
+        first = self._folder_rows(
+            "p.id IS NOT NULL AND f.random_key>=?",
+            (pivot,),
+            "f.random_key",
+            limit,
+        )
         if len(first) < limit:
-            first.extend(self._folder_rows("p.id IS NOT NULL AND f.random_key<?", (seed,), "f.random_key", limit - len(first)))
+            first.extend(
+                self._folder_rows(
+                    "p.id IS NOT NULL AND f.random_key<?",
+                    (pivot,),
+                    "f.random_key",
+                    limit - len(first),
+                )
+            )
         return first
 
     def source_root_folders(self, source_id: int) -> List[Dict[str, Any]]:

@@ -277,7 +277,8 @@ Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings > Home screen** to:
 - show or hide Media sources;
 - choose **Home-screen pictures per row** from 4 to 40;
 - choose how often the three random rows receive a new selection, in hours
-  (two hours by default);
+  (two hours by default); repeated Kodi requests during the interval keep the
+  current selection stable;
 - open **Configure home-screen rows**;
 - enable or disable built-in rows;
 - add a saved smart collection as its own row;

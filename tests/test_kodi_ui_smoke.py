@@ -698,6 +698,31 @@ def test_search_waits_for_picture_container_before_setting_view(monkeypatch) -> 
     assert calls.sleeps == []
 
 
+def test_home_random_seed_stays_stable_until_a_generation_changes(
+    monkeypatch,
+) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    params = {
+        "widget": "1",
+        "home": "1",
+        "generation": "12",
+        "random_generation": "7",
+    }
+
+    seed = ui._home_random_seed(params, "on-this-day-random")
+
+    assert seed == ui._home_random_seed(params, "on-this-day-random")
+    assert seed != ui._home_random_seed(
+        {**params, "random_generation": "8"}, "on-this-day-random"
+    )
+    assert seed != ui._home_random_seed(
+        {**params, "generation": "13"}, "on-this-day-random"
+    )
+    assert ui._home_random_seed({"widget": "1"}, "on-this-day-random") is None
+
+
 def test_random_on_this_day_route_uses_random_catalog_query(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()

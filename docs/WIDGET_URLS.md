@@ -40,6 +40,10 @@ The three random home providers also include a second cache-key parameter:
 plugin://plugin.image.mypicsdb3/random?widget=1&home=1&generation=<generation>&random_generation=<random-generation>
 ```
 
+For bundled random home rows, the plug-in hashes both generation values into a
+stable database pivot. Repeated requests for an unchanged provider URL therefore
+return the same selection instead of invoking a fresh random sample.
+
 `MyPicsDB3.RandomWidgetGeneration` advances at the interval configured under
 **Settings > Home screen**, two hours by default. It is also advanced by
 **Refresh random selections**. Because only Random memories, Random albums and

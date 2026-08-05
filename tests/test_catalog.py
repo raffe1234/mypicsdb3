@@ -299,6 +299,38 @@ def test_videos_share_date_and_folder_views_without_fake_ratings(tmp_path: Path)
     assert [row["id"] for row in catalog.rated(10)] == [picture_id]
 
 
+def test_seeded_random_picture_rows_are_repeatable(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "seeded-random"
+    picture_ids = [
+        add_picture(catalog, root, "memory-1.jpg", "2018-07-17 08:00:00"),
+        add_picture(catalog, root, "memory-2.jpg", "2019-07-17 09:00:00"),
+        add_picture(catalog, root, "memory-3.jpg", "2020-07-17 10:00:00"),
+        add_picture(catalog, root, "memory-4.jpg", "2021-07-17 11:00:00"),
+    ]
+    with catalog.engine.transaction() as connection:
+        for picture_id, random_key in zip(picture_ids, (0.1, 0.3, 0.6, 0.9)):
+            catalog.engine.execute(
+                connection,
+                "UPDATE pictures SET random_key=? WHERE id=?",
+                (random_key, picture_id),
+            ).close()
+
+    first = [row["id"] for row in catalog.random_pictures(3, seed=0.25)]
+    second = [row["id"] for row in catalog.random_pictures(3, seed=0.25)]
+    day_first = [
+        row["id"]
+        for row in catalog.random_on_this_day(7, 17, 2026, 3, seed=0.25)
+    ]
+    day_second = [
+        row["id"]
+        for row in catalog.random_on_this_day(7, 17, 2026, 3, seed=0.25)
+    ]
+
+    assert first == second
+    assert day_first == day_second
+
+
 def test_random_on_this_day_uses_all_earlier_years_without_duplicates(
     tmp_path: Path, monkeypatch
 ) -> None:
