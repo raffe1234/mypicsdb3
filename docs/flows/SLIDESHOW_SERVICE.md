@@ -48,6 +48,20 @@ context menu or action route
 The start token prevents overlapping plug-in calls from starting multiple
 slideshows at the same time.
 
+## Native manual-collection picture flow
+
+```text
+collection rows in stored order
+→ choose pictures when the collection is mixed
+→ build hidden slideshow/collection-pictures plug-in URI
+→ Kodi SlideShow built-in opens that URI as a directory
+→ route returns still-image URLs only, with order-preserving sort labels
+→ Kodi native picture window displays the slideshow
+```
+
+Manual-collection pictures deliberately bypass JSON-RPC picture playlist 2.
+The video branch still uses Kodi's video playlist.
+
 ## Database-backed playlist flow
 
 ```text

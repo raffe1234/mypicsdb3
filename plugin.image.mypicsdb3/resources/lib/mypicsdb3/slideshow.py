@@ -434,6 +434,42 @@ def start_video_playlist(
     return len(items)
 
 
+def start_native_directory_slideshow(
+    xbmc_module,
+    directory_uri: str,
+    *,
+    recursive: bool = False,
+    begin_slide_uri: str = "",
+    logger: Optional[Any] = None,
+) -> None:
+    """Use Kodi's native picture window for a directory-backed slideshow.
+
+    Kodi's JSON-RPC picture playlist is not a reliable way to feed arbitrary
+    still-image paths on every platform. The native ``SlideShow`` built-in asks
+    Kodi's directory layer for items instead, so it can consume either a normal
+    filesystem folder or a hidden plug-in directory that exposes collection
+    pictures in stored order.
+    """
+
+    uri = str(directory_uri or "").strip()
+    if not uri:
+        raise SlideshowError("Slideshow directory URI is empty")
+    arguments = [_quote_builtin_argument(uri)]
+    if recursive:
+        arguments.append("recursive")
+    arguments.append("notrandom")
+    begin_uri = str(begin_slide_uri or "").strip()
+    if begin_uri:
+        arguments.append("beginslide=%s" % _quote_builtin_argument(begin_uri))
+    if logger is not None:
+        logger.debug(
+            "Native picture slideshow: recursive=%s begin_slide=%s",
+            "true" if recursive else "false",
+            "set" if begin_uri else "default",
+        )
+    xbmc_module.executebuiltin("SlideShow(%s)" % ",".join(arguments))
+
+
 def start_native_folder_slideshow(
     xbmc_module,
     folder_uri: str,
@@ -443,16 +479,9 @@ def start_native_folder_slideshow(
 ) -> None:
     """Use Kodi's native folder slideshow for an album tree."""
 
-    uri = str(folder_uri or "").strip()
-    if not uri:
-        raise SlideshowError("Folder URI is empty")
-    arguments = [_quote_builtin_argument(uri)]
-    if recursive:
-        arguments.append("recursive")
-    arguments.append("notrandom")
-    if logger is not None:
-        logger.debug(
-            "Native picture slideshow: recursive=%s",
-            "true" if recursive else "false",
-        )
-    xbmc_module.executebuiltin("SlideShow(%s)" % ",".join(arguments))
+    start_native_directory_slideshow(
+        xbmc_module,
+        folder_uri,
+        recursive=recursive,
+        logger=logger,
+    )

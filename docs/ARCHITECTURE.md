@@ -286,7 +286,9 @@ stable, relevant Pictures container.
 
 Kodi builds differ in how picture playlist 2 is handled. MyPicsDB 3 probes the
 player and prefers conservative fallbacks rather than starting an invalid mixed
-playlist or interfering with unrelated playback.
+playlist or interfering with unrelated playback. Manual-collection stills avoid
+that JSON-RPC playlist entirely: a hidden ordered plug-in directory is consumed
+by Kodi's native ``SlideShow`` built-in.
 
 ## Testing architecture
 

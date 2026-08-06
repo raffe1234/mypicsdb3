@@ -25,9 +25,9 @@ Play collection slideshow / Play slideshow from here
 → release any direct plug-in playback handle
 → collection slideshow scope
 → fetch up to the normal bounded playlist limit in stored order
-→ picture-only: Kodi picture playlist
+→ picture-only: internal ordered plug-in directory → Kodi native SlideShow
 → video-only: Kodi video playlist
-→ mixed: choose picture slideshow or video playlist
+→ mixed: choose native picture slideshow or video playlist
 ```
 
 ## Files and responsibilities
@@ -79,14 +79,15 @@ is forwarded in collection routes and slideshow actions.
 
 ## Slideshow behaviour
 
-Collections reuse the existing database slideshow implementation. Saved order
-is preserved after filtering. Picture-only collections use Kodi's picture
-playlist and video-only collections use its video playlist. A mixed collection
-prompts for one of those two safe modes instead of probing Kodi's mixed picture
-playlist. Kodi 21 on Windows can route the still image in that probe through
-VideoPlayer, and a manual collection has no single folder URI for the native
-folder-slideshow fallback. The common playlist bound still applies, while empty
-URIs and duplicates are filtered defensively.
+Collection videos reuse Kodi's video playlist. Collection pictures do not use
+JSON-RPC picture playlist 2: Kodi 21 on Windows can accept that playlist but
+reopen its JPEG through VideoPlayer in a tight loop. Instead, MyPicsDB exposes a
+hidden plug-in directory containing only the selected still pictures and starts
+Kodi's native ``SlideShow`` built-in on that directory. Zero-padded internal
+labels retain stored collection order when Kodi sorts directory results, while
+normal picture metadata retains the visible filename. ``beginslide`` preserves
+**Play slideshow from here**. Empty URIs, duplicate paths and videos are filtered
+from the native picture directory.
 
 Slideshow command rows deliberately avoid a VideoInfoTag. When Kodi nevertheless
 opens a directly selected command as a media request, the action marks that

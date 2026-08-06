@@ -47,6 +47,7 @@ from .slideshow import (
     SlideshowError,
     SlideshowPlayerMismatchError,
     start_mixed_slideshow,
+    start_native_directory_slideshow,
     start_native_folder_slideshow,
     start_video_playlist,
     stop_active_media_players,
@@ -612,6 +613,76 @@ class PluginUI:
             category=self._rating_category(collection.name, params),
             view_mode=self._browser_view_mode(params),
         )
+
+    def collection_slideshow_pictures(
+        self, collection_id: int, params: Dict[str, str]
+    ):
+        """Expose still pictures from one collection to Kodi's slideshow loader.
+
+        The route is intentionally not linked from the browser. Kodi's native
+        ``SlideShow`` built-in opens it through the directory layer, where each
+        returned URL is a real still-image path. Labels carry a zero-padded
+        position prefix because Kodi sorts slideshow directory results by label;
+        picture metadata keeps the visible title free of that internal prefix.
+        """
+
+        rows = self.catalog.pictures_in_collection(
+            collection_id, MAX_SLIDESHOW_ITEMS, 0
+        )
+        items = []
+        seen = set()
+        for row in rows:
+            if str(row.get("media_type") or "picture") == "video":
+                continue
+            media_uri = str(row.get("uri") or "").strip()
+            if not media_uri or media_uri in seen:
+                continue
+            seen.add(media_uri)
+            date_text = str(
+                row.get("taken_at") or row.get("discovered_at") or ""
+            )
+            visible_label = str(
+                row.get("filename") or date_text or self.text(30031, "Picture")
+            )
+            sort_label = "%06d %s" % (len(items) + 1, visible_label)
+            art_uri = self._media_art_uri(
+                media_uri, row.get("thumb_uri"), "picture"
+            )
+            item = self._item(
+                sort_label,
+                art_uri,
+                media_uri,
+                publish_video_title=False,
+            )
+            info: Dict[str, Any] = {
+                "title": visible_label,
+                "picturepath": media_uri,
+                "date": date_text,
+            }
+            if row.get("width") and row.get("height"):
+                info["resolution"] = "%sx%s" % (row["width"], row["height"])
+            if row.get("camera_make"):
+                info["cameramake"] = row["camera_make"]
+            if row.get("camera_model"):
+                info["cameramodel"] = row["camera_model"]
+            if row.get("caption"):
+                info["exifcomment"] = row["caption"]
+            try:
+                self._set_picture_info(
+                    item, info, date_text, row.get("width"), row.get("height")
+                )
+            except Exception:
+                pass
+            item.setProperty("MyPicsDB3.MediaType", "picture")
+            item.setProperty("MyPicsDB3.PictureId", str(row.get("id", "")))
+            items.append((media_uri, item, False))
+
+        self.kodi.log.debug(
+            "Native collection picture directory: collection_id=%s items=%d",
+            collection_id,
+            len(items),
+        )
+        self.finish(items, content="images", cache=False)
 
     def sources(self, params: Optional[Dict[str, str]] = None):
         params = params or {}
@@ -1497,6 +1568,42 @@ class PluginUI:
         empty_count = sum(1 for row in rows if not str(row.get("uri") or "").strip())
         duplicate_count = max(0, len(rows) - empty_count - len(uris))
 
+        if scope == "collection" and picture_count and not video_count:
+            collection_uri = self.url(
+                "slideshow/collection-pictures",
+                id=params.get("id", ""),
+                **self._rating_route_params(params),
+            )
+            begin_slide_uri = uris[start_position] if uris else ""
+            self.kodi.log.info(
+                "Slideshow route=native-collection-picture collection_id=%s "
+                "rows=%d pictures=%d videos=0 unique=%d empty=%d "
+                "duplicates=%d start=%d",
+                params.get("id", ""),
+                len(rows),
+                picture_count,
+                len(uris),
+                empty_count,
+                duplicate_count,
+                start_position,
+            )
+            self.kodi.set_mixed_slideshow_active(False)
+            try:
+                stop_active_media_players(xbmc, logger=self.kodi.log)
+                start_native_directory_slideshow(
+                    xbmc,
+                    collection_uri,
+                    recursive=False,
+                    begin_slide_uri=begin_slide_uri,
+                    logger=self.kodi.log,
+                )
+            except SlideshowError as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32605, "Could not start slideshow"), exc),
+                    error=True,
+                )
+            return
+
         if scope == "folder-tree" and not has_video:
             self.kodi.log.info(
                 "Slideshow route=native-picture scope=folder-tree folder_id=%s "
@@ -2322,6 +2429,8 @@ class PluginUI:
             return self.collections(params)
         if route == "collection":
             return self.collection(int(params["id"]), params)
+        if route == "slideshow/collection-pictures":
+            return self.collection_slideshow_pictures(int(params["id"]), params)
         if route == "home-smart":
             try:
                 slot = int(params.get("slot") or 0)

@@ -1950,7 +1950,7 @@ def test_manual_collections_list_open_and_use_default_album_view(monkeypatch) ->
     assert calls.builtins in ([], ["Container.SetViewMode(54)"])
 
 
-def test_mixed_manual_collection_prompts_for_safe_picture_playlist(monkeypatch) -> None:
+def test_mixed_manual_collection_uses_native_picture_directory(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
     picture = dict(runtime.catalog.recent_taken(1)[0])
@@ -1976,22 +1976,78 @@ def test_mixed_manual_collection_prompts_for_safe_picture_playlist(monkeypatch) 
         )
     )
 
-    add_requests = [
-        request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
-    ]
-    assert len(add_requests) == 1
-    assert add_requests[0]["params"] == {
-        "playlistid": 2,
-        "item": [{"file": "smb://server/photos/image.jpg"}],
-    }
     assert not any(
-        request["method"] == "Player.GetItem"
+        request["method"] == "Playlist.Add"
         for request in calls.rpc_requests
     )
+    assert calls.builtins == [
+        'SlideShow("plugin://plugin.image.mypicsdb3/slideshow/collection-pictures?id=9",'
+        'notrandom,beginslide="smb://server/photos/image.jpg")'
+    ]
     assert any(
         "split to picture slideshow" in message
         for message in runtime.kodi.info_messages
     )
+    assert any(
+        "route=native-collection-picture" in message
+        for message in runtime.kodi.info_messages
+    )
+
+
+def test_native_collection_picture_directory_filters_and_orders_media(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    first = dict(runtime.catalog.recent_taken(1)[0])
+    first.update(
+        {
+            "id": 7,
+            "uri": "smb://server/photos/z-last-by-name.jpg",
+            "filename": "z-last-by-name.jpg",
+        }
+    )
+    video = dict(first)
+    video.update(
+        {
+            "id": 8,
+            "uri": "smb://server/photos/clip.mp4",
+            "filename": "clip.mp4",
+            "media_type": "video",
+        }
+    )
+    second = dict(first)
+    second.update(
+        {
+            "id": 9,
+            "uri": "smb://server/photos/a-first-by-name.jpg",
+            "filename": "a-first-by-name.jpg",
+        }
+    )
+    duplicate = dict(second)
+    duplicate["id"] = 10
+    runtime.catalog.pictures_in_collection = (
+        lambda collection_id, limit, offset=0: [first, video, second, duplicate]
+    )
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "slideshow/collection-pictures",
+            {"id": "9"},
+        )
+    )
+
+    assert [entry[0] for entry in calls.items] == [
+        "smb://server/photos/z-last-by-name.jpg",
+        "smb://server/photos/a-first-by-name.jpg",
+    ]
+    assert [entry[1].label for entry in calls.items] == [
+        "000001 z-last-by-name.jpg",
+        "000002 a-first-by-name.jpg",
+    ]
+    assert all(entry[2] is False for entry in calls.items)
+    assert calls.content == "images"
+    assert calls.ended is True
+    assert calls.rpc_requests == []
 
 
 def test_mixed_manual_collection_can_choose_video_playlist_from_video(monkeypatch) -> None:

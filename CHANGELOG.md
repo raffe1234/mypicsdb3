@@ -10,11 +10,11 @@
   collection** inside a collection. Duplicate additions are ignored, missing
   media is skipped safely, and the stored insertion order is retained for
   browsing and slideshows.
-- Open manual collections with **Default album view**. Picture-only collections
-  use Kodi's picture playlist and video-only collections use its video playlist.
-  Mixed collections ask whether to play the pictures or the videos, avoiding the
-  Kodi 21 Windows path that can send still images through VideoPlayer and stall
-  the direct plug-in action.
+- Open manual collections with **Default album view**. Collection pictures now
+  run through Kodi's native slideshow window over an internal ordered plug-in
+  directory; videos continue to use Kodi's video playlist. Mixed collections ask
+  which media type to play. This avoids the Kodi 21 Windows path that repeatedly
+  reopens a still image through VideoPlayer and leaves Kodi busy until shutdown.
 - Keep slideshow command rows out of Kodi's video metadata path and explicitly
   release a direct action playback handle before opening the real playlist. This
   prevents completed slideshow actions from being left as an unplayable plug-in

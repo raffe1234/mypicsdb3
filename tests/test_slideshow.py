@@ -12,6 +12,7 @@ from mypicsdb3.slideshow import (
     VIDEO_PLAYLIST_ID,
     _looks_like_picture_uri,
     start_mixed_slideshow,
+    start_native_directory_slideshow,
     start_native_folder_slideshow,
     start_video_playlist,
 )
@@ -170,6 +171,21 @@ def test_native_folder_slideshow_uses_kodi_recursive_slideshow() -> None:
 
     assert xbmc.builtins == [
         'SlideShow("smb://nas/Pictures/Trip, summer/",recursive,notrandom)'
+    ]
+
+
+def test_native_directory_slideshow_can_select_first_collection_picture() -> None:
+    xbmc = FakeXbmc()
+
+    start_native_directory_slideshow(
+        xbmc,
+        "plugin://plugin.image.mypicsdb3/slideshow/collection-pictures?id=9",
+        begin_slide_uri='smb://nas/Trip/one.jpg',
+    )
+
+    assert xbmc.builtins == [
+        'SlideShow("plugin://plugin.image.mypicsdb3/slideshow/collection-pictures?id=9",'
+        'notrandom,beginslide="smb://nas/Trip/one.jpg")'
     ]
 
 
@@ -473,4 +489,6 @@ def test_native_slideshow_emits_opt_in_route_diagnostic() -> None:
         logger=logger,
     )
 
-    assert logger.messages == ["Native picture slideshow: recursive=true"]
+    assert logger.messages == [
+        "Native picture slideshow: recursive=true begin_slide=default"
+    ]
