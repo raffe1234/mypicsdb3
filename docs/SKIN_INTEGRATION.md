@@ -138,11 +138,12 @@ home_smart_name_1
 home_smart_mode_1
 ```
 
-The ID is an integer saved-search ID, the name is the row heading and the mode
-is `poster`, `square` or `landscape`. The pattern continues through slot 9. The
-combined layout editor owns these hidden values; skins should treat them as
-read-only. For runtime skin XML, MyPicsDB 3 publishes comma-free Home-window
-properties instead:
+The ID is an integer saved-search ID and the name is the row heading. The mode
+setting is retained only for downgrade compatibility and is normalized to
+`poster`; current skins should not use it to offer a separate smart-row layout.
+The pattern continues through slot 9. The combined layout editor owns these
+hidden values; skins should treat them as read-only. For runtime skin XML,
+MyPicsDB 3 publishes comma-free Home-window properties instead:
 
 ```text
 MyPicsDB3.HomeRow1
@@ -177,8 +178,10 @@ that nested label are parsed as `$INFO` separators:
 plugin://plugin.image.mypicsdb3/home-smart?slot=1&widget=1&home=1
 ```
 
-Use `Window(Home).Property(MyPicsDB3.HomeSmartName1)` for the heading and
-`MyPicsDB3.HomeSmartMode1` to select Poster, Square or Wide layout.
+Use `Window(Home).Property(MyPicsDB3.HomeSmartName1)` for the heading. Render
+the slot with the standard MyPicsDB poster row; opening the collection through
+the plug-in uses **Default album view**. `MyPicsDB3.HomeSmartMode1` remains a
+legacy compatibility property and should be ignored by new skin integrations.
 
 Media sources can use:
 

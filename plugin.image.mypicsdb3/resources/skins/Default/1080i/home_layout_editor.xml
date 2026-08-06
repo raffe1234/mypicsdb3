@@ -72,6 +72,17 @@
       <align>center</align>
       <aligny>center</aligny>
     </control>
+    <control type="label" id="104">
+      <left>1590</left>
+      <top>130</top>
+      <width>260</width>
+      <height>38</height>
+      <label />
+      <font>font12</font>
+      <textcolor>FFB8C1C4</textcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+    </control>
     <control type="label" id="1001">
       <left>500</left>
       <top>180</top>
@@ -894,6 +905,43 @@
       <onleft>1301</onleft>
       <onright>1403</onright>
       <onup>1402</onup>
+      <ondown>1401</ondown>
+    </control>
+    <control type="button" id="1404">
+      <left>1590</left>
+      <top>450</top>
+      <width>260</width>
+      <height>72</height>
+      <label />
+      <font>font13</font>
+      <textcolor>FFD8DDDF</textcolor>
+      <focusedcolor>FFFFFFFF</focusedcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus>home-editor-focus.png</texturefocus>
+      <texturenofocus>home-editor-panel.png</texturenofocus>
+      <onleft>1301</onleft>
+      <onright>1404</onright>
+      <onup>1403</onup>
+      <ondown>1405</ondown>
+    </control>
+    <control type="button" id="1405">
+      <left>1590</left>
+      <top>540</top>
+      <width>260</width>
+      <height>72</height>
+      <label />
+      <font>font13</font>
+      <textcolor>FFD8DDDF</textcolor>
+      <focusedcolor>FFFFFFFF</focusedcolor>
+      <disabledcolor>FF596164</disabledcolor>
+      <align>center</align>
+      <aligny>center</aligny>
+      <texturefocus>home-editor-focus.png</texturefocus>
+      <texturenofocus>home-editor-panel.png</texturenofocus>
+      <onleft>1301</onleft>
+      <onright>1405</onright>
+      <onup>1404</onup>
       <ondown>1401</ondown>
     </control>
   </controls>

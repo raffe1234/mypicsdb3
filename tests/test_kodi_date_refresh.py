@@ -416,7 +416,7 @@ def test_home_layout_slots_are_published_as_home_window_properties(monkeypatch) 
     assert properties["MyPicsDB3.HomeRow1"] == "smart"
     assert properties["MyPicsDB3.HomeSmartId1"] == "42"
     assert properties["MyPicsDB3.HomeSmartName1"] == "Spain"
-    assert properties["MyPicsDB3.HomeSmartMode1"] == "square"
+    assert properties["MyPicsDB3.HomeSmartMode1"] == "poster"
     assert properties["MyPicsDB3.HomeRow9"] == "none"
     assert properties["MyPicsDB3.HomeSmartId9"] == "0"
 

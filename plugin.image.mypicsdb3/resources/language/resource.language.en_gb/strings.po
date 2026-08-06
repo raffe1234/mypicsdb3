@@ -1192,8 +1192,8 @@ msgid "Saved smart collection used by this home-screen row."
 msgstr "Saved smart collection used by this home-screen row."
 
 msgctxt "#32794"
-msgid "Layout used for this saved smart collection on the home screen."
-msgstr "Layout used for this saved smart collection on the home screen."
+msgid "Legacy smart-row layout retained for downgrade compatibility."
+msgstr "Legacy smart-row layout retained for downgrade compatibility."
 
 msgctxt "#32795"
 msgid "Refresh random home-screen rows every (hours)"
@@ -1210,3 +1210,11 @@ msgstr "Scan duration"
 msgctxt "#32798"
 msgid "Elapsed time"
 msgstr "Elapsed time"
+
+msgctxt "#32799"
+msgid "Home-screen row"
+msgstr "Home-screen row"
+
+msgctxt "#32800"
+msgid "Order"
+msgstr "Order"

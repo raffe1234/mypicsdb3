@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.11 - 2026-08-06
+
+- Replace the smart Home row action list with the inline layout used by Kodi
+  settings: every visible editor row now has its own On/Off switch plus direct
+  up/down buttons. The mixed built-in/smart list scrolls in ten-row pages while
+  Save, Cancel, Defaults, Add smart collection and contextual Remove remain on
+  the right.
+- Remove the separate Poster/Square/Wide choice for smart collections. Current
+  Estuary packages render smart collections with the standard MyPicsDB poster
+  row, while interactive saved-search browsing continues to use **Default album
+  view**. Legacy mode values are accepted and normalized to poster for safe
+  downgrade compatibility.
+- Bump generated Estuary revisions to Kodi 21 revision 15 and Kodi 22 revision
+  13. Database schema 5, Home-layout format 1 and repository add-on version
+  0.2.26 remain unchanged; no catalogue rescan or database migration is needed.
+
 ## 0.4.10 - 2026-08-06
 
 - Avoid publishing Estuary Home-window properties from the background service

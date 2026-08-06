@@ -104,13 +104,14 @@ def test_smart_home_layout_roundtrip_materializes_dynamic_slots() -> None:
     assert decoded is not None
     assert decoded[0].key == "recent_taken"
     assert decoded[1].saved_search_id == 42
-    assert decoded[1].mode == "square"
+    assert decoded[1].mode == "poster"
+    assert '"mode"' not in encoded
     assert slots[0]["row"] == "recent_taken"
     assert slots[1] == {
         "row": "smart",
         "smart_id": 42,
         "smart_name": "Spain favorites",
-        "smart_mode": "square",
+        "smart_mode": "poster",
     }
     assert len(slots) == 9
 
@@ -127,7 +128,7 @@ def test_smart_home_layout_drops_deleted_collection_and_invalid_modes() -> None:
 
     assert decoded is not None
     assert all(item.saved_search_id != 7 for item in decoded if item.kind == "smart")
-    assert next(item for item in decoded if item.kind == "smart").mode == "landscape"
+    assert next(item for item in decoded if item.kind == "smart").mode == "poster"
     assert all(item.kind != "smart" for item in removed)
 
 

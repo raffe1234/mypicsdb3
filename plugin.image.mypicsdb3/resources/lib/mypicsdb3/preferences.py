@@ -56,6 +56,10 @@ DEFAULT_HOME_ROWS: Tuple[str, ...] = (
 
 
 SMART_HOME_LAYOUT_VERSION = 1
+# Legacy 0.4.0-0.4.10 layouts may contain poster/square/landscape. From
+# 0.4.11 all smart Home rows use the standard poster widget while the opened
+# collection follows Default album view. Keep the field only for downgrade
+# compatibility with existing home_layout_v2 data.
 SMART_HOME_MODES: Tuple[str, ...] = ("poster", "square", "landscape")
 DEFAULT_SMART_HOME_MODE = "poster"
 
@@ -99,8 +103,10 @@ def migrate_home_layout_items(
 
 
 def normalize_smart_home_mode(value: object) -> str:
-    mode = str(value or "").strip().lower()
-    return mode if mode in SMART_HOME_MODES else DEFAULT_SMART_HOME_MODE
+    # Per-row display modes were removed in 0.4.11. Accept every legacy value
+    # but normalize it to the one compatibility mode still understood by old
+    # skins and downgraded plug-in versions.
+    return DEFAULT_SMART_HOME_MODE
 
 
 def parse_home_layout_v2(
@@ -194,7 +200,6 @@ def serialize_home_layout_v2(items: Sequence[HomeLayoutItem]) -> str:
                     "type": "smart",
                     "id": saved_id,
                     "enabled": enabled,
-                    "mode": normalize_smart_home_mode(item.mode),
                 }
             )
         else:

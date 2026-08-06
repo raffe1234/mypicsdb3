@@ -1000,6 +1000,9 @@ class PluginUI:
             saved_names,
             SmartHomeEditorText(
                 heading=self.text(32208, "Configure home-screen rows"),
+                row_heading=self.text(32799, "Home-screen row"),
+                visible_heading=self.text(32218, "Enabled"),
+                order_heading=self.text(32800, "Order"),
                 on=self.text(32223, "On"),
                 off=self.text(32224, "Off"),
                 move_up=self.text(32211, "Move up"),
@@ -1009,10 +1012,6 @@ class PluginUI:
                 defaults=self.text(32227, "Defaults"),
                 add_collection=self.text(32785, "Add smart collection"),
                 remove_collection=self.text(32786, "Remove smart collection"),
-                display_mode=self.text(32787, "Display mode"),
-                poster=self.text(32788, "Poster"),
-                square=self.text(32789, "Square"),
-                landscape=self.text(32790, "Wide"),
                 maximum_rows=self.text(32791, "A maximum of nine home-screen rows can be shown."),
                 no_collections=self.text(32792, "There are no additional saved smart collections to add."),
             ),
@@ -1038,7 +1037,6 @@ class PluginUI:
             (
                 self.kodi.addon.getSetting("home_smart_id_%d" % position),
                 self.kodi.addon.getSetting("home_smart_name_%d" % position),
-                self.kodi.addon.getSetting("home_smart_mode_%d" % position),
             )
             for position in range(1, 10)
             if self.kodi.addon.getSetting("home_row_%d" % position) == "smart"
@@ -1048,7 +1046,6 @@ class PluginUI:
             (
                 self.kodi.addon.getSetting("home_smart_id_%d" % position),
                 self.kodi.addon.getSetting("home_smart_name_%d" % position),
-                self.kodi.addon.getSetting("home_smart_mode_%d" % position),
             )
             for position in range(1, 10)
             if self.kodi.addon.getSetting("home_row_%d" % position) == "smart"

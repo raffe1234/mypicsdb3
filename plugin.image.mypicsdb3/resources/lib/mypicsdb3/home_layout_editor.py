@@ -4,7 +4,6 @@ import traceback
 from dataclasses import dataclass
 from typing import Dict, FrozenSet, Iterable, List, Optional, Sequence, Set, Tuple
 
-from .action_list_dialog import ActionListDialogUnavailable, show_action_list_dialog
 from .preferences import (
     DEFAULT_HOME_ROWS,
     HOME_ROW_COUNT,
@@ -139,6 +138,10 @@ def show_home_layout_editor(
                 self.getControl(1401).setLabel(self.editor_text.save)
                 self.getControl(1402).setLabel(self.editor_text.cancel)
                 self.getControl(1403).setLabel(self.editor_text.defaults)
+                self.getControl(104).setVisible(False)
+                for control_id in (1404, 1405):
+                    self.getControl(control_id).setVisible(False)
+                    self.getControl(control_id).setEnabled(False)
                 for index in range(row_count):
                     self.getControl(1201 + index).setLabel("▲")
                     self.getControl(1301 + index).setLabel("▼")
@@ -227,6 +230,9 @@ def show_home_layout_editor(
 @dataclass(frozen=True)
 class SmartHomeEditorText:
     heading: str
+    row_heading: str
+    visible_heading: str
+    order_heading: str
     on: str
     off: str
     move_up: str
@@ -236,10 +242,6 @@ class SmartHomeEditorText:
     defaults: str
     add_collection: str
     remove_collection: str
-    display_mode: str
-    poster: str
-    square: str
-    landscape: str
     maximum_rows: str
     no_collections: str
 
@@ -248,7 +250,11 @@ class SmartHomeLayoutState:
     """Mutable mixed built-in/saved-search home layout state."""
 
     def __init__(self, items):
-        from .preferences import HOME_ROW_COUNT, HomeLayoutItem
+        from .preferences import (
+            DEFAULT_SMART_HOME_MODE,
+            HOME_ROW_COUNT,
+            HomeLayoutItem,
+        )
 
         self.items = [
             HomeLayoutItem(
@@ -256,7 +262,10 @@ class SmartHomeLayoutState:
                 key=item.key,
                 saved_search_id=item.saved_search_id,
                 enabled=bool(item.enabled),
-                mode=item.mode,
+                # Per-row display modes were removed in 0.4.11. Keep the
+                # compatibility field normalized so older layouts downgrade
+                # safely and old square/wide values cannot leak back into Home.
+                mode=DEFAULT_SMART_HOME_MODE,
             )
             for item in items
         ]
@@ -272,7 +281,7 @@ class SmartHomeLayoutState:
                     key=item.key,
                     saved_search_id=item.saved_search_id,
                     enabled=enabled,
-                    mode=item.mode,
+                    mode=DEFAULT_SMART_HOME_MODE,
                 )
             )
         self.items = normalized
@@ -303,8 +312,12 @@ class SmartHomeLayoutState:
         self.items[index], self.items[target] = self.items[target], self.items[index]
         return target
 
-    def add_smart(self, saved_search_id: int, mode: str = "poster") -> bool:
-        from .preferences import HOME_ROW_COUNT, HomeLayoutItem, normalize_smart_home_mode
+    def add_smart(self, saved_search_id: int) -> bool:
+        from .preferences import (
+            DEFAULT_SMART_HOME_MODE,
+            HOME_ROW_COUNT,
+            HomeLayoutItem,
+        )
 
         if any(
             item.kind == "smart" and item.saved_search_id == saved_search_id
@@ -317,7 +330,7 @@ class SmartHomeLayoutState:
                 kind="smart",
                 saved_search_id=int(saved_search_id),
                 enabled=enabled,
-                mode=normalize_smart_home_mode(mode),
+                mode=DEFAULT_SMART_HOME_MODE,
             )
         )
         return True
@@ -328,20 +341,6 @@ class SmartHomeLayoutState:
         del self.items[index]
         return True
 
-    def set_mode(self, index: int, mode: str) -> None:
-        from .preferences import HomeLayoutItem, normalize_smart_home_mode
-
-        item = self.items[index]
-        if item.kind != "smart":
-            return
-        self.items[index] = HomeLayoutItem(
-            kind=item.kind,
-            key=item.key,
-            saved_search_id=item.saved_search_id,
-            enabled=item.enabled,
-            mode=normalize_smart_home_mode(mode),
-        )
-
     def reset(self) -> None:
         from .preferences import default_home_layout_items
 
@@ -351,25 +350,25 @@ class SmartHomeLayoutState:
         return tuple(self.items)
 
 
-def _smart_home_item_label(item, builtin_labels, saved_search_names, text, mode_labels) -> str:
+def _smart_home_item_name(item, builtin_labels, saved_search_names) -> str:
     if item.kind == "smart":
-        name = saved_search_names.get(item.saved_search_id, "#%d" % item.saved_search_id)
-        return "%s  %s  [COLOR=grey](%s)[/COLOR]" % (
-            text.on if item.enabled else text.off,
-            name,
-            mode_labels.get(item.mode, text.poster),
+        return saved_search_names.get(
+            item.saved_search_id,
+            "#%d" % item.saved_search_id,
         )
+    return builtin_labels.get(item.key, item.key)
+
+
+def _smart_home_item_label(item, builtin_labels, saved_search_names, text) -> str:
     return "%s  %s" % (
         text.on if item.enabled else text.off,
-        builtin_labels.get(item.key, item.key),
+        _smart_home_item_name(item, builtin_labels, saved_search_names),
     )
 
 
 def _add_smart_home_collection(
-    state, saved_search_names, text, mode_labels, dialog
-) -> None:
-    from .preferences import SMART_HOME_MODES
-
+    state, saved_search_names, text, dialog
+) -> Optional[int]:
     existing = {
         item.saved_search_id
         for item in state.items
@@ -382,27 +381,26 @@ def _add_smart_home_collection(
     ]
     if not available:
         dialog.ok(text.heading, text.no_collections)
-        return
+        return None
     choice = dialog.select(
         text.add_collection,
         [name for _saved_id, name in available],
     )
     if choice < 0:
-        return
-    mode_choice = dialog.select(
-        text.display_mode,
-        [mode_labels[mode] for mode in SMART_HOME_MODES],
+        return None
+    saved_search_id = available[choice][0]
+    if not state.add_smart(saved_search_id):
+        return None
+    return next(
+        index
+        for index, item in enumerate(state.items)
+        if item.kind == "smart" and item.saved_search_id == saved_search_id
     )
-    if mode_choice < 0:
-        mode_choice = 0
-    state.add_smart(available[choice][0], SMART_HOME_MODES[mode_choice])
 
 
 def _edit_smart_home_row(
-    state, index, builtin_labels, saved_search_names, text, mode_labels, dialog
+    state, index, builtin_labels, saved_search_names, text, dialog
 ) -> int:
-    from .preferences import SMART_HOME_MODES
-
     item = state.items[index]
     row_actions = [
         text.off if item.enabled else text.on,
@@ -410,10 +408,10 @@ def _edit_smart_home_row(
         text.move_down,
     ]
     if item.kind == "smart":
-        row_actions.extend([text.display_mode, text.remove_collection])
+        row_actions.append(text.remove_collection)
     action = dialog.select(
         _smart_home_item_label(
-            item, builtin_labels, saved_search_names, text, mode_labels
+            item, builtin_labels, saved_search_names, text
         ),
         row_actions,
     )
@@ -425,30 +423,20 @@ def _edit_smart_home_row(
     elif action == 2:
         index = state.move(index, 1)
     elif item.kind == "smart" and action == 3:
-        current_mode = item.mode if item.mode in SMART_HOME_MODES else "poster"
-        preselect = SMART_HOME_MODES.index(current_mode)
-        mode_choice = dialog.select(
-            text.display_mode,
-            [mode_labels[mode] for mode in SMART_HOME_MODES],
-            preselect=preselect,
-        )
-        if mode_choice >= 0:
-            state.set_mode(index, SMART_HOME_MODES[mode_choice])
-    elif item.kind == "smart" and action == 4:
         state.remove(index)
         index = min(index, max(0, len(state.items) - 1))
     return index
 
 
 def _show_smart_home_fallback(
-    state, builtin_labels, saved_search_names, text, mode_labels, dialog
+    state, builtin_labels, saved_search_names, text, dialog
 ):
-    """Fallback for skins/platforms that cannot load the XML editor."""
+    """Fallback for platforms that cannot load the XML row-controls editor."""
 
     while True:
         rows = [
             _smart_home_item_label(
-                item, builtin_labels, saved_search_names, text, mode_labels
+                item, builtin_labels, saved_search_names, text
             )
             for item in state.items
         ]
@@ -459,7 +447,7 @@ def _show_smart_home_fallback(
             return None
         if selected == len(rows):
             _add_smart_home_collection(
-                state, saved_search_names, text, mode_labels, dialog
+                state, saved_search_names, text, dialog
             )
             continue
         if selected == len(rows) + 1:
@@ -473,7 +461,6 @@ def _show_smart_home_fallback(
             builtin_labels,
             saved_search_names,
             text,
-            mode_labels,
             dialog,
         )
 
@@ -485,14 +472,13 @@ def show_smart_home_layout_editor(
     text: SmartHomeEditorText,
     xbmcgui_module=None,
 ):
-    """Edit built-in and smart rows with persistent actions on the right.
+    """Edit Home rows with inline On/Off and move controls.
 
-    The XML-backed editor keeps Save, Defaults and Cancel out of the scrolling
-    content list. Standard Kodi select dialogs remain as a safe fallback and for
-    the smaller row/action choices.
+    Kodi uses the XML-backed editor when available. Ten row slots are visible at
+    once; moving past the first or last visible slot scrolls the mixed built-in
+    and smart-collection list. Smart collections use the normal album default
+    when opened and therefore have no separate display-mode action.
     """
-
-    from .preferences import SMART_HOME_MODES
 
     custom_dialog = xbmcgui_module is None
     if xbmcgui_module is None:
@@ -500,73 +486,281 @@ def show_smart_home_layout_editor(
 
     dialog = xbmcgui_module.Dialog()
     state = SmartHomeLayoutState(items)
-    mode_labels = {
-        "poster": text.poster,
-        "square": text.square,
-        "landscape": text.landscape,
-    }
-    selected_index = 0
-
-    while custom_dialog:
-        rows = [
-            _smart_home_item_label(
-                item, builtin_labels, saved_search_names, text, mode_labels
-            )
-            for item in state.items
-        ]
-        rows.append(text.add_collection)
-        try:
-            selection = show_action_list_dialog(
-                text.heading,
-                rows,
-                (
-                    ("cancel", text.cancel),
-                    ("save", text.save),
-                    ("defaults", text.defaults),
-                ),
-                selected_index=selected_index,
-            )
-        except ActionListDialogUnavailable:
-            custom_dialog = False
-            break
-
-        if selection is None:
-            return None
-        kind, value = selection
-        if kind == "action":
-            if value == "cancel":
-                return None
-            if value == "save":
-                return state.snapshot()
-            if value == "defaults":
-                state.reset()
-                selected_index = 0
-                continue
-        if kind != "row":
-            continue
-
-        selected_index = int(value)
-        if selected_index == len(state.items):
-            _add_smart_home_collection(
-                state, saved_search_names, text, mode_labels, dialog
-            )
-            selected_index = min(selected_index, len(state.items))
-            continue
-        selected_index = _edit_smart_home_row(
+    if not custom_dialog:
+        return _show_smart_home_fallback(
             state,
-            selected_index,
             builtin_labels,
             saved_search_names,
             text,
-            mode_labels,
             dialog,
         )
+
+    import xbmc  # type: ignore
+    import xbmcaddon  # type: ignore
+
+    visible_row_count = 10
+    back_actions = {9, 10, 92}
+    action_move_left = 1
+    action_move_up = 3
+    action_move_down = 4
+    action_page_up = 5
+    action_page_down = 6
+    action_mouse_wheel_up = 104
+    action_mouse_wheel_down = 105
+    side_controls = {1401, 1402, 1403, 1404, 1405}
+
+    class SmartHomeLayoutDialog(xbmcgui_module.WindowXMLDialog):
+        def configure(self) -> None:
+            self.state = state
+            self.builtin_labels = builtin_labels
+            self.saved_search_names = saved_search_names
+            self.editor_text = text
+            self.dialog = dialog
+            self.result = None
+            self.top_index = 0
+            self.selected_index = 0
+            self._ready = False
+
+        @staticmethod
+        def _row_control(control_id: int):
+            for base in (1101, 1201, 1301):
+                if base <= control_id < base + visible_row_count:
+                    return base, control_id - base
+            return None
+
+        def _ensure_visible(self, index: int) -> None:
+            if not self.state.items:
+                self.top_index = 0
+                return
+            index = max(0, min(index, len(self.state.items) - 1))
+            if index < self.top_index:
+                self.top_index = index
+            elif index >= self.top_index + visible_row_count:
+                self.top_index = index - visible_row_count + 1
+            maximum = max(0, len(self.state.items) - visible_row_count)
+            self.top_index = max(0, min(self.top_index, maximum))
+
+        def _selected_item(self):
+            if 0 <= self.selected_index < len(self.state.items):
+                return self.state.items[self.selected_index]
+            return None
+
+        def _update_remove_action(self) -> None:
+            item = self._selected_item()
+            visible = item is not None and item.kind == "smart"
+            control = self.getControl(1405)
+            control.setVisible(visible)
+            control.setEnabled(visible)
+
+        def _refresh_rows(self) -> None:
+            count = len(self.state.items)
+            if count:
+                first = self.top_index + 1
+                last = min(count, self.top_index + visible_row_count)
+                self.getControl(104).setLabel("%d–%d / %d" % (first, last, count))
+            else:
+                self.getControl(104).setLabel("0 / 0")
+
+            for slot in range(visible_row_count):
+                index = self.top_index + slot
+                visible = index < count
+                label = self.getControl(1001 + slot)
+                toggle = self.getControl(1101 + slot)
+                move_up = self.getControl(1201 + slot)
+                move_down = self.getControl(1301 + slot)
+                for control in (label, toggle, move_up, move_down):
+                    control.setVisible(visible)
+                if not visible:
+                    continue
+
+                item = self.state.items[index]
+                label.setLabel(
+                    _smart_home_item_name(
+                        item,
+                        self.builtin_labels,
+                        self.saved_search_names,
+                    )
+                )
+                toggle.setEnabled(True)
+                toggle.setLabel(
+                    self.editor_text.on if item.enabled else self.editor_text.off
+                )
+                toggle.setSelected(bool(item.enabled))
+                move_up.setEnabled(index > 0)
+                move_down.setEnabled(index < count - 1)
+            self._update_remove_action()
+
+        def _focus_row(self, base: int, index: int) -> None:
+            if not self.state.items:
+                self.setFocusId(1404)
+                return
+            self.selected_index = max(0, min(index, len(self.state.items) - 1))
+            self._ensure_visible(self.selected_index)
+            self._refresh_rows()
+            self.setFocusId(base + self.selected_index - self.top_index)
+
+        def onInit(self) -> None:  # noqa: N802 - Kodi callback name
+            try:
+                self.getControl(100).setLabel(self.editor_text.heading)
+                self.getControl(101).setLabel(self.editor_text.row_heading)
+                self.getControl(102).setLabel(self.editor_text.visible_heading)
+                self.getControl(103).setLabel(self.editor_text.order_heading)
+                self.getControl(104).setVisible(True)
+                self.getControl(1401).setLabel(self.editor_text.save)
+                self.getControl(1402).setLabel(self.editor_text.cancel)
+                self.getControl(1403).setLabel(self.editor_text.defaults)
+                self.getControl(1404).setLabel(self.editor_text.add_collection)
+                self.getControl(1404).setVisible(True)
+                self.getControl(1404).setEnabled(True)
+                self.getControl(1405).setLabel(self.editor_text.remove_collection)
+                for index in range(visible_row_count):
+                    self.getControl(1201 + index).setLabel("▲")
+                    self.getControl(1301 + index).setLabel("▼")
+                self._refresh_rows()
+                self._ready = True
+                self._focus_row(1101, 0)
+            except Exception:
+                xbmc.log(
+                    "MyPicsDB 3 smart home editor onInit failed:\n%s"
+                    % traceback.format_exc(),
+                    xbmc.LOGERROR,
+                )
+                self.close()
+
+        def onFocus(self, control_id: int) -> None:  # noqa: N802
+            row_control = self._row_control(control_id)
+            if row_control is None:
+                return
+            _base, slot = row_control
+            index = self.top_index + slot
+            if index < len(self.state.items):
+                self.selected_index = index
+                self._update_remove_action()
+
+        def onClick(self, control_id: int) -> None:  # noqa: N802
+            if control_id == 1401:
+                self.result = self.state.snapshot()
+                self.close()
+                return
+            if control_id == 1402:
+                self.close()
+                return
+            if control_id == 1403:
+                self.state.reset()
+                self.top_index = 0
+                self._focus_row(1101, 0)
+                return
+            if control_id == 1404:
+                added_index = _add_smart_home_collection(
+                    self.state,
+                    self.saved_search_names,
+                    self.editor_text,
+                    self.dialog,
+                )
+                if added_index is not None:
+                    self._focus_row(1101, added_index)
+                else:
+                    self._refresh_rows()
+                return
+            if control_id == 1405:
+                if self.state.items and self.state.remove(self.selected_index):
+                    target = min(
+                        self.selected_index,
+                        max(0, len(self.state.items) - 1),
+                    )
+                    self._focus_row(1101, target)
+                return
+
+            row_control = self._row_control(control_id)
+            if row_control is None:
+                return
+            base, slot = row_control
+            index = self.top_index + slot
+            if index >= len(self.state.items):
+                return
+            self.selected_index = index
+            if base == 1101:
+                if not self.state.toggle(index):
+                    self.dialog.ok(
+                        self.editor_text.heading,
+                        self.editor_text.maximum_rows,
+                    )
+                self._focus_row(base, index)
+                return
+            offset = -1 if base == 1201 else 1
+            target = self.state.move(index, offset)
+            self._focus_row(base, target)
+
+        def onAction(self, action) -> None:  # noqa: N802 - Kodi callback name
+            action_id = action.getId()
+            if action_id in back_actions:
+                self.close()
+                return
+
+            focus_id = self.getFocusId()
+            if focus_id in side_controls:
+                if action_id == action_move_left:
+                    self._focus_row(1301, self.selected_index)
+                    return
+                if action_id in (action_move_up, action_move_down):
+                    ordered = [1401, 1402, 1403, 1404]
+                    selected_item = self._selected_item()
+                    if selected_item is not None and selected_item.kind == "smart":
+                        ordered.append(1405)
+                    current = ordered.index(focus_id) if focus_id in ordered else 0
+                    offset = -1 if action_id == action_move_up else 1
+                    self.setFocusId(ordered[(current + offset) % len(ordered)])
+                    return
+
+            row_control = self._row_control(focus_id)
+            if row_control is None:
+                return
+            base, slot = row_control
+            index = self.top_index + slot
+            if action_id in (action_move_up, action_mouse_wheel_up):
+                if slot == 0 and index > 0:
+                    self._focus_row(base, index - 1)
+                return
+            if action_id in (action_move_down, action_mouse_wheel_down):
+                if slot == visible_row_count - 1 and index + 1 < len(self.state.items):
+                    self._focus_row(base, index + 1)
+                return
+            if action_id == action_page_up:
+                self._focus_row(base, max(0, index - visible_row_count))
+                return
+            if action_id == action_page_down:
+                self._focus_row(
+                    base,
+                    min(len(self.state.items) - 1, index + visible_row_count),
+                )
+
+    xml_dialog = None
+    try:
+        addon_path = xbmcaddon.Addon().getAddonInfo("path")
+        xml_dialog = SmartHomeLayoutDialog(
+            "home_layout_editor.xml",
+            addon_path,
+            "Default",
+            "1080i",
+        )
+        xml_dialog.configure()
+        xml_dialog.doModal()
+        if getattr(xml_dialog, "_ready", False):
+            return xml_dialog.result
+    except Exception:
+        xbmc.log(
+            "MyPicsDB 3 XML smart home editor failed; using fallback:\n%s"
+            % traceback.format_exc(),
+            xbmc.LOGERROR,
+        )
+    finally:
+        if xml_dialog is not None:
+            del xml_dialog
 
     return _show_smart_home_fallback(
         state,
         builtin_labels,
         saved_search_names,
         text,
-        mode_labels,
         dialog,
     )

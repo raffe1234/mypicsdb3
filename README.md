@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.4.10 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.4.11 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search
@@ -74,7 +74,7 @@ For the component boundaries and long-lived safety rules, see
   pagination and slideshow support.
 - Kodi smart-filter editor with all/any matching, metadata criteria, result
   preview and saved smart collections. Saved smart collections can be placed as
-  ordered Pictures-home rows in poster, square or wide format.
+  ordered Pictures-home rows using the same standard picture-row layout.
 - Versioned, validated Query Model used by global and saved searches; stored
   queries are revalidated when opened and never expose raw SQL.
 - Stable widget endpoints for configurable skins.
@@ -284,8 +284,8 @@ Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings > Home screen** to:
 - open **Configure home-screen rows**;
 - enable or disable built-in rows;
 - add a saved smart collection as its own row;
-- move built-in and smart rows up or down in one shared order;
-- choose **Poster**, **Square** or **Wide** for each smart row.
+- move built-in and smart rows directly with the inline up/down arrows;
+- remove an added smart collection without deleting its saved search.
 
 The editor lists all built-in views and any smart collections already added to
 the home screen. The first six built-in views are enabled by default through
@@ -294,11 +294,12 @@ pictures are disabled by default, so the initial home screen stays compact. At
 most nine rows can be visible at the same time. Existing Row 1 through Row 9
 choices are migrated automatically the first time the editor is opened.
 
-Changing the per-row value changes the provider URL and invalidates only the
-MyPicsDB 3 rows; a choice such as 39 is therefore no longer capped by an old
-ten-item widget result. Smart rows run the saved Query Model again whenever the
-widget reloads, so newly scanned matching media appears automatically. Renaming
-or deleting a saved collection updates or removes its home row. Rows with no
+Changing **Home-screen pictures per row** changes the provider generation and
+invalidates only the MyPicsDB 3 rows; a choice such as 39 is therefore no longer
+capped by an old ten-item widget result. Smart rows run the saved Query Model
+again whenever the widget reloads, so newly scanned matching media appears
+automatically. Renaming or deleting a saved collection updates or removes its
+home row. Rows with no
 indexed results disappear until matching media has been indexed.
 
 Random memories, Random albums and On this day - random use a separate refresh
@@ -516,9 +517,11 @@ preview the matching count and up to ten filenames, and decide whether the
 collection should use the configured global minimum-rating policy. Saving the
 collection opens it immediately and makes it available under **Saved searches**.
 Open **Settings > Home screen > Configure home-screen rows** to add that saved
-collection as a Pictures-home row and choose its order and display mode. The
-editor keeps **Cancel**, **Save** and **Defaults** as dedicated buttons on the
-right, so they are not mixed into the scrolling row list.
+collection as a Pictures-home row and choose its order. Each row has an inline
+On/Off switch and up/down arrows, matching Kodi's settings pattern. Smart
+collections no longer have a separate display mode; when opened interactively
+they use **Default album view**. The editor keeps **Cancel**, **Save** and
+**Defaults** as dedicated buttons on the right.
 
 The configured minimum-rating policy also applies to search results and saved
 searches. Use **Show all pictures temporarily** from the main menu before
@@ -787,9 +790,10 @@ nodes shown between Picture sources and the scan actions.
 In **Settings > Home screen**, **Home-screen pictures per row** is separate from
 the general widget size and accepts 4–40. **Refresh random home-screen rows every
 (hours)** defaults to 2 and accepts 1–720. **Configure home-screen rows** opens
-the combined built-in/smart editor. It supports visibility, ordering, adding or
-removing saved smart collections and Poster/Square/Wide mode for smart rows.
-Cancel, Save and Defaults remain visible as right-hand action buttons. The
+the combined built-in/smart editor. It supports visibility, direct inline
+ordering, and adding or removing saved smart collections. Smart collections use
+the standard Home picture row and **Default album view** when opened. Cancel,
+Save and Defaults remain visible as right-hand action buttons. The
 Smart filter editor uses the same pattern for Cancel and Save.
 
 ### Repository artwork paths

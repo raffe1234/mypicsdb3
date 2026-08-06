@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.4.10" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.4.11" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Fix smart home-screen rows and move editor actions to dedicated side buttons.</news>
+    <news>Use inline Home-row switches and move arrows, and let smart collections follow the default album view.</news>
   </extension>
 </addon>

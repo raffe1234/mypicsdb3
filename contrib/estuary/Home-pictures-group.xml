@@ -86,21 +86,7 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode1),poster)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=1&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName1)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListSquareMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode1),square)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=1&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName1)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListLandscapeMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode1),landscape)">
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),smart)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=1&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName1)]"/>
@@ -180,21 +166,7 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode2),poster)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=2&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName2)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListSquareMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode2),square)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=2&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName2)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListLandscapeMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode2),landscape)">
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),smart)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=2&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName2)]"/>
@@ -274,21 +246,7 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode3),poster)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=3&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName3)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListSquareMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode3),square)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=3&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName3)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListLandscapeMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode3),landscape)">
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),smart)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=3&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName3)]"/>
@@ -368,21 +326,7 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode4),poster)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=4&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName4)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListSquareMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode4),square)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=4&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName4)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListLandscapeMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode4),landscape)">
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),smart)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=4&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName4)]"/>
@@ -462,21 +406,7 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode5),poster)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=5&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName5)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListSquareMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode5),square)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=5&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName5)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListLandscapeMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode5),landscape)">
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),smart)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=5&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName5)]"/>
@@ -556,21 +486,7 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode6),poster)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=6&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName6)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListSquareMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode6),square)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=6&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName6)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListLandscapeMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode6),landscape)">
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),smart)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=6&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName6)]"/>
@@ -650,21 +566,7 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode7),poster)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=7&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName7)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListSquareMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode7),square)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=7&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName7)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListLandscapeMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode7),landscape)">
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),smart)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=7&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName7)]"/>
@@ -744,21 +646,7 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode8),poster)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=8&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName8)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListSquareMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode8),square)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=8&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName8)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListLandscapeMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode8),landscape)">
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),smart)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=8&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName8)]"/>
@@ -838,21 +726,7 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode9),poster)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=9&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName9)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListSquareMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode9),square)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=9&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName9)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListLandscapeMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),smart) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeSmartMode9),landscape)">
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),smart)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=9&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName9)]"/>

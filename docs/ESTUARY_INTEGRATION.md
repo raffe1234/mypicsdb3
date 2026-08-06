@@ -26,9 +26,10 @@ matches at a time.
 ## MyPicsDB 3 home-row contract
 
 The generated skin patches the Pictures home group with up to nine materialized
-rows. Built-in rows use the existing poster include. Saved smart collections can
-select dedicated Poster, Square or Wide includes and obtain their heading and
-saved-search ID from the matching hidden add-on settings.
+rows. Built-in rows and saved smart collections use the standard MyPicsDB
+poster include. Smart rows obtain their heading and saved-search ID from the
+matching hidden add-on settings; interactive browsing still uses Default album
+view inside the plug-in.
 
 Every MyPicsDB 3 provider path includes `MyPicsDB3.HomeWidgetGeneration`. This
 fixes stale rows after changing the configured 4–40 item limit and lets scans
@@ -42,6 +43,8 @@ slots.
 
 The 0.4.4 patch uses Omega patch revision 12 and Piers patch revision 10.
 The plugin-only 0.4.5 stability follow-up keeps those skin revisions unchanged.
+Version 0.4.11 advances Omega to revision 15 and Piers to revision 13 because
+the generated Home fragment removes the legacy square/wide smart-row branches.
 
 ## Automatic upstream refresh
 
@@ -103,8 +106,9 @@ Preview packages use Kodi's supported pre-release ordering:
 ```
 
 Increase `patch_revision` in a channel when the MyPicsDB 3 patch itself changes
-without a new Kodi release. Versions 0.4.9 and 0.4.10 use Omega revision 14 and Piers
-revision 12 because 0.4.10 changes only background-service startup behaviour. Then run the updater
+without a new Kodi release. Versions 0.4.9 and 0.4.10 use Omega revision 14 and
+Piers revision 12. Version 0.4.11 uses revisions 15/13 because the Home fragment
+changes. Then run the updater
 so all generated versions are recalculated.
 
 ## Build commands

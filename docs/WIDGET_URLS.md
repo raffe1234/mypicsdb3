@@ -81,4 +81,5 @@ plugin://plugin.image.mypicsdb3/home-smart?slot=1&widget=1&home=1&generation=<ge
 The plug-in validates the slot and resolves its materialized saved-search ID.
 This avoids embedding a two-argument add-on setting label inside `$INFO[...]`,
 where its commas can be interpreted as label prefix/suffix separators. Up to
-nine configured slots are available, with Poster, Square and Wide layouts.
+nine configured slots are available. Smart slots use the standard MyPicsDB
+poster row; opening the saved collection uses the configured Default album view.

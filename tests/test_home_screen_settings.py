@@ -142,16 +142,20 @@ def test_home_fragment_has_visible_titles_and_all_routes() -> None:
     assert "Addon.SettingBool(plugin.image.mypicsdb3,show_media_sources)" in home
     for position in range(1, 10):
         assert f"Window(Home).Property(MyPicsDB3.HomeRow{position})" in home
-        assert f"Window(Home).Property(MyPicsDB3.HomeSmartMode{position})" in home
+        assert f"Window(Home).Property(MyPicsDB3.HomeSmartMode{position})" not in home
         assert f"Window(Home).Property(MyPicsDB3.HomeSmartName{position})" in home
+        smart_condition = (
+            f"String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow{position}),smart)"
+        )
+        assert home.count(smart_condition) == 1
         assert f"home-smart?slot={position}&amp;widget=1&amp;home=1" in home
     for route in ROUTES:
         assert f"plugin://plugin.image.mypicsdb3/{route}" in home
     for heading in HEADINGS:
         assert f'value="{heading}"' in home
-    assert home.count('<param name="widget_limit" value="40"/>') == 117
-    assert home.count("widget=1&amp;home=1") == 117
-    assert home.count("home-smart?slot=") == 27
+    assert home.count('<param name="widget_limit" value="40"/>') == 99
+    assert home.count("widget=1&amp;home=1") == 99
+    assert home.count("home-smart?slot=") == 9
     assert "saved-search?id=$INFO[Addon.SettingInt" not in home
     assert "Addon.SettingStr(plugin.image.mypicsdb3,home_" not in home
     assert "Addon.SettingInt(plugin.image.mypicsdb3,home_" not in home
@@ -160,6 +164,6 @@ def test_home_fragment_has_visible_titles_and_all_routes() -> None:
     assert "Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)" in home
     assert home.count("Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)") == 27
     assert home.count("random_generation=") == 27
-    assert "WidgetListSquareMyPicsDB" in home
-    assert "WidgetListLandscapeMyPicsDB" in home
+    assert "WidgetListSquareMyPicsDB" not in home
+    assert "WidgetListLandscapeMyPicsDB" not in home
     assert "$ADDON[plugin.image.mypicsdb3" not in home

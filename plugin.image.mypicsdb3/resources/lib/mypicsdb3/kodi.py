@@ -428,9 +428,9 @@ class KodiContext:
                 smart_name = str(
                     addon.getSetting("home_smart_name_%d" % position) or ""
                 )
-                smart_mode = str(
-                    addon.getSetting("home_smart_mode_%d" % position) or "poster"
-                )
+                # The property remains for 0.4.10 skin compatibility, but
+                # 0.4.11 no longer exposes per-row smart collection layouts.
+                smart_mode = "poster"
                 window.setProperty(HOME_ROW_PROPERTY_FORMAT % position, row)
                 window.setProperty(
                     HOME_SMART_ID_PROPERTY_FORMAT % position, str(smart_id)
