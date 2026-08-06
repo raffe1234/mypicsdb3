@@ -83,7 +83,7 @@ Kodi-facing orchestration
         ↓
 Application and domain logic
   scanner.py, search.py, query_model.py, saved_searches.py,
-  slideshow.py, preferences.py, home_layout_editor.py
+  static_collections.py, slideshow.py, preferences.py, home_layout_editor.py
         ↓
 Infrastructure adapters
   filesystem.py, metadata.py, db/engine.py, db/catalog.py,
@@ -136,7 +136,8 @@ on the backend when the engine can hide the difference.
 ### `db/catalog.py`: catalogue API
 
 `Catalog` is the main read/write interface for sources, folders, media,
-searches, locks and scan runs. It returns dictionaries or domain objects that
+searches, manual collections, locks and scan runs. It returns dictionaries or
+domain objects that
 higher layers convert to Kodi UI items. Query methods enforce rating policy and
 use backend-neutral engine operations.
 
@@ -174,6 +175,14 @@ The Query Model defines supported fields, operators, sort choices and validation
 limits. It is the only supported path from a user-created or stored query to a
 catalogue query. Raw SQL is not accepted from Kodi routes or saved records.
 
+### `static_collections.py`: manual-collection boundary
+
+Manual collections are intentionally separate from saved smart searches. This
+module validates names and stored collection metadata. `Catalog` owns ordered
+media references and backend-neutral persistence; `views.py` owns Kodi dialogs,
+context actions and collection browsing. A collection never contains query JSON
+or source-file copies.
+
 ### `service_loop.py`: long-running maintenance
 
 The service synchronizes sources, schedules automatic scans, reacts to local
@@ -202,6 +211,7 @@ sources
 
 scan runs and named locks
 saved searches containing validated Query Model JSON
+manual collections containing ordered references to pictures/media
 schema and migration history
 ```
 
@@ -286,7 +296,7 @@ The suite includes:
 
 - catalogue and migration tests;
 - scanner, checkpoint and partial-source tests;
-- query, search and saved-search tests;
+- query, search, saved-search and manual-collection tests;
 - UI and Kodi-state tests;
 - slideshow and service-loop tests;
 - Estuary patch and package-asset tests;

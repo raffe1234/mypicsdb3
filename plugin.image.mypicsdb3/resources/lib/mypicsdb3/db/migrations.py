@@ -39,6 +39,9 @@ from .migration_steps.v0003_global_search_documents import (
 )
 from .migration_steps.v0004_mixed_media import MIGRATION as MIXED_MEDIA_MIGRATION
 from .migration_steps.v0005_saved_searches import MIGRATION as SAVED_SEARCHES_MIGRATION
+from .migration_steps.v0006_static_collections import (
+    MIGRATION as STATIC_COLLECTIONS_MIGRATION,
+)
 
 
 @dataclass(frozen=True)
@@ -80,6 +83,7 @@ DEFAULT_MIGRATIONS: Tuple[MigrationStep, ...] = (
     GLOBAL_SEARCH_DOCUMENTS_MIGRATION,
     MIXED_MEDIA_MIGRATION,
     SAVED_SEARCHES_MIGRATION,
+    STATIC_COLLECTIONS_MIGRATION,
 )
 MIGRATION_LOCK_TTL_SECONDS = 7200
 

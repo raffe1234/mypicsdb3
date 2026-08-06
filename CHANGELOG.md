@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.5.0 - 2026-08-06
+
+- Add named manual collections containing an explicit, user-selected sequence of
+  indexed pictures and home videos. Collections can be created, renamed and
+  deleted from the main menu; deleting a collection never deletes source files
+  or catalogue media rows.
+- Add **Add to collection** to normal media context menus and **Remove from
+  collection** inside a collection. Duplicate additions are ignored, missing
+  media is skipped safely, and the stored insertion order is retained for
+  browsing and slideshows.
+- Open manual collections with **Default album view** and support picture-only,
+  video-only and mixed collection slideshows through the existing guarded
+  playlist paths.
+- Raise the catalogue from schema 5 to schema 6 with portable `collections` and
+  `collection_items` tables for SQLite and MySQL/MariaDB. SQLite creates its
+  verified pre-migration backup automatically; MySQL/MariaDB still requires an
+  operator-managed backup. No catalogue rescan is required.
+
 ## 0.4.11 - 2026-08-06
 
 - Replace the smart Home row action list with the inline layout used by Kodi

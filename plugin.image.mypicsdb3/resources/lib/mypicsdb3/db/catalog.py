@@ -18,6 +18,12 @@ from ..saved_searches import (
     normalize_saved_search_name,
     parse_stored_saved_search,
 )
+from ..static_collections import (
+    CollectionValidationError,
+    StaticCollection,
+    normalize_collection_name,
+    parse_stored_collection,
+)
 from ..search_index import build_picture_search_document
 from ..utils import (
     NON_INDEXABLE_PICTURE_SOURCE_URIS,
@@ -178,6 +184,189 @@ class Catalog:
                 return int(cursor.rowcount or 0) > 0
             finally:
                 cursor.close()
+
+    def list_collections(self) -> List[Dict[str, Any]]:
+        order = "name COLLATE NOCASE, id" if self.engine.backend == "sqlite" else "name, id"
+        predicate, policy_params = self._rating_predicate("p.rating", "p.media_type")
+        policy_sql = " AND " + predicate if predicate else ""
+        with self.engine.transaction() as connection:
+            rows = self.engine.fetchall(
+                connection,
+                "SELECT id, name, created_at, updated_at FROM collections "
+                "ORDER BY %s" % order,
+            )
+            for row in rows:
+                total = self.engine.fetchone(
+                    connection,
+                    "SELECT COUNT(*) AS total FROM collection_items WHERE collection_id=?",
+                    (row["id"],),
+                )
+                available = self.engine.fetchone(
+                    connection,
+                    "SELECT COUNT(*) AS total FROM collection_items ci "
+                    "JOIN pictures p ON p.id=ci.picture_id "
+                    "WHERE ci.collection_id=? AND p.is_missing=0%s" % policy_sql,
+                    (row["id"], *policy_params),
+                )
+                representative = self.engine.fetchone(
+                    connection,
+                    "SELECT p.uri, p.thumb_uri, p.media_type FROM collection_items ci "
+                    "JOIN pictures p ON p.id=ci.picture_id "
+                    "WHERE ci.collection_id=? AND p.is_missing=0%s "
+                    "ORDER BY ci.position, ci.picture_id LIMIT 1" % policy_sql,
+                    (row["id"], *policy_params),
+                )
+                row["item_count"] = int((total or {}).get("total") or 0)
+                row["available_count"] = int((available or {}).get("total") or 0)
+                row.update(representative or {})
+        return rows
+
+    def get_collection(self, collection_id: int) -> Optional[StaticCollection]:
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(
+                connection,
+                "SELECT id, name, created_at, updated_at FROM collections WHERE id=?",
+                (collection_id,),
+            )
+        return parse_stored_collection(row) if row is not None else None
+
+    def create_collection(self, name: str) -> int:
+        normalized_name = normalize_collection_name(name)
+        now = utc_now()
+        with self.engine.transaction(immediate=True) as connection:
+            existing = self.engine.fetchone(
+                connection,
+                "SELECT id FROM collections WHERE name=?",
+                (normalized_name,),
+            )
+            if existing is not None:
+                raise CollectionValidationError(
+                    "A collection with this name already exists"
+                )
+            try:
+                cursor = self.engine.execute(
+                    connection,
+                    "INSERT INTO collections (name, created_at, updated_at) "
+                    "VALUES (?, ?, ?)",
+                    (normalized_name, now, now),
+                )
+            except self.engine.integrity_errors as exc:
+                raise CollectionValidationError(
+                    "A collection with this name already exists"
+                ) from exc
+            try:
+                return int(cursor.lastrowid)
+            finally:
+                cursor.close()
+
+    def rename_collection(self, collection_id: int, name: str) -> bool:
+        normalized_name = normalize_collection_name(name)
+        with self.engine.transaction(immediate=True) as connection:
+            existing = self.engine.fetchone(
+                connection,
+                "SELECT id FROM collections WHERE name=? AND id<>?",
+                (normalized_name, collection_id),
+            )
+            if existing is not None:
+                raise CollectionValidationError(
+                    "A collection with this name already exists"
+                )
+            try:
+                cursor = self.engine.execute(
+                    connection,
+                    "UPDATE collections SET name=?, updated_at=? WHERE id=?",
+                    (normalized_name, utc_now(), collection_id),
+                )
+            except self.engine.integrity_errors as exc:
+                raise CollectionValidationError(
+                    "A collection with this name already exists"
+                ) from exc
+            try:
+                return int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
+
+    def delete_collection(self, collection_id: int) -> bool:
+        with self.engine.transaction(immediate=True) as connection:
+            cursor = self.engine.execute(
+                connection,
+                "DELETE FROM collections WHERE id=?",
+                (collection_id,),
+            )
+            try:
+                return int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
+
+    def add_picture_to_collection(self, collection_id: int, picture_id: int) -> bool:
+        """Append one indexed media item, returning False for duplicates/missing rows."""
+        with self.engine.transaction(immediate=True) as connection:
+            collection_sql = "SELECT id FROM collections WHERE id=?"
+            if self.engine.backend == "mysql":
+                collection_sql += " FOR UPDATE"
+            collection = self.engine.fetchone(
+                connection,
+                collection_sql,
+                (collection_id,),
+            )
+            picture = self.engine.fetchone(
+                connection,
+                "SELECT id FROM pictures WHERE id=? AND is_missing=0",
+                (picture_id,),
+            )
+            if collection is None or picture is None:
+                return False
+            existing = self.engine.fetchone(
+                connection,
+                "SELECT position FROM collection_items "
+                "WHERE collection_id=? AND picture_id=?",
+                (collection_id, picture_id),
+            )
+            if existing is not None:
+                return False
+            last = self.engine.fetchone(
+                connection,
+                "SELECT MAX(position) AS position FROM collection_items "
+                "WHERE collection_id=?",
+                (collection_id,),
+            )
+            position = int((last or {}).get("position") or 0) + 1
+            now = utc_now()
+            try:
+                self.engine.execute(
+                    connection,
+                    "INSERT INTO collection_items "
+                    "(collection_id, picture_id, position, added_at) "
+                    "VALUES (?, ?, ?, ?)",
+                    (collection_id, picture_id, position, now),
+                ).close()
+            except self.engine.integrity_errors:
+                return False
+            self.engine.execute(
+                connection,
+                "UPDATE collections SET updated_at=? WHERE id=?",
+                (now, collection_id),
+            ).close()
+            return True
+
+    def remove_picture_from_collection(self, collection_id: int, picture_id: int) -> bool:
+        with self.engine.transaction(immediate=True) as connection:
+            cursor = self.engine.execute(
+                connection,
+                "DELETE FROM collection_items WHERE collection_id=? AND picture_id=?",
+                (collection_id, picture_id),
+            )
+            try:
+                removed = int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
+            if removed:
+                self.engine.execute(
+                    connection,
+                    "UPDATE collections SET updated_at=? WHERE id=?",
+                    (utc_now(), collection_id),
+                ).close()
+            return removed
 
     def sync_sources(self, kodi_sources: Sequence[Dict[str, str]]) -> List[Source]:
         now = utc_now()
@@ -656,6 +845,32 @@ class Catalog:
 
     def pictures_in_folder(self, folder_id: int, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.folder_id=?", (folder_id,), "COALESCE(p.taken_at, p.discovered_at) DESC, p.filename", limit, offset)
+
+    def pictures_in_collection(
+        self, collection_id: int, limit: int, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        if type(limit) is not int or type(offset) is not int:
+            raise ValueError("Collection page bounds must be integers")
+        if limit < 1 or limit > 5000:
+            raise ValueError("Collection page limit must be between 1 and 5000")
+        if offset < 0:
+            raise ValueError("Collection page offset must not be negative")
+        where, params = self._apply_rating_policy(
+            "ci.collection_id=?", (collection_id,)
+        )
+        query = (
+            "SELECT %s FROM collection_items ci "
+            "JOIN pictures p ON p.id=ci.picture_id "
+            "JOIN folders f ON f.id=p.folder_id "
+            "JOIN sources s ON s.id=p.source_id "
+            "WHERE p.is_missing=0 AND %s "
+            "ORDER BY ci.position, ci.picture_id LIMIT ? OFFSET ?"
+            % (PICTURE_COLUMNS, where)
+        )
+        with self.engine.transaction() as connection:
+            return self.engine.fetchall(
+                connection, query, (*params, limit, offset)
+            )
 
     @staticmethod
     def _escape_like(value: str) -> str:

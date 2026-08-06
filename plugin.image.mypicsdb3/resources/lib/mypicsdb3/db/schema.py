@@ -106,6 +106,22 @@ SQLITE_SCHEMA = [
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
     )""",
+    """CREATE TABLE IF NOT EXISTS collections (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )""",
+    """CREATE TABLE IF NOT EXISTS collection_items (
+        collection_id INTEGER NOT NULL,
+        picture_id INTEGER NOT NULL,
+        position INTEGER NOT NULL,
+        added_at TEXT NOT NULL,
+        PRIMARY KEY(collection_id, picture_id),
+        UNIQUE(collection_id, position),
+        FOREIGN KEY(collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+        FOREIGN KEY(picture_id) REFERENCES pictures(id) ON DELETE CASCADE
+    )""",
     """CREATE TABLE IF NOT EXISTS scan_runs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         source_id INTEGER,
@@ -135,6 +151,7 @@ SQLITE_SCHEMA = [
     "CREATE INDEX IF NOT EXISTS idx_pictures_camera ON pictures(is_missing, camera_make, camera_model)",
     "CREATE INDEX IF NOT EXISTS idx_pictures_favorite ON pictures(is_missing, favorite)",
     "CREATE INDEX IF NOT EXISTS idx_pictures_media_type ON pictures(is_missing, media_type, taken_at DESC)",
+    "CREATE INDEX IF NOT EXISTS idx_collection_items_picture ON collection_items(picture_id)",
     "CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(source_id, parent_uri, is_missing)",
     "CREATE INDEX IF NOT EXISTS idx_folders_recent ON folders(is_missing, latest_discovered_at DESC)",
     "CREATE INDEX IF NOT EXISTS idx_folders_random ON folders(is_missing, random_key)",
@@ -250,6 +267,25 @@ MYSQL_SCHEMA = [
         query_json LONGTEXT NOT NULL,
         created_at DATETIME(6) NOT NULL,
         updated_at DATETIME(6) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
+    """CREATE TABLE IF NOT EXISTS collections (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(191) NOT NULL UNIQUE,
+        created_at DATETIME(6) NOT NULL,
+        updated_at DATETIME(6) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
+    """CREATE TABLE IF NOT EXISTS collection_items (
+        collection_id BIGINT UNSIGNED NOT NULL,
+        picture_id BIGINT UNSIGNED NOT NULL,
+        position INT UNSIGNED NOT NULL,
+        added_at DATETIME(6) NOT NULL,
+        PRIMARY KEY(collection_id, picture_id),
+        UNIQUE KEY uq_collection_items_position (collection_id, position),
+        INDEX idx_collection_items_picture (picture_id),
+        CONSTRAINT fk_collection_items_collection
+            FOREIGN KEY(collection_id) REFERENCES collections(id) ON DELETE CASCADE,
+        CONSTRAINT fk_collection_items_picture
+            FOREIGN KEY(picture_id) REFERENCES pictures(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
     """CREATE TABLE IF NOT EXISTS scan_runs (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

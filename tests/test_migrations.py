@@ -31,6 +31,8 @@ def make_engine(tmp_path: Path) -> DatabaseEngine:
 def create_schema_one_without_history(engine: DatabaseEngine) -> None:
     with engine.transaction(immediate=True) as connection:
         create_schema(engine, connection)
+        engine.execute(connection, "DROP TABLE IF EXISTS collection_items").close()
+        engine.execute(connection, "DROP TABLE IF EXISTS collections").close()
         engine.execute(connection, "DROP TABLE IF EXISTS saved_searches").close()
         engine.execute(connection, "DROP TABLE IF EXISTS picture_search_documents").close()
         engine.execute(connection, "DROP INDEX IF EXISTS idx_pictures_date_browse").close()
@@ -61,7 +63,7 @@ def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> N
     result = MigrationRunner(engine).initialize()
 
     assert result.created_database is True
-    assert result.current_version == 5
+    assert result.current_version == 6
     assert result.backup_path is None
     assert not (tmp_path / "backups").exists()
     with engine.transaction() as connection:
@@ -84,16 +86,29 @@ def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> N
             "SELECT name FROM sqlite_master WHERE type='table' "
             "AND name='saved_searches'",
         )
-    assert [row["version"] for row in rows] == [1, 2, 3, 4, 5]
+        collections_table = engine.fetchone(
+            connection,
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name='collections'",
+        )
+        collection_items_table = engine.fetchone(
+            connection,
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name='collection_items'",
+        )
+    assert [row["version"] for row in rows] == [1, 2, 3, 4, 5, 6]
     assert rows[0]["name"] == "initial catalogue schema"
     assert rows[1]["name"] == "year-first date browsing index"
     assert rows[2]["name"] == "normalized global search documents"
     assert rows[3]["name"] == "mixed picture and video media type"
     assert rows[4]["name"] == "saved picture searches"
+    assert rows[5]["name"] == "manual media collections"
     assert all(len(row["checksum"]) == 64 for row in rows)
     assert index is not None
     assert search_table is not None
     assert saved_searches_table is not None
+    assert collections_table is not None
+    assert collection_items_table is not None
     with engine.transaction() as connection:
         columns = engine.fetchall(connection, "PRAGMA table_info(pictures)")
     assert any(row["name"] == "media_type" for row in columns)
@@ -111,15 +126,51 @@ def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> N
     )
 
 
-def test_existing_schema_four_adds_saved_searches(tmp_path: Path) -> None:
+def test_existing_schema_five_adds_manual_collections(tmp_path: Path) -> None:
     engine = make_engine(tmp_path)
     MigrationRunner(engine).initialize()
     with engine.transaction(immediate=True) as connection:
-        engine.execute(connection, "DROP TABLE saved_searches").close()
+        engine.execute(connection, "DROP TABLE collection_items").close()
+        engine.execute(connection, "DROP TABLE collections").close()
         engine.execute(
             connection,
             "DELETE FROM schema_migrations WHERE version=?",
-            (5,),
+            (6,),
+        ).close()
+        engine.execute(
+            connection,
+            "UPDATE meta SET value=? WHERE key=?",
+            ("5", "schema_version"),
+        ).close()
+
+    result = MigrationRunner(engine).initialize()
+
+    assert result.previous_version == 5
+    assert result.current_version == 6
+    assert result.applied_versions == (6,)
+    assert result.backup_path is not None
+    with engine.transaction() as connection:
+        assert engine.table_exists(connection, "collections")
+        assert engine.table_exists(connection, "collection_items")
+        row = engine.fetchone(
+            connection,
+            "SELECT name FROM schema_migrations WHERE version=?",
+            (6,),
+        )
+    assert row == {"name": "manual media collections"}
+
+
+def test_existing_schema_four_adds_saved_searches_and_collections(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path)
+    MigrationRunner(engine).initialize()
+    with engine.transaction(immediate=True) as connection:
+        engine.execute(connection, "DROP TABLE collection_items").close()
+        engine.execute(connection, "DROP TABLE collections").close()
+        engine.execute(connection, "DROP TABLE saved_searches").close()
+        engine.execute(
+            connection,
+            "DELETE FROM schema_migrations WHERE version IN (?, ?)",
+            (5, 6),
         ).close()
         engine.execute(
             connection,
@@ -130,11 +181,13 @@ def test_existing_schema_four_adds_saved_searches(tmp_path: Path) -> None:
     result = MigrationRunner(engine).initialize()
 
     assert result.previous_version == 4
-    assert result.current_version == 5
-    assert result.applied_versions == (5,)
+    assert result.current_version == 6
+    assert result.applied_versions == (5, 6)
     assert result.backup_path is not None
     with engine.transaction() as connection:
         assert engine.table_exists(connection, "saved_searches")
+        assert engine.table_exists(connection, "collections")
+        assert engine.table_exists(connection, "collection_items")
         row = engine.fetchone(
             connection,
             "SELECT name FROM schema_migrations WHERE version=?",
@@ -157,8 +210,8 @@ def test_existing_schema_one_is_backed_up_and_registered(tmp_path: Path) -> None
     result = MigrationRunner(engine).initialize()
 
     assert result.bootstrapped_history is True
-    assert result.current_version == 5
-    assert result.applied_versions == (2, 3, 4, 5)
+    assert result.current_version == 6
+    assert result.applied_versions == (2, 3, 4, 5, 6)
     assert result.backup_path is not None
     backup_path = Path(result.backup_path)
     assert backup_path.is_file()
@@ -178,11 +231,11 @@ def test_existing_schema_one_is_backed_up_and_registered(tmp_path: Path) -> None
     with engine.transaction() as connection:
         assert engine.fetchone(
             connection, "SELECT value FROM meta WHERE key='schema_version'"
-        )["value"] == "5"
+        )["value"] == "6"
         assert engine.fetchone(
             connection,
             "SELECT COUNT(*) AS total FROM schema_migrations",
-        )["total"] == 5
+        )["total"] == 6
         assert engine.fetchone(
             connection,
             "SELECT name FROM sqlite_master WHERE type='index' "
@@ -262,8 +315,8 @@ def test_existing_schema_two_backfills_normalized_search_documents(tmp_path: Pat
     result = MigrationRunner(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 5
-    assert result.applied_versions == (3, 4, 5)
+    assert result.current_version == 6
+    assert result.applied_versions == (3, 4, 5, 6)
     assert result.backup_path is not None
     with engine.transaction() as connection:
         row = engine.fetchone(
@@ -287,7 +340,7 @@ def test_existing_schema_two_backfills_normalized_search_documents(tmp_path: Pat
     assert " familj " in row["document"]
     assert " göteborg " in row["document"]
     assert media == {"media_type": "picture"}
-    assert [item["version"] for item in history] == [1, 2, 3, 4, 5]
+    assert [item["version"] for item in history] == [1, 2, 3, 4, 5, 6]
 
 
 def test_schema_marker_reconciles_already_recorded_later_migration(tmp_path: Path) -> None:
@@ -309,7 +362,7 @@ def test_schema_marker_reconciles_already_recorded_later_migration(tmp_path: Pat
     result = MigrationRunner(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 5
+    assert result.current_version == 6
     assert result.applied_versions == (3,)
     with engine.transaction() as connection:
         history = engine.fetchall(
@@ -321,8 +374,8 @@ def test_schema_marker_reconciles_already_recorded_later_migration(tmp_path: Pat
             "SELECT value FROM meta WHERE key=?",
             ("schema_version",),
         )
-    assert [item["version"] for item in history] == [1, 2, 3, 4, 5]
-    assert schema_version == {"value": "5"}
+    assert [item["version"] for item in history] == [1, 2, 3, 4, 5, 6]
+    assert schema_version == {"value": "6"}
 
 
 def test_newer_schema_is_rejected_before_any_schema_write(tmp_path: Path) -> None:

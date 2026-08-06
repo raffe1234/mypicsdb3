@@ -4,8 +4,9 @@ MyPicsDB 3 uses a versioned migration runner for both SQLite and
 MySQL/MariaDB. Add-on version 0.2.13 introduced the framework. Version 0.2.15
 raised the catalogue to schema version 2. Version 0.2.19 raised it to schema 3
 with normalized global-search documents. Version 0.2.22 raised it to schema 4
-with an explicit picture/video media type. Version 0.2.34 raises it to schema 5
-with validated saved searches.
+with an explicit picture/video media type. Version 0.2.34 raised it to schema 5
+with validated saved searches. Version 0.5.0 raises it to schema 6 with named
+manual media collections and explicit item order.
 
 ## Startup sequence
 
@@ -80,6 +81,36 @@ The add-on stores no raw SQL. Each saved query is parsed and validated again
 when it is opened; malformed JSON, unknown fields, unsupported operators and
 unknown query versions are rejected. Saved-search plugin URLs contain only the
 database row ID, pagination and local display-policy parameters.
+
+## Schema 6: manual media collections
+
+Schema 6 adds two portable tables:
+
+```text
+collections
+- id
+- name
+- created_at
+- updated_at
+
+collection_items
+- collection_id
+- picture_id
+- position
+- added_at
+```
+
+A collection stores only references to existing `pictures` rows. The composite
+primary key prevents one media item from being added twice to the same
+collection, while the unique collection/position key preserves a deterministic
+manual order. Foreign keys cascade collection-item rows when a collection or a
+cleaned-up media row is deleted; source files are never changed.
+
+The migration creates empty tables and an item lookup index. It does not scan
+sources, rewrite media metadata or populate collections automatically. Existing
+schema-5 catalogues therefore upgrade without a rescan. SQLite and
+MySQL/MariaDB use equivalent constraints, with backend-appropriate types and
+DDL.
 
 ## SQLite backups
 

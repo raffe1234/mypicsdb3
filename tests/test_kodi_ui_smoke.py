@@ -217,6 +217,13 @@ class FakeCatalog:
         self.created_saved_searches = []
         self.renamed_saved_searches = []
         self.deleted_saved_searches = []
+        self.collection_rows = []
+        self.collection_objects = {}
+        self.created_collections = []
+        self.renamed_collections = []
+        self.deleted_collections = []
+        self.added_collection_items = []
+        self.removed_collection_items = []
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -306,6 +313,45 @@ class FakeCatalog:
         self.deleted_saved_searches.append(saved_search_id)
         return True
 
+    def list_collections(self):
+        return list(self.collection_rows)
+
+    def get_collection(self, collection_id):
+        return self.collection_objects.get(collection_id)
+
+    def create_collection(self, name):
+        collection_id = max(self.collection_objects, default=0) + 1
+        collection = types.SimpleNamespace(id=collection_id, name=name.strip())
+        self.collection_objects[collection_id] = collection
+        self.created_collections.append(name)
+        return collection_id
+
+    def rename_collection(self, collection_id, name):
+        self.renamed_collections.append((collection_id, name))
+        collection = self.collection_objects.get(collection_id)
+        if collection is not None:
+            collection.name = name.strip()
+        return True
+
+    def delete_collection(self, collection_id):
+        self.deleted_collections.append(collection_id)
+        self.collection_objects.pop(collection_id, None)
+        return True
+
+    def add_picture_to_collection(self, collection_id, picture_id):
+        item = (collection_id, picture_id)
+        if item in self.added_collection_items:
+            return False
+        self.added_collection_items.append(item)
+        return True
+
+    def remove_picture_from_collection(self, collection_id, picture_id):
+        self.removed_collection_items.append((collection_id, picture_id))
+        return True
+
+    def pictures_in_collection(self, collection_id, limit, offset=0):
+        return self.recent_taken(limit, offset)
+
     def get_folder(self, folder_id):
         return {"id": folder_id, "source_id": 4, "uri": "smb://server/photos/Summer/", "name": "Summer"}
 
@@ -379,11 +425,12 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 21
+    assert len(calls.items) == 22
     assert calls.items[0][0].endswith("/search")
     assert calls.items[1][0].endswith("/saved-searches")
-    assert calls.items[2][0].endswith("/action/create-smart-collection")
-    assert calls.items[3][0].endswith("/sources")
+    assert calls.items[2][0].endswith("/collections")
+    assert calls.items[3][0].endswith("/action/create-smart-collection")
+    assert calls.items[4][0].endswith("/sources")
 
     calls.ended = False
     ui.dispatch(views.Request("recent-taken", {"limit": "15"}))
@@ -408,12 +455,13 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     ui.root()
 
     urls = [url for url, _item, _is_folder in calls.items]
-    assert len(urls) == 18
+    assert len(urls) == 19
     assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
     assert "plugin://plugin.image.mypicsdb3/years" not in urls
     assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
     assert "plugin://plugin.image.mypicsdb3/search" in urls
     assert "plugin://plugin.image.mypicsdb3/saved-searches" in urls
+    assert "plugin://plugin.image.mypicsdb3/collections" in urls
     assert "plugin://plugin.image.mypicsdb3/action/create-smart-collection" in urls
     assert "plugin://plugin.image.mypicsdb3/sources" in urls
     assert "plugin://plugin.image.mypicsdb3/action/refresh-random" in urls
@@ -538,14 +586,14 @@ def test_rating_policy_is_visible_and_can_be_temporarily_bypassed(monkeypatch) -
     assert calls.items[0][1].label == "Minimum rating: 3+"
     assert calls.items[1][1].label == "Show all pictures temporarily"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/?rating_policy=all"
-    assert calls.items[6][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
+    assert calls.items[7][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
 
     ui.dispatch(views.Request("", {"rating_policy": "all"}))
 
     assert runtime.catalog.rating_policy == "all"
     assert calls.items[1][1].label == "Use configured rating filter"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/"
-    assert calls.items[6][0] == (
+    assert calls.items[7][0] == (
         "plugin://plugin.image.mypicsdb3/recent-taken?rating_policy=all"
     )
 
@@ -1765,3 +1813,108 @@ def test_home_smart_route_resolves_saved_search_id_from_slot(monkeypatch) -> Non
     assert calls.category == "Spain"
     assert runtime.catalog.query_requests[-1][0] is query
     assert calls.ended is True
+
+
+def test_manual_collections_list_open_and_use_default_album_view(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.album_view_mode = 54
+    runtime.catalog.collection_rows = [
+        {
+            "id": 9,
+            "name": "Family picks",
+            "available_count": 1,
+            "item_count": 2,
+            "uri": "smb://server/photos/image.jpg",
+            "thumb_uri": "smb://server/photos/image.jpg",
+            "media_type": "picture",
+        }
+    ]
+    runtime.catalog.collection_objects[9] = types.SimpleNamespace(
+        id=9, name="Family picks"
+    )
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("collections", {}))
+    assert calls.category == "Collections"
+    assert calls.items[0][0].endswith("/action/create-collection")
+    assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/collection?id=9"
+    assert calls.items[1][1].label == "Family picks  [COLOR=grey](1)[/COLOR]"
+    assert calls.items[1][1].context == [
+        (
+            "Rename collection",
+            "RunPlugin(plugin://plugin.image.mypicsdb3/action/rename-collection?id=9)",
+        ),
+        (
+            "Delete collection",
+            "RunPlugin(plugin://plugin.image.mypicsdb3/action/delete-collection?id=9)",
+        ),
+    ]
+
+    calls.builtins.clear()
+    calls.info_label_sequences = {
+        "Container.PluginCategory": ["Collections", "Family picks"],
+        "Container.Content": ["files", "images"],
+    }
+    ui.dispatch(views.Request("collection", {"id": "9"}))
+    assert calls.category == "Family picks"
+    assert calls.items[0][0].startswith(
+        "plugin://plugin.image.mypicsdb3/action/start-slideshow?"
+    )
+    assert calls.items[1][0] == "smb://server/photos/image.jpg"
+    labels = [label for label, _command in calls.items[1][1].context]
+    assert "Add to collection" in labels
+    assert "Remove from collection" in labels
+    slideshow = [
+        command
+        for label, command in calls.items[1][1].context
+        if label == "Play slideshow from here"
+    ]
+    assert slideshow == [
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/start-slideshow?"
+        "id=9&scope=collection&start=1)"
+    ]
+    assert calls.builtins in ([], ["Container.SetViewMode(54)"])
+
+
+def test_manual_collection_actions_create_add_remove_rename_and_delete(
+    monkeypatch,
+) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.collection_objects[4] = types.SimpleNamespace(
+        id=4, name="Trips"
+    )
+    runtime.catalog.collection_rows = [
+        {"id": 4, "name": "Trips", "available_count": 0}
+    ]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    FakeDialog.input_responses = ["New collection"]
+    ui.action("action/create-collection", {})
+    assert runtime.catalog.created_collections == ["New collection"]
+    assert runtime.kodi.notifications[-1] == ("Collection created", False)
+    assert calls.builtins[-1].startswith("Container.Update(")
+
+    FakeDialog.select_responses = [1]
+    ui.action("action/add-to-collection", {"id": "1"})
+    assert runtime.catalog.added_collection_items == [(4, 1)]
+    assert runtime.kodi.notifications[-1] == ("Added to 'Trips'", False)
+
+    ui.action(
+        "action/remove-from-collection",
+        {"collection": "4", "id": "1"},
+    )
+    assert runtime.catalog.removed_collection_items == [(4, 1)]
+    assert runtime.kodi.notifications[-1] == ("Removed from 'Trips'", False)
+    assert calls.builtins[-1] == "Container.Refresh"
+
+    FakeDialog.input_responses = ["Journeys"]
+    ui.action("action/rename-collection", {"id": "4"})
+    assert runtime.catalog.renamed_collections == [(4, "Journeys")]
+    assert runtime.kodi.notifications[-1] == ("Collection renamed", False)
+
+    FakeDialog.responses = [True]
+    ui.action("action/delete-collection", {"id": "4"})
+    assert runtime.catalog.deleted_collections == [4]
+    assert runtime.kodi.notifications[-1] == ("Collection deleted", False)

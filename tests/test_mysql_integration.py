@@ -65,6 +65,8 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     engine = DatabaseEngine(mysql_settings(tmp_path))
     with engine.transaction() as connection:
         create_schema(engine, connection)
+        engine.execute(connection, "DROP TABLE collection_items").close()
+        engine.execute(connection, "DROP TABLE collections").close()
         engine.execute(connection, "DROP TABLE saved_searches").close()
         engine.execute(
             connection,
@@ -99,8 +101,8 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     second = catalog.initialize()
 
     assert first.bootstrapped_history is True
-    assert first.current_version == 5
-    assert first.applied_versions == (2, 3, 4, 5)
+    assert first.current_version == 6
+    assert first.applied_versions == (2, 3, 4, 5, 6)
     assert second.bootstrapped_history is False
     assert second.applied_versions == ()
     with engine.transaction() as connection:
@@ -130,9 +132,9 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
         )
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
-    assert [row["version"] for row in history] == [1, 2, 3, 4, 5]
+    assert [row["version"] for row in history] == [1, 2, 3, 4, 5, 6]
     assert {row["addon_version"] for row in history} == {VERSION}
-    assert count["total"] == 5
+    assert count["total"] == 6
     assert index is not None
     assert search_table is not None
 
@@ -239,7 +241,7 @@ def test_existing_mysql_schema_two_backfills_global_search_documents(tmp_path) -
     result = Catalog(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 5
+    assert result.current_version == 6
     assert result.applied_versions == (3,)
     with engine.transaction() as connection:
         row = engine.fetchone(
@@ -369,3 +371,58 @@ def test_mysql_saved_search_roundtrip(tmp_path) -> None:
     assert catalog.rename_saved_search(saved_id, "Östersjön") is True
     assert catalog.list_saved_searches()[0]["name"] == "Östersjön"
     assert catalog.delete_saved_search(saved_id) is True
+
+
+def test_mysql_manual_collection_roundtrip_preserves_mixed_order(tmp_path) -> None:
+    catalog = Catalog(DatabaseEngine(mysql_settings(tmp_path)))
+    catalog.initialize()
+    source = catalog.sync_sources(
+        [{"label": "Collection media", "uri": "/srv/collection-media"}]
+    )[0]
+    now = utc_now()
+    with catalog.engine.transaction() as connection:
+        folder_id = catalog.upsert_folder(
+            connection,
+            source.id,
+            "/srv/collection-media/",
+            "",
+            "Collection media",
+            now,
+        )
+        media_ids = []
+        for filename, media_type in (("clip.mp4", "video"), ("photo.jpg", "picture")):
+            media_ids.append(
+                catalog.insert_picture(
+                    connection,
+                    {
+                        "source_id": source.id,
+                        "folder_id": folder_id,
+                        "uri": "/srv/collection-media/" + filename,
+                        "filename": filename,
+                        "extension": filename.rsplit(".", 1)[-1],
+                        "media_type": media_type,
+                        "file_size": 100,
+                        "file_mtime": 1.0,
+                        "discovered_at": now,
+                        "last_seen_at": now,
+                        "taken_at": "2026-08-06 12:00:00.000000",
+                        "taken_source": "test",
+                        "rating": None if media_type == "video" else 5,
+                        "metadata_hash": filename,
+                        "thumb_uri": "/srv/collection-media/" + filename,
+                    },
+                    [],
+                )
+            )
+
+    collection_id = catalog.create_collection("Mixed picks")
+    assert catalog.add_picture_to_collection(collection_id, media_ids[0]) is True
+    assert catalog.add_picture_to_collection(collection_id, media_ids[1]) is True
+    assert catalog.add_picture_to_collection(collection_id, media_ids[0]) is False
+    assert [
+        row["id"] for row in catalog.pictures_in_collection(collection_id, 10)
+    ] == media_ids
+    assert catalog.list_collections()[0]["available_count"] == 2
+    assert catalog.rename_collection(collection_id, "Renamed picks") is True
+    assert catalog.get_collection(collection_id).name == "Renamed picks"
+    assert catalog.delete_collection(collection_id) is True

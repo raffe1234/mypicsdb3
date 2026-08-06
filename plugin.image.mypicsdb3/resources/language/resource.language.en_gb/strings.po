@@ -1218,3 +1218,75 @@ msgstr "Home-screen row"
 msgctxt "#32800"
 msgid "Order"
 msgstr "Order"
+
+msgctxt "#32801"
+msgid "Collections"
+msgstr "Collections"
+
+msgctxt "#32802"
+msgid "Create collection"
+msgstr "Create collection"
+
+msgctxt "#32803"
+msgid "Rename collection"
+msgstr "Rename collection"
+
+msgctxt "#32804"
+msgid "Delete collection"
+msgstr "Delete collection"
+
+msgctxt "#32805"
+msgid "Collection name"
+msgstr "Collection name"
+
+msgctxt "#32806"
+msgid "Collection created"
+msgstr "Collection created"
+
+msgctxt "#32807"
+msgid "Collection renamed"
+msgstr "Collection renamed"
+
+msgctxt "#32808"
+msgid "Collection deleted"
+msgstr "Collection deleted"
+
+msgctxt "#32809"
+msgid "Collection was not found"
+msgstr "Collection was not found"
+
+msgctxt "#32810"
+msgid "Could not save collection"
+msgstr "Could not save collection"
+
+msgctxt "#32811"
+msgid "Delete '%s'? Pictures and videos are not deleted."
+msgstr "Delete '%s'? Pictures and videos are not deleted."
+
+msgctxt "#32812"
+msgid "Add to collection"
+msgstr "Add to collection"
+
+msgctxt "#32813"
+msgid "Remove from collection"
+msgstr "Remove from collection"
+
+msgctxt "#32814"
+msgid "Create new collection..."
+msgstr "Create new collection..."
+
+msgctxt "#32815"
+msgid "Added to '%s'"
+msgstr "Added to '%s'"
+
+msgctxt "#32816"
+msgid "Already in '%s'"
+msgstr "Already in '%s'"
+
+msgctxt "#32817"
+msgid "Removed from '%s'"
+msgstr "Removed from '%s'"
+
+msgctxt "#32818"
+msgid "Play collection slideshow"
+msgstr "Play collection slideshow"

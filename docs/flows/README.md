@@ -61,6 +61,14 @@ JSON, saved searches, smart-filter editing and smart home rows.
 Main files: `search.py`, `search_index.py`, `query_model.py`,
 `saved_searches.py`, `smart_filter_editor.py`, `db/catalog.py`, `views.py`.
 
+### [Manual collections](STATIC_COLLECTIONS.md)
+
+Read this for named user-selected collections, ordered media references,
+collection context actions, default album view and collection slideshows.
+
+Main files: `static_collections.py`, `db/catalog.py`, `db/schema.py`,
+`db/migration_steps/v0006_static_collections.py`, `views.py`.
+
 ### [Slideshows and the background service](SLIDESHOW_SERVICE.md)
 
 Read this for native picture slideshows, video playlists, mixed database

@@ -40,6 +40,7 @@ from .rating_policy import (
 from .router import Request
 from .search import build_global_search_request
 from .saved_searches import SavedSearchValidationError
+from .static_collections import CollectionValidationError
 from .smart_filter_editor import SmartFilterEditor
 from .scanner import Scanner
 from .slideshow import (
@@ -323,6 +324,7 @@ class PluginUI:
         items = [
             self.add_folder(self.text(32500, "Search"), "search", **rating_params),
             self.add_folder(self.text(32700, "Saved searches"), "saved-searches", **rating_params),
+            self.add_folder(self.text(32801, "Collections"), "collections", **rating_params),
             self.add_action(
                 self.text(32740, "Create smart collection"),
                 "action/create-smart-collection",
@@ -489,6 +491,124 @@ class PluginUI:
             saved.name,
         )
 
+    def collections(self, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
+        items = [
+            self.add_action(
+                self.text(32802, "Create collection"),
+                "action/create-collection",
+            )
+        ]
+        for row in self.catalog.list_collections():
+            collection_id = int(row["id"])
+            count = int(row.get("available_count") or 0)
+            label = "%s  [COLOR=grey](%d)[/COLOR]" % (row["name"], count)
+            rename = "RunPlugin(%s)" % self.url(
+                "action/rename-collection", id=collection_id
+            )
+            delete = "RunPlugin(%s)" % self.url(
+                "action/delete-collection", id=collection_id
+            )
+            context = [
+                (self.text(32803, "Rename collection"), rename),
+                (self.text(32804, "Delete collection"), delete),
+            ]
+            art = self._media_art_uri(
+                row.get("uri"), row.get("thumb_uri"), row.get("media_type")
+            ) or self.icon
+            items.append(
+                self.add_folder(
+                    label,
+                    "collection",
+                    art=art,
+                    context=context,
+                    id=collection_id,
+                    **rating_params,
+                )
+            )
+        self.finish(
+            items,
+            content="files",
+            category=self._rating_category(
+                self.text(32801, "Collections"), params
+            ),
+        )
+
+    def collection(self, collection_id: int, params: Dict[str, str]):
+        try:
+            collection = self.catalog.get_collection(collection_id)
+        except CollectionValidationError as exc:
+            self.kodi.log.warning("Could not read collection %s: %s", collection_id, exc)
+            collection = None
+        if collection is None:
+            self.kodi.notify(
+                self.text(32809, "Collection was not found"), error=True
+            )
+            return self.finish(
+                [],
+                content="images",
+                cache=False,
+                category=self.text(32801, "Collections"),
+            )
+
+        limit = safe_limit(
+            params.get("limit"), self.kodi.settings.browser_page_size
+        )
+        offset = int(params.get("offset", "0") or 0)
+        rows = self.catalog.pictures_in_collection(
+            collection_id, limit, offset
+        )
+        items = []
+        if offset == 0:
+            items.append(
+                self.add_action(
+                    self.text(32818, "Play collection slideshow"),
+                    "action/start-slideshow",
+                    scope="collection",
+                    id=collection_id,
+                    **self._rating_route_params(params),
+                )
+            )
+        for row in rows:
+            remove = "RunPlugin(%s)" % self.url(
+                "action/remove-from-collection",
+                collection=collection_id,
+                id=row.get("id"),
+            )
+            items.append(
+                self._media_item(
+                    row,
+                    extra_context=[
+                        (self.text(32813, "Remove from collection"), remove)
+                    ],
+                    browse_params=params,
+                    slideshow_route="collection",
+                )
+            )
+        if len(rows) == limit and "limit" not in params:
+            page_params = {
+                key: value
+                for key, value in params.items()
+                if key not in {"id", "offset", "limit", "widget"}
+            }
+            items.append(
+                self._next_page_item(
+                    "collection",
+                    offset,
+                    limit,
+                    id=collection_id,
+                    **page_params,
+                )
+            )
+        self.finish(
+            items,
+            content="images",
+            cache=False,
+            category=self._rating_category(collection.name, params),
+            view_mode=self._browser_view_mode(params),
+        )
+
     def sources(self, params: Optional[Dict[str, str]] = None):
         params = params or {}
         rating_params = self._rating_route_params(params)
@@ -622,7 +742,13 @@ class PluginUI:
         if row.get("rating") is not None:
             item.setProperty("MyPicsDB3.Rating", str(row["rating"]))
         toggle = "RunPlugin(%s)" % self.url("action/toggle-favorite", id=row.get("id"))
-        context = [(self.text(30022, "Toggle favorite"), toggle)]
+        add_to_collection = "RunPlugin(%s)" % self.url(
+            "action/add-to-collection", id=row.get("id")
+        )
+        context = [
+            (self.text(30022, "Toggle favorite"), toggle),
+            (self.text(32812, "Add to collection"), add_to_collection),
+        ]
         if slideshow_route:
             slideshow_params = {
                 key: value
@@ -1143,6 +1269,10 @@ class PluginUI:
                 if saved is not None
                 else []
             )
+        if scope == "collection":
+            return self.catalog.pictures_in_collection(
+                int(params["id"]), limit, 0
+            )
         return []
 
     @staticmethod
@@ -1580,6 +1710,148 @@ class PluginUI:
                     error=True,
                 )
             return
+        if route == "action/create-collection":
+            name = xbmcgui.Dialog().input(
+                self.text(32805, "Collection name")
+            )
+            if not name:
+                return
+            try:
+                collection_id = self.catalog.create_collection(name)
+                self.kodi.notify(self.text(32806, "Collection created"))
+                xbmc.executebuiltin(
+                    "Container.Update(%s)"
+                    % self.url("collection", id=collection_id)
+                )
+            except CollectionValidationError as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(32810, "Could not save collection"), exc),
+                    error=True,
+                )
+            return
+        if route == "action/rename-collection":
+            try:
+                collection = self.catalog.get_collection(int(params["id"]))
+                if collection is None:
+                    self.kodi.notify(
+                        self.text(32809, "Collection was not found"), error=True
+                    )
+                    return
+                name = xbmcgui.Dialog().input(
+                    self.text(32803, "Rename collection"),
+                    defaultt=collection.name,
+                )
+                if not name or name.strip() == collection.name:
+                    return
+                self.catalog.rename_collection(collection.id, name)
+                self.kodi.notify(self.text(32807, "Collection renamed"))
+                xbmc.executebuiltin("Container.Refresh")
+            except CollectionValidationError as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(32810, "Could not save collection"), exc),
+                    error=True,
+                )
+            return
+        if route == "action/delete-collection":
+            try:
+                collection = self.catalog.get_collection(int(params["id"]))
+                if collection is None:
+                    self.kodi.notify(
+                        self.text(32809, "Collection was not found"), error=True
+                    )
+                    return
+                confirmed = xbmcgui.Dialog().yesno(
+                    self.text(32804, "Delete collection"),
+                    self.text(
+                        32811,
+                        "Delete '%s'? Pictures and videos are not deleted.",
+                    )
+                    % collection.name,
+                )
+                if not confirmed:
+                    return
+                self.catalog.delete_collection(collection.id)
+                self.kodi.notify(self.text(32808, "Collection deleted"))
+                xbmc.executebuiltin("Container.Refresh")
+            except CollectionValidationError as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(32809, "Collection was not found"), exc),
+                    error=True,
+                )
+            return
+        if route == "action/add-to-collection":
+            picture_id = int(params["id"])
+            collections = self.catalog.list_collections()
+            dialog = xbmcgui.Dialog()
+            selection = dialog.select(
+                self.text(32812, "Add to collection"),
+                [self.text(32814, "Create new collection...")]
+                + [str(row["name"]) for row in collections],
+            )
+            if selection < 0:
+                return
+            try:
+                if selection == 0:
+                    name = dialog.input(self.text(32805, "Collection name"))
+                    if not name:
+                        return
+                    collection_id = self.catalog.create_collection(name)
+                    collection = self.catalog.get_collection(collection_id)
+                else:
+                    row = collections[selection - 1]
+                    collection_id = int(row["id"])
+                    collection = self.catalog.get_collection(collection_id)
+                if collection is None:
+                    self.kodi.notify(
+                        self.text(32809, "Collection was not found"), error=True
+                    )
+                    return
+                added = self.catalog.add_picture_to_collection(
+                    collection_id, picture_id
+                )
+                self.kodi.notify(
+                    (
+                        self.text(32815, "Added to '%s'")
+                        if added
+                        else self.text(32816, "Already in '%s'")
+                    )
+                    % collection.name
+                )
+            except (CollectionValidationError, IndexError) as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(32810, "Could not save collection"), exc),
+                    error=True,
+                )
+            return
+        if route == "action/remove-from-collection":
+            try:
+                collection_id = int(params["collection"])
+                picture_id = int(params["id"])
+                collection = self.catalog.get_collection(collection_id)
+                if collection is None:
+                    self.kodi.notify(
+                        self.text(32809, "Collection was not found"), error=True
+                    )
+                    return
+                removed = self.catalog.remove_picture_from_collection(
+                    collection_id, picture_id
+                )
+                if removed:
+                    self.kodi.notify(
+                        self.text(32817, "Removed from '%s'") % collection.name
+                    )
+                    xbmc.executebuiltin("Container.Refresh")
+            except CollectionValidationError as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(32809, "Collection was not found"), exc),
+                    error=True,
+                )
+            return
         if route == "action/save-search":
             try:
                 request = build_global_search_request(params.get("q", ""))
@@ -1955,6 +2227,10 @@ class PluginUI:
             return self.saved_searches(params)
         if route == "saved-search":
             return self.saved_search(int(params["id"]), params)
+        if route == "collections":
+            return self.collections(params)
+        if route == "collection":
+            return self.collection(int(params["id"]), params)
         if route == "home-smart":
             try:
                 slot = int(params.get("slot") or 0)

@@ -5,12 +5,12 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.4.11 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.5.0 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
-> automated tests. The schema-1-to-5 migrations, search-document backfill,
-> mixed-media playlist integration, backup and restore, and large-library search
-> performance still require documented validation on real Kodi installations before calling the project
-> production-stable.
+> automated tests. The schema-1-to-6 migrations, search-document backfill,
+> mixed-media playlist integration, manual collections, backup and restore, and
+> large-library search performance still require documented validation on real
+> Kodi installations before calling the project production-stable.
 
 ## Want to help develop MyPicsDB 3?
 
@@ -72,6 +72,10 @@ For the component boundaries and long-lived safety rules, see
   views, with a temporary all-pictures override.
 - Save, reopen, rename and delete named global searches, with normal
   pagination and slideshow support.
+- Create named manual collections from selected indexed pictures and home
+  videos, retaining insertion order without copying, moving or deleting source
+  files. Collections support normal browsing and picture, video or mixed
+  slideshows.
 - Kodi smart-filter editor with all/any matching, metadata criteria, result
   preview and saved smart collections. Saved smart collections can be placed as
   ordered Pictures-home rows using the same standard picture-row layout.
@@ -446,6 +450,8 @@ After the first successful scan, the add-on main menu provides:
 - **Rated pictures** — pictures with an embedded metadata rating;
 - **Geotagged pictures** — pictures with stored GPS coordinates;
 - **Videos** — all indexed home videos, when optional video indexing is enabled;
+- **Collections** — named manual selections of indexed pictures and home videos,
+  kept in the order in which they were added;
 - **Saved searches** — named global searches and smart collections that can be
   reopened with normal pagination and slideshow support;
 - **Create smart collection** — combine metadata criteria in a Kodi dialog,
@@ -458,13 +464,15 @@ selection starts at its first tile. It does not scan the filesystem or change
 the catalogue.
 
 Open **Settings > General > Configure add-on menu** to show or hide the
-configurable catalogue browsing nodes. Search, Saved searches, Create smart
-collection, Picture sources, Refresh random selections, Scan now, Scan status
-and Settings always remain visible.
+configurable catalogue browsing nodes. Search, Collections, Saved searches,
+Create smart collection, Picture sources, Refresh random selections, Scan now,
+Scan status and Settings always remain visible.
 
-Open the context menu on a picture and select **Toggle favorite** to add or
-remove it from Favorites. **Open containing album** opens the indexed folder.
-Album context menus can also start a recursive Kodi slideshow.
+Open the context menu on a picture or indexed home video and select **Add to
+collection** to append it to an existing manual collection or create a new one.
+Duplicate additions are ignored. **Toggle favorite** adds or removes the item
+from Favorites, and **Open containing album** opens the indexed folder. Album
+context menus can also start a recursive Kodi slideshow.
 
 The Keywords and Rated pictures views depend on metadata embedded in the source
 files. Geotagged pictures requires **Store GPS coordinates** to be enabled
@@ -523,12 +531,30 @@ collections no longer have a separate display mode; when opened interactively
 they use **Default album view**. The editor keeps **Cancel**, **Save** and
 **Defaults** as dedicated buttons on the right.
 
+### 6. Manual collections
+
+Open **Collections** from the main menu to create, rename, open or delete a named
+manual collection. Use **Add to collection** on any indexed picture or home video
+to append it. Inside the collection, use **Remove from collection** to remove only
+the reference; the original file and its catalogue row remain untouched.
+
+Items are displayed in their stored insertion order. Missing files and media
+hidden by the current minimum-rating policy are omitted safely rather than
+breaking the collection. The first 0.5.0 implementation does not yet provide
+manual up/down reordering or Home-screen rows for manual collections.
+
+Collections open with **Default album view**. **Play collection slideshow** and
+the normal per-item slideshow context action reuse the existing picture-only,
+video-only and mixed playlist handling while preserving collection order.
+Manual collections are frozen selections of media IDs; saved smart collections
+remain live validated queries and are managed separately.
+
 The configured minimum-rating policy also applies to search results and saved
 searches. Use **Show all pictures temporarily** from the main menu before
 searching or opening a saved search to bypass the policy for that browsing
 session.
 
-### 6. Configure the minimum-rating display policy
+### 7. Configure the minimum-rating display policy
 
 Open the context menu anywhere inside MyPicsDB 3 and select **Minimum
 picture rating**, or open **MyPicsDB 3 > Settings > General > Minimum picture
@@ -551,7 +577,8 @@ add-on main menu to bypass the configured policy for that browsing session.
 
 Version 0.2.19 extended Query Model version 1 with the allowlisted `text` /
 `contains_tokens` rule used by Kodi global search. Version 0.2.34 added named
-saved searches backed by canonical Query Model JSON in schema 5. Version 0.3.0
+saved searches backed by canonical Query Model JSON in schema 5. Schema 6 adds
+named manual collections and ordered media references. Version 0.3.0
 adds the first Kodi smart-filter editor and the allowlisted `media_type` field.
 The model validates nested all/any/not rules for rating, favorite, source,
 album, date range, camera, keyword, text and picture/video type, and compiles
@@ -649,11 +676,13 @@ tested by this project.
 SQLite is recommended for one Kodi device. The database is stored under the
 add-on profile directory and must not be moved to SMB/NFS.
 
-The current development release uses schema version 5 for both SQLite and
+The current development release uses schema version 6 for both SQLite and
 MySQL/MariaDB. Schema 2 adds the year-first date-browsing index. Schema 3 adds
 one normalized search document per picture and backfills existing catalogues.
 Schema 4 adds the picture/video media type. Schema 5 adds validated named saved
-searches. Existing SQLite databases receive an atomic, integrity-checked backup
+searches. Schema 6 adds manual collection metadata and ordered media references;
+it does not rewrite indexed media and requires no rescan. Existing SQLite
+databases receive an atomic, integrity-checked backup
 before a schema migration; MySQL/MariaDB operators must keep an external
 backup. See [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before
 testing a development build that changes the catalogue schema.

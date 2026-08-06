@@ -368,3 +368,95 @@ def test_random_on_this_day_uses_all_earlier_years_without_duplicates(
     assert len(rows) == len({row["id"] for row in rows})
     assert catalog.media_type_for_uri(str(root / "memory-2020.jpg")) == "picture"
     assert catalog.media_type_for_uri(str(root / "missing.jpg")) is None
+
+
+def test_manual_collections_preserve_mixed_media_order_and_reject_duplicates(
+    tmp_path: Path,
+) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "collection-media"
+    first = add_picture(
+        catalog,
+        root,
+        "first.jpg",
+        taken_at="2020-01-01 10:00:00",
+    )
+    second = add_picture(
+        catalog,
+        root,
+        "second.mp4",
+        taken_at="2024-01-01 10:00:00",
+        media_type="video",
+        rating=None,
+    )
+    third = add_picture(
+        catalog,
+        root,
+        "third.jpg",
+        taken_at="2026-01-01 10:00:00",
+    )
+
+    collection_id = catalog.create_collection("  Family picks  ")
+    assert catalog.get_collection(collection_id).name == "Family picks"
+    assert catalog.add_picture_to_collection(collection_id, second) is True
+    assert catalog.add_picture_to_collection(collection_id, first) is True
+    assert catalog.add_picture_to_collection(collection_id, second) is False
+
+    rows = catalog.pictures_in_collection(collection_id, 10)
+    assert [row["id"] for row in rows] == [second, first]
+    assert [row["media_type"] for row in rows] == ["video", "picture"]
+
+    summary = catalog.list_collections()[0]
+    assert summary["name"] == "Family picks"
+    assert summary["item_count"] == 2
+    assert summary["available_count"] == 2
+    assert summary["uri"].endswith("second.mp4")
+
+    assert catalog.remove_picture_from_collection(collection_id, second) is True
+    assert catalog.remove_picture_from_collection(collection_id, second) is False
+    assert catalog.add_picture_to_collection(collection_id, third) is True
+    assert [row["id"] for row in catalog.pictures_in_collection(collection_id, 10)] == [
+        first,
+        third,
+    ]
+
+
+def test_manual_collection_rename_delete_and_missing_media_are_safe(
+    tmp_path: Path,
+) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "missing-collection"
+    visible = add_picture(catalog, root, "visible.jpg")
+    missing = add_picture(catalog, root, "missing.jpg")
+    collection_id = catalog.create_collection("Before")
+    assert catalog.add_picture_to_collection(collection_id, missing)
+    assert catalog.add_picture_to_collection(collection_id, visible)
+
+    assert catalog.rename_collection(collection_id, "After") is True
+    assert catalog.get_collection(collection_id).name == "After"
+    with catalog.engine.transaction() as connection:
+        catalog.engine.execute(
+            connection,
+            "UPDATE pictures SET is_missing=1, missing_since=? WHERE id=?",
+            ("2020-01-01 00:00:00", missing),
+        ).close()
+
+    assert [row["id"] for row in catalog.pictures_in_collection(collection_id, 10)] == [
+        visible
+    ]
+    summary = catalog.list_collections()[0]
+    assert summary["item_count"] == 2
+    assert summary["available_count"] == 1
+
+    assert catalog.delete_collection(collection_id) is True
+    assert catalog.get_collection(collection_id) is None
+    assert catalog.recent_added(10)
+    with catalog.engine.transaction() as connection:
+        assert catalog.engine.fetchone(
+            connection,
+            "SELECT COUNT(*) AS total FROM pictures",
+        )["total"] == 2
+        assert catalog.engine.fetchone(
+            connection,
+            "SELECT COUNT(*) AS total FROM collection_items",
+        )["total"] == 0
