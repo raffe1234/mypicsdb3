@@ -59,6 +59,7 @@ class Calls:
     rpc_requests: list[dict] = field(default_factory=list)
     sleeps: list[int] = field(default_factory=list)
     info_label_sequences: dict[str, list[str]] = field(default_factory=dict)
+    resolved_urls: list[tuple[int, bool, object]] = field(default_factory=list)
 
 
 def load_views(monkeypatch):
@@ -108,6 +109,9 @@ def load_views(monkeypatch):
     xbmcplugin.setContent = lambda handle, content: setattr(calls, "content", content)
     xbmcplugin.addDirectoryItems = lambda handle, items, total: setattr(calls, "items", items) or True
     xbmcplugin.endOfDirectory = lambda handle, succeeded=True, cacheToDisc=False: setattr(calls, "ended", True)
+    xbmcplugin.setResolvedUrl = lambda handle, succeeded, item: calls.resolved_urls.append(
+        (handle, bool(succeeded), item)
+    )
     monkeypatch.setitem(sys.modules, "xbmc", xbmc)
     monkeypatch.setitem(sys.modules, "xbmcgui", xbmcgui)
     monkeypatch.setitem(sys.modules, "xbmcplugin", xbmcplugin)
@@ -1041,6 +1045,38 @@ def test_widget_items_publish_titles_for_estuary_poster_rows(monkeypatch) -> Non
     assert is_folder is True
 
 
+def test_action_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+
+    class ActionVideoTag:
+        def setTitle(self, _value):
+            raise AssertionError("action rows must not create a VideoInfoTag")
+
+    class ActionListItem(FakeListItem):
+        def __init__(self, label="", path=""):
+            super().__init__(label, path)
+            self.video_tag_requests = 0
+
+        def getVideoInfoTag(self):
+            self.video_tag_requests += 1
+            return ActionVideoTag()
+
+    views.xbmcgui.ListItem = ActionListItem
+    ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
+
+    _url, item, is_folder = ui.add_action(
+        "Play collection slideshow",
+        "action/start-slideshow",
+        scope="collection",
+        id=9,
+    )
+
+    assert item.video_tag_requests == 0
+    assert item.properties["IsPlayable"] == "false"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "Play collection slideshow"
+    assert is_folder is False
+
+
 def test_video_items_prefer_info_tag_video_setters(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
 
@@ -1090,6 +1126,43 @@ def test_video_items_prefer_info_tag_video_setters(monkeypatch) -> None:
     assert item.video_tag.title == "clip.mp4"
     assert item.video_tag.date_added == "2026-07-28 10:00:00"
 
+
+
+def test_direct_slideshow_action_releases_media_request_before_work(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.pictures_in_collection = lambda collection_id, limit, offset=0: []
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "collection", "id": "9"},
+        )
+    )
+
+    assert len(calls.resolved_urls) == 1
+    handle, succeeded, item = calls.resolved_urls[0]
+    assert handle == 7
+    assert succeeded is False
+    assert isinstance(item, FakeListItem)
+    assert runtime.kodi.notifications[-1] == ("No media to play", False)
+
+
+def test_runplugin_slideshow_action_does_not_resolve_negative_handle(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.pictures_in_collection = lambda collection_id, limit, offset=0: []
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", -1)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "collection", "id": "9"},
+        )
+    )
+
+    assert calls.resolved_urls == []
 
 
 def test_parallel_slideshow_start_is_rejected_before_playlist_work(monkeypatch) -> None:
@@ -1875,6 +1948,120 @@ def test_manual_collections_list_open_and_use_default_album_view(monkeypatch) ->
         "id=9&scope=collection&start=1)"
     ]
     assert calls.builtins in ([], ["Container.SetViewMode(54)"])
+
+
+def test_mixed_manual_collection_prompts_for_safe_picture_playlist(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    picture = dict(runtime.catalog.recent_taken(1)[0])
+    video = dict(picture)
+    video.update(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/clip.mp4",
+            "filename": "clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.pictures_in_collection = (
+        lambda collection_id, limit, offset=0: [picture, video]
+    )
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", -1)
+    FakeDialog.select_responses = [0]
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "collection", "id": "9"},
+        )
+    )
+
+    add_requests = [
+        request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
+    ]
+    assert len(add_requests) == 1
+    assert add_requests[0]["params"] == {
+        "playlistid": 2,
+        "item": [{"file": "smb://server/photos/image.jpg"}],
+    }
+    assert not any(
+        request["method"] == "Player.GetItem"
+        for request in calls.rpc_requests
+    )
+    assert any(
+        "split to picture slideshow" in message
+        for message in runtime.kodi.info_messages
+    )
+
+
+def test_mixed_manual_collection_can_choose_video_playlist_from_video(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    picture = dict(runtime.catalog.recent_taken(1)[0])
+    video = dict(picture)
+    video.update(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/clip.mp4",
+            "filename": "clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.pictures_in_collection = (
+        lambda collection_id, limit, offset=0: [picture, video]
+    )
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", -1)
+    FakeDialog.select_responses = [1]
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "collection", "id": "9", "start": "2"},
+        )
+    )
+
+    add_requests = [
+        request for request in calls.rpc_requests if request["method"] == "Playlist.Add"
+    ]
+    assert len(add_requests) == 1
+    assert add_requests[0]["params"] == {
+        "playlistid": 1,
+        "item": [{"file": "smb://server/photos/clip.mp4"}],
+    }
+    assert any(
+        "split to video playlist" in message
+        for message in runtime.kodi.info_messages
+    )
+
+
+def test_mixed_manual_collection_playback_can_be_cancelled(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    picture = dict(runtime.catalog.recent_taken(1)[0])
+    video = dict(picture)
+    video.update(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/clip.mp4",
+            "filename": "clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.pictures_in_collection = (
+        lambda collection_id, limit, offset=0: [picture, video]
+    )
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", -1)
+    FakeDialog.select_responses = [-1]
+
+    ui.dispatch(
+        views.Request(
+            "action/start-slideshow",
+            {"scope": "collection", "id": "9"},
+        )
+    )
+
+    assert calls.rpc_requests == []
+    assert runtime.kodi.mixed_slideshow_updates == []
 
 
 def test_manual_collection_actions_create_add_remove_rename_and_delete(

@@ -22,9 +22,12 @@ Collections main-menu entry
 → render in stored order with Default album view
 
 Play collection slideshow / Play slideshow from here
+→ release any direct plug-in playback handle
 → collection slideshow scope
 → fetch up to the normal bounded playlist limit in stored order
-→ existing picture-only, video-only or mixed playback path
+→ picture-only: Kodi picture playlist
+→ video-only: Kodi video playlist
+→ mixed: choose picture slideshow or video playlist
 ```
 
 ## Files and responsibilities
@@ -77,9 +80,18 @@ is forwarded in collection routes and slideshow actions.
 ## Slideshow behaviour
 
 Collections reuse the existing database slideshow implementation. Saved order
-is preserved for picture-only, video-only and mixed collections. The common
-playlist bound still applies, empty URIs and duplicates are filtered defensively,
-and mixed playback remains coordinated with the background service.
+is preserved after filtering. Picture-only collections use Kodi's picture
+playlist and video-only collections use its video playlist. A mixed collection
+prompts for one of those two safe modes instead of probing Kodi's mixed picture
+playlist. Kodi 21 on Windows can route the still image in that probe through
+VideoPlayer, and a manual collection has no single folder URI for the native
+folder-slideshow fallback. The common playlist bound still applies, while empty
+URIs and duplicates are filtered defensively.
+
+Slideshow command rows deliberately avoid a VideoInfoTag. When Kodi nevertheless
+opens a directly selected command as a media request, the action marks that
+request unresolved before opening the actual playlist. ``RunPlugin`` context
+commands use a negative handle and are not resolved.
 
 ## Tests
 
@@ -95,7 +107,7 @@ and mixed playback remains coordinated with the background service.
 - Manual and smart collections remain different concepts and tables.
 - Source files are never copied, moved, edited or deleted by collection actions.
 - One media row occurs at most once in a collection.
-- Stored order is stable across browsing pages and slideshow creation.
+- Stored order is stable across browsing pages and each selected playback type.
 - Missing or policy-hidden media never crashes collection browsing.
 - SQLite and MySQL/MariaDB expose equivalent collection behaviour.
 - Schema migration does not require a catalogue rescan.

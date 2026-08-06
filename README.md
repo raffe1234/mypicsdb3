@@ -544,10 +544,14 @@ breaking the collection. The first 0.5.0 implementation does not yet provide
 manual up/down reordering or Home-screen rows for manual collections.
 
 Collections open with **Default album view**. **Play collection slideshow** and
-the normal per-item slideshow context action reuse the existing picture-only,
-video-only and mixed playlist handling while preserving collection order.
-Manual collections are frozen selections of media IDs; saved smart collections
-remain live validated queries and are managed separately.
+the normal per-item slideshow context action preserve collection order. A
+picture-only collection starts Kodi's picture playlist and a video-only
+collection starts its video playlist. For a mixed collection, choose **Play
+picture slideshow** or **Play video playlist**. This avoids a Kodi 21 Windows
+failure mode where a mixed picture playlist can route a still image through
+VideoPlayer and leave the plug-in playback request hanging. Manual collections
+are frozen selections of media IDs; saved smart collections remain live
+validated queries and are managed separately.
 
 The configured minimum-rating policy also applies to search results and saved
 searches. Use **Show all pictures temporarily** from the main menu before

@@ -10,9 +10,15 @@
   collection** inside a collection. Duplicate additions are ignored, missing
   media is skipped safely, and the stored insertion order is retained for
   browsing and slideshows.
-- Open manual collections with **Default album view** and support picture-only,
-  video-only and mixed collection slideshows through the existing guarded
-  playlist paths.
+- Open manual collections with **Default album view**. Picture-only collections
+  use Kodi's picture playlist and video-only collections use its video playlist.
+  Mixed collections ask whether to play the pictures or the videos, avoiding the
+  Kodi 21 Windows path that can send still images through VideoPlayer and stall
+  the direct plug-in action.
+- Keep slideshow command rows out of Kodi's video metadata path and explicitly
+  release a direct action playback handle before opening the real playlist. This
+  prevents completed slideshow actions from being left as an unplayable plug-in
+  video until Kodi kills the Python invoker.
 - Raise the catalogue from schema 5 to schema 6 with portable `collections` and
   `collection_items` tables for SQLite and MySQL/MariaDB. SQLite creates its
   verified pre-migration backup automatically; MySQL/MariaDB still requires an

@@ -284,7 +284,11 @@ class PluginUI:
         return (target, item, True)
 
     def add_action(self, label: str, route: str, art: Optional[str] = None, context: Optional[List[Tuple[str, str]]] = None, **params: Any):
-        item = self._item(label, art)
+        # Action rows are commands, not videos. Publishing a VideoInfoTag here
+        # can make Kodi route the plug-in URL through VideoPlayer even when
+        # IsPlayable is false, leaving the Python invoker waiting for a media
+        # resolution after the command has already completed.
+        item = self._item(label, art, publish_video_title=False)
         item.setProperty("IsPlayable", "false")
         if context:
             item.addContextMenuItems(context)
@@ -1351,7 +1355,89 @@ class PluginUI:
             error=True,
         )
 
+    def _release_direct_slideshow_action(self) -> None:
+        """Finish a direct non-folder plug-in playback request before playback.
+
+        Selecting an action row can still make Kodi open the plug-in URL as a
+        media item. Marking that request unresolved before the action starts a
+        real playlist prevents Kodi from waiting for ``addon.py`` as the active
+        player item and eventually killing the otherwise completed invoker.
+        ``RunPlugin`` calls normally use a negative handle and are left alone.
+        """
+
+        if int(self.handle) < 0:
+            return
+        resolver = getattr(xbmcplugin, "setResolvedUrl", None)
+        if not callable(resolver):
+            return
+        try:
+            resolver(self.handle, False, xbmcgui.ListItem())
+            self.kodi.log.debug("Released direct slideshow action playback handle")
+        except Exception as exc:
+            self.kodi.log.warning(
+                "Could not release direct slideshow action playback handle: %s",
+                exc,
+            )
+
+    def _select_collection_slideshow_rows(
+        self,
+        rows: Sequence[Dict[str, Any]],
+        start_id: int,
+    ) -> Optional[List[Dict[str, Any]]]:
+        """Split a mixed manual collection into a safe Kodi playlist type.
+
+        Kodi 21 on Windows may route still images in a mixed picture playlist
+        through VideoPlayer. A manual collection can span unrelated folders, so
+        the native folder-slideshow fallback is unavailable. Prompting for one
+        media type avoids the unstable compatibility probe while preserving the
+        stored order within the selected type.
+        """
+
+        pictures = [
+            row
+            for row in rows
+            if str(row.get("media_type") or "picture") != "video"
+        ]
+        videos = [
+            row for row in rows if str(row.get("media_type") or "") == "video"
+        ]
+        if not pictures or not videos:
+            return list(rows)
+
+        start_is_video = any(
+            int(row.get("id") or 0) == int(start_id)
+            and str(row.get("media_type") or "") == "video"
+            for row in rows
+        )
+        selected = xbmcgui.Dialog().select(
+            self.text(32819, "Choose collection playback"),
+            [
+                self.text(32820, "Play picture slideshow"),
+                self.text(32821, "Play video playlist"),
+            ],
+            preselect=1 if start_is_video else 0,
+        )
+        if selected == 0:
+            self.kodi.log.info(
+                "Mixed collection playback split to picture slideshow: "
+                "pictures=%d videos=%d",
+                len(pictures),
+                len(videos),
+            )
+            return pictures
+        if selected == 1:
+            self.kodi.log.info(
+                "Mixed collection playback split to video playlist: "
+                "pictures=%d videos=%d",
+                len(pictures),
+                len(videos),
+            )
+            return videos
+        self.kodi.log.debug("Mixed collection playback cancelled")
+        return None
+
     def _start_slideshow(self, params: Dict[str, str]) -> None:
+        self._release_direct_slideshow_action()
         acquire = getattr(self.kodi, "acquire_slideshow_start", None)
         release = getattr(self.kodi, "release_slideshow_start", None)
         token = acquire() if callable(acquire) else ""
@@ -1389,6 +1475,11 @@ class PluginUI:
             self.kodi.notify(self.text(32604, "No media to play"))
             return
         start_id = int(params.get("start", "0") or 0)
+        if scope == "collection":
+            selected_rows = self._select_collection_slideshow_rows(rows, start_id)
+            if selected_rows is None:
+                return
+            rows = selected_rows
         (
             uris,
             start_position,
