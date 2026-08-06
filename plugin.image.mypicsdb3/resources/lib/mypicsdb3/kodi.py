@@ -104,9 +104,10 @@ def create_abort_monitor(xbmc_module=None):
 
 
 class KodiContext:
-    def __init__(self):
+    def __init__(self, publish_home_state: bool = True):
         if xbmcaddon is None:
             raise RuntimeError("Kodi Python modules are not available")
+        self._publish_home_state_on_refresh = bool(publish_home_state)
         self.addon = xbmcaddon.Addon()
         self.addon_id = self.addon.getAddonInfo("id")
         self.name = self.addon.getAddonInfo("name")
@@ -126,8 +127,8 @@ class KodiContext:
                 effective,
                 str(bool(saved)).lower(),
             )
-        self.publish_home_widget_limit()
-        self.publish_home_layout_slots()
+        if self._publish_home_state_on_refresh:
+            self.publish_home_state()
 
     @staticmethod
     def translate(path: str) -> str:
@@ -229,8 +230,21 @@ class KodiContext:
     def refresh_settings(self) -> Settings:
         self.settings = self.load_settings()
         self.log.debug_enabled = self.settings.debug_logging
-        self.publish_home_widget_limit()
+        if self._publish_home_state_on_refresh:
+            self.publish_home_widget_limit()
         return self.settings
+
+    def publish_home_state(self) -> None:
+        """Publish the settings consumed by the Estuary home integration."""
+
+        self.publish_home_widget_limit()
+        self.publish_home_layout_slots()
+
+    def enable_home_state_publishing(self) -> None:
+        """Enable refresh-time publishing and publish the initial state once."""
+
+        self._publish_home_state_on_refresh = True
+        self.publish_home_state()
 
     def localize(self, string_id: int, fallback: str = "") -> str:
         value = self.addon.getLocalizedString(string_id)

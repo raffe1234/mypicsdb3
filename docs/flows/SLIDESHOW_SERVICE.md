@@ -94,6 +94,9 @@ session state safely.
 `ServiceLoop` also:
 
 - retries initialization while another process owns the migration lock;
+- delays the initial Estuary Home-window state publication during service
+  startup so in-place add-on updates do not write GUI state while a skin may be
+  unloading;
 - synchronizes Kodi picture sources;
 - schedules automatic scans;
 - defers scans during playback when configured;

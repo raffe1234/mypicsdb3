@@ -9,6 +9,7 @@ DATABASE_BUSY_FALLBACK = "MyPicsDB 3 is starting. Please try again in a moment."
 DIAGNOSTIC_LOG_ROUTE = "action/log-diagnostic"
 DIAGNOSTIC_LOG_STRING_ID = 32721
 DIAGNOSTIC_LOG_FALLBACK = "Diagnostic entry written to kodi.log"
+HOME_STATE_PUBLISH_DELAY_SECONDS = 5.0
 
 
 def _finish_database_busy_plugin_request(context, handle: int, request) -> None:
@@ -86,7 +87,7 @@ def service_main() -> None:
     last_error: Optional[RuntimeError] = None
     for attempt in range(5):
         try:
-            context = KodiContext()
+            context = KodiContext(publish_home_state=False)
             break
         except RuntimeError as exc:
             if "Unknown addon id" not in str(exc):
@@ -105,6 +106,16 @@ def service_main() -> None:
 
     context.log.info("MyPicsDB 3 service started")
     try:
+        if monitor.waitForAbort(HOME_STATE_PUBLISH_DELAY_SECONDS):
+            context.log.info(
+                "Service shutdown requested before delayed home state publication"
+            )
+            return
+        context.enable_home_state_publishing()
+        context.log.info(
+            "Home-screen state published after %.1f-second service startup delay",
+            HOME_STATE_PUBLISH_DELAY_SECONDS,
+        )
         ServiceLoop(context, monitor=monitor).run()
     except Exception as exc:
         context.log.error("MyPicsDB 3 service stopped with an error: %s", exc)

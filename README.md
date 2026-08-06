@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.4.9 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.4.10 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-5 migrations, search-document backfill,
 > mixed-media playlist integration, backup and restore, and large-library search
@@ -575,9 +575,12 @@ to 720. Common choices are:
 - `12` hours for a lower-impact schedule;
 - `24` hours for a daily scan.
 
-The background service waits for the configured startup delay and then runs an
-incremental scan. By default, automatic scanning is disabled and scans are
-deferred while Kodi is playing media. Automatic scans use the same non-modal
+The background service first waits through a short, abortable five-second grace
+period before publishing the Home-screen row state. This protects in-place
+add-on updates while Kodi may still be unloading a skin. It then waits for the
+configured scan startup delay and runs an incremental scan. By default,
+automatic scanning is disabled and scans are deferred while Kodi is playing
+media. Automatic scans use the same non-modal
 background progress indicator as manual scans. The main menu and **Scan status**
 show the current source, file and number of discovered media items. If **Pause
 scans during media playback** is disabled, scanning may continue silently while

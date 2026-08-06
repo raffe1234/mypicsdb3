@@ -20,6 +20,10 @@ class FakeLog:
 class FakeContext:
     def __init__(self):
         self.log = FakeLog()
+        self.home_state_publish_calls = 0
+
+    def enable_home_state_publishing(self):
+        self.home_state_publish_calls += 1
 
 
 class FakeMonitor:
@@ -44,7 +48,8 @@ def test_service_retries_transient_unknown_addon_id(monkeypatch):
     monitor = FakeMonitor()
 
     class KodiContext:
-        def __new__(cls):
+        def __new__(cls, publish_home_state=True):
+            assert publish_home_state is False
             attempts["count"] += 1
             if attempts["count"] < 3:
                 raise RuntimeError("Unknown addon id 'plugin.image.mypicsdb3'.")
@@ -67,7 +72,12 @@ def test_service_retries_transient_unknown_addon_id(monkeypatch):
     monkeypatch.setitem(sys.modules, "mypicsdb3.service_loop", service_module)
     entrypoints.service_main()
     assert attempts["count"] == 3
-    assert monitor.wait_calls == [1.0, 1.0]
+    assert monitor.wait_calls == [
+        1.0,
+        1.0,
+        entrypoints.HOME_STATE_PUBLISH_DELAY_SECONDS,
+    ]
+    assert context.home_state_publish_calls == 1
     assert ("info", "MyPicsDB 3 service started") in context.log.messages
     assert ("info", "MyPicsDB 3 service stopped") in context.log.messages
 
@@ -77,7 +87,8 @@ def test_service_retry_stops_when_kodi_starts_shutting_down(monkeypatch):
     monitor = FakeMonitor(abort_on_wait=True)
 
     class KodiContext:
-        def __new__(cls):
+        def __new__(cls, publish_home_state=True):
+            assert publish_home_state is False
             attempts["count"] += 1
             raise RuntimeError("Unknown addon id 'plugin.image.mypicsdb3'.")
 
@@ -97,3 +108,35 @@ def test_service_retry_stops_when_kodi_starts_shutting_down(monkeypatch):
 
     assert attempts["count"] == 1
     assert monitor.wait_calls == [1.0]
+
+
+def test_service_delay_is_abortable_before_home_state_publication(monkeypatch):
+    context = FakeContext()
+    monitor = FakeMonitor(abort_on_wait=True)
+
+    class KodiContext:
+        def __new__(cls, publish_home_state=True):
+            assert publish_home_state is False
+            return context
+
+    class ServiceLoop:
+        def __init__(self, *args, **kwargs):
+            raise AssertionError("service loop must not start after delayed shutdown")
+
+    kodi_module = types.ModuleType("mypicsdb3.kodi")
+    kodi_module.KodiContext = KodiContext
+    kodi_module.create_abort_monitor = lambda: monitor
+    service_module = types.ModuleType("mypicsdb3.service_loop")
+    service_module.ServiceLoop = ServiceLoop
+    monkeypatch.setitem(sys.modules, "mypicsdb3.kodi", kodi_module)
+    monkeypatch.setitem(sys.modules, "mypicsdb3.service_loop", service_module)
+
+    entrypoints.service_main()
+
+    assert monitor.wait_calls == [entrypoints.HOME_STATE_PUBLISH_DELAY_SECONDS]
+    assert context.home_state_publish_calls == 0
+    assert (
+        "info",
+        "Service shutdown requested before delayed home state publication",
+    ) in context.log.messages
+    assert ("info", "MyPicsDB 3 service stopped") in context.log.messages

@@ -419,3 +419,28 @@ def test_home_layout_slots_are_published_as_home_window_properties(monkeypatch) 
     assert properties["MyPicsDB3.HomeSmartMode1"] == "square"
     assert properties["MyPicsDB3.HomeRow9"] == "none"
     assert properties["MyPicsDB3.HomeSmartId9"] == "0"
+
+
+def test_service_context_defers_home_state_until_explicitly_enabled() -> None:
+    calls = []
+    context = kodi.KodiContext.__new__(kodi.KodiContext)
+    context._publish_home_state_on_refresh = False
+    context.settings = types.SimpleNamespace(debug_logging=False)
+    context.log = types.SimpleNamespace(debug_enabled=True)
+    context.load_settings = lambda: types.SimpleNamespace(debug_logging=False)
+    context.publish_home_widget_limit = lambda: calls.append("limit")
+    context.publish_home_layout_slots = lambda: calls.append("layout")
+
+    context.refresh_settings()
+
+    assert calls == []
+    assert context.log.debug_enabled is False
+
+    context.enable_home_state_publishing()
+
+    assert calls == ["limit", "layout"]
+    assert context._publish_home_state_on_refresh is True
+
+    context.refresh_settings()
+
+    assert calls == ["limit", "layout", "limit"]

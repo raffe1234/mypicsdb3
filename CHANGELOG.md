@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.10 - 2026-08-06
+
+- Avoid publishing Estuary Home-window properties from the background service
+  while Kodi may still be unregistering an old add-on or unloading a skin during
+  an in-place update. The service now starts with Home-state publication
+  disabled, waits five abortable seconds and publishes the initial row layout
+  only after that grace period.
+- Keep normal plug-in requests and editor saves immediate. Only the long-running
+  service startup path is delayed, and a Kodi shutdown request cancels the delay
+  without entering the service loop.
+- Add regression coverage for transient add-on registration retries, delayed
+  publication and shutdown during the grace period. Database schema 5, Estuary
+  revisions 14/12 and repository add-on version 0.2.26 remain unchanged.
+
 ## 0.4.9 - 2026-08-05
 
 - Fix saved smart collections on the Pictures home screen. Estuary now uses
