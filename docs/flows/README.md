@@ -78,6 +78,15 @@ state.
 Main files: `views.py`, `slideshow.py`, `service_loop.py`, `kodi.py`,
 `db/catalog.py`.
 
+### [Collection music playlists](COLLECTION_MUSIC.md)
+
+Read this for smart/manual collection playlist assignments, Kodi music-source
+picking, picture-only music slideshows, queue fingerprints and ownership-safe
+service cleanup.
+
+Main files: `music_playlists.py`, `music_slideshow.py`, `views.py`, `kodi.py`,
+`service_loop.py`, `db/catalog.py`.
+
 ### [Estuary integration, builds, GitHub Actions and releases](SKIN_BUILD_RELEASE.md)
 
 Read this for the maintained Estuary fork, widget contracts, upstream pins,

@@ -8,6 +8,7 @@ from typing import Callable
 from .db import Catalog, DatabaseEngine
 from .db.migrations import MigrationLockError
 from .filesystem import KodiFilesystem
+from .music_slideshow import stop_music_player
 from .scanner import ScanAlreadyRunning, Scanner
 
 
@@ -18,6 +19,8 @@ MAINTENANCE_INTERVAL_SECONDS = 5.0
 VIDEO_IDLE_CLEAR_POLLS = 3
 MIXED_SLIDESHOW_STARTUP_IDLE_POLLS = 20
 DATABASE_BUSY_RETRY_SECONDS = 2.0
+MUSIC_SLIDESHOW_STARTUP_IDLE_POLLS = 20
+MUSIC_SLIDESHOW_END_IDLE_POLLS = 3
 
 
 class MixedSlideshowVideoMonitor:
@@ -103,6 +106,75 @@ class MixedSlideshowVideoMonitor:
                     "Mixed slideshow video monitor failed: %s",
                     exc,
                 )
+                self.failure_logged = True
+
+
+class MusicSlideshowMonitor:
+    """Stop only the music queue owned by a finished MyPicsDB slideshow."""
+
+    def __init__(self, kodi_context):
+        self.kodi = kodi_context
+        self.token = ""
+        self.seen_picture_player = False
+        self.idle_polls = 0
+        self.failure_logged = False
+
+    def _reset(self) -> None:
+        self.token = ""
+        self.seen_picture_player = False
+        self.idle_polls = 0
+
+    def tick(self) -> None:
+        try:
+            session = self.kodi.music_slideshow_session()
+            token = str(session.get("token") or "")
+            if not token:
+                self._reset()
+                self.failure_logged = False
+                return
+            if token != self.token:
+                self.token = token
+                self.seen_picture_player = False
+                self.idle_polls = 0
+
+            result = self.kodi.execute_jsonrpc("Player.GetActivePlayers")
+            players = result if isinstance(result, list) else []
+            player_types = {
+                str(player.get("type") or "")
+                for player in players
+                if isinstance(player, dict)
+            }
+            self.failure_logged = False
+            if "picture" in player_types:
+                self.seen_picture_player = True
+                self.idle_polls = 0
+                return
+
+            self.idle_polls += 1
+            idle_limit = (
+                MUSIC_SLIDESHOW_END_IDLE_POLLS
+                if self.seen_picture_player
+                else MUSIC_SLIDESHOW_STARTUP_IDLE_POLLS
+            )
+            if self.idle_polls < idle_limit:
+                return
+
+            expected = str(session.get("playlist_fingerprint") or "")
+            current = self.kodi.music_playlist_fingerprint()
+            if "audio" in player_types and expected and current == expected:
+                stop_music_player(
+                    self.kodi, logger=self.kodi.log, active_players=players
+                )
+            elif "audio" in player_types:
+                self.kodi.log.info(
+                    "Music slideshow ended but Kodi's music queue changed; "
+                    "replacement audio was left playing"
+                )
+            self.kodi.clear_music_slideshow_session(token)
+            self._reset()
+        except Exception as exc:
+            if not self.failure_logged:
+                self.kodi.log.warning("Music slideshow monitor failed: %s", exc)
                 self.failure_logged = True
 
 
@@ -262,9 +334,11 @@ class ServiceLoop:
         self._maintain_random_home_refresh(settings, now)
         next_maintenance_at = now
         slideshow_monitor = MixedSlideshowVideoMonitor(self.kodi, catalog)
+        music_slideshow_monitor = MusicSlideshowMonitor(self.kodi)
 
         while not self._abort_requested():
             slideshow_monitor.tick()
+            music_slideshow_monitor.tick()
             now = self.monotonic_provider()
             if now >= next_maintenance_at:
                 self._refresh_after_date_change()

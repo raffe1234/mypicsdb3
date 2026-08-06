@@ -136,7 +136,8 @@ on the backend when the engine can hide the difference.
 ### `db/catalog.py`: catalogue API
 
 `Catalog` is the main read/write interface for sources, folders, media,
-searches, manual collections, locks and scan runs. It returns dictionaries or
+searches, manual collections, collection music-playlist mappings, locks and scan
+runs. It returns dictionaries or
 domain objects that
 higher layers convert to Kodi UI items. Query methods enforce rating policy and
 use backend-neutral engine operations.
@@ -184,12 +185,23 @@ context actions, explicit order changes, collection browsing and Home providers.
 A collection never contains query JSON or source-file copies. Dynamic Home rows
 store only validated saved-search or manual-collection IDs.
 
+### `music_playlists.py` and `music_slideshow.py`: collection-music boundary
+
+A saved smart or manual collection may reference one Kodi-readable music
+playlist file. `music_playlists.py` validates target types and bounded URIs;
+`Catalog` persists only the mapping. `music_slideshow.py` loads and starts Kodi
+music playlist 0 and stops only an active audio player. `views.py` keeps the
+feature explicit and picture-only. `kodi.py` and `service_loop.py` own the
+session token, queue fingerprint and cleanup after the native picture slideshow
+ends. Playlist files and music are never imported or modified.
+
 ### `service_loop.py`: long-running maintenance
 
 The service synchronizes sources, schedules automatic scans, reacts to local
 date changes, notices home-widget limit changes, advances the separate random
-home-row generation on its configured hourly interval and advances compatible
-mixed slideshows after video playback. It must remain responsive to Kodi abort
+home-row generation on its configured hourly interval advances compatible mixed slideshows after video playback, and cleans up only
+the recognized music queue belonging to a finished collection picture
+slideshow. It must remain responsive to Kodi abort
 requests and defer disruptive work while playback is active when configured.
 
 ### Estuary and build tools
@@ -213,6 +225,7 @@ sources
 scan runs and named locks
 saved searches containing validated Query Model JSON
 manual collections containing ordered references to pictures/media
+optional smart/manual collection music-playlist mappings
 schema and migration history
 ```
 

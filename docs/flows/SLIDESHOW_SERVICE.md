@@ -1,7 +1,8 @@
 # Slideshows and the background service
 
 This guide covers picture-only, video-only and mixed-media playback plus the
-long-running Kodi service that supports it.
+long-running Kodi service that supports it. Optional smart/manual collection
+music is described in [Collection music playlists](COLLECTION_MUSIC.md).
 
 ## Slideshow choices
 
@@ -29,7 +30,7 @@ unsupported Kodi picture-playlist behaviour
 | --- | --- |
 | `views.py` | Chooses slideshow type, obtains rows and starts/falls back safely |
 | `slideshow.py` | Kodi JSON-RPC playlist operations and player compatibility probe |
-| `service_loop.py` | Mixed-slideshow video monitor and general service scheduling |
+| `service_loop.py` | Mixed-slideshow video monitor, collection-music cleanup and general service scheduling |
 | `kodi.py` | Shared start locks, session compatibility state and playback helpers |
 | `db/catalog.py` | Folder-tree and query result rows used for playlists |
 
@@ -103,6 +104,15 @@ active players. After a video item finishes, it advances the compatible picture
 playlist when appropriate. It must ignore unrelated playback and clear stale
 session state safely.
 
+## Collection-music monitor
+
+`MusicSlideshowMonitor` watches a separate owner token and the native picture
+player. Once a seen picture slideshow ends, it fingerprints Kodi music playlist
+0 again. Matching owned audio is stopped; a changed replacement queue is left
+playing. The monitor uses the active-player snapshot already obtained for that
+tick so ownership verification and `Player.Stop` are not separated by another
+detection poll.
+
 ## Other service responsibilities
 
 `ServiceLoop` also:
@@ -136,6 +146,8 @@ instance; they are not a substitute for catalogue locks shared across devices.
 
 - `tests/test_slideshow.py`;
 - `tests/test_mixed_slideshow_monitor.py`;
+- `tests/test_music_slideshow.py`;
+- `tests/test_music_slideshow_monitor.py`;
 - `tests/test_kodi_slideshow_state.py`;
 - `tests/test_service_shutdown.py`;
 - `tests/test_service_startup_retry.py`;
@@ -145,7 +157,7 @@ instance; they are not a substitute for catalogue locks shared across devices.
 
 ## Invariants
 
-- Never interfere with unrelated picture, video, TV or movie playback.
+- Never interfere with unrelated picture, video, TV, movie or replacement music playback.
 - Preserve the exact-item and repeated-confirmation compatibility checks.
 - Keep playlist sizes and JSON-RPC batches bounded.
 - Release slideshow-start ownership on every exit path.

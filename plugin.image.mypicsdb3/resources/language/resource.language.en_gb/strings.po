@@ -1338,3 +1338,47 @@ msgstr "Could not reorder collection"
 msgctxt "#32830"
 msgid "Manual collection used by this home-screen row."
 msgstr "Manual collection used by this home-screen row."
+
+msgctxt "#32831"
+msgid "Assign music playlist"
+msgstr "Assign music playlist"
+
+msgctxt "#32832"
+msgid "Change music playlist"
+msgstr "Change music playlist"
+
+msgctxt "#32833"
+msgid "Remove music playlist"
+msgstr "Remove music playlist"
+
+msgctxt "#32834"
+msgid "Play picture slideshow with music"
+msgstr "Play picture slideshow with music"
+
+msgctxt "#32835"
+msgid "Choose music playlist"
+msgstr "Choose music playlist"
+
+msgctxt "#32836"
+msgid "Music playlist assigned"
+msgstr "Music playlist assigned"
+
+msgctxt "#32837"
+msgid "Music playlist removed"
+msgstr "Music playlist removed"
+
+msgctxt "#32838"
+msgid "Music slideshow could not be started"
+msgstr "Music slideshow could not be started"
+
+msgctxt "#32839"
+msgid "No music playlist is assigned"
+msgstr "No music playlist is assigned"
+
+msgctxt "#32840"
+msgid "No pictures to play with music"
+msgstr "No pictures to play with music"
+
+msgctxt "#32841"
+msgid "Could not save music playlist"
+msgstr "Could not save music playlist"

@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.6.0 - 2026-08-06
+
+- Add one optional Kodi music-playlist assignment to each saved smart collection
+  or manual collection. Collection context menus can assign, change or remove
+  `.m3u`, `.m3u8`, `.pls`, `.b4s` and `.wpl` references selected from Kodi music
+  sources; playlist and music files are never copied or edited.
+- Add **Play picture slideshow with music** inside assigned collections. Smart
+  results retain their validated query order and manual collections retain their
+  explicit mixed-media order after videos are filtered from this picture-only
+  action. Existing picture, video and mixed collection playback remains
+  unchanged.
+- Add an ownership-safe service monitor. Music slideshow startup fingerprints
+  Kodi music playlist 0 and publishes a random session token; after the native
+  picture player closes, only the still-matching owned audio queue is stopped.
+  A replacement queue is left playing, and startup/load failures clean up safely.
+- Raise the catalogue from schema 6 to schema 7 with a portable
+  `collection_music_playlists` mapping for SQLite and MySQL/MariaDB. SQLite
+  creates its verified pre-migration backup automatically; no catalogue rescan
+  is required.
+- Reorganize the README feature overview into catalogue, browsing, collections,
+  Kodi integration, safety and development categories for faster scanning.
+
 ## 0.5.1 - 2026-08-06
 
 - Add manual collections to the combined Pictures-home row editor alongside

@@ -122,6 +122,14 @@ SQLITE_SCHEMA = [
         FOREIGN KEY(collection_id) REFERENCES collections(id) ON DELETE CASCADE,
         FOREIGN KEY(picture_id) REFERENCES pictures(id) ON DELETE CASCADE
     )""",
+    """CREATE TABLE IF NOT EXISTS collection_music_playlists (
+        collection_type TEXT NOT NULL,
+        collection_id INTEGER NOT NULL,
+        playlist_uri TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY(collection_type, collection_id),
+        CHECK(collection_type IN ('smart', 'manual'))
+    )""",
     """CREATE TABLE IF NOT EXISTS scan_runs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         source_id INTEGER,
@@ -286,6 +294,13 @@ MYSQL_SCHEMA = [
             FOREIGN KEY(collection_id) REFERENCES collections(id) ON DELETE CASCADE,
         CONSTRAINT fk_collection_items_picture
             FOREIGN KEY(picture_id) REFERENCES pictures(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
+    """CREATE TABLE IF NOT EXISTS collection_music_playlists (
+        collection_type VARCHAR(16) NOT NULL,
+        collection_id BIGINT UNSIGNED NOT NULL,
+        playlist_uri TEXT NOT NULL,
+        updated_at DATETIME(6) NOT NULL,
+        PRIMARY KEY(collection_type, collection_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
     """CREATE TABLE IF NOT EXISTS scan_runs (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

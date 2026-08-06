@@ -11,6 +11,13 @@ from ..query_model import (
     parse_picture_query,
     picture_query_to_dict,
 )
+from ..music_playlists import (
+    MUSIC_TARGET_MANUAL,
+    MUSIC_TARGET_SMART,
+    MusicPlaylistValidationError,
+    normalize_music_playlist_uri,
+    normalize_music_target_type,
+)
 from ..rating_policy import RATING_POLICY_ALL, normalize_rating_policy, rating_sql_predicate
 from ..saved_searches import (
     SavedSearch,
@@ -87,13 +94,24 @@ class Catalog:
         self.engine.test_connection()
 
     def list_saved_searches(self) -> List[Dict[str, Any]]:
-        order = "name COLLATE NOCASE, id" if self.engine.backend == "sqlite" else "name, id"
+        order = (
+            "ss.name COLLATE NOCASE, ss.id"
+            if self.engine.backend == "sqlite"
+            else "ss.name, ss.id"
+        )
         with self.engine.transaction() as connection:
-            return self.engine.fetchall(
+            rows = self.engine.fetchall(
                 connection,
-                "SELECT id, name, query_version, created_at, updated_at "
-                "FROM saved_searches ORDER BY %s" % order,
+                "SELECT ss.id, ss.name, ss.query_version, ss.created_at, "
+                "ss.updated_at, cmp.playlist_uri AS music_playlist_uri "
+                "FROM saved_searches ss LEFT JOIN collection_music_playlists cmp "
+                "ON cmp.collection_type='smart' AND cmp.collection_id=ss.id "
+                "ORDER BY %s" % order,
             )
+        for row in rows:
+            if not row.get("music_playlist_uri"):
+                row.pop("music_playlist_uri", None)
+        return rows
 
     def get_saved_search(self, saved_search_id: int) -> Optional[SavedSearch]:
         with self.engine.transaction() as connection:
@@ -109,8 +127,11 @@ class Catalog:
         with self.engine.transaction() as connection:
             return self.engine.fetchone(
                 connection,
-                "SELECT id, name, query_version, created_at, updated_at "
-                "FROM saved_searches WHERE id=?",
+                "SELECT ss.id, ss.name, ss.query_version, ss.created_at, "
+                "ss.updated_at, cmp.playlist_uri AS music_playlist_uri "
+                "FROM saved_searches ss LEFT JOIN collection_music_playlists cmp "
+                "ON cmp.collection_type='smart' AND cmp.collection_id=ss.id "
+                "WHERE ss.id=?",
                 (saved_search_id,),
             )
 
@@ -175,6 +196,12 @@ class Catalog:
 
     def delete_saved_search(self, saved_search_id: int) -> bool:
         with self.engine.transaction(immediate=True) as connection:
+            self.engine.execute(
+                connection,
+                "DELETE FROM collection_music_playlists "
+                "WHERE collection_type=? AND collection_id=?",
+                (MUSIC_TARGET_SMART, saved_search_id),
+            ).close()
             cursor = self.engine.execute(
                 connection,
                 "DELETE FROM saved_searches WHERE id=?",
@@ -185,17 +212,128 @@ class Catalog:
             finally:
                 cursor.close()
 
+    def _music_target_exists(
+        self,
+        connection,
+        collection_type: str,
+        collection_id: int,
+        lock: bool = False,
+    ) -> bool:
+        table = (
+            "saved_searches"
+            if collection_type == MUSIC_TARGET_SMART
+            else "collections"
+        )
+        lock_sql = " FOR UPDATE" if lock and self.engine.backend == "mysql" else ""
+        return self.engine.fetchone(
+            connection,
+            "SELECT id FROM %s WHERE id=?%s" % (table, lock_sql),
+            (collection_id,),
+        ) is not None
+
+    def get_music_playlist(
+        self, collection_type: str, collection_id: int
+    ) -> str:
+        target_type = normalize_music_target_type(collection_type)
+        target_id = int(collection_id)
+        if target_id <= 0:
+            raise MusicPlaylistValidationError("Collection ID is invalid")
+        with self.engine.transaction() as connection:
+            if not self._music_target_exists(connection, target_type, target_id):
+                return ""
+            row = self.engine.fetchone(
+                connection,
+                "SELECT playlist_uri FROM collection_music_playlists "
+                "WHERE collection_type=? AND collection_id=?",
+                (target_type, target_id),
+            )
+        return str((row or {}).get("playlist_uri") or "")
+
+    def set_music_playlist(
+        self, collection_type: str, collection_id: int, playlist_uri: str
+    ) -> bool:
+        target_type = normalize_music_target_type(collection_type)
+        target_id = int(collection_id)
+        uri = normalize_music_playlist_uri(playlist_uri)
+        if target_id <= 0:
+            raise MusicPlaylistValidationError("Collection ID is invalid")
+        now = utc_now()
+        with self.engine.transaction(immediate=True) as connection:
+            if not self._music_target_exists(
+                connection, target_type, target_id, lock=True
+            ):
+                return False
+            cursor = self.engine.execute(
+                connection,
+                "UPDATE collection_music_playlists "
+                "SET playlist_uri=?, updated_at=? "
+                "WHERE collection_type=? AND collection_id=?",
+                (uri, now, target_type, target_id),
+            )
+            try:
+                updated = int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
+            if not updated:
+                try:
+                    self.engine.execute(
+                        connection,
+                        "INSERT INTO collection_music_playlists "
+                        "(collection_type, collection_id, playlist_uri, updated_at) "
+                        "VALUES (?, ?, ?, ?)",
+                        (target_type, target_id, uri, now),
+                    ).close()
+                except self.engine.integrity_errors:
+                    # A second Kodi device may assign the same shared target
+                    # after our UPDATE but before our INSERT. Last writer wins.
+                    self.engine.execute(
+                        connection,
+                        "UPDATE collection_music_playlists "
+                        "SET playlist_uri=?, updated_at=? "
+                        "WHERE collection_type=? AND collection_id=?",
+                        (uri, now, target_type, target_id),
+                    ).close()
+        return True
+
+    def clear_music_playlist(
+        self, collection_type: str, collection_id: int
+    ) -> bool:
+        target_type = normalize_music_target_type(collection_type)
+        target_id = int(collection_id)
+        if target_id <= 0:
+            raise MusicPlaylistValidationError("Collection ID is invalid")
+        with self.engine.transaction(immediate=True) as connection:
+            cursor = self.engine.execute(
+                connection,
+                "DELETE FROM collection_music_playlists "
+                "WHERE collection_type=? AND collection_id=?",
+                (target_type, target_id),
+            )
+            try:
+                return int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
+
     def list_collections(self) -> List[Dict[str, Any]]:
-        order = "name COLLATE NOCASE, id" if self.engine.backend == "sqlite" else "name, id"
+        order = (
+            "c.name COLLATE NOCASE, c.id"
+            if self.engine.backend == "sqlite"
+            else "c.name, c.id"
+        )
         predicate, policy_params = self._rating_predicate("p.rating", "p.media_type")
         policy_sql = " AND " + predicate if predicate else ""
         with self.engine.transaction() as connection:
             rows = self.engine.fetchall(
                 connection,
-                "SELECT id, name, created_at, updated_at FROM collections "
+                "SELECT c.id, c.name, c.created_at, c.updated_at, "
+                "cmp.playlist_uri AS music_playlist_uri FROM collections c "
+                "LEFT JOIN collection_music_playlists cmp "
+                "ON cmp.collection_type='manual' AND cmp.collection_id=c.id "
                 "ORDER BY %s" % order,
             )
             for row in rows:
+                if not row.get("music_playlist_uri"):
+                    row.pop("music_playlist_uri", None)
                 total = self.engine.fetchone(
                     connection,
                     "SELECT COUNT(*) AS total FROM collection_items WHERE collection_id=?",
@@ -288,6 +426,12 @@ class Catalog:
 
     def delete_collection(self, collection_id: int) -> bool:
         with self.engine.transaction(immediate=True) as connection:
+            self.engine.execute(
+                connection,
+                "DELETE FROM collection_music_playlists "
+                "WHERE collection_type=? AND collection_id=?",
+                (MUSIC_TARGET_MANUAL, collection_id),
+            ).close()
             cursor = self.engine.execute(
                 connection,
                 "DELETE FROM collections WHERE id=?",

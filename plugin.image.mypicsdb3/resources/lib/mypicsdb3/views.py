@@ -33,6 +33,19 @@ from .preferences import (
     serialize_home_layout_v2,
     serialize_persisted_home_layout,
 )
+from .music_playlists import (
+    MUSIC_PLAYLIST_MASK,
+    MUSIC_TARGET_MANUAL,
+    MUSIC_TARGET_SMART,
+    MusicPlaylistValidationError,
+    music_playlist_label,
+    normalize_music_target_type,
+)
+from .music_slideshow import (
+    MusicSlideshowError,
+    start_music_playlist,
+    stop_music_player,
+)
 from .rating_policy import (
     RATING_POLICY_ALL,
     normalize_rating_policy,
@@ -429,6 +442,53 @@ class PluginUI:
             prefix_items=[save_item],
         )
 
+    def _music_playlist_context(
+        self, collection_type: str, collection_id: int, playlist_uri: str
+    ) -> List[Tuple[str, str]]:
+        assign_label = (
+            self.text(32832, "Change music playlist")
+            if playlist_uri
+            else self.text(32831, "Assign music playlist")
+        )
+        context = [
+            (
+                assign_label,
+                "RunPlugin(%s)"
+                % self.url(
+                    "action/assign-music-playlist",
+                    type=collection_type,
+                    id=collection_id,
+                ),
+            )
+        ]
+        if playlist_uri:
+            context.append(
+                (
+                    self.text(32833, "Remove music playlist"),
+                    "RunPlugin(%s)"
+                    % self.url(
+                        "action/remove-music-playlist",
+                        type=collection_type,
+                        id=collection_id,
+                    ),
+                )
+            )
+        return context
+
+    def _music_slideshow_action(
+        self, scope: str, collection_id: int, playlist_uri: str
+    ):
+        label = self.text(32834, "Play picture slideshow with music")
+        playlist_name = music_playlist_label(playlist_uri)
+        if playlist_name:
+            label = "%s  [COLOR=grey](%s)[/COLOR]" % (label, playlist_name)
+        return self.add_action(
+            label,
+            "action/start-music-slideshow",
+            scope=scope,
+            id=collection_id,
+        )
+
     def saved_searches(self, params: Optional[Dict[str, str]] = None):
         params = params or {}
         rating_params = self._rating_route_params(params)
@@ -441,10 +501,16 @@ class PluginUI:
             delete = "RunPlugin(%s)" % self.url(
                 "action/delete-saved-search", id=saved_id
             )
+            music_uri = str(row.get("music_playlist_uri") or "")
             context = [
                 (self.text(32705, "Rename saved search"), rename),
                 (self.text(32706, "Delete saved search"), delete),
             ]
+            context.extend(
+                self._music_playlist_context(
+                    MUSIC_TARGET_SMART, saved_id, music_uri
+                )
+            )
             items.append(
                 self.add_folder(
                     str(row["name"]),
@@ -486,6 +552,18 @@ class PluginUI:
             )
         saved_params = dict(params)
         saved_params["id"] = str(saved.id)
+        music_uri = self.catalog.get_music_playlist(
+            MUSIC_TARGET_SMART, saved.id
+        )
+        prefix_items = (
+            [
+                self._music_slideshow_action(
+                    "saved-search", saved.id, music_uri
+                )
+            ]
+            if music_uri and not self._is_home_widget(params)
+            else None
+        )
         return self.pictures(
             "saved-search",
             lambda limit, offset: self.catalog.query_pictures(
@@ -495,6 +573,7 @@ class PluginUI:
             ),
             saved_params,
             saved.name,
+            prefix_items=prefix_items,
         )
 
     def collections(self, params: Optional[Dict[str, str]] = None):
@@ -516,10 +595,16 @@ class PluginUI:
             delete = "RunPlugin(%s)" % self.url(
                 "action/delete-collection", id=collection_id
             )
+            music_uri = str(row.get("music_playlist_uri") or "")
             context = [
                 (self.text(32803, "Rename collection"), rename),
                 (self.text(32804, "Delete collection"), delete),
             ]
+            context.extend(
+                self._music_playlist_context(
+                    MUSIC_TARGET_MANUAL, collection_id, music_uri
+                )
+            )
             art = self._media_art_uri(
                 row.get("uri"), row.get("thumb_uri"), row.get("media_type")
             ) or self.icon
@@ -586,6 +671,15 @@ class PluginUI:
                     **self._rating_route_params(params),
                 )
             )
+            music_uri = self.catalog.get_music_playlist(
+                MUSIC_TARGET_MANUAL, collection_id
+            )
+            if music_uri:
+                items.append(
+                    self._music_slideshow_action(
+                        "collection", collection_id, music_uri
+                    )
+                )
         for row_index, row in enumerate(rows):
             picture_id = int(row.get("id") or 0)
             absolute_index = offset + row_index
@@ -677,21 +771,14 @@ class PluginUI:
             view_mode=self._browser_view_mode(params),
         )
 
-    def collection_slideshow_pictures(
-        self, collection_id: int, params: Dict[str, str]
+    def _finish_native_picture_directory(
+        self,
+        rows: Sequence[Dict[str, Any]],
+        log_message: str,
+        log_id: int,
     ):
-        """Expose still pictures from one collection to Kodi's slideshow loader.
+        """Return an ordered, picture-only directory for Kodi SlideShow."""
 
-        The route is intentionally not linked from the browser. Kodi's native
-        ``SlideShow`` built-in opens it through the directory layer, where each
-        returned URL is a real still-image path. Labels carry a zero-padded
-        position prefix because Kodi sorts slideshow directory results by label;
-        picture metadata keeps the visible title free of that internal prefix.
-        """
-
-        rows = self.catalog.pictures_in_collection(
-            collection_id, MAX_SLIDESHOW_ITEMS, 0
-        )
         items = []
         seen = set()
         for row in rows:
@@ -740,12 +827,55 @@ class PluginUI:
             item.setProperty("MyPicsDB3.PictureId", str(row.get("id", "")))
             items.append((media_uri, item, False))
 
-        self.kodi.log.debug(
+        self.kodi.log.debug(log_message, log_id, len(items))
+        return self.finish(items, content="images", cache=False)
+
+    def collection_slideshow_pictures(
+        self, collection_id: int, params: Dict[str, str]
+    ):
+        """Expose still pictures from one collection to Kodi's slideshow loader.
+
+        The route is intentionally not linked from the browser. Kodi's native
+        ``SlideShow`` built-in opens it through the directory layer, where each
+        returned URL is a real still-image path. Labels carry a zero-padded
+        position prefix because Kodi sorts slideshow directory results by label;
+        picture metadata keeps the visible title free of that internal prefix.
+        """
+
+        rows = self.catalog.pictures_in_collection(
+            collection_id, MAX_SLIDESHOW_ITEMS, 0
+        )
+        return self._finish_native_picture_directory(
+            rows,
             "Native collection picture directory: collection_id=%s items=%d",
             collection_id,
-            len(items),
         )
-        self.finish(items, content="images", cache=False)
+
+    def saved_search_slideshow_pictures(
+        self, saved_search_id: int, params: Dict[str, str]
+    ):
+        """Expose picture-only smart-collection results to Kodi's slideshow."""
+
+        try:
+            saved = self.catalog.get_saved_search(saved_search_id)
+        except SavedSearchValidationError as exc:
+            self.kodi.log.warning(
+                "Could not read smart collection %s for slideshow: %s",
+                saved_search_id,
+                exc,
+            )
+            saved = None
+        if saved is None:
+            return self.finish([], content="images", cache=False)
+        rows = self.catalog.query_pictures(
+            saved.query, MAX_SLIDESHOW_ITEMS, 0
+        )
+        return self._finish_native_picture_directory(
+            rows,
+            "Native smart-collection picture directory: "
+            "saved_search_id=%s items=%d",
+            saved_search_id,
+        )
 
     def sources(self, params: Optional[Dict[str, str]] = None):
         params = params or {}
@@ -1622,6 +1752,139 @@ class PluginUI:
         self.kodi.log.debug("Mixed collection playback cancelled")
         return None
 
+    def _start_music_slideshow(self, params: Dict[str, str]) -> None:
+        self._release_direct_slideshow_action()
+        acquire = getattr(self.kodi, "acquire_slideshow_start", None)
+        release = getattr(self.kodi, "release_slideshow_start", None)
+        token = acquire() if callable(acquire) else ""
+        if callable(acquire) and not token:
+            self.kodi.notify(
+                self.text(32725, "A slideshow is already being prepared")
+            )
+            return
+        try:
+            self._start_music_slideshow_unlocked(params)
+        finally:
+            if token and callable(release):
+                release(token)
+
+    def _start_music_slideshow_unlocked(
+        self, params: Dict[str, str]
+    ) -> None:
+        scope = str(params.get("scope") or "")
+        try:
+            collection_id = int(params.get("id") or 0)
+        except (TypeError, ValueError):
+            collection_id = 0
+        target_type = (
+            MUSIC_TARGET_SMART
+            if scope == "saved-search"
+            else MUSIC_TARGET_MANUAL
+            if scope == "collection"
+            else ""
+        )
+        if not target_type or collection_id <= 0:
+            self.kodi.notify(
+                self.text(32838, "Music slideshow could not be started"),
+                error=True,
+            )
+            return
+        playlist_uri = self.catalog.get_music_playlist(
+            target_type, collection_id
+        )
+        if not playlist_uri:
+            self.kodi.notify(
+                self.text(32839, "No music playlist is assigned"),
+                error=True,
+            )
+            return
+        try:
+            rows = self._slideshow_rows(
+                {"scope": scope, "id": str(collection_id)}
+            )
+        except SavedSearchValidationError as exc:
+            self.kodi.notify(
+                "%s: %s"
+                % (self.text(32710, "Invalid saved search"), exc),
+                error=True,
+            )
+            return
+        picture_rows = [
+            row
+            for row in rows
+            if str(row.get("media_type") or "picture") != "video"
+            and str(row.get("uri") or "").strip()
+        ]
+        if not picture_rows:
+            self.kodi.notify(
+                self.text(32840, "No pictures to play with music")
+            )
+            return
+        directory_uri = self.url(
+            "slideshow/saved-search-pictures"
+            if scope == "saved-search"
+            else "slideshow/collection-pictures",
+            id=collection_id,
+            **self._rating_route_params(params),
+        )
+        begin_slide_uri = str(picture_rows[0].get("uri") or "")
+        session_token = uuid.uuid4().hex
+        fingerprint = ""
+        try:
+            stop_active_media_players(xbmc, logger=self.kodi.log)
+            count = start_music_playlist(
+                xbmc, playlist_uri, logger=self.kodi.log
+            )
+            fingerprint = self.kodi.music_playlist_fingerprint()
+            if not fingerprint:
+                stop_music_player(self.kodi, logger=self.kodi.log)
+                raise MusicSlideshowError(
+                    "Kodi could not verify the loaded music playlist"
+                )
+            self.kodi.set_music_slideshow_session(
+                session_token, fingerprint
+            )
+            published = self.kodi.music_slideshow_session()
+            if (
+                str(published.get("token") or "") != session_token
+                or str(published.get("playlist_fingerprint") or "")
+                != fingerprint
+            ):
+                stop_music_player(self.kodi, logger=self.kodi.log)
+                raise MusicSlideshowError(
+                    "Kodi could not publish music slideshow ownership"
+                )
+            start_native_directory_slideshow(
+                xbmc,
+                directory_uri,
+                recursive=False,
+                begin_slide_uri=begin_slide_uri,
+                logger=self.kodi.log,
+            )
+            self.kodi.log.info(
+                "Music slideshow started: scope=%s id=%d pictures=%d music_items=%d",
+                scope,
+                collection_id,
+                len(picture_rows),
+                count,
+            )
+        except (MusicPlaylistValidationError, MusicSlideshowError, SlideshowError) as exc:
+            if fingerprint:
+                try:
+                    if self.kodi.music_playlist_fingerprint() == fingerprint:
+                        stop_music_player(self.kodi, logger=self.kodi.log)
+                except Exception:
+                    pass
+            self.kodi.clear_music_slideshow_session(session_token)
+            self.kodi.notify(
+                "%s: %s"
+                % (
+                    self.text(32838, "Music slideshow could not be started"),
+                    exc,
+                ),
+                error=True,
+            )
+
     def _start_slideshow(self, params: Dict[str, str]) -> None:
         self._release_direct_slideshow_action()
         acquire = getattr(self.kodi, "acquire_slideshow_start", None)
@@ -1992,6 +2255,9 @@ class PluginUI:
         if route == "action/start-slideshow":
             self._start_slideshow(params)
             return
+        if route == "action/start-music-slideshow":
+            self._start_music_slideshow(params)
+            return
         if route == "action/configure-home":
             self._configure_home_screen()
             return
@@ -2000,6 +2266,64 @@ class PluginUI:
             return
         if route == "action/save-album-view":
             self._save_current_album_view()
+            return
+        if route == "action/assign-music-playlist":
+            try:
+                target_type = normalize_music_target_type(params.get("type"))
+                target_id = int(params.get("id") or 0)
+                current = self.catalog.get_music_playlist(
+                    target_type, target_id
+                )
+                selected = xbmcgui.Dialog().browseSingle(
+                    1,
+                    self.text(32835, "Choose music playlist"),
+                    "music",
+                    MUSIC_PLAYLIST_MASK,
+                    False,
+                    False,
+                    current,
+                )
+                selected = str(selected or "").strip()
+                if not selected or selected == current:
+                    return
+                if not self.catalog.set_music_playlist(
+                    target_type, target_id, selected
+                ):
+                    raise MusicPlaylistValidationError(
+                        "Collection was not found"
+                    )
+                self.kodi.notify(
+                    self.text(32836, "Music playlist assigned")
+                )
+                xbmc.executebuiltin("Container.Refresh")
+            except (MusicPlaylistValidationError, RuntimeError, TypeError, ValueError) as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (
+                        self.text(32841, "Could not save music playlist"),
+                        exc,
+                    ),
+                    error=True,
+                )
+            return
+        if route == "action/remove-music-playlist":
+            try:
+                target_type = normalize_music_target_type(params.get("type"))
+                target_id = int(params.get("id") or 0)
+                self.catalog.clear_music_playlist(target_type, target_id)
+                self.kodi.notify(
+                    self.text(32837, "Music playlist removed")
+                )
+                xbmc.executebuiltin("Container.Refresh")
+            except (MusicPlaylistValidationError, RuntimeError, TypeError, ValueError) as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (
+                        self.text(32841, "Could not save music playlist"),
+                        exc,
+                    ),
+                    error=True,
+                )
             return
         if route == "action/create-smart-collection":
             try:
@@ -2580,6 +2904,10 @@ class PluginUI:
             return self.collection(int(params["id"]), params)
         if route == "slideshow/collection-pictures":
             return self.collection_slideshow_pictures(int(params["id"]), params)
+        if route == "slideshow/saved-search-pictures":
+            return self.saved_search_slideshow_pictures(
+                int(params["id"]), params
+            )
         if route == "home-smart":
             try:
                 slot = int(params.get("slot") or 0)

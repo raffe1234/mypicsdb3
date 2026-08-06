@@ -5,10 +5,10 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.5.1 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.6.0 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
-> automated tests. The schema-1-to-6 migrations, search-document backfill,
-> mixed-media playlist integration, manual collections, backup and restore, and
+> automated tests. The schema-1-to-7 migrations, search-document backfill,
+> mixed-media playback, collection music playlists, backup and restore, and
 > large-library search performance still require documented validation on real
 > Kodi installations before calling the project production-stable.
 
@@ -34,57 +34,75 @@ For the component boundaries and long-lived safety rules, see
 
 ## Features
 
-- Select one or more existing Kodi picture sources.
-- Incremental manual and scheduled background scanning, with local folder
-  checkpoints that resume a compatible interrupted scan from the first
-  unfinished folder.
-- Session-visible scan progress for manual and automatic scans, with a
-  confirmation-protected **Stop scan** action that cancels at the next safe
-  file or folder checkpoint. Scan progress is hidden while Live TV, TV
-  episodes, movies or other media are playing and returns after playback.
-- Faster home rows with a separate 4–40 item limit that updates live, direct
-  Kodi texture-cache artwork and render-friendly stills ahead of RAW/HEIF and
-  video thumbnails.
-- SQLite by default, using WAL mode and a local add-on profile database.
-- Optional shared MySQL/MariaDB catalogue through PyMySQL.
-- EXIF capture date, camera, orientation, dimensions, rating and optional GPS.
-- Basic embedded XMP keywords, rating, location and capture date.
-- IPTC keywords, caption and location from JPEG files through IPTCInfo3 when
-  available.
-- Missing-source safety: an unavailable SMB/NFS source or incomplete directory
-  traversal is never interpreted as deletion of unseen media.
-- Lazy Kodi thumbnail caching, including native generated-frame previews for
-  indexed videos; no duplicate thumbnail tree is generated.
-- Global Unicode-normalized AND search across filename, caption, keywords,
-  path parts, camera and stored location fields.
-- Favorites, ratings, keywords, cameras, year/month/day and geotagged views.
-- Picture-first album artwork, preferring broadly supported still formats,
-  with RAW/HEIF and video fallback for collections that need them.
-- Guarded album-view activation that waits for the active, stable Pictures
-  container, skips empty results and never changes a background window or widget
-  layout.
-- Optional indexing of common home-video formats alongside pictures, including
-  a dedicated **Videos** node and mixed picture/video date and folder views.
-- Native recursive slideshows for picture-only album trees and database-backed
-  mixed playlists for album trees containing video or results spanning multiple
-  folders, with bounded playlist batches.
-- Optional global minimum-rating display policy for normal browser and widget
-  views, with a temporary all-pictures override.
-- Save, reopen, rename and delete named global searches, with normal
-  pagination and slideshow support.
-- Create named manual collections from selected indexed pictures and home
-  videos without copying, moving or deleting source files. Collections support
-  explicit item ordering, normal browsing, picture/video playback and ordered
-  Pictures-home rows.
-- Kodi smart-filter editor with all/any matching, metadata criteria, result
-  preview and saved smart collections. Saved smart and manual collections can
-  be placed as ordered Pictures-home rows using the same standard picture-row
-  layout.
-- Versioned, validated Query Model used by global and saved searches; stored
-  queries are revalidated when opened and never expose raw SQL.
-- Stable widget endpoints for configurable skins.
-- Optional **Estuary MyPicsDB 3** skin with picture rows on the home screen.
-- GitHub Actions, Kodi repository generation and GitHub Pages deployment.
+### Catalogue and scanning
+
+- Select one or more existing Kodi picture sources and index them manually or on
+  a schedule.
+- Resume a compatible interrupted scan from the first unfinished folder, show
+  session progress and cancel at a safe file or folder checkpoint.
+- Protect unavailable SMB/NFS sources and incomplete directory traversals from
+  being mistaken for deletion of unseen media.
+- Index EXIF, basic embedded XMP and optional IPTC metadata, including capture
+  date, camera, dimensions, rating, keywords, caption and stored location.
+- Optionally index common home-video formats in the same catalogue without a
+  separate video scraper.
+
+### Browsing, search and metadata
+
+- Browse favorites, ratings, keywords, cameras, year/month/day, folders,
+  geotagged media, recent items and optional videos.
+- Search Unicode-normalized filename, caption, keywords, paths, camera and
+  location fields with AND matching.
+- Apply an optional global minimum-picture-rating policy with a temporary
+  all-pictures override.
+- Use guarded **Default album view** activation that changes only the active,
+  stable Pictures container.
+- Use picture-first album artwork with broadly supported stills preferred over
+  RAW/HEIF and video fallbacks.
+
+### Collections and playback
+
+- Save, reopen, rename and delete named global searches, or build saved smart
+  collections with all/any metadata criteria and result preview.
+- Create manual collections containing an explicit shared order of indexed
+  pictures and home videos without copying, moving or deleting source files.
+- Reorder manual collection items and browse both smart and manual collections
+  with normal pagination and **Default album view**.
+- Assign one Kodi music-playlist file to a saved smart collection or manual
+  collection, then explicitly start its picture slideshow with that music.
+- Run native recursive or ordered picture slideshows and video playlists; mixed
+  manual collections let the user choose picture or video playback safely.
+
+### Home screen and Kodi integration
+
+- Configure ordered Pictures-home rows for built-in views, saved smart
+  collections and manual collections, with direct On/Off and up/down controls.
+- Limit Home rows independently to 4–40 items and refresh widget state after
+  collection, date, random-selection or setting changes.
+- Use stable provider endpoints and an optional maintained **Estuary MyPicsDB
+  3** skin with standard picture rows on Kodi's home screen.
+- Cache artwork lazily through Kodi, including generated video-frame previews,
+  without building a duplicate thumbnail tree.
+
+### Storage, safety and maintenance
+
+- Use local SQLite with WAL mode by default or an optional shared
+  MySQL/MariaDB catalogue through PyMySQL.
+- Upgrade through versioned, checksum-validated schema migrations; SQLite makes
+  a verified pre-migration backup automatically.
+- Keep saved queries behind a validated versioned Query Model and never expose
+  raw SQL through Kodi routes.
+- Skip missing collection media safely and keep every collection operation
+  separate from original source files.
+- Stop collection-slideshow music only while the service still recognizes the
+  music queue started by that slideshow; a replacement queue is left alone.
+
+### Development and delivery
+
+- Build and verify the add-on, repository index and optional Estuary fork with
+  automated tests and repository tools.
+- Publish installable Kodi repository packages through GitHub Actions and
+  GitHub Pages.
 
 ## Widget endpoints
 
@@ -561,6 +579,21 @@ on Windows repeatedly reopening a JPEG through VideoPlayer when picture playlist
 media IDs; saved smart collections remain live validated queries and are managed
 separately.
 
+To add music, open the context menu for a manual collection under
+**Collections** or a smart collection under **Saved searches**, then choose
+**Assign music playlist**. Select an ordinary Kodi playlist file (`.m3u`,
+`.m3u8`, `.pls`, `.b4s` or `.wpl`) from a configured music source. Open the
+collection and choose **Play picture slideshow with music**. The assignment is a
+reference to the playlist file; MyPicsDB does not copy or edit it.
+
+Music playback is deliberately picture-only in 0.6.0. Videos keep their normal
+separate playback path, so a mixed manual collection still uses **Play picture
+slideshow** or **Play video playlist**. When the picture slideshow closes, the
+background service stops the music queue only when it still matches the queue
+started by MyPicsDB. If another music queue has replaced it, that audio is left
+playing. Use **Change music playlist** or **Remove music playlist** from the same
+collection context menu to update the assignment.
+
 The configured minimum-rating policy also applies to search results and saved
 searches. Use **Show all pictures temporarily** from the main menu before
 searching or opening a saved search to bypass the policy for that browsing
@@ -585,7 +618,7 @@ scanning, metadata extraction or stored database values. The active policy is
 shown in the browser category. Open **Show all pictures temporarily** from the
 add-on main menu to bypass the configured policy for that browsing session.
 
-### 7. Query Model, global search and saved searches
+### 8. Query Model, global search and saved searches
 
 Version 0.2.19 extended Query Model version 1 with the allowlisted `text` /
 `contains_tokens` rule used by Kodi global search. Version 0.2.34 added named
@@ -606,7 +639,7 @@ in the Kodi dialog. See [Query Model version 1](docs/QUERY_MODEL.md),
 [Global search](docs/GLOBAL_SEARCH.md) and
 [Database migrations](docs/DATABASE_MIGRATIONS.md).
 
-### 8. Configure automatic scanning
+### 9. Configure automatic scanning
 
 Open **MyPicsDB 3 > Settings > Scanning** and enable **Enable automatic
 scanning**. Set **Automatic scan interval (hours)** to any whole number from 1
@@ -688,13 +721,14 @@ tested by this project.
 SQLite is recommended for one Kodi device. The database is stored under the
 add-on profile directory and must not be moved to SMB/NFS.
 
-The current development release uses schema version 6 for both SQLite and
+The current development release uses schema version 7 for both SQLite and
 MySQL/MariaDB. Schema 2 adds the year-first date-browsing index. Schema 3 adds
 one normalized search document per picture and backfills existing catalogues.
 Schema 4 adds the picture/video media type. Schema 5 adds validated named saved
-searches. Schema 6 adds manual collection metadata and ordered media references;
-it does not rewrite indexed media and requires no rescan. Existing SQLite
-databases receive an atomic, integrity-checked backup
+searches. Schema 6 adds manual collection metadata and ordered media references.
+Schema 7 adds one optional music-playlist reference per saved smart or manual
+collection. Neither migration rewrites indexed media or requires a rescan.
+Existing SQLite databases receive an atomic, integrity-checked backup
 before a schema migration; MySQL/MariaDB operators must keep an external
 backup. See [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before
 testing a development build that changes the catalogue schema.

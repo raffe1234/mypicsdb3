@@ -38,6 +38,11 @@ Play collection slideshow / Play slideshow from here
 → picture-only: internal ordered plug-in directory → Kodi native SlideShow
 → video-only: Kodi video playlist
 → mixed: choose native picture slideshow or video playlist
+
+optional collection context action → Assign music playlist
+→ schema-7 mapping by manual collection ID
+→ explicit Play picture slideshow with music
+→ same ordered picture-only directory + service-owned music cleanup
 ```
 
 ## Files and responsibilities
@@ -52,6 +57,8 @@ Play collection slideshow / Play slideshow from here
 | `views.py` | Main-menu route, dialogs, context actions, Home provider, browsing and slideshow scope |
 | `kodi.py`, `contrib/estuary/` | Materialized Home properties and generated Estuary row |
 | `resources/language/resource.language.en_gb/strings.po` | User-facing collection text |
+| `music_playlists.py`, `music_slideshow.py` | Optional playlist assignment and music playback helpers |
+| `db/migration_steps/v0007_collection_music.py` | Optional schema-7 music mapping |
 
 ## Schema and ordering
 
@@ -110,12 +117,20 @@ opens a directly selected command as a media request, the action marks that
 request unresolved before opening the actual playlist. ``RunPlugin`` context
 commands use a negative handle and are not resolved.
 
+An optional schema-7 playlist assignment adds **Play picture slideshow with
+music**. This action filters out videos and starts the same native ordered
+picture directory while Kodi music playlist 0 plays. Version 0.6.0 deliberately
+keeps videos on their normal separate playlist; it does not pause, fade or
+resume music around video items. The background service stops music after the
+picture slideshow only while the Kodi music queue still matches the queue that
+MyPicsDB started. See [Collection music playlists](COLLECTION_MUSIC.md).
+
 ## Tests
 
 - `tests/test_static_collections.py` validates names and stored records;
 - `tests/test_catalog.py` covers CRUD, duplicates, order, missing media, rating
   policy, mixed media and deletion safety;
-- `tests/test_migrations.py` covers schema-5-to-6 upgrade and fresh schema 6;
+- `tests/test_migrations.py` covers schema-5-to-6, schema-6-to-7 and fresh schema 7;
 - `tests/test_kodi_ui_smoke.py` covers routes, Home providers, context actions
   and row synchronization;
 - `tests/test_preferences.py` and `tests/test_home_layout_editor.py` cover manual Home rows;
@@ -131,4 +146,5 @@ commands use a negative handle and are not resolved.
 - A deleted manual collection cannot leave an active Home provider behind.
 - Missing or policy-hidden media never crashes collection browsing.
 - SQLite and MySQL/MariaDB expose equivalent collection behaviour.
-- Schema migration does not require a catalogue rescan.
+- Schema migrations 6 and 7 do not require a catalogue rescan.
+- Optional music remains picture-only and never changes collection ordering.

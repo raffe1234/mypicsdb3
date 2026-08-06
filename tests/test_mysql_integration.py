@@ -65,6 +65,7 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     engine = DatabaseEngine(mysql_settings(tmp_path))
     with engine.transaction() as connection:
         create_schema(engine, connection)
+        engine.execute(connection, "DROP TABLE collection_music_playlists").close()
         engine.execute(connection, "DROP TABLE collection_items").close()
         engine.execute(connection, "DROP TABLE collections").close()
         engine.execute(connection, "DROP TABLE saved_searches").close()
@@ -101,8 +102,8 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     second = catalog.initialize()
 
     assert first.bootstrapped_history is True
-    assert first.current_version == 6
-    assert first.applied_versions == (2, 3, 4, 5, 6)
+    assert first.current_version == 7
+    assert first.applied_versions == (2, 3, 4, 5, 6, 7)
     assert second.bootstrapped_history is False
     assert second.applied_versions == ()
     with engine.transaction() as connection:
@@ -132,9 +133,9 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
         )
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
-    assert [row["version"] for row in history] == [1, 2, 3, 4, 5, 6]
+    assert [row["version"] for row in history] == [1, 2, 3, 4, 5, 6, 7]
     assert {row["addon_version"] for row in history} == {VERSION}
-    assert count["total"] == 6
+    assert count["total"] == 7
     assert index is not None
     assert search_table is not None
 
@@ -241,7 +242,7 @@ def test_existing_mysql_schema_two_backfills_global_search_documents(tmp_path) -
     result = Catalog(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 6
+    assert result.current_version == 7
     assert result.applied_versions == (3,)
     with engine.transaction() as connection:
         row = engine.fetchone(
@@ -437,3 +438,36 @@ def test_mysql_manual_collection_roundtrip_preserves_mixed_order(tmp_path) -> No
     assert catalog.rename_collection(collection_id, "Renamed picks") is True
     assert catalog.get_collection(collection_id).name == "Renamed picks"
     assert catalog.delete_collection(collection_id) is True
+
+
+def test_mysql_collection_music_playlist_roundtrip(tmp_path) -> None:
+    catalog = Catalog(DatabaseEngine(mysql_settings(tmp_path)))
+    catalog.initialize()
+    smart_id = catalog.create_saved_search(
+        "Summer music", build_global_search_request("summer").query
+    )
+    manual_id = catalog.create_collection("Family music")
+
+    assert catalog.set_music_playlist(
+        "smart", smart_id, "smb://nas/music/summer.m3u"
+    )
+    assert catalog.set_music_playlist(
+        "manual", manual_id, "smb://nas/music/family.pls"
+    )
+    assert catalog.get_music_playlist("smart", smart_id).endswith("summer.m3u")
+    assert catalog.get_music_playlist("manual", manual_id).endswith("family.pls")
+    assert catalog.list_saved_searches()[0]["music_playlist_uri"].endswith(
+        "summer.m3u"
+    )
+    assert catalog.list_collections()[0]["music_playlist_uri"].endswith(
+        "family.pls"
+    )
+
+    assert catalog.delete_saved_search(smart_id)
+    assert catalog.delete_collection(manual_id)
+    with catalog.engine.transaction() as connection:
+        total = catalog.engine.fetchone(
+            connection,
+            "SELECT COUNT(*) AS total FROM collection_music_playlists",
+        )["total"]
+    assert total == 0

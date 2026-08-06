@@ -42,6 +42,9 @@ from .migration_steps.v0005_saved_searches import MIGRATION as SAVED_SEARCHES_MI
 from .migration_steps.v0006_static_collections import (
     MIGRATION as STATIC_COLLECTIONS_MIGRATION,
 )
+from .migration_steps.v0007_collection_music import (
+    MIGRATION as COLLECTION_MUSIC_MIGRATION,
+)
 
 
 @dataclass(frozen=True)
@@ -84,6 +87,7 @@ DEFAULT_MIGRATIONS: Tuple[MigrationStep, ...] = (
     MIXED_MEDIA_MIGRATION,
     SAVED_SEARCHES_MIGRATION,
     STATIC_COLLECTIONS_MIGRATION,
+    COLLECTION_MUSIC_MIGRATION,
 )
 MIGRATION_LOCK_TTL_SECONDS = 7200
 

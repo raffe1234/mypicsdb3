@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import time
@@ -22,6 +23,7 @@ except ImportError:  # pragma: no cover - Kodi modules are unavailable in unit t
 SHUTDOWN_NOTIFICATION_METHODS = frozenset(("System.OnQuit", "System.OnRestart"))
 HOME_WINDOW_ID = 10000
 MIXED_SLIDESHOW_PROPERTY = "MyPicsDB3.MixedSlideshowActive"
+MUSIC_SLIDESHOW_PROPERTY = "MyPicsDB3.MusicSlideshowSessionV1"
 PICTURE_PLAYLIST_COMPATIBILITY_PROPERTY = "MyPicsDB3.PicturePlaylistCompatibilityV2"
 SLIDESHOW_START_PROPERTY = "MyPicsDB3.SlideshowStart"
 SLIDESHOW_START_TTL_SECONDS = 180.0
@@ -714,6 +716,98 @@ class KodiContext:
             return str(value or "").strip().lower() == "true"
         except Exception:
             return False
+
+    def music_playlist_fingerprint(self) -> str:
+        """Fingerprint Kodi's current music queue without persisting its items."""
+
+        try:
+            result = self.execute_jsonrpc(
+                "Playlist.GetItems",
+                {
+                    "playlistid": 0,
+                    "properties": ["file"],
+                    "limits": {"start": 0, "end": 5000},
+                },
+            )
+            if not isinstance(result, dict):
+                return ""
+            items = result.get("items") or []
+            files = [
+                str(item.get("file") or "")
+                for item in items
+                if isinstance(item, dict)
+            ]
+            total = int((result.get("limits") or {}).get("total") or len(files))
+            if total <= 0 or not any(files):
+                return ""
+            payload = json.dumps(
+                {"total": total, "files": files},
+                ensure_ascii=False,
+                separators=(",", ":"),
+            )
+            return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+        except Exception as exc:
+            self.log.warning("Could not fingerprint the music playlist: %s", exc)
+            return ""
+
+    def set_music_slideshow_session(
+        self, token: str, playlist_fingerprint: str
+    ) -> None:
+        if xbmcgui is None:
+            return
+        try:
+            payload = json.dumps(
+                {
+                    "version": 1,
+                    "token": str(token or ""),
+                    "playlist_fingerprint": str(playlist_fingerprint or ""),
+                },
+                separators=(",", ":"),
+            )
+            xbmcgui.Window(HOME_WINDOW_ID).setProperty(
+                MUSIC_SLIDESHOW_PROPERTY, payload
+            )
+            self.log.debug("Music slideshow session published")
+        except Exception as exc:
+            self.log.warning("Could not publish music slideshow session: %s", exc)
+
+    @staticmethod
+    def music_slideshow_session() -> Dict[str, str]:
+        if xbmcgui is None:
+            return {}
+        try:
+            raw = xbmcgui.Window(HOME_WINDOW_ID).getProperty(
+                MUSIC_SLIDESHOW_PROPERTY
+            )
+            payload = json.loads(str(raw or "{}"))
+            if not isinstance(payload, dict) or int(payload.get("version") or 0) != 1:
+                return {}
+            token = str(payload.get("token") or "")
+            if not token:
+                return {}
+            return {
+                "token": token,
+                "playlist_fingerprint": str(
+                    payload.get("playlist_fingerprint") or ""
+                ),
+            }
+        except Exception:
+            return {}
+
+    @staticmethod
+    def clear_music_slideshow_session(token: str = "") -> None:
+        if xbmcgui is None:
+            return
+        try:
+            window = xbmcgui.Window(HOME_WINDOW_ID)
+            if token:
+                raw = window.getProperty(MUSIC_SLIDESHOW_PROPERTY)
+                payload = json.loads(str(raw or "{}"))
+                if str(payload.get("token") or "") != str(token):
+                    return
+            window.clearProperty(MUSIC_SLIDESHOW_PROPERTY)
+        except Exception:
+            return
 
     def set_picture_playlist_compatibility(self, compatible: Optional[bool]) -> None:
         """Cache picture-playlist support for the current Kodi session."""

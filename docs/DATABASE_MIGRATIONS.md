@@ -6,7 +6,8 @@ raised the catalogue to schema version 2. Version 0.2.19 raised it to schema 3
 with normalized global-search documents. Version 0.2.22 raised it to schema 4
 with an explicit picture/video media type. Version 0.2.34 raised it to schema 5
 with validated saved searches. Version 0.5.0 raises it to schema 6 with named
-manual media collections and explicit item order.
+manual media collections and explicit item order. Version 0.6.0 raises it to
+schema 7 with optional smart/manual collection music-playlist mappings.
 
 ## Startup sequence
 
@@ -111,6 +112,30 @@ sources, rewrite media metadata or populate collections automatically. Existing
 schema-5 catalogues therefore upgrade without a rescan. SQLite and
 MySQL/MariaDB use equivalent constraints, with backend-appropriate types and
 DDL.
+
+## Schema 7: collection music playlists
+
+Schema 7 adds one portable mapping table:
+
+```text
+collection_music_playlists
+- collection_type (`smart` or `manual`)
+- collection_id
+- playlist_uri
+- updated_at
+```
+
+The composite primary key permits one optional playlist reference for each
+saved smart or manual collection. Because the target can live in either
+`saved_searches` or `collections`, the mapping deliberately has no polymorphic
+foreign key. Catalogue deletion methods remove the mapping in the same
+transaction as the target.
+
+The migration creates an empty table only. It does not read playlist files,
+scan music, rewrite collection contents or touch indexed media. Existing
+schema-6 catalogues therefore upgrade without a rescan. SQLite enforces the two
+allowed target-type values with a check constraint; application validation
+provides the equivalent boundary for MySQL/MariaDB.
 
 ## SQLite backups
 

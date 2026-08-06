@@ -34,6 +34,7 @@ class FakeDialog:
     select_responses = []
     multiselect_responses = []
     input_responses = []
+    browse_responses = []
 
     def yesno(self, heading, message):
         return self.__class__.responses.pop(0)
@@ -46,6 +47,12 @@ class FakeDialog:
 
     def input(self, heading, defaultt=""):
         return self.__class__.input_responses.pop(0)
+
+    def browseSingle(
+        self, type, heading, shares, mask="", useThumbs=False,
+        treatAsFolder=False, defaultt=""
+    ):
+        return self.__class__.browse_responses.pop(0)
 
 
 @dataclass
@@ -60,6 +67,9 @@ class Calls:
     sleeps: list[int] = field(default_factory=list)
     info_label_sequences: dict[str, list[str]] = field(default_factory=dict)
     resolved_urls: list[tuple[int, bool, object]] = field(default_factory=list)
+    music_playlist_uri: str = ""
+    music_playlist_items: list[str] = field(default_factory=list)
+    player_calls: list[tuple[object, int]] = field(default_factory=list)
 
 
 def load_views(monkeypatch):
@@ -74,11 +84,40 @@ def load_views(monkeypatch):
     xbmc.executebuiltin = execute_builtin
     xbmc.sleep = calls.sleeps.append
 
+    xbmc.PLAYLIST_MUSIC = 0
+
+    class FakePlayList:
+        def __init__(self, playlist_type):
+            self.playlist_type = playlist_type
+
+        def load(self, uri):
+            calls.music_playlist_uri = str(uri)
+            calls.music_playlist_items = [
+                "smb://server/music/one.mp3",
+                "smb://server/music/two.mp3",
+            ]
+            return True
+
+        def size(self):
+            return len(calls.music_playlist_items)
+
+    class FakePlayer:
+        def play(self, playlist, startpos=0):
+            calls.player_calls.append((playlist, int(startpos)))
+
+    xbmc.PlayList = FakePlayList
+    xbmc.Player = FakePlayer
+
     def execute_jsonrpc(payload):
         request = json.loads(payload)
         calls.rpc_requests.append(request)
         if request["method"] == "Player.GetActivePlayers":
             result = [{"playerid": 2, "type": "picture"}]
+        elif request["method"] == "Playlist.GetItems":
+            result = {
+                "items": [{"file": item} for item in calls.music_playlist_items],
+                "limits": {"total": len(calls.music_playlist_items)},
+            }
         else:
             result = "OK"
         return json.dumps({"jsonrpc": "2.0", "id": 1, "result": result})
@@ -165,6 +204,8 @@ class FakeKodi:
         self.random_refreshes = 0
         self.random_invalidations = []
         self.home_invalidations = []
+        self.music_session = {}
+        self.music_fingerprint = "test-music-fingerprint"
 
     def localize(self, string_id, fallback):
         return fallback
@@ -215,6 +256,22 @@ class FakeKodi:
     def is_playing(self):
         return False
 
+    def music_playlist_fingerprint(self):
+        return self.music_fingerprint
+
+    def set_music_slideshow_session(self, token, playlist_fingerprint):
+        self.music_session = {
+            "token": token,
+            "playlist_fingerprint": playlist_fingerprint,
+        }
+
+    def music_slideshow_session(self):
+        return dict(self.music_session)
+
+    def clear_music_slideshow_session(self, token=""):
+        if not token or self.music_session.get("token") == token:
+            self.music_session = {}
+
 
 class FakeCatalog:
     def __init__(self):
@@ -235,6 +292,9 @@ class FakeCatalog:
         self.removed_collection_items = []
         self.moved_collection_items = []
         self.collection_requests = []
+        self.music_playlists = {}
+        self.music_playlist_updates = []
+        self.music_playlist_clears = []
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -322,6 +382,44 @@ class FakeCatalog:
 
     def delete_saved_search(self, saved_search_id):
         self.deleted_saved_searches.append(saved_search_id)
+        return True
+
+    def get_music_playlist(self, collection_type, collection_id):
+        return self.music_playlists.get((str(collection_type), int(collection_id)), "")
+
+    def set_music_playlist(self, collection_type, collection_id, playlist_uri):
+        key = (str(collection_type), int(collection_id))
+        target_exists = (
+            int(collection_id) in self.saved_search_objects
+            if str(collection_type) == "smart"
+            else int(collection_id) in self.collection_objects
+        )
+        if not target_exists:
+            return False
+        self.music_playlists[key] = str(playlist_uri)
+        rows = (
+            self.saved_search_rows
+            if str(collection_type) == "smart"
+            else self.collection_rows
+        )
+        for row in rows:
+            if int(row.get("id") or 0) == int(collection_id):
+                row["music_playlist_uri"] = str(playlist_uri)
+        self.music_playlist_updates.append((*key, str(playlist_uri)))
+        return True
+
+    def clear_music_playlist(self, collection_type, collection_id):
+        key = (str(collection_type), int(collection_id))
+        self.music_playlists.pop(key, None)
+        rows = (
+            self.saved_search_rows
+            if str(collection_type) == "smart"
+            else self.collection_rows
+        )
+        for row in rows:
+            if int(row.get("id") or 0) == int(collection_id):
+                row.pop("music_playlist_uri", None)
+        self.music_playlist_clears.append(key)
         return True
 
     def list_collections(self):
@@ -1624,6 +1722,10 @@ def test_saved_search_ui_saves_lists_opens_and_paginates_by_id(monkeypatch) -> N
             "Delete saved search",
             "RunPlugin(plugin://plugin.image.mypicsdb3/action/delete-saved-search?id=42)",
         ),
+        (
+            "Assign music playlist",
+            "RunPlugin(plugin://plugin.image.mypicsdb3/action/assign-music-playlist?type=smart&id=42)",
+        ),
     ]
     assert not any(command.startswith("Container.SetViewMode") for command in calls.builtins)
 
@@ -1946,6 +2048,10 @@ def test_manual_collections_list_open_and_use_default_album_view(monkeypatch) ->
         (
             "Delete collection",
             "RunPlugin(plugin://plugin.image.mypicsdb3/action/delete-collection?id=9)",
+        ),
+        (
+            "Assign music playlist",
+            "RunPlugin(plugin://plugin.image.mypicsdb3/action/assign-music-playlist?type=manual&id=9)",
         ),
     ]
 
@@ -2289,3 +2395,113 @@ def test_manual_collection_actions_create_add_remove_rename_and_delete(
     ui.action("action/delete-collection", {"id": "4"})
     assert runtime.catalog.deleted_collections == [4]
     assert runtime.kodi.notifications[-1] == ("Collection deleted", False)
+
+
+def test_manual_collection_music_playlist_can_be_assigned_changed_and_removed(
+    monkeypatch,
+) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.collection_objects[9] = types.SimpleNamespace(id=9, name="Trips")
+    runtime.catalog.collection_rows = [
+        {"id": 9, "name": "Trips", "available_count": 1}
+    ]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    FakeDialog.browse_responses = ["special://music/trips.m3u"]
+    ui.action("action/assign-music-playlist", {"type": "manual", "id": "9"})
+
+    assert runtime.catalog.music_playlist_updates == [
+        ("manual", 9, "special://music/trips.m3u")
+    ]
+    assert runtime.kodi.notifications[-1] == ("Music playlist assigned", False)
+    assert calls.builtins[-1] == "Container.Refresh"
+
+    calls.items = []
+    calls.ended = False
+    ui.collections()
+    context = calls.items[1][1].context
+    assert (
+        "Change music playlist",
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/assign-music-playlist?type=manual&id=9)",
+    ) in context
+    assert (
+        "Remove music playlist",
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/remove-music-playlist?type=manual&id=9)",
+    ) in context
+
+    ui.action("action/remove-music-playlist", {"type": "manual", "id": "9"})
+    assert runtime.catalog.music_playlist_clears == [("manual", 9)]
+    assert runtime.kodi.notifications[-1] == ("Music playlist removed", False)
+
+
+def test_manual_collection_picture_slideshow_starts_assigned_music(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.collection_objects[9] = types.SimpleNamespace(id=9, name="Trips")
+    runtime.catalog.music_playlists[("manual", 9)] = "special://music/trips.m3u"
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", -1)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-music-slideshow",
+            {"scope": "collection", "id": "9"},
+        )
+    )
+
+    assert calls.music_playlist_uri == "special://music/trips.m3u"
+    assert len(calls.player_calls) == 1
+    assert runtime.kodi.music_session["playlist_fingerprint"] == (
+        "test-music-fingerprint"
+    )
+    assert calls.builtins[-1] == (
+        'SlideShow("plugin://plugin.image.mypicsdb3/slideshow/collection-pictures?id=9",'
+        'notrandom,beginslide="smb://server/photos/image.jpg")'
+    )
+    assert any("Music slideshow started" in message for message in runtime.kodi.info_messages)
+
+
+def test_smart_collection_music_slideshow_uses_picture_only_hidden_route(
+    monkeypatch,
+) -> None:
+    from mypicsdb3.search import build_global_search_request
+
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    query = build_global_search_request("summer").query
+    runtime.catalog.saved_search_objects[42] = types.SimpleNamespace(
+        id=42, name="Summer", query=query
+    )
+    runtime.catalog.music_playlists[("smart", 42)] = "smb://nas/music/summer.pls"
+    picture = dict(runtime.catalog.recent_taken(1)[0])
+    video = dict(picture)
+    video.update(
+        {
+            "id": 2,
+            "uri": "smb://server/photos/clip.mp4",
+            "filename": "clip.mp4",
+            "media_type": "video",
+        }
+    )
+    runtime.catalog.query_pictures = lambda _query, _limit, _offset=0: [video, picture]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", -1)
+
+    ui.dispatch(
+        views.Request(
+            "action/start-music-slideshow",
+            {"scope": "saved-search", "id": "42"},
+        )
+    )
+
+    assert calls.music_playlist_uri == "smb://nas/music/summer.pls"
+    assert calls.builtins[-1] == (
+        'SlideShow("plugin://plugin.image.mypicsdb3/slideshow/saved-search-pictures?id=42",'
+        'notrandom,beginslide="smb://server/photos/image.jpg")'
+    )
+
+    calls.items = []
+    calls.ended = False
+    ui.dispatch(views.Request("slideshow/saved-search-pictures", {"id": "42"}))
+    assert [entry[0] for entry in calls.items] == [
+        "smb://server/photos/image.jpg"
+    ]

@@ -81,3 +81,56 @@ def test_slideshow_start_guard_only_releases_its_own_token(monkeypatch):
     context.release_slideshow_start("older")
 
     assert window.getProperty(kodi.SLIDESHOW_START_PROPERTY) == "newer|1000.0"
+
+
+def test_music_slideshow_session_roundtrip_and_owner_safe_clear(monkeypatch):
+    window = FakeWindow()
+    context = context_with_window(monkeypatch, window)
+
+    context.set_music_slideshow_session("owner", "fingerprint")
+
+    assert context.music_slideshow_session() == {
+        "token": "owner",
+        "playlist_fingerprint": "fingerprint",
+    }
+    context.clear_music_slideshow_session("newer")
+    assert context.music_slideshow_session()["token"] == "owner"
+    context.clear_music_slideshow_session("owner")
+    assert context.music_slideshow_session() == {}
+
+
+def test_music_playlist_fingerprint_uses_order_and_total(monkeypatch):
+    window = FakeWindow()
+    context = context_with_window(monkeypatch, window)
+    calls = []
+
+    def execute_jsonrpc(method, params=None):
+        calls.append((method, params))
+        return {
+            "items": [
+                {"file": "smb://nas/music/one.flac"},
+                {"file": "smb://nas/music/two.flac"},
+            ],
+            "limits": {"total": 2},
+        }
+
+    context.execute_jsonrpc = execute_jsonrpc
+
+    first = context.music_playlist_fingerprint()
+    second = context.music_playlist_fingerprint()
+
+    assert first
+    assert first == second
+    assert calls[0][0] == "Playlist.GetItems"
+    assert calls[0][1]["playlistid"] == 0
+
+
+def test_empty_music_playlist_has_no_fingerprint(monkeypatch):
+    window = FakeWindow()
+    context = context_with_window(monkeypatch, window)
+    context.execute_jsonrpc = lambda _method, _params=None: {
+        "items": [],
+        "limits": {"total": 0},
+    }
+
+    assert context.music_playlist_fingerprint() == ""
