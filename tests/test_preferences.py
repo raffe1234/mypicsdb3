@@ -7,6 +7,7 @@ from mypicsdb3.preferences import (
     HomeLayoutItem,
     home_layout_slots,
     parse_home_layout_v2,
+    remove_collection_from_home_layout,
     remove_saved_search_from_home_layout,
     serialize_home_layout_v2,
     normalize_album_view_mode,
@@ -112,6 +113,8 @@ def test_smart_home_layout_roundtrip_materializes_dynamic_slots() -> None:
         "smart_id": 42,
         "smart_name": "Spain favorites",
         "smart_mode": "poster",
+        "collection_id": 0,
+        "collection_name": "",
     }
     assert len(slots) == 9
 
@@ -145,3 +148,42 @@ def test_smart_home_layout_drops_all_smart_rows_when_no_saved_searches_exist() -
     assert decoded is not None
     assert all(item.kind != "smart" for item in decoded)
     assert next(item for item in decoded if item.key == "recent_taken").enabled is True
+
+
+def test_manual_collection_home_layout_roundtrip_and_removal() -> None:
+    items = (
+        HomeLayoutItem(kind="collection", collection_id=9, enabled=True),
+        HomeLayoutItem(kind="builtin", key="recent_taken", enabled=True),
+    )
+
+    encoded = serialize_home_layout_v2(items)
+    decoded = parse_home_layout_v2(encoded, set(), {9})
+    slots = home_layout_slots(decoded or (), {}, {9: "Family picks"})
+
+    assert decoded is not None
+    assert decoded[0].kind == "collection"
+    assert decoded[0].collection_id == 9
+    assert decoded[0].token == "collection:9"
+    assert slots[0] == {
+        "row": "collection",
+        "smart_id": 0,
+        "smart_name": "",
+        "smart_mode": "poster",
+        "collection_id": 9,
+        "collection_name": "Family picks",
+    }
+    assert all(
+        item.kind != "collection"
+        for item in remove_collection_from_home_layout(decoded, 9)
+    )
+
+
+def test_manual_collection_home_layout_drops_deleted_collection() -> None:
+    encoded = serialize_home_layout_v2(
+        (HomeLayoutItem(kind="collection", collection_id=12, enabled=True),)
+    )
+
+    decoded = parse_home_layout_v2(encoded, set(), set())
+
+    assert decoded is not None
+    assert all(item.kind != "collection" for item in decoded)

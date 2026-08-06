@@ -164,6 +164,7 @@ class FakeKodi:
         self.scan_cancel_requests = 0
         self.random_refreshes = 0
         self.random_invalidations = []
+        self.home_invalidations = []
 
     def localize(self, string_id, fallback):
         return fallback
@@ -207,6 +208,10 @@ class FakeKodi:
         self.random_invalidations.append(reason)
         return len(self.random_invalidations)
 
+    def invalidate_home_widgets(self, reason):
+        self.home_invalidations.append(reason)
+        return len(self.home_invalidations)
+
     def is_playing(self):
         return False
 
@@ -228,6 +233,8 @@ class FakeCatalog:
         self.deleted_collections = []
         self.added_collection_items = []
         self.removed_collection_items = []
+        self.moved_collection_items = []
+        self.collection_requests = []
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -335,11 +342,19 @@ class FakeCatalog:
         collection = self.collection_objects.get(collection_id)
         if collection is not None:
             collection.name = name.strip()
+        for row in self.collection_rows:
+            if int(row.get("id") or 0) == int(collection_id):
+                row["name"] = name.strip()
         return True
 
     def delete_collection(self, collection_id):
         self.deleted_collections.append(collection_id)
         self.collection_objects.pop(collection_id, None)
+        self.collection_rows = [
+            row
+            for row in self.collection_rows
+            if int(row.get("id") or 0) != int(collection_id)
+        ]
         return True
 
     def add_picture_to_collection(self, collection_id, picture_id):
@@ -354,7 +369,15 @@ class FakeCatalog:
         return True
 
     def pictures_in_collection(self, collection_id, limit, offset=0):
+        self.collection_requests.append((collection_id, limit, offset))
         return self.recent_taken(limit, offset)
+
+    def collection_available_count(self, collection_id):
+        return len(self.pictures_in_collection(collection_id, 5000, 0))
+
+    def move_picture_in_collection(self, collection_id, picture_id, direction):
+        self.moved_collection_items.append((collection_id, picture_id, direction))
+        return True
 
     def get_folder(self, folder_id):
         return {"id": folder_id, "source_id": 4, "uri": "smb://server/photos/Summer/", "name": "Summer"}
@@ -852,7 +875,9 @@ def test_home_screen_editor_enables_a_hidden_row(monkeypatch) -> None:
     runtime = FakeRuntime()
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
-    def enable_favorites(items, _labels, _saved_names, _text):
+    def enable_favorites(
+        items, _labels, _saved_names, _text, collection_names=None
+    ):
         from mypicsdb3.preferences import HomeLayoutItem
 
         return tuple(
@@ -1950,6 +1975,77 @@ def test_manual_collections_list_open_and_use_default_album_view(monkeypatch) ->
     assert calls.builtins in ([], ["Container.SetViewMode(54)"])
 
 
+
+def test_manual_collection_home_route_is_bounded_and_has_no_action_row(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.collection_objects[9] = types.SimpleNamespace(
+        id=9, name="Family picks"
+    )
+    runtime.catalog.collection_rows = [
+        {"id": 9, "name": "Family picks", "available_count": 1}
+    ]
+    runtime.kodi.addon.setSetting("home_collection_id_2", "9")
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "home-collection",
+            {"slot": "2", "widget": "1", "home": "1", "generation": "7"},
+        )
+    )
+
+    assert runtime.catalog.collection_requests[0] == (9, 10, 0)
+    assert calls.category == "Family picks"
+    assert len(calls.items) == 1
+    assert calls.items[0][0] == "smb://server/photos/image.jpg"
+    assert not calls.items[0][0].startswith(
+        "plugin://plugin.image.mypicsdb3/action/start-slideshow"
+    )
+    assert calls.ended is True
+
+
+def test_manual_collection_context_reorders_items_and_invalidates_home(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.collection_objects[9] = types.SimpleNamespace(
+        id=9, name="Family picks"
+    )
+    first = dict(runtime.catalog.recent_taken(1)[0])
+    first["id"] = 1
+    second = dict(first)
+    second.update({"id": 2, "filename": "clip.mp4", "media_type": "video"})
+    third = dict(first)
+    third.update({"id": 3, "filename": "third.jpg"})
+    rows = [first, second, third]
+    runtime.catalog.pictures_in_collection = (
+        lambda collection_id, limit, offset=0: rows[offset : offset + limit]
+    )
+    runtime.catalog.collection_available_count = lambda collection_id: len(rows)
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("collection", {"id": "9"}))
+
+    first_labels = [label for label, _command in calls.items[1][1].context]
+    middle_labels = [label for label, _command in calls.items[2][1].context]
+    last_labels = [label for label, _command in calls.items[3][1].context]
+    assert "Move up" not in first_labels
+    assert "Move down" in first_labels
+    assert {"Move up", "Move down", "Move to top", "Move to bottom"} <= set(
+        middle_labels
+    )
+    assert "Move down" not in last_labels
+    assert "Move up" in last_labels
+
+    ui.action(
+        "action/move-collection-item",
+        {"collection": "9", "id": "2", "direction": "top"},
+    )
+    assert runtime.catalog.moved_collection_items == [(9, 2, "top")]
+    assert runtime.kodi.home_invalidations[-1] == "manual collection order changed"
+    assert calls.builtins[-1] == "Container.Refresh"
+
+
 def test_mixed_manual_collection_uses_native_picture_directory(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -2118,6 +2214,38 @@ def test_mixed_manual_collection_playback_can_be_cancelled(monkeypatch) -> None:
 
     assert calls.rpc_requests == []
     assert runtime.kodi.mixed_slideshow_updates == []
+
+
+
+def test_manual_collection_rename_and_delete_keep_home_rows_in_sync(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.collection_objects[4] = types.SimpleNamespace(id=4, name="Trips")
+    runtime.catalog.collection_rows = [
+        {"id": 4, "name": "Trips", "available_count": 0}
+    ]
+    runtime.kodi.addon.setSetting(
+        "home_layout_v2",
+        '{"version":1,"items":[{"type":"collection","id":4,"enabled":true}]}',
+    )
+    runtime.kodi.addon.setSetting("home_row_1", "collection")
+    runtime.kodi.addon.setSetting("home_collection_id_1", "4")
+    runtime.kodi.addon.setSetting("home_collection_name_1", "Trips")
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    FakeDialog.input_responses = ["Journeys"]
+    ui.action("action/rename-collection", {"id": "4"})
+    assert runtime.kodi.addon.getSetting("home_collection_name_1") == "Journeys"
+    assert runtime.kodi.home_invalidations[-1] == (
+        "manual collection home rows changed"
+    )
+    assert calls.builtins[-1] == "ReloadSkin()"
+
+    FakeDialog.responses = [True]
+    ui.action("action/delete-collection", {"id": "4"})
+    assert runtime.kodi.addon.getSetting("home_row_1") == "none"
+    assert runtime.kodi.addon.getSetting("home_collection_id_1") == "0"
+    assert calls.builtins[-1] == "ReloadSkin()"
 
 
 def test_manual_collection_actions_create_add_remove_rename_and_delete(

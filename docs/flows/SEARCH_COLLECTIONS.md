@@ -110,15 +110,16 @@ When adding a filter field:
 4. update docs and localization;
 5. test saved-query reopen and invalid stored input.
 
-## Smart home rows
+## Dynamic Home rows
 
 A saved smart collection can be added to the Estuary MyPicsDB 3 home layout.
 The row stores a reference to the saved search, not a frozen set of picture
 IDs. Each widget reload runs the query again, so newly scanned matching media
-appears automatically. The editor uses a dynamic list with persistent Cancel,
-Save and Defaults buttons on the right. Estuary calls a fixed
-`home-smart?slot=N` provider; the plug-in resolves the saved-search ID from the
-materialized slot setting.
+appears automatically. The same combined editor can add a manual collection,
+whose provider preserves its stored media order. Estuary calls fixed
+`home-smart?slot=N` and `home-collection?slot=N` providers; the plug-in resolves
+the database ID from each materialized slot setting. Cancel, Save and Defaults
+remain persistent on the right.
 
 Changes can span:
 

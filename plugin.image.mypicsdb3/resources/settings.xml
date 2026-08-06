@@ -145,6 +145,7 @@
             <options>
               <option label="32081">none</option>
               <option label="32784">smart</option>
+              <option label="32822">collection</option>
               <option label="30001">recent_taken</option>
               <option label="30002">recent_added</option>
               <option label="30003">random_memories</option>
@@ -193,6 +194,25 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="home_collection_id_1" type="integer" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <maximum>2147483647</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="home_collection_name_1" type="string" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
         <setting id="home_row_2" type="string" label="32073" help="32172">
           <level>4</level>
           <visible>false</visible>
@@ -201,6 +221,7 @@
             <options>
               <option label="32081">none</option>
               <option label="32784">smart</option>
+              <option label="32822">collection</option>
               <option label="30001">recent_taken</option>
               <option label="30002">recent_added</option>
               <option label="30003">random_memories</option>
@@ -249,6 +270,25 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="home_collection_id_2" type="integer" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <maximum>2147483647</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="home_collection_name_2" type="string" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
         <setting id="home_row_3" type="string" label="32074" help="32172">
           <level>4</level>
           <visible>false</visible>
@@ -257,6 +297,7 @@
             <options>
               <option label="32081">none</option>
               <option label="32784">smart</option>
+              <option label="32822">collection</option>
               <option label="30001">recent_taken</option>
               <option label="30002">recent_added</option>
               <option label="30003">random_memories</option>
@@ -305,6 +346,25 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="home_collection_id_3" type="integer" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <maximum>2147483647</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="home_collection_name_3" type="string" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
         <setting id="home_row_4" type="string" label="32075" help="32172">
           <level>4</level>
           <visible>false</visible>
@@ -313,6 +373,7 @@
             <options>
               <option label="32081">none</option>
               <option label="32784">smart</option>
+              <option label="32822">collection</option>
               <option label="30001">recent_taken</option>
               <option label="30002">recent_added</option>
               <option label="30003">random_memories</option>
@@ -361,6 +422,25 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="home_collection_id_4" type="integer" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <maximum>2147483647</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="home_collection_name_4" type="string" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
         <setting id="home_row_5" type="string" label="32076" help="32172">
           <level>4</level>
           <visible>false</visible>
@@ -369,6 +449,7 @@
             <options>
               <option label="32081">none</option>
               <option label="32784">smart</option>
+              <option label="32822">collection</option>
               <option label="30001">recent_taken</option>
               <option label="30002">recent_added</option>
               <option label="30003">random_memories</option>
@@ -417,6 +498,25 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="home_collection_id_5" type="integer" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <maximum>2147483647</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="home_collection_name_5" type="string" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
         <setting id="home_row_6" type="string" label="32077" help="32172">
           <level>4</level>
           <visible>false</visible>
@@ -425,6 +525,7 @@
             <options>
               <option label="32081">none</option>
               <option label="32784">smart</option>
+              <option label="32822">collection</option>
               <option label="30001">recent_taken</option>
               <option label="30002">recent_added</option>
               <option label="30003">random_memories</option>
@@ -473,6 +574,25 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="home_collection_id_6" type="integer" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <maximum>2147483647</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="home_collection_name_6" type="string" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
         <setting id="home_row_7" type="string" label="32078" help="32172">
           <level>4</level>
           <visible>false</visible>
@@ -481,6 +601,7 @@
             <options>
               <option label="32081">none</option>
               <option label="32784">smart</option>
+              <option label="32822">collection</option>
               <option label="30001">recent_taken</option>
               <option label="30002">recent_added</option>
               <option label="30003">random_memories</option>
@@ -529,6 +650,25 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="home_collection_id_7" type="integer" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <maximum>2147483647</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="home_collection_name_7" type="string" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
         <setting id="home_row_8" type="string" label="32079" help="32172">
           <level>4</level>
           <visible>false</visible>
@@ -537,6 +677,7 @@
             <options>
               <option label="32081">none</option>
               <option label="32784">smart</option>
+              <option label="32822">collection</option>
               <option label="30001">recent_taken</option>
               <option label="30002">recent_added</option>
               <option label="30003">random_memories</option>
@@ -585,6 +726,25 @@
           </constraints>
           <control type="spinner" format="string" />
         </setting>
+        <setting id="home_collection_id_8" type="integer" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <maximum>2147483647</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="home_collection_name_8" type="string" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
+        </setting>
         <setting id="home_row_9" type="string" label="32080" help="32172">
           <level>4</level>
           <visible>false</visible>
@@ -593,6 +753,7 @@
             <options>
               <option label="32081">none</option>
               <option label="32784">smart</option>
+              <option label="32822">collection</option>
               <option label="30001">recent_taken</option>
               <option label="30002">recent_added</option>
               <option label="30003">random_memories</option>
@@ -640,6 +801,25 @@
             </options>
           </constraints>
           <control type="spinner" format="string" />
+        </setting>
+        <setting id="home_collection_id_9" type="integer" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <maximum>2147483647</maximum>
+          </constraints>
+          <control type="spinner" format="integer" />
+        </setting>
+        <setting id="home_collection_name_9" type="string" label="32822" help="32830">
+          <level>4</level>
+          <visible>false</visible>
+          <default />
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string" />
         </setting>
       </group>
     </category>

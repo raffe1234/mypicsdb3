@@ -421,6 +421,71 @@ def test_manual_collections_preserve_mixed_media_order_and_reject_duplicates(
     ]
 
 
+
+def test_manual_collection_items_can_be_reordered_and_positions_are_compacted(
+    tmp_path: Path,
+) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "ordered-collection"
+    first = add_picture(catalog, root, "first.jpg")
+    second = add_picture(
+        catalog,
+        root,
+        "second.mp4",
+        media_type="video",
+        rating=None,
+    )
+    third = add_picture(catalog, root, "third.jpg")
+    collection_id = catalog.create_collection("Ordered")
+    for picture_id in (first, second, third):
+        assert catalog.add_picture_to_collection(collection_id, picture_id)
+
+    assert catalog.move_picture_in_collection(collection_id, third, "top")
+    assert [row["id"] for row in catalog.pictures_in_collection(collection_id, 10)] == [
+        third,
+        first,
+        second,
+    ]
+    assert not catalog.move_picture_in_collection(collection_id, third, "up")
+
+    assert catalog.move_picture_in_collection(collection_id, first, "down")
+    assert [row["id"] for row in catalog.pictures_in_collection(collection_id, 10)] == [
+        third,
+        second,
+        first,
+    ]
+    assert not catalog.move_picture_in_collection(collection_id, first, "bottom")
+
+    assert catalog.move_picture_in_collection(collection_id, first, "top")
+    assert catalog.move_picture_in_collection(collection_id, first, "down")
+    assert [row["id"] for row in catalog.pictures_in_collection(collection_id, 10)] == [
+        third,
+        first,
+        second,
+    ]
+
+    assert catalog.remove_picture_from_collection(collection_id, first)
+    with catalog.engine.transaction() as connection:
+        stored = catalog.engine.fetchall(
+            connection,
+            "SELECT picture_id, position FROM collection_items "
+            "WHERE collection_id=? ORDER BY position",
+            (collection_id,),
+        )
+    assert [(row["picture_id"], row["position"]) for row in stored] == [
+        (third, 1),
+        (second, 2),
+    ]
+    assert catalog.collection_available_count(collection_id) == 2
+
+    try:
+        catalog.move_picture_in_collection(collection_id, third, "sideways")
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("Invalid move directions must be rejected")
+
+
 def test_manual_collection_rename_delete_and_missing_media_are_safe(
     tmp_path: Path,
 ) -> None:

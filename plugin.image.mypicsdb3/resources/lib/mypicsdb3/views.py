@@ -27,6 +27,7 @@ from .preferences import (
     parse_hidden_main_menu_nodes,
     parse_home_layout_v2,
     parse_persisted_home_layout,
+    remove_collection_from_home_layout,
     remove_saved_search_from_home_layout,
     serialize_hidden_main_menu_nodes,
     serialize_home_layout_v2,
@@ -557,15 +558,25 @@ class PluginUI:
                 category=self.text(32801, "Collections"),
             )
 
-        limit = safe_limit(
-            params.get("limit"), self.kodi.settings.browser_page_size
+        is_widget = self._is_home_widget(params)
+        default_limit = (
+            self._widget_default_limit(params)
+            if is_widget
+            else self.kodi.settings.browser_page_size
         )
+        limit = self._result_limit(params, default_limit)
         offset = int(params.get("offset", "0") or 0)
         rows = self.catalog.pictures_in_collection(
             collection_id, limit, offset
         )
+        count_getter = getattr(self.catalog, "collection_available_count", None)
+        total = (
+            int(count_getter(collection_id))
+            if callable(count_getter)
+            else offset + len(rows)
+        )
         items = []
-        if offset == 0:
+        if offset == 0 and not is_widget:
             items.append(
                 self.add_action(
                     self.text(32818, "Play collection slideshow"),
@@ -575,23 +586,75 @@ class PluginUI:
                     **self._rating_route_params(params),
                 )
             )
-        for row in rows:
+        for row_index, row in enumerate(rows):
+            picture_id = int(row.get("id") or 0)
+            absolute_index = offset + row_index
+            context = []
+            if absolute_index > 0:
+                context.extend(
+                    [
+                        (
+                            self.text(32211, "Move up"),
+                            "RunPlugin(%s)"
+                            % self.url(
+                                "action/move-collection-item",
+                                collection=collection_id,
+                                id=picture_id,
+                                direction="up",
+                            ),
+                        ),
+                        (
+                            self.text(32823, "Move to top"),
+                            "RunPlugin(%s)"
+                            % self.url(
+                                "action/move-collection-item",
+                                collection=collection_id,
+                                id=picture_id,
+                                direction="top",
+                            ),
+                        ),
+                    ]
+                )
+            if absolute_index + 1 < total:
+                context.extend(
+                    [
+                        (
+                            self.text(32212, "Move down"),
+                            "RunPlugin(%s)"
+                            % self.url(
+                                "action/move-collection-item",
+                                collection=collection_id,
+                                id=picture_id,
+                                direction="down",
+                            ),
+                        ),
+                        (
+                            self.text(32824, "Move to bottom"),
+                            "RunPlugin(%s)"
+                            % self.url(
+                                "action/move-collection-item",
+                                collection=collection_id,
+                                id=picture_id,
+                                direction="bottom",
+                            ),
+                        ),
+                    ]
+                )
             remove = "RunPlugin(%s)" % self.url(
                 "action/remove-from-collection",
                 collection=collection_id,
-                id=row.get("id"),
+                id=picture_id,
             )
+            context.append((self.text(32813, "Remove from collection"), remove))
             items.append(
                 self._media_item(
                     row,
-                    extra_context=[
-                        (self.text(32813, "Remove from collection"), remove)
-                    ],
+                    extra_context=context,
                     browse_params=params,
                     slideshow_route="collection",
                 )
             )
-        if len(rows) == limit and "limit" not in params:
+        if len(rows) == limit and "limit" not in params and not is_widget:
             page_params = {
                 key: value
                 for key, value in params.items()
@@ -1114,10 +1177,21 @@ class PluginUI:
             for row in self.catalog.list_saved_searches()
         }
 
-    def _load_home_layout_items(self, saved_names: Dict[int, str]):
+    def _collection_name_map(self) -> Dict[int, str]:
+        return {
+            int(row["id"]): str(row["name"])
+            for row in self.catalog.list_collections()
+        }
+
+    def _load_home_layout_items(
+        self,
+        saved_names: Dict[int, str],
+        collection_names: Dict[int, str],
+    ):
         parsed = parse_home_layout_v2(
             self.kodi.addon.getSetting("home_layout_v2"),
             saved_names.keys(),
+            collection_names.keys(),
         )
         if parsed is not None:
             return parsed
@@ -1137,12 +1211,15 @@ class PluginUI:
         return migrate_home_layout_items(order, enabled)
 
     def _write_home_layout_items(
-        self, items, saved_names: Dict[int, str]
+        self,
+        items,
+        saved_names: Dict[int, str],
+        collection_names: Dict[int, str],
     ) -> None:
         self.kodi.addon.setSetting(
             "home_layout_v2", serialize_home_layout_v2(items)
         )
-        slots = home_layout_slots(items, saved_names)
+        slots = home_layout_slots(items, saved_names, collection_names)
         for position, slot in enumerate(slots, start=1):
             self.kodi.addon.setSetting(
                 "home_row_%d" % position, str(slot["row"])
@@ -1155,6 +1232,14 @@ class PluginUI:
             )
             self.kodi.addon.setSetting(
                 "home_smart_mode_%d" % position, str(slot["smart_mode"])
+            )
+            self.kodi.addon.setSetting(
+                "home_collection_id_%d" % position,
+                str(slot["collection_id"]),
+            )
+            self.kodi.addon.setSetting(
+                "home_collection_name_%d" % position,
+                str(slot["collection_name"]),
             )
 
         # Preserve the old built-in-only layout for downgrade compatibility.
@@ -1191,7 +1276,8 @@ class PluginUI:
 
     def _configure_home_screen(self) -> None:
         saved_names = self._saved_search_name_map()
-        items = self._load_home_layout_items(saved_names)
+        collection_names = self._collection_name_map()
+        items = self._load_home_layout_items(saved_names, collection_names)
         result = show_smart_home_layout_editor(
             items,
             {
@@ -1211,49 +1297,78 @@ class PluginUI:
                 save=self.text(32225, "Save"),
                 cancel=self.text(32226, "Cancel"),
                 defaults=self.text(32227, "Defaults"),
-                add_collection=self.text(32785, "Add smart collection"),
-                remove_collection=self.text(32786, "Remove smart collection"),
+                add_collection=self.text(32825, "Add collection"),
+                add_smart_collection=self.text(32785, "Add smart collection"),
+                add_manual_collection=self.text(32826, "Add manual collection"),
+                remove_collection=self.text(32827, "Remove collection row"),
                 maximum_rows=self.text(32791, "A maximum of nine home-screen rows can be shown."),
-                no_collections=self.text(32792, "There are no additional saved smart collections to add."),
+                no_smart_collections=self.text(32792, "There are no additional saved smart collections to add."),
+                no_manual_collections=self.text(32828, "There are no additional manual collections to add."),
             ),
+            collection_names=collection_names,
         )
         if result is None:
             return
 
-        self._write_home_layout_items(result, saved_names)
+        self._write_home_layout_items(result, saved_names, collection_names)
         self._invalidate_home_widgets("home layout changed")
         self.kodi.notify(self.text(32214, "Home-screen layout saved"))
         xbmc.executebuiltin("ReloadSkin()")
+
+    def _dynamic_home_slot_snapshot(self) -> Tuple[Tuple[str, str, str], ...]:
+        values = []
+        for position in range(1, 10):
+            row = self.kodi.addon.getSetting("home_row_%d" % position)
+            if row == "smart":
+                values.append(
+                    (
+                        row,
+                        self.kodi.addon.getSetting("home_smart_id_%d" % position),
+                        self.kodi.addon.getSetting("home_smart_name_%d" % position),
+                    )
+                )
+            elif row == "collection":
+                values.append(
+                    (
+                        row,
+                        self.kodi.addon.getSetting("home_collection_id_%d" % position),
+                        self.kodi.addon.getSetting("home_collection_name_%d" % position),
+                    )
+                )
+        return tuple(values)
 
     def _sync_saved_search_home_rows(
         self, removed_saved_search_id: Optional[int] = None
     ) -> bool:
         saved_names = self._saved_search_name_map()
-        items = self._load_home_layout_items(saved_names)
+        collection_names = self._collection_name_map()
+        items = self._load_home_layout_items(saved_names, collection_names)
         if removed_saved_search_id is not None:
             items = remove_saved_search_from_home_layout(
                 items, removed_saved_search_id
             )
-        before = tuple(
-            (
-                self.kodi.addon.getSetting("home_smart_id_%d" % position),
-                self.kodi.addon.getSetting("home_smart_name_%d" % position),
-            )
-            for position in range(1, 10)
-            if self.kodi.addon.getSetting("home_row_%d" % position) == "smart"
-        )
-        self._write_home_layout_items(items, saved_names)
-        after = tuple(
-            (
-                self.kodi.addon.getSetting("home_smart_id_%d" % position),
-                self.kodi.addon.getSetting("home_smart_name_%d" % position),
-            )
-            for position in range(1, 10)
-            if self.kodi.addon.getSetting("home_row_%d" % position) == "smart"
-        )
-        changed = before != after
+        before = self._dynamic_home_slot_snapshot()
+        self._write_home_layout_items(items, saved_names, collection_names)
+        changed = before != self._dynamic_home_slot_snapshot()
         if changed:
             self._invalidate_home_widgets("smart collection home rows changed")
+        return changed
+
+    def _sync_collection_home_rows(
+        self, removed_collection_id: Optional[int] = None
+    ) -> bool:
+        saved_names = self._saved_search_name_map()
+        collection_names = self._collection_name_map()
+        items = self._load_home_layout_items(saved_names, collection_names)
+        if removed_collection_id is not None:
+            items = remove_collection_from_home_layout(
+                items, removed_collection_id
+            )
+        before = self._dynamic_home_slot_snapshot()
+        self._write_home_layout_items(items, saved_names, collection_names)
+        changed = before != self._dynamic_home_slot_snapshot()
+        if changed:
+            self._invalidate_home_widgets("manual collection home rows changed")
         return changed
 
     def _configure_main_menu(self) -> None:
@@ -1943,8 +2058,11 @@ class PluginUI:
                 if not name or name.strip() == collection.name:
                     return
                 self.catalog.rename_collection(collection.id, name)
+                home_changed = self._sync_collection_home_rows()
                 self.kodi.notify(self.text(32807, "Collection renamed"))
-                xbmc.executebuiltin("Container.Refresh")
+                xbmc.executebuiltin(
+                    "ReloadSkin()" if home_changed else "Container.Refresh"
+                )
             except CollectionValidationError as exc:
                 self.kodi.notify(
                     "%s: %s"
@@ -1970,9 +2088,13 @@ class PluginUI:
                 )
                 if not confirmed:
                     return
-                self.catalog.delete_collection(collection.id)
+                collection_id = collection.id
+                self.catalog.delete_collection(collection_id)
+                home_changed = self._sync_collection_home_rows(collection_id)
                 self.kodi.notify(self.text(32808, "Collection deleted"))
-                xbmc.executebuiltin("Container.Refresh")
+                xbmc.executebuiltin(
+                    "ReloadSkin()" if home_changed else "Container.Refresh"
+                )
             except CollectionValidationError as exc:
                 self.kodi.notify(
                     "%s: %s"
@@ -2018,6 +2140,10 @@ class PluginUI:
                     )
                     % collection.name
                 )
+                if added:
+                    self._invalidate_home_widgets(
+                        "manual collection content changed"
+                    )
             except (CollectionValidationError, IndexError) as exc:
                 self.kodi.notify(
                     "%s: %s"
@@ -2042,11 +2168,34 @@ class PluginUI:
                     self.kodi.notify(
                         self.text(32817, "Removed from '%s'") % collection.name
                     )
+                    self._invalidate_home_widgets(
+                        "manual collection content changed"
+                    )
                     xbmc.executebuiltin("Container.Refresh")
             except CollectionValidationError as exc:
                 self.kodi.notify(
                     "%s: %s"
                     % (self.text(32809, "Collection was not found"), exc),
+                    error=True,
+                )
+            return
+        if route == "action/move-collection-item":
+            try:
+                collection_id = int(params["collection"])
+                picture_id = int(params["id"])
+                direction = str(params.get("direction") or "")
+                moved = self.catalog.move_picture_in_collection(
+                    collection_id, picture_id, direction
+                )
+                if moved:
+                    self._invalidate_home_widgets(
+                        "manual collection order changed"
+                    )
+                    xbmc.executebuiltin("Container.Refresh")
+            except (CollectionValidationError, ValueError) as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(32829, "Could not reorder collection"), exc),
                     error=True,
                 )
             return
@@ -2454,6 +2603,32 @@ class PluginUI:
                 )
                 return self.finish([], content="images", cache=False)
             return self.saved_search(saved_search_id, params)
+        if route == "home-collection":
+            try:
+                slot = int(params.get("slot") or 0)
+            except (TypeError, ValueError):
+                slot = 0
+            if slot < 1 or slot > 9:
+                self.kodi.log.warning(
+                    "Manual collection home row ignored because its slot is invalid: %s",
+                    params.get("slot"),
+                )
+                return self.finish([], content="images", cache=False)
+            try:
+                collection_id = int(
+                    self.kodi.addon.getSetting(
+                        "home_collection_id_%d" % slot
+                    )
+                    or 0
+                )
+            except (TypeError, ValueError):
+                collection_id = 0
+            if collection_id <= 0:
+                self.kodi.log.warning(
+                    "Manual collection home row %d has no collection", slot
+                )
+                return self.finish([], content="images", cache=False)
+            return self.collection(collection_id, params)
         if route == "sources":
             return self.sources(params)
         if route == "source":

@@ -83,3 +83,23 @@ This avoids embedding a two-argument add-on setting label inside `$INFO[...]`,
 where its commas can be interpreted as label prefix/suffix separators. Up to
 nine configured slots are available. Smart slots use the standard MyPicsDB
 poster row; opening the saved collection uses the configured Default album view.
+
+## Manual collection providers
+
+A manual collection can be used directly as a read-only widget source through
+its normal collection route:
+
+```text
+plugin://plugin.image.mypicsdb3/collection?id=9&widget=1
+```
+
+The bundled Estuary integration uses a fixed materialized slot instead:
+
+```text
+plugin://plugin.image.mypicsdb3/home-collection?slot=1&widget=1&home=1&generation=<generation>
+```
+
+The plug-in resolves `home_collection_id_1`, applies the configured Home-row
+limit and returns available media in the collection's explicit order. Rename,
+membership, ordering and deletion actions invalidate or remove the slot safely.
+Opening the collection interactively uses **Default album view**.

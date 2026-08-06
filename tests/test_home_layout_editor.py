@@ -177,6 +177,26 @@ def test_smart_home_layout_state_adds_orders_and_normalizes_legacy_mode() -> Non
     assert items[1].enabled is True
 
 
+
+def test_home_layout_state_adds_and_moves_manual_collection() -> None:
+    from mypicsdb3.home_layout_editor import SmartHomeLayoutState
+    from mypicsdb3.preferences import HomeLayoutItem
+
+    state = SmartHomeLayoutState(
+        [HomeLayoutItem(kind="builtin", key="recent_taken", enabled=True)]
+    )
+
+    assert state.add_collection(9) is True
+    assert state.add_collection(9) is False
+    assert state.move(1, -1) == 0
+
+    items = state.snapshot()
+    assert items[0].kind == "collection"
+    assert items[0].collection_id == 9
+    assert items[0].enabled is True
+    assert items[0].mode == "poster"
+
+
 def test_smart_home_layout_state_limits_visible_rows_to_nine() -> None:
     from mypicsdb3.home_layout_editor import SmartHomeLayoutState
     from mypicsdb3.preferences import HOME_VIEW_KEYS, HomeLayoutItem
@@ -201,7 +221,7 @@ def test_smart_home_editor_adds_collection_without_display_mode_prompt() -> None
 
     class FakeDialog:
         def __init__(self):
-            self.answers = iter((1, 0, 3))
+            self.answers = iter((1, 0, 0, 3))
             self.ok_calls = []
 
         def select(self, _heading, _options, preselect=-1):
@@ -230,9 +250,12 @@ def test_smart_home_editor_adds_collection_without_display_mode_prompt() -> None
         cancel="Cancel",
         defaults="Defaults",
         add_collection="Add",
+        add_smart_collection="Add smart",
+        add_manual_collection="Add manual",
         remove_collection="Remove",
         maximum_rows="Maximum",
-        no_collections="None",
+        no_smart_collections="No smart",
+        no_manual_collections="No manual",
     )
     gui = FakeGui()
 
@@ -360,9 +383,12 @@ def test_smart_home_xml_editor_uses_inline_controls_and_scrolls(monkeypatch) -> 
         cancel="Cancel",
         defaults="Defaults",
         add_collection="Add",
+        add_smart_collection="Add smart",
+        add_manual_collection="Add manual",
         remove_collection="Remove",
         maximum_rows="Maximum",
-        no_collections="None",
+        no_smart_collections="No smart",
+        no_manual_collections="No manual",
     )
 
     result = show_smart_home_layout_editor(

@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.5.1 - 2026-08-06
+
+- Add manual collections to the combined Pictures-home row editor alongside
+  built-in views and saved smart collections. Manual rows have the same inline
+  On/Off and up/down controls, use the standard picture-row layout and open with
+  **Default album view**.
+- Add **Move up**, **Move down**, **Move to top** and **Move to bottom** context
+  actions inside manual collections. Pictures and home videos retain one shared
+  explicit order, and removing an item compacts stored positions safely.
+- Refresh manual collection Home widgets after membership or order changes,
+  update row headings after rename, and remove stale rows when a collection is
+  deleted. Fixed `home-collection?slot=N` providers keep collection IDs out of
+  skin expressions.
+- Advance generated Estuary revisions to Omega 16 and Piers 14. Catalogue schema
+  6 is unchanged; no migration, backup or rescan is required.
+
 ## 0.5.0 - 2026-08-06
 
 - Add named manual collections containing an explicit, user-selected sequence of

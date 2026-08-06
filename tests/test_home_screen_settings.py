@@ -18,6 +18,7 @@ VIEW_VALUES = {
     "rated",
     "geotagged",
     "smart",
+    "collection",
 }
 
 DEFAULT_ROWS = [
@@ -94,6 +95,8 @@ def test_home_screen_settings_offer_nine_ordered_slots() -> None:
         assert settings[f"home_smart_id_{position}"].attrib["type"] == "integer"
         assert settings[f"home_smart_name_{position}"].attrib["type"] == "string"
         assert settings[f"home_smart_mode_{position}"].findtext("default") == "poster"
+        assert settings[f"home_collection_id_{position}"].attrib["type"] == "integer"
+        assert settings[f"home_collection_name_{position}"].attrib["type"] == "string"
 
 
 def test_general_settings_offer_estuary_album_views() -> None:
@@ -144,18 +147,25 @@ def test_home_fragment_has_visible_titles_and_all_routes() -> None:
         assert f"Window(Home).Property(MyPicsDB3.HomeRow{position})" in home
         assert f"Window(Home).Property(MyPicsDB3.HomeSmartMode{position})" not in home
         assert f"Window(Home).Property(MyPicsDB3.HomeSmartName{position})" in home
+        assert f"Window(Home).Property(MyPicsDB3.HomeCollectionName{position})" in home
         smart_condition = (
             f"String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow{position}),smart)"
         )
         assert home.count(smart_condition) == 1
+        collection_condition = (
+            f"String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow{position}),collection)"
+        )
+        assert home.count(collection_condition) == 1
         assert f"home-smart?slot={position}&amp;widget=1&amp;home=1" in home
+        assert f"home-collection?slot={position}&amp;widget=1&amp;home=1" in home
     for route in ROUTES:
         assert f"plugin://plugin.image.mypicsdb3/{route}" in home
     for heading in HEADINGS:
         assert f'value="{heading}"' in home
-    assert home.count('<param name="widget_limit" value="40"/>') == 99
-    assert home.count("widget=1&amp;home=1") == 99
+    assert home.count('<param name="widget_limit" value="40"/>') == 108
+    assert home.count("widget=1&amp;home=1") == 108
     assert home.count("home-smart?slot=") == 9
+    assert home.count("home-collection?slot=") == 9
     assert "saved-search?id=$INFO[Addon.SettingInt" not in home
     assert "Addon.SettingStr(plugin.image.mypicsdb3,home_" not in home
     assert "Addon.SettingInt(plugin.image.mypicsdb3,home_" not in home

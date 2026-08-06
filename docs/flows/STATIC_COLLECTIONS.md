@@ -21,6 +21,16 @@ Collections main-menu entry
 → skip missing/policy-hidden media
 → render in stored order with Default album view
 
+item context menu → Move up/down/top/bottom
+→ Catalog.move_picture_in_collection()
+→ rewrite compact 1-based positions in one transaction
+→ invalidate Home widgets and refresh the collection
+
+Home-screen editor → Add collection → Add manual collection
+→ persist collection ID in home_layout_v2 and the selected slot
+→ Estuary home-collection?slot=N provider
+→ resolve current collection and render its bounded ordered media
+
 Play collection slideshow / Play slideshow from here
 → release any direct plug-in playback handle
 → collection slideshow scope
@@ -37,8 +47,10 @@ Play collection slideshow / Play slideshow from here
 | `static_collections.py` | Collection-name and stored-record validation |
 | `db/migration_steps/v0006_static_collections.py` | Schema-5-to-6 migration |
 | `db/schema.py` | Fresh SQLite and MySQL/MariaDB schema |
-| `db/catalog.py` | Collection CRUD, duplicate prevention, ordered membership and reads |
-| `views.py` | Main-menu route, dialogs, context actions, browsing and slideshow scope |
+| `db/catalog.py` | Collection CRUD, duplicate prevention, ordered membership, reordering and reads |
+| `preferences.py`, `home_layout_editor.py` | Manual collection Home-row persistence and editing |
+| `views.py` | Main-menu route, dialogs, context actions, Home provider, browsing and slideshow scope |
+| `kodi.py`, `contrib/estuary/` | Materialized Home properties and generated Estuary row |
 | `resources/language/resource.language.en_gb/strings.po` | User-facing collection text |
 
 ## Schema and ordering
@@ -46,12 +58,15 @@ Play collection slideshow / Play slideshow from here
 `collections` stores the name and timestamps. `collection_items` stores one
 media reference per collection, an explicit positive `position` and its add
 time. The `(collection_id, picture_id)` primary key prevents duplicates. The
-`(collection_id, position)` unique constraint makes order deterministic and
-prepares the model for a later reordering UI.
+`(collection_id, position)` unique constraint keeps the explicit order
+deterministic.
 
-The first implementation appends at `MAX(position) + 1`. Removing an item may
-leave a gap; gaps are harmless because reads sort by `position, picture_id`.
-Compaction and manual up/down movement are intentionally deferred.
+New items append at `MAX(position) + 1`. Move and remove operations rewrite the
+remaining IDs to compact 1-based positions. The rewrite preserves each
+membership timestamp, replaces the collection rows inside the current transaction
+and inserts the final positive positions, so the unique
+`(collection_id, position)` constraint is never violated and MySQL `INT
+UNSIGNED` remains supported. Pictures and videos remain in one shared order.
 
 ## Missing media and rating policy
 
@@ -72,7 +87,8 @@ is forwarded in collection routes and slideshow actions.
   characters.
 - Adding an already-present item is a no-op and returns `False`.
 - Only indexed, currently non-missing media can be added.
-- Removing an item deletes only its membership row.
+- Removing an item deletes only its membership row and compacts positions.
+- Context actions move an item one step or directly to either edge.
 - Deleting a collection cascades membership rows but never deletes a `pictures`
   row or source file.
 - Pictures and videos may coexist in the same collection.
@@ -100,7 +116,9 @@ commands use a negative handle and are not resolved.
 - `tests/test_catalog.py` covers CRUD, duplicates, order, missing media, rating
   policy, mixed media and deletion safety;
 - `tests/test_migrations.py` covers schema-5-to-6 upgrade and fresh schema 6;
-- `tests/test_kodi_ui_smoke.py` covers routes and context actions;
+- `tests/test_kodi_ui_smoke.py` covers routes, Home providers, context actions
+  and row synchronization;
+- `tests/test_preferences.py` and `tests/test_home_layout_editor.py` cover manual Home rows;
 - `tests/test_mysql_integration.py` contains an opt-in backend round trip.
 
 ## Invariants
@@ -108,7 +126,9 @@ commands use a negative handle and are not resolved.
 - Manual and smart collections remain different concepts and tables.
 - Source files are never copied, moved, edited or deleted by collection actions.
 - One media row occurs at most once in a collection.
-- Stored order is stable across browsing pages and each selected playback type.
+- Stored order is stable, compact and editable across browsing pages, Home rows
+  and each selected playback type.
+- A deleted manual collection cannot leave an active Home provider behind.
 - Missing or policy-hidden media never crashes collection browsing.
 - SQLite and MySQL/MariaDB expose equivalent collection behaviour.
 - Schema migration does not require a catalogue rescan.

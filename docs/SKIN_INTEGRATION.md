@@ -118,6 +118,7 @@ Supported values are:
 |---|---|
 | `none` | No row |
 | `smart` | Saved smart collection described by the matching slot settings |
+| `collection` | Manual collection described by the matching slot settings |
 | `recent_taken` | Recently taken |
 | `recent_added` | Recently added |
 | `random_memories` | Random memories |
@@ -141,15 +142,25 @@ home_smart_mode_1
 The ID is an integer saved-search ID and the name is the row heading. The mode
 setting is retained only for downgrade compatibility and is normalized to
 `poster`; current skins should not use it to offer a separate smart-row layout.
-The pattern continues through slot 9. The combined layout editor owns these
-hidden values; skins should treat them as read-only. For runtime skin XML,
-MyPicsDB 3 publishes comma-free Home-window properties instead:
+
+For a row whose value is `collection`, the matching read-only settings are:
+
+```text
+home_collection_id_1
+home_collection_name_1
+```
+
+The pattern continues through slot 9. The combined layout editor owns all of
+these hidden values. For runtime skin XML, MyPicsDB 3 publishes comma-free
+Home-window properties instead:
 
 ```text
 MyPicsDB3.HomeRow1
 MyPicsDB3.HomeSmartId1
 MyPicsDB3.HomeSmartName1
 MyPicsDB3.HomeSmartMode1
+MyPicsDB3.HomeCollectionId1
+MyPicsDB3.HomeCollectionName1
 ```
 
 The Media sources visibility setting is:
@@ -178,10 +189,17 @@ that nested label are parsed as `$INFO` separators:
 plugin://plugin.image.mypicsdb3/home-smart?slot=1&widget=1&home=1
 ```
 
-Use `Window(Home).Property(MyPicsDB3.HomeSmartName1)` for the heading. Render
-the slot with the standard MyPicsDB poster row; opening the collection through
-the plug-in uses **Default album view**. `MyPicsDB3.HomeSmartMode1` remains a
-legacy compatibility property and should be ignored by new skin integrations.
+Use `Window(Home).Property(MyPicsDB3.HomeSmartName1)` for a smart heading. A
+manual row uses the corresponding collection name and fixed provider:
+
+```text
+plugin://plugin.image.mypicsdb3/home-collection?slot=1&widget=1&home=1
+```
+
+Render both dynamic row types with the standard MyPicsDB poster row; opening
+either collection through the plug-in uses **Default album view**.
+`MyPicsDB3.HomeSmartMode1` remains a legacy compatibility property and should
+be ignored by new skin integrations.
 
 Media sources can use:
 

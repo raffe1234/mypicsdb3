@@ -35,6 +35,8 @@ HOME_ROW_PROPERTY_FORMAT = "MyPicsDB3.HomeRow%d"
 HOME_SMART_ID_PROPERTY_FORMAT = "MyPicsDB3.HomeSmartId%d"
 HOME_SMART_NAME_PROPERTY_FORMAT = "MyPicsDB3.HomeSmartName%d"
 HOME_SMART_MODE_PROPERTY_FORMAT = "MyPicsDB3.HomeSmartMode%d"
+HOME_COLLECTION_ID_PROPERTY_FORMAT = "MyPicsDB3.HomeCollectionId%d"
+HOME_COLLECTION_NAME_PROPERTY_FORMAT = "MyPicsDB3.HomeCollectionName%d"
 
 INTEGER_SETTING_IDS = frozenset(
     {
@@ -428,8 +430,19 @@ class KodiContext:
                 smart_name = str(
                     addon.getSetting("home_smart_name_%d" % position) or ""
                 )
+                raw_collection_id = addon.getSetting(
+                    "home_collection_id_%d" % position
+                )
+                try:
+                    collection_id = max(0, int(raw_collection_id or 0))
+                except (TypeError, ValueError):
+                    collection_id = 0
+                collection_name = str(
+                    addon.getSetting("home_collection_name_%d" % position)
+                    or ""
+                )
                 # The property remains for 0.4.10 skin compatibility, but
-                # 0.4.11 no longer exposes per-row smart collection layouts.
+                # 0.4.11 no longer exposes per-row dynamic collection layouts.
                 smart_mode = "poster"
                 window.setProperty(HOME_ROW_PROPERTY_FORMAT % position, row)
                 window.setProperty(
@@ -440,6 +453,14 @@ class KodiContext:
                 )
                 window.setProperty(
                     HOME_SMART_MODE_PROPERTY_FORMAT % position, smart_mode
+                )
+                window.setProperty(
+                    HOME_COLLECTION_ID_PROPERTY_FORMAT % position,
+                    str(collection_id),
+                )
+                window.setProperty(
+                    HOME_COLLECTION_NAME_PROPERTY_FORMAT % position,
+                    collection_name,
                 )
         except Exception as exc:
             logger = getattr(self, "log", None)

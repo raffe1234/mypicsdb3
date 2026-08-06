@@ -93,6 +93,13 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),collection)">
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=1&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+						<param name="widget_limit" value="40"/>
+						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName1)]"/>
+						<param name="widget_target" value="pictures"/>
+						<param name="list_id" value="4200"/>
+					</include>
 					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),recent_taken)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
@@ -170,6 +177,13 @@
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=2&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName2)]"/>
+						<param name="widget_target" value="pictures"/>
+						<param name="list_id" value="4300"/>
+					</include>
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),collection)">
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=2&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+						<param name="widget_limit" value="40"/>
+						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName2)]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
@@ -253,6 +267,13 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),collection)">
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=3&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+						<param name="widget_limit" value="40"/>
+						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName3)]"/>
+						<param name="widget_target" value="pictures"/>
+						<param name="list_id" value="4400"/>
+					</include>
 					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),recent_taken)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
@@ -330,6 +351,13 @@
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=4&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName4)]"/>
+						<param name="widget_target" value="pictures"/>
+						<param name="list_id" value="4500"/>
+					</include>
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),collection)">
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=4&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+						<param name="widget_limit" value="40"/>
+						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName4)]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
@@ -413,6 +441,13 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),collection)">
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=5&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+						<param name="widget_limit" value="40"/>
+						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName5)]"/>
+						<param name="widget_target" value="pictures"/>
+						<param name="list_id" value="4600"/>
+					</include>
 					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),recent_taken)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
@@ -490,6 +525,13 @@
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=6&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName6)]"/>
+						<param name="widget_target" value="pictures"/>
+						<param name="list_id" value="4700"/>
+					</include>
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),collection)">
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=6&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+						<param name="widget_limit" value="40"/>
+						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName6)]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
@@ -573,6 +615,13 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),collection)">
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=7&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+						<param name="widget_limit" value="40"/>
+						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName7)]"/>
+						<param name="widget_target" value="pictures"/>
+						<param name="list_id" value="4800"/>
+					</include>
 					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),recent_taken)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
@@ -653,6 +702,13 @@
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),collection)">
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=8&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+						<param name="widget_limit" value="40"/>
+						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName8)]"/>
+						<param name="widget_target" value="pictures"/>
+						<param name="list_id" value="4900"/>
+					</include>
 					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),recent_taken)">
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
@@ -730,6 +786,13 @@
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=9&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName9)]"/>
+						<param name="widget_target" value="pictures"/>
+						<param name="list_id" value="5000"/>
+					</include>
+					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),collection)">
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=9&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+						<param name="widget_limit" value="40"/>
+						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName9)]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>

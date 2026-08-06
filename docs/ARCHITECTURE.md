@@ -180,8 +180,9 @@ catalogue query. Raw SQL is not accepted from Kodi routes or saved records.
 Manual collections are intentionally separate from saved smart searches. This
 module validates names and stored collection metadata. `Catalog` owns ordered
 media references and backend-neutral persistence; `views.py` owns Kodi dialogs,
-context actions and collection browsing. A collection never contains query JSON
-or source-file copies.
+context actions, explicit order changes, collection browsing and Home providers.
+A collection never contains query JSON or source-file copies. Dynamic Home rows
+store only validated saved-search or manual-collection IDs.
 
 ### `service_loop.py`: long-running maintenance
 

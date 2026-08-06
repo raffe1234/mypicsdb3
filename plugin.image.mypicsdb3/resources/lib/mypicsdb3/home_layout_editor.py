@@ -241,13 +241,16 @@ class SmartHomeEditorText:
     cancel: str
     defaults: str
     add_collection: str
+    add_smart_collection: str
+    add_manual_collection: str
     remove_collection: str
     maximum_rows: str
-    no_collections: str
+    no_smart_collections: str
+    no_manual_collections: str
 
 
 class SmartHomeLayoutState:
-    """Mutable mixed built-in/saved-search home layout state."""
+    """Mutable mixed built-in/smart/manual Home layout state."""
 
     def __init__(self, items):
         from .preferences import (
@@ -261,6 +264,7 @@ class SmartHomeLayoutState:
                 kind=item.kind,
                 key=item.key,
                 saved_search_id=item.saved_search_id,
+                collection_id=item.collection_id,
                 enabled=bool(item.enabled),
                 # Per-row display modes were removed in 0.4.11. Keep the
                 # compatibility field normalized so older layouts downgrade
@@ -280,6 +284,7 @@ class SmartHomeLayoutState:
                     kind=item.kind,
                     key=item.key,
                     saved_search_id=item.saved_search_id,
+                    collection_id=item.collection_id,
                     enabled=enabled,
                     mode=DEFAULT_SMART_HOME_MODE,
                 )
@@ -300,6 +305,7 @@ class SmartHomeLayoutState:
             kind=item.kind,
             key=item.key,
             saved_search_id=item.saved_search_id,
+            collection_id=item.collection_id,
             enabled=enabled,
             mode=item.mode,
         )
@@ -312,31 +318,51 @@ class SmartHomeLayoutState:
         self.items[index], self.items[target] = self.items[target], self.items[index]
         return target
 
-    def add_smart(self, saved_search_id: int) -> bool:
+    def _add_dynamic(self, kind: str, value_id: int) -> bool:
         from .preferences import (
             DEFAULT_SMART_HOME_MODE,
             HOME_ROW_COUNT,
             HomeLayoutItem,
         )
 
-        if any(
-            item.kind == "smart" and item.saved_search_id == saved_search_id
-            for item in self.items
-        ):
+        value_id = int(value_id)
+        if value_id <= 0:
+            return False
+        if kind == "smart":
+            duplicate = any(
+                item.kind == "smart" and item.saved_search_id == value_id
+                for item in self.items
+            )
+            kwargs = {"saved_search_id": value_id}
+        elif kind == "collection":
+            duplicate = any(
+                item.kind == "collection" and item.collection_id == value_id
+                for item in self.items
+            )
+            kwargs = {"collection_id": value_id}
+        else:
+            return False
+        if duplicate:
             return False
         enabled = sum(1 for item in self.items if item.enabled) < HOME_ROW_COUNT
         self.items.append(
             HomeLayoutItem(
-                kind="smart",
-                saved_search_id=int(saved_search_id),
+                kind=kind,
                 enabled=enabled,
                 mode=DEFAULT_SMART_HOME_MODE,
+                **kwargs,
             )
         )
         return True
 
+    def add_smart(self, saved_search_id: int) -> bool:
+        return self._add_dynamic("smart", saved_search_id)
+
+    def add_collection(self, collection_id: int) -> bool:
+        return self._add_dynamic("collection", collection_id)
+
     def remove(self, index: int) -> bool:
-        if self.items[index].kind != "smart":
+        if self.items[index].kind not in {"smart", "collection"}:
             return False
         del self.items[index]
         return True
@@ -350,56 +376,97 @@ class SmartHomeLayoutState:
         return tuple(self.items)
 
 
-def _smart_home_item_name(item, builtin_labels, saved_search_names) -> str:
+def _smart_home_item_name(
+    item, builtin_labels, saved_search_names, collection_names
+) -> str:
     if item.kind == "smart":
         return saved_search_names.get(
             item.saved_search_id,
             "#%d" % item.saved_search_id,
         )
+    if item.kind == "collection":
+        return collection_names.get(
+            item.collection_id,
+            "#%d" % item.collection_id,
+        )
     return builtin_labels.get(item.key, item.key)
 
 
-def _smart_home_item_label(item, builtin_labels, saved_search_names, text) -> str:
+def _smart_home_item_label(
+    item, builtin_labels, saved_search_names, collection_names, text
+) -> str:
     return "%s  %s" % (
         text.on if item.enabled else text.off,
-        _smart_home_item_name(item, builtin_labels, saved_search_names),
+        _smart_home_item_name(
+            item, builtin_labels, saved_search_names, collection_names
+        ),
     )
 
 
-def _add_smart_home_collection(
-    state, saved_search_names, text, dialog
+def _add_home_collection(
+    state, saved_search_names, collection_names, text, dialog
 ) -> Optional[int]:
-    existing = {
-        item.saved_search_id
-        for item in state.items
-        if item.kind == "smart"
-    }
+    collection_type = dialog.select(
+        text.add_collection,
+        [text.add_smart_collection, text.add_manual_collection],
+    )
+    if collection_type < 0:
+        return None
+
+    if collection_type == 0:
+        kind = "smart"
+        names = saved_search_names
+        existing = {
+            item.saved_search_id
+            for item in state.items
+            if item.kind == "smart"
+        }
+        heading = text.add_smart_collection
+        empty_message = text.no_smart_collections
+        add = state.add_smart
+        id_for_item = lambda item: item.saved_search_id
+    else:
+        kind = "collection"
+        names = collection_names
+        existing = {
+            item.collection_id
+            for item in state.items
+            if item.kind == "collection"
+        }
+        heading = text.add_manual_collection
+        empty_message = text.no_manual_collections
+        add = state.add_collection
+        id_for_item = lambda item: item.collection_id
+
     available = [
-        (saved_id, name)
-        for saved_id, name in saved_search_names.items()
-        if saved_id not in existing
+        (value_id, name)
+        for value_id, name in names.items()
+        if value_id not in existing
     ]
     if not available:
-        dialog.ok(text.heading, text.no_collections)
+        dialog.ok(text.heading, empty_message)
         return None
-    choice = dialog.select(
-        text.add_collection,
-        [name for _saved_id, name in available],
-    )
+    choice = dialog.select(heading, [name for _value_id, name in available])
     if choice < 0:
         return None
-    saved_search_id = available[choice][0]
-    if not state.add_smart(saved_search_id):
+    value_id = available[choice][0]
+    if not add(value_id):
         return None
     return next(
         index
         for index, item in enumerate(state.items)
-        if item.kind == "smart" and item.saved_search_id == saved_search_id
+        if item.kind == kind and id_for_item(item) == value_id
     )
 
 
 def _edit_smart_home_row(
-    state, index, builtin_labels, saved_search_names, text, dialog
+    state,
+    index,
+    builtin_labels,
+    saved_search_names,
+    collection_names,
+    text,
+    dialog,
 ) -> int:
     item = state.items[index]
     row_actions = [
@@ -407,11 +474,15 @@ def _edit_smart_home_row(
         text.move_up,
         text.move_down,
     ]
-    if item.kind == "smart":
+    if item.kind in {"smart", "collection"}:
         row_actions.append(text.remove_collection)
     action = dialog.select(
         _smart_home_item_label(
-            item, builtin_labels, saved_search_names, text
+            item,
+            builtin_labels,
+            saved_search_names,
+            collection_names,
+            text,
         ),
         row_actions,
     )
@@ -422,21 +493,30 @@ def _edit_smart_home_row(
         index = state.move(index, -1)
     elif action == 2:
         index = state.move(index, 1)
-    elif item.kind == "smart" and action == 3:
+    elif item.kind in {"smart", "collection"} and action == 3:
         state.remove(index)
         index = min(index, max(0, len(state.items) - 1))
     return index
 
 
 def _show_smart_home_fallback(
-    state, builtin_labels, saved_search_names, text, dialog
+    state,
+    builtin_labels,
+    saved_search_names,
+    collection_names,
+    text,
+    dialog,
 ):
     """Fallback for platforms that cannot load the XML row-controls editor."""
 
     while True:
         rows = [
             _smart_home_item_label(
-                item, builtin_labels, saved_search_names, text
+                item,
+                builtin_labels,
+                saved_search_names,
+                collection_names,
+                text,
             )
             for item in state.items
         ]
@@ -446,8 +526,12 @@ def _show_smart_home_fallback(
         if selected < 0:
             return None
         if selected == len(rows):
-            _add_smart_home_collection(
-                state, saved_search_names, text, dialog
+            _add_home_collection(
+                state,
+                saved_search_names,
+                collection_names,
+                text,
+                dialog,
             )
             continue
         if selected == len(rows) + 1:
@@ -460,26 +544,28 @@ def _show_smart_home_fallback(
             selected,
             builtin_labels,
             saved_search_names,
+            collection_names,
             text,
             dialog,
         )
-
 
 def show_smart_home_layout_editor(
     items,
     builtin_labels: Dict[str, str],
     saved_search_names: Dict[int, str],
     text: SmartHomeEditorText,
+    collection_names: Optional[Dict[int, str]] = None,
     xbmcgui_module=None,
 ):
     """Edit Home rows with inline On/Off and move controls.
 
     Kodi uses the XML-backed editor when available. Ten row slots are visible at
-    once; moving past the first or last visible slot scrolls the mixed built-in
-    and smart-collection list. Smart collections use the normal album default
-    when opened and therefore have no separate display-mode action.
+    once; moving past the first or last visible slot scrolls the mixed built-in,
+    smart and manual-collection list. Dynamic collections use the normal album
+    default when opened and therefore have no separate display-mode action.
     """
 
+    collection_names = collection_names or {}
     custom_dialog = xbmcgui_module is None
     if xbmcgui_module is None:
         import xbmcgui as xbmcgui_module  # type: ignore
@@ -491,6 +577,7 @@ def show_smart_home_layout_editor(
             state,
             builtin_labels,
             saved_search_names,
+            collection_names,
             text,
             dialog,
         )
@@ -514,6 +601,7 @@ def show_smart_home_layout_editor(
             self.state = state
             self.builtin_labels = builtin_labels
             self.saved_search_names = saved_search_names
+            self.collection_names = collection_names
             self.editor_text = text
             self.dialog = dialog
             self.result = None
@@ -547,7 +635,7 @@ def show_smart_home_layout_editor(
 
         def _update_remove_action(self) -> None:
             item = self._selected_item()
-            visible = item is not None and item.kind == "smart"
+            visible = item is not None and item.kind in {"smart", "collection"}
             control = self.getControl(1405)
             control.setVisible(visible)
             control.setEnabled(visible)
@@ -579,6 +667,7 @@ def show_smart_home_layout_editor(
                         item,
                         self.builtin_labels,
                         self.saved_search_names,
+                        self.collection_names,
                     )
                 )
                 toggle.setEnabled(True)
@@ -651,9 +740,10 @@ def show_smart_home_layout_editor(
                 self._focus_row(1101, 0)
                 return
             if control_id == 1404:
-                added_index = _add_smart_home_collection(
+                added_index = _add_home_collection(
                     self.state,
                     self.saved_search_names,
+                    self.collection_names,
                     self.editor_text,
                     self.dialog,
                 )
@@ -705,7 +795,10 @@ def show_smart_home_layout_editor(
                 if action_id in (action_move_up, action_move_down):
                     ordered = [1401, 1402, 1403, 1404]
                     selected_item = self._selected_item()
-                    if selected_item is not None and selected_item.kind == "smart":
+                    if (
+                        selected_item is not None
+                        and selected_item.kind in {"smart", "collection"}
+                    ):
                         ordered.append(1405)
                     current = ordered.index(focus_id) if focus_id in ordered else 0
                     offset = -1 if action_id == action_move_up else 1
@@ -761,6 +854,7 @@ def show_smart_home_layout_editor(
         state,
         builtin_labels,
         saved_search_names,
+        collection_names,
         text,
         dialog,
     )

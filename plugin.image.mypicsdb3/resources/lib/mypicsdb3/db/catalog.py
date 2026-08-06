@@ -349,8 +349,56 @@ class Catalog:
             ).close()
             return True
 
+    def _collection_item_ids(self, connection, collection_id: int) -> List[int]:
+        rows = self.engine.fetchall(
+            connection,
+            "SELECT picture_id FROM collection_items WHERE collection_id=? "
+            "ORDER BY position, picture_id",
+            (collection_id,),
+        )
+        return [int(row["picture_id"]) for row in rows]
+
+    def _rewrite_collection_positions(
+        self, connection, collection_id: int, picture_ids: Sequence[int]
+    ) -> None:
+        """Rewrite a compact 1-based order without signed-column assumptions."""
+
+        stored = self.engine.fetchall(
+            connection,
+            "SELECT picture_id, added_at FROM collection_items "
+            "WHERE collection_id=?",
+            (collection_id,),
+        )
+        added_at = {int(row["picture_id"]): row["added_at"] for row in stored}
+        ordered_ids = [int(picture_id) for picture_id in picture_ids]
+        if len(ordered_ids) != len(set(ordered_ids)) or set(ordered_ids) != set(added_at):
+            raise CollectionValidationError("Collection membership changed while reordering")
+
+        self.engine.execute(
+            connection,
+            "DELETE FROM collection_items WHERE collection_id=?",
+            (collection_id,),
+        ).close()
+        if ordered_ids:
+            cursor = self.engine.executemany(
+                connection,
+                "INSERT INTO collection_items "
+                "(collection_id, picture_id, position, added_at) "
+                "VALUES (?, ?, ?, ?)",
+                [
+                    (collection_id, picture_id, position, added_at[picture_id])
+                    for position, picture_id in enumerate(ordered_ids, start=1)
+                ],
+            )
+            cursor.close()
+
     def remove_picture_from_collection(self, collection_id: int, picture_id: int) -> bool:
         with self.engine.transaction(immediate=True) as connection:
+            collection_sql = "SELECT id FROM collections WHERE id=?"
+            if self.engine.backend == "mysql":
+                collection_sql += " FOR UPDATE"
+            if self.engine.fetchone(connection, collection_sql, (collection_id,)) is None:
+                return False
             cursor = self.engine.execute(
                 connection,
                 "DELETE FROM collection_items WHERE collection_id=? AND picture_id=?",
@@ -361,12 +409,55 @@ class Catalog:
             finally:
                 cursor.close()
             if removed:
+                self._rewrite_collection_positions(
+                    connection,
+                    collection_id,
+                    self._collection_item_ids(connection, collection_id),
+                )
                 self.engine.execute(
                     connection,
                     "UPDATE collections SET updated_at=? WHERE id=?",
                     (utc_now(), collection_id),
                 ).close()
             return removed
+
+    def move_picture_in_collection(
+        self, collection_id: int, picture_id: int, direction: str
+    ) -> bool:
+        """Move one item up/down/to an edge while preserving mixed-media order."""
+
+        if direction not in {"up", "down", "top", "bottom"}:
+            raise ValueError("Unknown collection move direction")
+        with self.engine.transaction(immediate=True) as connection:
+            collection_sql = "SELECT id FROM collections WHERE id=?"
+            if self.engine.backend == "mysql":
+                collection_sql += " FOR UPDATE"
+            if self.engine.fetchone(connection, collection_sql, (collection_id,)) is None:
+                return False
+            picture_ids = self._collection_item_ids(connection, collection_id)
+            try:
+                index = picture_ids.index(int(picture_id))
+            except ValueError:
+                return False
+            if direction == "up":
+                target = index - 1
+            elif direction == "down":
+                target = index + 1
+            elif direction == "top":
+                target = 0
+            else:
+                target = len(picture_ids) - 1
+            if target < 0 or target >= len(picture_ids) or target == index:
+                return False
+            item = picture_ids.pop(index)
+            picture_ids.insert(target, item)
+            self._rewrite_collection_positions(connection, collection_id, picture_ids)
+            self.engine.execute(
+                connection,
+                "UPDATE collections SET updated_at=? WHERE id=?",
+                (utc_now(), collection_id),
+            ).close()
+            return True
 
     def sync_sources(self, kodi_sources: Sequence[Dict[str, str]]) -> List[Source]:
         now = utc_now()
@@ -846,6 +937,20 @@ class Catalog:
     def pictures_in_folder(self, folder_id: int, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.folder_id=?", (folder_id,), "COALESCE(p.taken_at, p.discovered_at) DESC, p.filename", limit, offset)
 
+    def collection_available_count(self, collection_id: int) -> int:
+        where, params = self._apply_rating_policy(
+            "ci.collection_id=?", (collection_id,)
+        )
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(
+                connection,
+                "SELECT COUNT(*) AS total FROM collection_items ci "
+                "JOIN pictures p ON p.id=ci.picture_id "
+                "WHERE p.is_missing=0 AND %s" % where,
+                params,
+            )
+        return int((row or {}).get("total") or 0)
+
     def pictures_in_collection(
         self, collection_id: int, limit: int, offset: int = 0
     ) -> List[Dict[str, Any]]:
@@ -859,7 +964,8 @@ class Catalog:
             "ci.collection_id=?", (collection_id,)
         )
         query = (
-            "SELECT %s FROM collection_items ci "
+            "SELECT %s, ci.position AS collection_position "
+            "FROM collection_items ci "
             "JOIN pictures p ON p.id=ci.picture_id "
             "JOIN folders f ON f.id=p.folder_id "
             "JOIN sources s ON s.id=p.source_id "

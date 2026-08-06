@@ -26,10 +26,10 @@ matches at a time.
 ## MyPicsDB 3 home-row contract
 
 The generated skin patches the Pictures home group with up to nine materialized
-rows. Built-in rows and saved smart collections use the standard MyPicsDB
-poster include. Smart rows obtain their heading and saved-search ID from the
-matching hidden add-on settings; interactive browsing still uses Default album
-view inside the plug-in.
+rows. Built-in rows plus saved smart and manual collections use the standard
+MyPicsDB poster include. Dynamic rows obtain their heading and database ID from
+matching materialized slot settings; interactive browsing still uses Default
+album view inside the plug-in.
 
 Every MyPicsDB 3 provider path includes `MyPicsDB3.HomeWidgetGeneration`. This
 fixes stale rows after changing the configured 4–40 item limit and lets scans
@@ -45,6 +45,8 @@ The 0.4.4 patch uses Omega patch revision 12 and Piers patch revision 10.
 The plugin-only 0.4.5 stability follow-up keeps those skin revisions unchanged.
 Version 0.4.11 advances Omega to revision 15 and Piers to revision 13 because
 the generated Home fragment removes the legacy square/wide smart-row branches.
+Version 0.5.1 advances Omega to revision 16 and Piers to revision 14 for fixed
+manual-collection Home providers.
 
 ## Automatic upstream refresh
 

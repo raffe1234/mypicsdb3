@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.5.0 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.5.1 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-6 migrations, search-document backfill,
 > mixed-media playlist integration, manual collections, backup and restore, and
@@ -73,12 +73,13 @@ For the component boundaries and long-lived safety rules, see
 - Save, reopen, rename and delete named global searches, with normal
   pagination and slideshow support.
 - Create named manual collections from selected indexed pictures and home
-  videos, retaining insertion order without copying, moving or deleting source
-  files. Collections support normal browsing and picture, video or mixed
-  slideshows.
+  videos without copying, moving or deleting source files. Collections support
+  explicit item ordering, normal browsing, picture/video playback and ordered
+  Pictures-home rows.
 - Kodi smart-filter editor with all/any matching, metadata criteria, result
-  preview and saved smart collections. Saved smart collections can be placed as
-  ordered Pictures-home rows using the same standard picture-row layout.
+  preview and saved smart collections. Saved smart and manual collections can
+  be placed as ordered Pictures-home rows using the same standard picture-row
+  layout.
 - Versioned, validated Query Model used by global and saved searches; stored
   queries are revalidated when opened and never expose raw SQL.
 - Stable widget endpoints for configurable skins.
@@ -287,12 +288,13 @@ Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings > Home screen** to:
   current selection stable;
 - open **Configure home-screen rows**;
 - enable or disable built-in rows;
-- add a saved smart collection as its own row;
-- move built-in and smart rows directly with the inline up/down arrows;
-- remove an added smart collection without deleting its saved search.
+- add a saved smart collection or manual collection as its own row;
+- move built-in, smart and manual rows directly with the inline up/down arrows;
+- remove an added collection row without deleting the underlying collection.
 
-The editor lists all built-in views and any smart collections already added to
-the home screen. The first six built-in views are enabled by default through
+The editor lists all built-in views and any smart or manual collections already
+added to the home screen. The first six built-in views are enabled by default
+through
 **On this day**. On this day - random, Favorites, Rated pictures and Geotagged
 pictures are disabled by default, so the initial home screen stays compact. At
 most nine rows can be visible at the same time. Existing Row 1 through Row 9
@@ -300,11 +302,10 @@ choices are migrated automatically the first time the editor is opened.
 
 Changing **Home-screen pictures per row** changes the provider generation and
 invalidates only the MyPicsDB 3 rows; a choice such as 39 is therefore no longer
-capped by an old ten-item widget result. Smart rows run the saved Query Model
-again whenever the widget reloads, so newly scanned matching media appears
-automatically. Renaming or deleting a saved collection updates or removes its
-home row. Rows with no
-indexed results disappear until matching media has been indexed.
+capped by an old ten-item widget result. Smart rows rerun the saved Query Model
+whenever the widget reloads, while manual rows read their stored media order.
+Renaming or deleting either collection type updates or removes its Home row.
+Rows with no available indexed results disappear until content is available.
 
 Random memories, Random albums and On this day - random use a separate refresh
 generation. The background service advances it at the configured hourly
@@ -538,10 +539,17 @@ manual collection. Use **Add to collection** on any indexed picture or home vide
 to append it. Inside the collection, use **Remove from collection** to remove only
 the reference; the original file and its catalogue row remain untouched.
 
-Items are displayed in their stored insertion order. Missing files and media
-hidden by the current minimum-rating policy are omitted safely rather than
-breaking the collection. The first 0.5.0 implementation does not yet provide
-manual up/down reordering or Home-screen rows for manual collections.
+Items are displayed in their stored order. Use **Move up**, **Move down**,
+**Move to top** or **Move to bottom** from an item context menu to change the
+shared picture/video order. Removing an item compacts the stored positions.
+Missing files and media hidden by the current minimum-rating policy are omitted
+safely rather than breaking the collection.
+
+Open **Settings > Home screen > Configure home-screen rows**, choose **Add
+collection > Add manual collection**, and select a collection to expose it as a
+Pictures-home row. Renames, content changes and ordering changes refresh the
+widget; deleting the collection also removes its saved Home row. Manual rows use
+**Default album view** when opened.
 
 Collections open with **Default album view**. **Play collection slideshow** and
 the normal per-item slideshow context action preserve collection order. Pictures
@@ -823,9 +831,10 @@ nodes shown between Picture sources and the scan actions.
 In **Settings > Home screen**, **Home-screen pictures per row** is separate from
 the general widget size and accepts 4–40. **Refresh random home-screen rows every
 (hours)** defaults to 2 and accepts 1–720. **Configure home-screen rows** opens
-the combined built-in/smart editor. It supports visibility, direct inline
-ordering, and adding or removing saved smart collections. Smart collections use
-the standard Home picture row and **Default album view** when opened. Cancel,
+the combined built-in/smart/manual editor. It supports visibility, direct inline
+ordering, and adding or removing saved smart and manual collection rows. Both
+collection types use the standard Home picture row and **Default album view**
+when opened. Cancel,
 Save and Defaults remain visible as right-hand action buttons. The
 Smart filter editor uses the same pattern for Cancel and Save.
 

@@ -397,6 +397,9 @@ def test_home_layout_slots_are_published_as_home_window_properties(monkeypatch) 
             "home_smart_id_1": "42",
             "home_smart_name_1": "Spain",
             "home_smart_mode_1": "square",
+            "home_row_2": "collection",
+            "home_collection_id_2": "9",
+            "home_collection_name_2": "Family picks",
         }
 
         def getSetting(self, key):
@@ -417,6 +420,9 @@ def test_home_layout_slots_are_published_as_home_window_properties(monkeypatch) 
     assert properties["MyPicsDB3.HomeSmartId1"] == "42"
     assert properties["MyPicsDB3.HomeSmartName1"] == "Spain"
     assert properties["MyPicsDB3.HomeSmartMode1"] == "poster"
+    assert properties["MyPicsDB3.HomeRow2"] == "collection"
+    assert properties["MyPicsDB3.HomeCollectionId2"] == "9"
+    assert properties["MyPicsDB3.HomeCollectionName2"] == "Family picks"
     assert properties["MyPicsDB3.HomeRow9"] == "none"
     assert properties["MyPicsDB3.HomeSmartId9"] == "0"
 

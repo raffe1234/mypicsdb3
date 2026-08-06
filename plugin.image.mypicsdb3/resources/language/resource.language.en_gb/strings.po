@@ -1302,3 +1302,39 @@ msgstr "Play picture slideshow"
 msgctxt "#32821"
 msgid "Play video playlist"
 msgstr "Play video playlist"
+
+msgctxt "#32822"
+msgid "Manual collection"
+msgstr "Manual collection"
+
+msgctxt "#32823"
+msgid "Move to top"
+msgstr "Move to top"
+
+msgctxt "#32824"
+msgid "Move to bottom"
+msgstr "Move to bottom"
+
+msgctxt "#32825"
+msgid "Add collection"
+msgstr "Add collection"
+
+msgctxt "#32826"
+msgid "Add manual collection"
+msgstr "Add manual collection"
+
+msgctxt "#32827"
+msgid "Remove collection row"
+msgstr "Remove collection row"
+
+msgctxt "#32828"
+msgid "There are no additional manual collections to add."
+msgstr "There are no additional manual collections to add."
+
+msgctxt "#32829"
+msgid "Could not reorder collection"
+msgstr "Could not reorder collection"
+
+msgctxt "#32830"
+msgid "Manual collection used by this home-screen row."
+msgstr "Manual collection used by this home-screen row."

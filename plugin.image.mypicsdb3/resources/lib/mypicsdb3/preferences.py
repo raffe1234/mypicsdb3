@@ -57,9 +57,9 @@ DEFAULT_HOME_ROWS: Tuple[str, ...] = (
 
 SMART_HOME_LAYOUT_VERSION = 1
 # Legacy 0.4.0-0.4.10 layouts may contain poster/square/landscape. From
-# 0.4.11 all smart Home rows use the standard poster widget while the opened
-# collection follows Default album view. Keep the field only for downgrade
-# compatibility with existing home_layout_v2 data.
+# 0.4.11 all dynamic Home rows use the standard poster widget while the opened
+# smart or manual collection follows Default album view. Keep the field only
+# for downgrade compatibility with existing home_layout_v2 data.
 SMART_HOME_MODES: Tuple[str, ...] = ("poster", "square", "landscape")
 DEFAULT_SMART_HOME_MODE = "poster"
 
@@ -69,6 +69,7 @@ class HomeLayoutItem:
     kind: str
     key: str = ""
     saved_search_id: int = 0
+    collection_id: int = 0
     enabled: bool = False
     mode: str = DEFAULT_SMART_HOME_MODE
 
@@ -76,6 +77,8 @@ class HomeLayoutItem:
     def token(self) -> str:
         if self.kind == "smart":
             return "smart:%d" % self.saved_search_id
+        if self.kind == "collection":
+            return "collection:%d" % self.collection_id
         return self.key
 
 
@@ -112,6 +115,7 @@ def normalize_smart_home_mode(value: object) -> str:
 def parse_home_layout_v2(
     value: object,
     available_saved_search_ids: Optional[Iterable[int]] = None,
+    available_collection_ids: Optional[Iterable[int]] = None,
 ) -> Optional[Tuple[HomeLayoutItem, ...]]:
     raw = str(value or "").strip()
     if not raw:
@@ -126,14 +130,20 @@ def parse_home_layout_v2(
     if not isinstance(raw_items, list):
         return None
 
-    available = (
+    available_saved = (
         None
         if available_saved_search_ids is None
         else {int(value) for value in available_saved_search_ids}
     )
+    available_collections = (
+        None
+        if available_collection_ids is None
+        else {int(value) for value in available_collection_ids}
+    )
     items: List[HomeLayoutItem] = []
     seen_builtin = set()
     seen_smart = set()
+    seen_collections = set()
     enabled_count = 0
     for raw_item in raw_items:
         if not isinstance(raw_item, Mapping):
@@ -153,7 +163,7 @@ def parse_home_layout_v2(
                 continue
             if saved_id <= 0 or saved_id in seen_smart:
                 continue
-            if available is not None and saved_id not in available:
+            if available_saved is not None and saved_id not in available_saved:
                 continue
             seen_smart.add(saved_id)
             item = HomeLayoutItem(
@@ -161,6 +171,25 @@ def parse_home_layout_v2(
                 saved_search_id=saved_id,
                 enabled=enabled,
                 mode=normalize_smart_home_mode(raw_item.get("mode")),
+            )
+        elif kind == "collection":
+            try:
+                collection_id = int(raw_item.get("id") or 0)
+            except (TypeError, ValueError):
+                continue
+            if collection_id <= 0 or collection_id in seen_collections:
+                continue
+            if (
+                available_collections is not None
+                and collection_id not in available_collections
+            ):
+                continue
+            seen_collections.add(collection_id)
+            item = HomeLayoutItem(
+                kind="collection",
+                collection_id=collection_id,
+                enabled=enabled,
+                mode=DEFAULT_SMART_HOME_MODE,
             )
         else:
             continue
@@ -180,6 +209,7 @@ def serialize_home_layout_v2(items: Sequence[HomeLayoutItem]) -> str:
     payload_items: List[Dict[str, Any]] = []
     seen_builtin = set()
     seen_smart = set()
+    seen_collections = set()
     enabled_count = 0
     for item in items:
         enabled = bool(item.enabled) and enabled_count < HOME_ROW_COUNT
@@ -199,6 +229,18 @@ def serialize_home_layout_v2(items: Sequence[HomeLayoutItem]) -> str:
                 {
                     "type": "smart",
                     "id": saved_id,
+                    "enabled": enabled,
+                }
+            )
+        elif item.kind == "collection":
+            collection_id = int(item.collection_id or 0)
+            if collection_id <= 0 or collection_id in seen_collections:
+                continue
+            seen_collections.add(collection_id)
+            payload_items.append(
+                {
+                    "type": "collection",
+                    "id": collection_id,
                     "enabled": enabled,
                 }
             )
@@ -229,25 +271,40 @@ def remove_saved_search_from_home_layout(
     )
 
 
+def remove_collection_from_home_layout(
+    items: Sequence[HomeLayoutItem], collection_id: int
+) -> Tuple[HomeLayoutItem, ...]:
+    return tuple(
+        item
+        for item in items
+        if not (
+            item.kind == "collection" and item.collection_id == collection_id
+        )
+    )
+
+
 def home_layout_slots(
     items: Sequence[HomeLayoutItem],
     saved_search_names: Mapping[int, str],
+    collection_names: Optional[Mapping[int, str]] = None,
 ) -> Tuple[Dict[str, Any], ...]:
+    manual_names = collection_names or {}
     slots: List[Dict[str, Any]] = []
     for item in items:
         if not item.enabled:
             continue
+        slot = {
+            "row": "none",
+            "smart_id": 0,
+            "smart_name": "",
+            "smart_mode": DEFAULT_SMART_HOME_MODE,
+            "collection_id": 0,
+            "collection_name": "",
+        }
         if item.kind == "builtin" and item.key in HOME_VIEW_BY_KEY:
-            slots.append(
-                {
-                    "row": item.key,
-                    "smart_id": 0,
-                    "smart_name": "",
-                    "smart_mode": DEFAULT_SMART_HOME_MODE,
-                }
-            )
+            slot["row"] = item.key
         elif item.kind == "smart" and item.saved_search_id in saved_search_names:
-            slots.append(
+            slot.update(
                 {
                     "row": "smart",
                     "smart_id": item.saved_search_id,
@@ -255,6 +312,17 @@ def home_layout_slots(
                     "smart_mode": normalize_smart_home_mode(item.mode),
                 }
             )
+        elif item.kind == "collection" and item.collection_id in manual_names:
+            slot.update(
+                {
+                    "row": "collection",
+                    "collection_id": item.collection_id,
+                    "collection_name": str(manual_names[item.collection_id]),
+                }
+            )
+        else:
+            continue
+        slots.append(slot)
         if len(slots) >= HOME_ROW_COUNT:
             break
     slots.extend(
@@ -263,6 +331,8 @@ def home_layout_slots(
             "smart_id": 0,
             "smart_name": "",
             "smart_mode": DEFAULT_SMART_HOME_MODE,
+            "collection_id": 0,
+            "collection_name": "",
         }
         for _ in range(HOME_ROW_COUNT - len(slots))
     )

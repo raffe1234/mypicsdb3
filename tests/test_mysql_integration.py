@@ -422,7 +422,18 @@ def test_mysql_manual_collection_roundtrip_preserves_mixed_order(tmp_path) -> No
     assert [
         row["id"] for row in catalog.pictures_in_collection(collection_id, 10)
     ] == media_ids
-    assert catalog.list_collections()[0]["available_count"] == 2
+    assert catalog.move_picture_in_collection(
+        collection_id, media_ids[1], "top"
+    ) is True
+    assert [
+        row["id"] for row in catalog.pictures_in_collection(collection_id, 10)
+    ] == [media_ids[1], media_ids[0]]
+    assert catalog.remove_picture_from_collection(collection_id, media_ids[1]) is True
+    assert [
+        (row["id"], row["collection_position"])
+        for row in catalog.pictures_in_collection(collection_id, 10)
+    ] == [(media_ids[0], 1)]
+    assert catalog.list_collections()[0]["available_count"] == 1
     assert catalog.rename_collection(collection_id, "Renamed picks") is True
     assert catalog.get_collection(collection_id).name == "Renamed picks"
     assert catalog.delete_collection(collection_id) is True
