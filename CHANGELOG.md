@@ -11,6 +11,8 @@
 - Surface Home row count, random refresh interval, video-indexing state and debug
   logging state, and keep the existing **Write diagnostic log entry** action
   available from the diagnostics screen. Database schema 7 is unchanged.
+- Keep display-only Diagnostics and Scan status rows non-playable so pressing OK
+  on version, count or status information does not trigger Kodi's player.
 
 ## 0.7.0 - 2026-08-07
 

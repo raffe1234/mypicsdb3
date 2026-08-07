@@ -318,6 +318,15 @@ class PluginUI:
             item.addContextMenuItems(context)
         return (self.url(route, **params), item, False)
 
+    def add_info(self, label: str, art: Optional[str] = None):
+        # Display-only rows must not publish video metadata. Kodi may otherwise
+        # send an empty directory-item URL to VideoPlayer and show
+        # "Playback failed" when the user presses OK on an information row.
+        item = self._item(label, art, publish_video_title=False)
+        item.setProperty("IsPlayable", "false")
+        item.setProperty("MyPicsDB3.MediaType", "info")
+        return ("", item, False)
+
     def finish(
         self,
         items: Sequence[Tuple[str, xbmcgui.ListItem, bool]],
@@ -2315,7 +2324,7 @@ class PluginUI:
             ]
         )
 
-        items = [("", self._item(value), False) for value in values]
+        items = [self.add_info(value) for value in values]
         items.append(
             self.add_action(
                 self.text(32720, "Write diagnostic log entry"),
@@ -2400,7 +2409,7 @@ class PluginUI:
                 "%s: %s" % (self.text(30049, "Pictures unchanged"), latest.get("pictures_unchanged", 0)),
                 "%s: %s" % (self.text(30050, "Errors"), latest.get("errors", 0)),
             ])
-        items = [("", self._item(value), False) for value in values]
+        items = [self.add_info(value) for value in values]
         if active:
             items.append(self.add_action(self.text(32726, "Stop scan"), "action/stop-scan"))
         items.append(self.add_action(self.text(30060, "Test database connection"), "action/test-db"))

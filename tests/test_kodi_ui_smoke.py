@@ -697,6 +697,11 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     assert "smb://" not in joined
     assert "secret-pass" not in joined
     assert "Private photos" not in joined
+    for url, item, is_folder in calls.items[:-1]:
+        assert url == ""
+        assert item.properties["IsPlayable"] == "false"
+        assert item.properties["MyPicsDB3.MediaType"] == "info"
+        assert is_folder is False
     assert calls.items[-1][0].endswith("/action/log-diagnostic")
 
 
@@ -1230,6 +1235,35 @@ def test_widget_items_publish_titles_for_estuary_poster_rows(monkeypatch) -> Non
     assert album.video_tag.title == "Summer album  [COLOR=grey](3)[/COLOR]"
     assert album.properties["MyPicsDB3.WidgetLabel"] == album.label
     assert is_folder is True
+
+
+def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+
+    class InfoVideoTag:
+        def setTitle(self, _value):
+            raise AssertionError("information rows must not create a VideoInfoTag")
+
+    class InfoListItem(FakeListItem):
+        def __init__(self, label="", path=""):
+            super().__init__(label, path)
+            self.video_tag_requests = 0
+
+        def getVideoInfoTag(self):
+            self.video_tag_requests += 1
+            return InfoVideoTag()
+
+    views.xbmcgui.ListItem = InfoListItem
+    ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
+
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.0")
+
+    assert url == ""
+    assert item.video_tag_requests == 0
+    assert item.properties["IsPlayable"] == "false"
+    assert item.properties["MyPicsDB3.MediaType"] == "info"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.0"
+    assert is_folder is False
 
 
 def test_action_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
