@@ -2300,8 +2300,47 @@ class PluginUI:
                 )
             )
 
+        playlist_compatibility = {
+            "compatible": self.text(32866, "Compatible"),
+            "incompatible": self.text(32867, "Incompatible"),
+            "unknown": self.text(32868, "Unknown"),
+        }.get(
+            str(snapshot.get("picture_playlist_compatibility") or "unknown"),
+            self.text(32868, "Unknown"),
+        )
+        music_session = snapshot.get("music_slideshow_session") or {}
+
         values.extend(
             [
+                "%s: %s"
+                % (
+                    self.text(32863, "Home widget generation"),
+                    snapshot["home_generations"]["content"],
+                ),
+                "%s: %s"
+                % (
+                    self.text(32864, "Random Home generation"),
+                    snapshot["home_generations"]["random"],
+                ),
+                "%s: %s"
+                % (
+                    self.text(32865, "Picture playlist compatibility"),
+                    playlist_compatibility,
+                ),
+                "%s: %s"
+                % (
+                    self.text(32869, "Music slideshow session"),
+                    self.text(32870, "Active")
+                    if music_session.get("active")
+                    else self.text(32871, "Inactive"),
+                ),
+                "%s: %s"
+                % (
+                    self.text(32872, "Music playlist ownership marker"),
+                    self.text(32873, "Present")
+                    if music_session.get("playlist_fingerprint_present")
+                    else self.text(32874, "Missing"),
+                ),
                 "%s: %s"
                 % (
                     self.text(32853, "Home-screen row count"),

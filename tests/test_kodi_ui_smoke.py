@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.2",
+            "version": "0.8.3",
         }[key]
 
     def getSetting(self, key):
@@ -214,6 +214,7 @@ class FakeKodi:
         self.random_refreshes = 0
         self.random_invalidations = []
         self.home_invalidations = []
+        self.home_generations = {"content": 7, "random": 3}
         self.music_session = {}
         self.music_fingerprint = "test-music-fingerprint"
 
@@ -272,6 +273,9 @@ class FakeKodi:
     def invalidate_home_widgets(self, reason):
         self.home_invalidations.append(reason)
         return len(self.home_invalidations)
+
+    def home_widget_generations(self):
+        return dict(self.home_generations)
 
     def is_playing(self):
         return False
@@ -664,6 +668,12 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     runtime = FakeRuntime()
     runtime.kodi.settings.debug_logging = True
     runtime.kodi.settings.include_videos = True
+    runtime.kodi.home_generations = {"content": 17, "random": 6}
+    runtime.kodi.picture_playlist_compatibility_value = False
+    runtime.kodi.music_session = {
+        "token": "private-ui-token",
+        "playlist_fingerprint": "private-ui-fingerprint",
+    }
     runtime.kodi.scan_state = {
         "token": "scan-1",
         "kind": "automatic",
@@ -682,7 +692,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.2" in labels
+    assert "MyPicsDB 3 version: 0.8.3" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -692,6 +702,11 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     assert "Enabled sources: 2" in labels
     assert "Active scan: Automatic scan - Scan in progress" in labels
     assert "Elapsed time: 2 min 5 sec" in labels
+    assert "Home widget generation: 17" in labels
+    assert "Random Home generation: 6" in labels
+    assert "Picture playlist compatibility: Incompatible" in labels
+    assert "Music slideshow session: Active" in labels
+    assert "Music playlist ownership marker: Present" in labels
     assert "Include videos: On" in labels
     assert "Debug logging: On" in labels
     assert (
@@ -701,6 +716,8 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     assert "smb://" not in joined
     assert "secret-pass" not in joined
     assert "Private photos" not in joined
+    assert "private-ui-token" not in joined
+    assert "private-ui-fingerprint" not in joined
     for url, item, is_folder in calls.items[:-2]:
         assert url == ""
         assert item.properties["IsPlayable"] == "false"
@@ -717,19 +734,19 @@ def test_export_support_bundle_action_reports_generated_filename(monkeypatch) ->
     monkeypatch.setattr(
         views,
         "write_support_bundle",
-        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.2.zip",
+        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.3.zip",
     )
 
     ui.dispatch(views.Request("action/export-support-bundle", {}))
 
     assert runtime.kodi.notifications[-1] == (
-        "Support bundle saved: mypicsdb3-support-test-v0.8.2.zip\n"
+        "Support bundle saved: mypicsdb3-support-test-v0.8.3.zip\n"
         "Support bundle folder: Kodi userdata > addon_data > "
         "plugin.image.mypicsdb3 > support-bundles",
         False,
     )
     assert runtime.kodi.info_messages[-1] == (
-        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.2.zip"
+        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.3.zip"
     )
 
 
@@ -1302,13 +1319,13 @@ def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
     views.xbmcgui.ListItem = InfoListItem
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
-    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.2")
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.3")
 
     assert url == ""
     assert item.video_tag_requests == 0
     assert item.properties["IsPlayable"] == "false"
     assert item.properties["MyPicsDB3.MediaType"] == "info"
-    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.2"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.3"
     assert is_folder is False
 
 

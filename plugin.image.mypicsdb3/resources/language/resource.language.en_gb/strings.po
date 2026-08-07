@@ -1466,3 +1466,51 @@ msgstr "Support bundle folder"
 msgctxt "#32862"
 msgid "Kodi userdata > addon_data > plugin.image.mypicsdb3 > support-bundles"
 msgstr "Kodi userdata > addon_data > plugin.image.mypicsdb3 > support-bundles"
+
+msgctxt "#32863"
+msgid "Home widget generation"
+msgstr "Home widget generation"
+
+msgctxt "#32864"
+msgid "Random Home generation"
+msgstr "Random Home generation"
+
+msgctxt "#32865"
+msgid "Picture playlist compatibility"
+msgstr "Picture playlist compatibility"
+
+msgctxt "#32866"
+msgid "Compatible"
+msgstr "Compatible"
+
+msgctxt "#32867"
+msgid "Incompatible"
+msgstr "Incompatible"
+
+msgctxt "#32868"
+msgid "Unknown"
+msgstr "Unknown"
+
+msgctxt "#32869"
+msgid "Music slideshow session"
+msgstr "Music slideshow session"
+
+msgctxt "#32870"
+msgid "Active"
+msgstr "Active"
+
+msgctxt "#32871"
+msgid "Inactive"
+msgstr "Inactive"
+
+msgctxt "#32872"
+msgid "Music playlist ownership marker"
+msgstr "Music playlist ownership marker"
+
+msgctxt "#32873"
+msgid "Present"
+msgstr "Present"
+
+msgctxt "#32874"
+msgid "Missing"
+msgstr "Missing"

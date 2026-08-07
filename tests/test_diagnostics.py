@@ -63,6 +63,18 @@ class Kodi:
             "path": "smb://secret-user:secret-password@server/private/photo.jpg",
         }
 
+    def home_widget_generations(self):
+        return {"content": 42, "random": 9}
+
+    def picture_playlist_compatibility(self):
+        return False
+
+    def music_slideshow_session(self):
+        return {
+            "token": "private-music-session-token",
+            "playlist_fingerprint": "private-playlist-fingerprint",
+        }
+
 
 def test_collect_diagnostics_excludes_private_connection_and_source_details():
     runtime = SimpleNamespace(catalog=Catalog(), kodi=Kodi())
@@ -84,6 +96,12 @@ def test_collect_diagnostics_excludes_private_connection_and_source_details():
         "elapsed_seconds": 125.0,
     }
     assert snapshot["last_scan"]["duration_seconds"] == 210.0
+    assert snapshot["home_generations"] == {"content": 42, "random": 9}
+    assert snapshot["picture_playlist_compatibility"] == "incompatible"
+    assert snapshot["music_slideshow_session"] == {
+        "active": True,
+        "playlist_fingerprint_present": True,
+    }
 
     rendered = repr(snapshot)
     assert "private-db.example" not in rendered
@@ -92,6 +110,8 @@ def test_collect_diagnostics_excludes_private_connection_and_source_details():
     assert "/private/profile" not in rendered
     assert "Private source" not in rendered
     assert "smb://" not in rendered
+    assert "private-music-session-token" not in rendered
+    assert "private-playlist-fingerprint" not in rendered
 
 
 def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
@@ -106,7 +126,7 @@ def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
     )
 
     assert path.endswith(
-        "support-bundles/mypicsdb3-support-20260807-113045Z-v0.8.2.zip"
+        "support-bundles/mypicsdb3-support-20260807-113045Z-v0.8.3.zip"
     )
     with zipfile.ZipFile(path) as archive:
         assert sorted(archive.namelist()) == ["README.txt", "diagnostics.json"]
@@ -115,7 +135,7 @@ def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
 
     assert payload["format_version"] == 1
     assert payload["generated_at"] == "2026-08-07T11:30:45Z"
-    assert payload["diagnostics"]["plugin_version"] == "0.8.2"
+    assert payload["diagnostics"]["plugin_version"] == "0.8.3"
     assert payload["diagnostics"]["active_scan"] == {
         "kind": "manual",
         "state": "running",
@@ -139,6 +159,8 @@ def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
         "smb://",
         "Private source",
         "scan-1",
+        "private-music-session-token",
+        "private-playlist-fingerprint",
     ):
         assert secret not in exported
     assert "does not include" in readme

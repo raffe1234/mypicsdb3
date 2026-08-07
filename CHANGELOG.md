@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.3 - 2026-08-07
+
+- Extend Diagnostics with the session-local Home content and random provider
+  generations used to invalidate Estuary widget URLs.
+- Show the cached picture-playlist compatibility state and MyPicsDB-owned music
+  slideshow session state, including whether an ownership fingerprint exists,
+  without exposing the token or fingerprint value.
+- Include the same sanitized runtime state in support bundles. Database schema 7
+  is unchanged, and the plug-in version is raised to 0.8.3 so Kodi reloads the
+  updated diagnostics UI.
+
 ## 0.8.2 - 2026-08-07
 
 - Show the privacy-safe support-bundle location directly in Diagnostics as

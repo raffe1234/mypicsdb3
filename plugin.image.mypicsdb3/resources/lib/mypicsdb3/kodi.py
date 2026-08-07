@@ -543,6 +543,28 @@ class KodiContext:
             reason,
         )
 
+    @staticmethod
+    def home_widget_generations() -> Dict[str, int]:
+        """Return the session-local Home provider generations without changing them."""
+
+        if xbmcgui is None:
+            return {"content": 0, "random": 0}
+        try:
+            window = xbmcgui.Window(HOME_WINDOW_ID)
+        except Exception:
+            return {"content": 0, "random": 0}
+
+        def generation(property_name: str) -> int:
+            try:
+                return max(0, int(str(window.getProperty(property_name) or "0")))
+            except (TypeError, ValueError, AttributeError):
+                return 0
+
+        return {
+            "content": generation(HOME_WIDGET_GENERATION_PROPERTY),
+            "random": generation(RANDOM_HOME_WIDGET_GENERATION_PROPERTY),
+        }
+
     def create_background_progress(self, heading: str, message: str):
         if xbmcgui is None:
             return None

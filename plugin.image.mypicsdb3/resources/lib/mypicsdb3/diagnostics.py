@@ -42,6 +42,59 @@ def _current_skin(kodi) -> Dict[str, str]:
     }
 
 
+def _home_generations(kodi) -> Dict[str, int]:
+    getter = getattr(kodi, "home_widget_generations", None)
+    if not callable(getter):
+        return {"content": 0, "random": 0}
+    try:
+        values = getter()
+    except Exception:
+        values = {}
+    if not isinstance(values, dict):
+        values = {}
+
+    def generation(key: str) -> int:
+        try:
+            return max(0, int(values.get(key) or 0))
+        except (TypeError, ValueError):
+            return 0
+
+    return {"content": generation("content"), "random": generation("random")}
+
+
+def _picture_playlist_compatibility(kodi) -> str:
+    getter = getattr(kodi, "picture_playlist_compatibility", None)
+    if not callable(getter):
+        return "unknown"
+    try:
+        compatible = getter()
+    except Exception:
+        return "unknown"
+    if compatible is True:
+        return "compatible"
+    if compatible is False:
+        return "incompatible"
+    return "unknown"
+
+
+def _music_session_status(kodi) -> Dict[str, bool]:
+    getter = getattr(kodi, "music_slideshow_session", None)
+    if not callable(getter):
+        return {"active": False, "playlist_fingerprint_present": False}
+    try:
+        session = getter()
+    except Exception:
+        session = {}
+    if not isinstance(session, dict):
+        session = {}
+    return {
+        "active": bool(str(session.get("token") or "")),
+        "playlist_fingerprint_present": bool(
+            str(session.get("playlist_fingerprint") or "")
+        ),
+    }
+
+
 def collect_diagnostics(runtime, now: Optional[float] = None) -> Dict[str, Any]:
     """Return a privacy-safe, read-only support snapshot.
 
@@ -109,6 +162,11 @@ def collect_diagnostics(runtime, now: Optional[float] = None) -> Dict[str, Any]:
             if active
             else None
         ),
+        "home_generations": _home_generations(runtime.kodi),
+        "picture_playlist_compatibility": _picture_playlist_compatibility(
+            runtime.kodi
+        ),
+        "music_slideshow_session": _music_session_status(runtime.kodi),
         "home_widget_limit": int(getattr(settings, "home_widget_limit", 10)),
         "random_home_refresh_hours": int(
             getattr(settings, "random_home_refresh_hours", 2)
