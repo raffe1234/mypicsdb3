@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.4",
+            "version": "0.8.5",
         }[key]
 
     def getSetting(self, key):
@@ -700,7 +700,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.4" in labels
+    assert "MyPicsDB 3 version: 0.8.5" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -742,19 +742,19 @@ def test_export_support_bundle_action_reports_generated_filename(monkeypatch) ->
     monkeypatch.setattr(
         views,
         "write_support_bundle",
-        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.4.zip",
+        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.5.zip",
     )
 
     ui.dispatch(views.Request("action/export-support-bundle", {}))
 
     assert runtime.kodi.notifications[-1] == (
-        "Support bundle saved: mypicsdb3-support-test-v0.8.4.zip\n"
+        "Support bundle saved: mypicsdb3-support-test-v0.8.5.zip\n"
         "Support bundle folder: Kodi userdata > addon_data > "
         "plugin.image.mypicsdb3 > support-bundles",
         False,
     )
     assert runtime.kodi.info_messages[-1] == (
-        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.4.zip"
+        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.5.zip"
     )
 
 
@@ -1327,13 +1327,13 @@ def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
     views.xbmcgui.ListItem = InfoListItem
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
-    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.4")
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.5")
 
     assert url == ""
     assert item.video_tag_requests == 0
     assert item.properties["IsPlayable"] == "false"
     assert item.properties["MyPicsDB3.MediaType"] == "info"
-    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.4"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.5"
     assert is_folder is False
 
 

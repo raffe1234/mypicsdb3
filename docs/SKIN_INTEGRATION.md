@@ -224,6 +224,33 @@ change when the 4–40 setting or catalogue generation changes. A third-party sk
 may use its own invalidation method, but should avoid caching one fixed provider
 URL forever.
 
+## Optional Picture Info collection action
+
+The reference Estuary fork exposes one write action from Kodi's native Picture
+Info dialog while a still picture is displayed full-screen:
+
+```text
+plugin://plugin.image.mypicsdb3/action/add-current-picture-to-collection
+```
+
+This route is intentionally narrower than a general context-menu API. It asks
+Kodi for the current slideshow picture URI, requires one exact available
+catalogue row with `media_type=picture`, and only then reuses MyPicsDB 3's normal
+manual-collection picker/write path. A skin should not pass an arbitrary media ID
+or source path to bypass those checks.
+
+For keyboard and remote users, the action must be part of the skin's real focus
+graph. The Estuary reference implementation makes Down leave the metadata list
+for the button only while the button is visible, with a mutually exclusive
+fallback to native list navigation when it is hidden. Do not rely on a visible
+button being focusable automatically. Do not remap Kodi's `C`, Info or remote
+keys just to expose this action; the reference flow is **I / Info** -> Down to
+the action -> **OK / Enter**.
+
+Third-party skins may omit this action completely. If they expose it, test both
+the visible and hidden states with keyboard and remote controls on every
+supported Kodi/skin version.
+
 ## Estuary-derived skins
 
 The reference integration uses Estuary-specific includes such as its widget
@@ -362,6 +389,8 @@ Test in a real Kodi installation:
 - albums open in the Pictures window;
 - focus and Back navigation are logical;
 - keyboard, remote, mouse and touch work where supported;
+- any Picture Info collection action is actually reachable by focus navigation,
+  and hiding it restores the skin's native navigation;
 - random rows do not gain an unwanted "more" item;
 - switching skins is safe;
 - skin and Kodi updates do not overwrite a separate fork;

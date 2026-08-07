@@ -47,6 +47,34 @@ Version 0.4.11 advances Omega to revision 15 and Piers to revision 13 because
 the generated Home fragment removes the legacy square/wide smart-row branches.
 Version 0.5.1 advances Omega to revision 16 and Piers to revision 14 for fixed
 manual-collection Home providers.
+Version 0.8.4 advances Omega to revision 17 and Piers to revision 15 for the
+Picture Info collection action. Version 0.8.5 advances them again to revisions
+18/16 to make that action reachable with keyboard and remote focus navigation.
+
+## Picture Info collection action
+
+The generated Estuary fork also patches `DialogPictureInfo.xml`. While Kodi's
+native slideshow is showing a still picture, Picture Info displays **Add current
+picture to collection** as control `9200`. The button closes Picture Info and
+runs:
+
+```text
+plugin://plugin.image.mypicsdb3/action/add-current-picture-to-collection
+```
+
+The user flow is **I / Info** -> move **Down** past the last metadata row ->
+**OK / Enter**. The `C` context-menu key and Kodi keymaps are not changed.
+
+Focus navigation is deliberately fail-safe. At the bottom of Estuary's metadata
+list, Down targets control `9200` only when `Control.IsVisible(9200)` is true.
+The fallback back to list control `5` has the inverse condition, so the two
+navigation actions cannot both fire for one key press. When the MyPicsDB action
+is hidden, native Estuary behaviour is preserved.
+
+The plug-in then resolves Kodi's current slideshow path and filename to one
+exact, non-missing catalogue URI and requires `media_type=picture` before it
+opens the existing collection picker. An unindexed, missing, ambiguous or video
+item causes no collection write.
 
 ## Automatic upstream refresh
 
@@ -62,8 +90,9 @@ started manually. It:
 6. starts the Pages deployment.
 
 The workflow is fail-closed. If the Pictures group can no longer be found
-exactly between Estuary control groups `4000` and `17000`, no new pin is
-committed and the previously published skin remains available. A GitHub issue
+exactly between Estuary control groups `4000` and `17000`, or the expected
+Picture Info metadata-list navigation cannot be patched exactly once, no new pin
+is committed and the previously published skin remains available. A GitHub issue
 named **Automatic Estuary patch failed** is created or updated.
 
 Only official release tags are followed. Development commits between Kodi
@@ -109,8 +138,9 @@ Preview packages use Kodi's supported pre-release ordering:
 
 Increase `patch_revision` in a channel when the MyPicsDB 3 patch itself changes
 without a new Kodi release. Versions 0.4.9 and 0.4.10 use Omega revision 14 and
-Piers revision 12. Version 0.4.11 uses revisions 15/13 because the Home fragment
-changes. Then run the updater
+Piers revision 12. Version 0.4.11 uses revisions 15/13, version 0.8.4 uses
+17/15 for Picture Info, and version 0.8.5 uses 18/16 for the corrected focus
+navigation. Then run the updater
 so all generated versions are recalculated.
 
 ## Build commands

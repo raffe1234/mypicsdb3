@@ -14,6 +14,12 @@ picture or home-video context menu
 → Catalog.add_picture_to_collection()
 → append collection_items.position
 
+Estuary full-screen still → I / Info → Add current picture to collection
+→ KodiContext.current_slideshow_picture_uri()
+→ Catalog.picture_for_uri() exact available `media_type=picture` match
+→ same collection picker and Catalog.add_picture_to_collection() path
+→ no write if the current item cannot be resolved safely
+
 Collections main-menu entry
 → Catalog.list_collections()
 → open collection route
@@ -54,8 +60,9 @@ optional collection context action → Assign music playlist
 | `db/schema.py` | Fresh SQLite and MySQL/MariaDB schema |
 | `db/catalog.py` | Collection CRUD, duplicate prevention, ordered membership, reordering and reads |
 | `preferences.py`, `home_layout_editor.py` | Manual collection Home-row persistence and editing |
-| `views.py` | Main-menu route, dialogs, context actions, Home provider, browsing and slideshow scope |
-| `kodi.py`, `contrib/estuary/` | Materialized Home properties and generated Estuary row |
+| `views.py` | Main-menu route, dialogs, context actions, full-screen Picture Info action, Home provider, browsing and slideshow scope |
+| `kodi.py` | Kodi state helpers, including the current native slideshow picture URI |
+| `contrib/estuary/`, `tools/estuary_skin.py` | Generated Estuary Home rows and focusable Picture Info action |
 | `resources/language/resource.language.en_gb/strings.po` | User-facing collection text |
 | `music_playlists.py`, `music_slideshow.py` | Optional playlist assignment and music playback helpers |
 | `db/migration_steps/v0007_collection_music.py` | Optional schema-7 music mapping |
@@ -94,6 +101,8 @@ is forwarded in collection routes and slideshow actions.
   characters.
 - Adding an already-present item is a no-op and returns `False`.
 - Only indexed, currently non-missing media can be added.
+- The full-screen Picture Info route additionally requires one exact URI match
+  whose catalogue row is explicitly a still picture; otherwise it fails closed.
 - Removing an item deletes only its membership row and compacts positions.
 - Context actions move an item one step or directly to either edge.
 - Deleting a collection cascades membership rows but never deletes a `pictures`
@@ -131,8 +140,11 @@ MyPicsDB started. See [Collection music playlists](COLLECTION_MUSIC.md).
 - `tests/test_catalog.py` covers CRUD, duplicates, order, missing media, rating
   policy, mixed media and deletion safety;
 - `tests/test_migrations.py` covers schema-5-to-6, schema-6-to-7 and fresh schema 7;
-- `tests/test_kodi_ui_smoke.py` covers routes, Home providers, context actions
-  and row synchronization;
+- `tests/test_kodi_ui_smoke.py` covers routes, Home providers, context actions,
+  full-screen collection guardrails and row synchronization;
+- `tests/test_kodi_date_refresh.py` covers current-slideshow URI resolution;
+- `tests/test_estuary_skin.py` covers Picture Info insertion and keyboard/remote
+  focus navigation in the generated Estuary fork;
 - `tests/test_preferences.py` and `tests/test_home_layout_editor.py` cover manual Home rows;
 - `tests/test_mysql_integration.py` contains an opt-in backend round trip.
 
@@ -140,6 +152,8 @@ MyPicsDB started. See [Collection music playlists](COLLECTION_MUSIC.md).
 
 - Manual and smart collections remain different concepts and tables.
 - Source files are never copied, moved, edited or deleted by collection actions.
+- Full-screen collection adds reuse the same membership writer as list-context
+  adds and never modify Kodi's native slideshow or keymap.
 - One media row occurs at most once in a collection.
 - Stored order is stable, compact and editable across browsing pages, Home rows
   and each selected playback type.

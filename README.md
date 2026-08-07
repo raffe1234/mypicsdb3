@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.4. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.5. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -67,6 +67,10 @@ For the component boundaries and long-lived safety rules, see
   pictures and home videos without copying, moving or deleting source files.
 - Reorder manual collection items and browse both smart and manual collections
   with normal pagination and **Default album view**.
+- With **Estuary MyPicsDB 3**, add the indexed still picture currently shown in
+  Kodi's native full-screen viewer by opening **I / Info**, moving down past the
+  last metadata row to **Add current picture to collection**, and pressing
+  **OK / Enter**; the `C` context-menu key is not used for this action.
 - Assign one Kodi music-playlist file to a saved smart collection or manual
   collection, then explicitly start its picture slideshow with that music.
 - Install the separate **MyPicsDB 3 Screensaver** and explicitly choose one saved
@@ -544,6 +548,13 @@ Duplicate additions are ignored. **Toggle favorite** adds or removes the item
 from Favorites, and **Open containing album** opens the indexed folder. Album
 context menus can also start a recursive Kodi slideshow.
 
+When using **Estuary MyPicsDB 3**, an indexed still picture can also be added
+without leaving Kodi's native full-screen viewer. Press **I / Info**, use
+**Down** until focus moves past the last metadata row to **Add current picture
+to collection**, then press **OK / Enter**. This is a Picture Info action, not a
+`C` context-menu action. If the current item cannot be resolved to one exact,
+available picture row, MyPicsDB 3 stops without changing a collection.
+
 The Keywords and Rated pictures views depend on metadata embedded in the source
 files. Geotagged pictures requires **Store GPS coordinates** to be enabled
 before the relevant pictures are scanned again.
@@ -607,6 +618,14 @@ Open **Collections** from the main menu to create, rename, open or delete a name
 manual collection. Use **Add to collection** on any indexed picture or home video
 to append it. Inside the collection, use **Remove from collection** to remove only
 the reference; the original file and its catalogue row remain untouched.
+
+With **Estuary MyPicsDB 3** installed, the same collection picker is available
+for the currently displayed indexed still picture: open the full-screen picture,
+press **I / Info**, move **Down** past the metadata list to **Add current picture
+to collection**, and press **OK / Enter**. Keyboard and remote navigation use the
+normal Estuary focus graph; MyPicsDB 3 does not remap `C`, Info or remote keys.
+The action rejects unindexed, missing and video items before any collection
+write.
 
 Items are displayed in their stored order. Use **Move up**, **Move down**,
 **Move to top** or **Move to bottom** from an item context menu to change the

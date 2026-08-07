@@ -487,8 +487,9 @@ def patch_picture_info_xml(
     picture_info, nav_count = nav_pattern.subn(
         lambda match: (
             match.group("indent")
-            + '<ondown condition="Window.IsActive(Slideshow) + !SlideShow.IsVideo + System.HasAddon(plugin.image.mypicsdb3)">9200</ondown>\n'
-            + match.group(0)
+            + '<ondown condition="Control.IsVisible(9200)">9200</ondown>\n'
+            + match.group("indent")
+            + '<ondown condition="!Control.IsVisible(9200)">5</ondown>'
         ),
         picture_info,
         count=1,

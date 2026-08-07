@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.5 - 2026-08-07
+
+- Fix keyboard and remote focus for **Add current picture to collection** in
+  Estuary Picture Info. The metadata list now routes Down to the MyPicsDB button
+  only while that button is visible and uses a mutually exclusive fallback to
+  Estuary's original list focus when it is hidden.
+- Keep Kodi's native full-screen viewer and keymap unchanged: use **I / Info**,
+  move Down past the last metadata row, then press **OK / Enter**. The `C`
+  context-menu key is not repurposed.
+- Document the full-screen collection action, its fail-closed catalogue lookup
+  and its keyboard/remote focus contract in the README and skin/collection docs.
+- Advance the generated Estuary fork revisions to Omega 18 and Piers 16. The
+  plug-in version is 0.8.5 and database schema remains 7.
+
 ## 0.8.4 - 2026-08-07
 
 - Keep Kodi's native full-screen picture viewer and add a MyPicsDB 3 action to

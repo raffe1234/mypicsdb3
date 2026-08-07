@@ -159,7 +159,21 @@ def test_patch_skin_creates_separate_addon_and_widgets(tmp_path: Path):
     picture_info = (output / "xml" / "DialogPictureInfo.xml").read_text(encoding="utf-8")
     assert 'id="9200"' in picture_info
     assert "plugin://plugin.image.mypicsdb3/action/add-current-picture-to-collection" in picture_info
-    assert '<ondown condition="Window.IsActive(Slideshow) + !SlideShow.IsVideo + System.HasAddon(plugin.image.mypicsdb3)">9200</ondown>' in picture_info
+    assert '<ondown condition="Control.IsVisible(9200)">9200</ondown>' in picture_info
+    assert '<ondown condition="!Control.IsVisible(9200)">5</ondown>' in picture_info
+    picture_info_root = ET.fromstring(picture_info)
+    metadata_list = next(
+        control
+        for control in picture_info_root.iter("control")
+        if control.attrib.get("type") == "list" and control.attrib.get("id") == "5"
+    )
+    assert [
+        (node.attrib.get("condition"), (node.text or "").strip())
+        for node in metadata_list.findall("ondown")
+    ] == [
+        ("Control.IsVisible(9200)", "9200"),
+        ("!Control.IsVisible(9200)", "5"),
+    ]
     assert (output / "xml" / "Other.xml").is_file()
     notice = (output / "MYPICSDB3_UPSTREAM.md").read_text(encoding="utf-8")
     assert "Kodi channel: omega" in notice
@@ -224,7 +238,7 @@ def test_patch_skin_fails_closed_when_picture_info_navigation_changes(tmp_path: 
     output = tmp_path / "skin.estuary.mypicsdb3"
 
     try:
-        patch_skin(source, output, config(), "0.8.4")
+        patch_skin(source, output, config(), "0.8.5")
     except RuntimeError as exc:
         assert "Picture Info" in str(exc)
     else:
@@ -275,11 +289,11 @@ def test_upstream_config_has_versioned_channels_and_history():
     assert set(project.channels) == {"omega", "piers"}
     assert project.channels["omega"].releases[0].ref == "21.3-Omega"
     assert project.channels["omega"].xbmc_gui_version == "5.17.0"
-    assert project.channels["omega"].patch_revision == 17
-    assert project.channels["omega"].releases[0].skin_version == "21.3.17"
+    assert project.channels["omega"].patch_revision == 18
+    assert project.channels["omega"].releases[0].skin_version == "21.3.18"
     assert project.channels["piers"].xbmc_gui_version == "5.17.0"
-    assert project.channels["piers"].patch_revision == 15
-    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.15"
+    assert project.channels["piers"].patch_revision == 16
+    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.16"
     assert project.channels["piers"].releases[0].ref == "22.0b1-Piers"
     assert all(
         len(channel.releases) <= project.retain_versions
