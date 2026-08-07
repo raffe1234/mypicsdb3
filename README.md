@@ -5,19 +5,18 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.7.0 development release. The catalogue, SQLite backend, scanner,
-> browser routes, Estuary fork builder and package builder are covered by
-> automated tests. The schema-1-to-7 migrations, search-document backfill,
-> mixed-media playback, collection music playlists, the MyPicsDB-aware screensaver, backup and restore, and
-> large-library search performance still require documented validation on real
-> Kodi installations before calling the project production-stable.
+> Status: 0.7.0. The catalogue, scanner, collections, collection music playback,
+> Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
+> tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
+> backup/restore and very large-library performance still need broader real-device
+> validation before calling the project production-stable.
 
 ## Want to help develop MyPicsDB 3?
 
 New contributors do not need to read the whole repository before making a
 useful change. Start with [Start here: developing MyPicsDB 3](docs/START_HERE.md),
-which explains the two entry points, the main modules, the most important safety
-rules and where to begin for different types of work.
+which explains the three Kodi entry points, the main modules, the most important
+safety rules and where to begin for different types of work.
 
 A suitable reading order is:
 
@@ -137,8 +136,8 @@ alternatives and troubleshooting.
 
 ### Quick install with the MyPicsDB 3 Repository
 
-Use this method if you want Kodi to discover future MyPicsDB 3 and Estuary
-MyPicsDB 3 updates.
+Use this method if you want Kodi to discover future MyPicsDB 3, MyPicsDB 3
+Screensaver and Estuary MyPicsDB 3 updates.
 
 1. Download `repository.mypicsdb3-<version>.zip` from the
    [latest release](https://github.com/raffe1234/mypicsdb3/releases/latest).
@@ -147,12 +146,13 @@ MyPicsDB 3 updates.
 2. Open **Add-ons > Install from repository > MyPicsDB 3 Repository > Picture
    add-ons > MyPicsDB 3** and select **Install**.
 3. Optional: to show MyPicsDB 3 rows directly on the Pictures home screen, open
-   **MyPicsDB 3 Repository > Look and feel > Skin > Estuary MyPicsDB 3** and
-   select **Install**.
-4. Optional: install **MyPicsDB 3 Screensaver** from **Look and feel >
-   Screensaver**, then choose it under **Settings > Interface > Screensaver**.
-   Open its settings and use **Choose collection** to select one manual or saved
-   smart collection. No source is selected automatically.
+   **Add-ons > Install from repository > MyPicsDB 3 Repository > Look and feel >
+   Skin > Estuary MyPicsDB 3** and select **Install**.
+4. Optional: open **Add-ons > Install from repository > MyPicsDB 3 Repository
+   > Look and feel > Screensaver > MyPicsDB 3 Screensaver** and select **Install**.
+   Then choose it under **Settings > Interface > Screensaver**, open its settings
+   and use **Choose collection** to select one manual or saved smart collection.
+   No source is selected automatically.
 
 ### Quick install without the MyPicsDB 3 Repository
 
@@ -189,34 +189,6 @@ releases yourself and install newer packages manually.
    - **Database** — local SQLite or a shared MySQL/MariaDB catalogue;
    - **Maintenance** — missing-record retention and debug logging.
 
-## MyPicsDB 3 Screensaver
-
-Version 0.7.0 adds a separate `screensaver.mypicsdb3` add-on in the same Kodi
-repository. It intentionally has its own add-on identity so Kodi can select it
-under **Settings > Interface > Screensaver** without turning the picture plug-in
-into a long-running screen UI.
-
-The screensaver does not choose **all pictures**, favorites or geotagged media
-automatically. Open the screensaver's **Settings** and select **Choose
-collection**. The picker lists:
-
-- manual collections, preserving their explicit order when **Random order** is
-  disabled;
-- saved smart collections, using their validated Query Model sort when random
-  order is disabled.
-
-Only still pictures are displayed. Videos in a mixed manual collection are
-skipped. Pictures keep their aspect ratio and are centered on an opaque black
-full-screen canvas, including when Kodi's **Preview** button launches the
-screensaver from Settings.
-Random mode uses the catalogue's stored random key and a bounded query
-instead of an unbounded database random sort. **Maximum pictures per session**
-is capped at 1,000. The screensaver opens the existing SQLite database read-only
-(or issues SELECT-only queries with the configured MySQL/MariaDB account), never
-runs migrations and never starts a scan. If the database or selected collection
-is unavailable, it shows a short fallback message and exits cleanly when Kodi
-deactivates the screensaver.
-
 ### Optional RAW and HEIF image decoders
 
 MyPicsDB 3 can index supported file extensions, but Kodi must also have an
@@ -242,9 +214,9 @@ installed.
 
 Video indexing is disabled by default. Enable **Settings > Scanning > Include
 videos**, review the video-extension list and run **Scan now**. Videos are stored
-in the existing catalogue with `media_type=video`. In 0.2.22, their date comes
-from the file modification time and their MIME type is inferred from the
-filename; no separate video scraper or `ffprobe` dependency is used.
+in the existing catalogue with `media_type=video`. Their date comes from the
+file modification time and their MIME type is inferred from the filename; no
+separate video scraper or `ffprobe` dependency is used.
 
 Videos appear in folder, recent, date, favorites and search results and in the
 dedicated **Videos** node. Camera, keyword, geolocation and embedded-rating
@@ -297,7 +269,8 @@ after the configured retention period.
 ### Recommended: install through the MyPicsDB 3 repository
 
 Installing the repository is recommended because Kodi can then discover future
-updates for the picture add-on and the optional Estuary fork.
+updates for the picture add-on, the optional screensaver and the optional Estuary
+fork.
 
 1. Open the [latest MyPicsDB 3 release](https://github.com/raffe1234/mypicsdb3/releases/latest).
 2. Under **Assets**, download `repository.mypicsdb3-<version>.zip` and copy it
@@ -372,6 +345,38 @@ interval, so non-random rows keep their current provider results. A scan that
 changes the catalogue, a relevant home-screen setting change or **Refresh random
 selections** can produce a new random selection before the interval expires.
 
+### Optional: install MyPicsDB 3 Screensaver
+
+After MyPicsDB 3 is installed:
+
+1. Open **Add-ons > Install from repository > MyPicsDB 3 Repository**.
+2. Open **Look and feel > Screensaver**.
+3. Select **MyPicsDB 3 Screensaver** and choose **Install**.
+4. Open **Settings > Interface > Screensaver** and select **MyPicsDB 3
+   Screensaver**.
+5. Open its **Settings**, choose **Choose collection**, and select one manual or
+   saved smart collection. The settings dialog closes after the selection is
+   saved; reopen it to change options or use **Preview**. No source is selected
+   automatically.
+
+The screensaver is a separate `screensaver.mypicsdb3` add-on but uses the
+existing MyPicsDB 3 catalogue. Manual collections preserve their explicit order
+when **Random order** is disabled. Saved smart collections use their validated
+Query Model sort when random order is disabled.
+
+Only still pictures are displayed. Videos in a mixed manual collection are
+skipped. Pictures keep their aspect ratio and are centered on an opaque black
+full-screen canvas, including when Kodi's **Preview** button launches the
+screensaver from Settings. Random mode uses the catalogue's stored random key
+and a bounded query instead of an unbounded database random sort. **Maximum
+pictures per session** is capped at 1,000.
+
+The screensaver opens the existing SQLite database read-only (or issues
+SELECT-only queries with the configured MySQL/MariaDB account), never runs
+migrations and never starts a scan. If the database or selected collection is
+unavailable, it shows a short fallback message and exits cleanly when Kodi
+deactivates the screensaver.
+
 ### Default album view
 
 Choose the view used when an album opens under **Settings > General > Default
@@ -387,14 +392,15 @@ not install the update repository.
 
 1. Open the [latest MyPicsDB 3 release](https://github.com/raffe1234/mypicsdb3/releases/latest).
 2. Under **Assets**, download either:
-   - `plugin.image.mypicsdb3-<version>.zip`; or
+   - `plugin.image.mypicsdb3-<version>.zip`;
+   - `screensaver.mypicsdb3-<version>.zip`; or
    - `skin.estuary.mypicsdb3-<version>.zip`.
 3. Enable **Unknown sources** under **Settings > System > Add-ons**.
 4. Open **Add-ons > Install from zip file** and select the downloaded package.
 
-Installing the skin package directly also installs or updates its required
-MyPicsDB 3 dependency when Kodi can resolve that dependency from an enabled
-repository.
+Installing the skin or screensaver package directly also installs or updates its
+required MyPicsDB 3 dependency when Kodi can resolve that dependency from an
+enabled repository.
 
 Kodi resolves ExifRead and PyMySQL from its add-on repositories. IPTCInfo3 is an
 optional dependency and is used only for files identified as JPEG; EXIF and XMP
@@ -630,8 +636,8 @@ from the picker if the playlist is stored in another Kodi music source. Open the
 collection and choose **Play picture slideshow with music**. The assignment is a
 reference to the playlist file; MyPicsDB does not copy or edit it.
 
-Music playback is deliberately picture-only in 0.6.0. Videos keep their normal
-separate playback path, so a mixed manual collection still uses **Play picture
+Music playback is deliberately picture-only. Videos keep their normal separate
+playback path, so a mixed manual collection still uses **Play picture
 slideshow** or **Play video playlist**. When the picture slideshow closes, the
 background service stops the music queue only when it still matches the queue
 started by MyPicsDB. If another music queue has replaced it, that audio is left
@@ -812,6 +818,7 @@ Build output:
 
 ```text
 dist/plugin.image.mypicsdb3-<version>.zip
+dist/screensaver.mypicsdb3-<version>.zip
 dist/repository.mypicsdb3-<version>.zip
 dist/skin.estuary.mypicsdb3-<skin-version>.zip
 dist/mypicsdb3-<version>-source.zip
@@ -833,8 +840,8 @@ CI, Pages and release builds.
 ## Updates for other users
 
 Install `repository.mypicsdb3-<version>.zip` once. When GitHub Pages is enabled
-and the included Pages workflow has deployed, Kodi can discover picture add-on
-and skin updates from:
+and the included Pages workflow has deployed, Kodi can discover picture add-on,
+screensaver and skin updates from:
 
 ```text
 https://raffe1234.github.io/mypicsdb3/repository/omega/
@@ -890,10 +897,13 @@ releases. Bump it only when `repository.mypicsdb3` itself changes:
 python3 tools/set_version.py 0.4.2 --repository-version 0.2.27
 ```
 
-The skin version and pinned upstream Kodi tag are maintained separately in
+The screensaver has its own add-on manifest and dependency on MyPicsDB 3; update
+its version when the screensaver package itself changes. The skin version and
+pinned upstream Kodi tag are maintained separately in
 `contrib/estuary/upstream.json`. Update `CHANGELOG.md`, commit the changes, and
 tag the project version with a `v` prefix. The release workflow verifies, tests,
-builds all three Kodi packages and attaches the archives to the GitHub release.
+builds the picture add-on, screensaver, repository add-on and compatible Estuary
+skin packages, then attaches the archives to the GitHub release.
 
 ## Settings display
 

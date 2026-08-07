@@ -10,29 +10,29 @@ repository.
 ## Overview
 
 ```text
-                         ┌──────────────────────┐
-                         │        Kodi          │
-                         └──────────┬───────────┘
-                                    │
-                   ┌────────────────┴────────────────┐
-                   │                                 │
-          one-shot plug-in calls             background service
-                   │                                 │
-            addon.py / views.py              service.py / service_loop.py
-                   │                                 │
-        ┌──────────┼───────────┐          ┌──────────┼───────────┐
-        │          │           │          │          │           │
-     browse      search    slideshow   auto scan  date refresh  monitor
-        │          │           │          │
-        └──────────┴─────┬─────┴──────────┘
-                         │
-                    Catalog API
-                         │
-        ┌────────────────┼─────────────────┐
-        │                │                 │
-    SQLite/MySQL     Scanner writes    saved queries
-                         │
-              filesystem + metadata
+                              ┌──────────────────────┐
+                              │        Kodi          │
+                              └──────────┬───────────┘
+                                         │
+             ┌───────────────────────────┼──────────────────────────┐
+             │                           │                          │
+    one-shot plug-in calls        background service          screensaver
+             │                           │                          │
+      addon.py / views.py        service.py / service_loop.py   default.py
+             │                           │                          │
+  ┌──────────┼───────────┐      ┌────────┼──────────┐       read-only provider
+  │          │           │      │        │          │              │
+browse     search    slideshow  scan  refresh    monitor    bounded picture query
+  │          │           │      │                                │
+  └──────────┴─────┬─────┴──────┘                                │
+                   │                                              │
+              Catalog API                                 SQLite/MySQL SELECT
+                   │
+       ┌───────────┼──────────────┐
+       │           │              │
+   SQLite/MySQL Scanner writes saved queries/collections
+                   │
+            filesystem + metadata
 ```
 
 ## Choose a guide
@@ -87,6 +87,14 @@ service cleanup.
 Main files: `music_playlists.py`, `music_slideshow.py`, `views.py`, `kodi.py`,
 `service_loop.py`, `db/catalog.py`.
 
+### [MyPicsDB 3 screensaver](SCREENSAVER.md)
+
+Read this for manual/smart collection source selection, bounded read-only
+catalogue queries, full-screen picture layout and Kodi screensaver lifecycle.
+
+Main files: `screensaver.mypicsdb3/default.py`, `screensaver.py`, `query_model.py`,
+`db/engine.py`, `tests/test_screensaver.py`.
+
 ### [Estuary integration, builds, GitHub Actions and releases](SKIN_BUILD_RELEASE.md)
 
 Read this for the maintained Estuary fork, widget contracts, upstream pins,
@@ -114,5 +122,3 @@ Some changes need more than one flow guide:
 3. Open the listed tests and run one focused file.
 4. Note the invariants before editing.
 5. Update the guide when your change alters the described path.
-
-- [MyPicsDB 3 screensaver](SCREENSAVER.md) — explicit collection selection, bounded read-only queries and screensaver lifecycle.

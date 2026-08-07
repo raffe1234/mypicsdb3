@@ -1,7 +1,8 @@
 # Estuary integration, builds, GitHub Actions and releases
 
-This guide covers the optional Estuary MyPicsDB 3 skin, generated packages and
-the GitHub workflows that validate and publish them.
+This guide covers the optional Estuary MyPicsDB 3 skin, the picture add-on, the
+separate screensaver, generated packages and the GitHub workflows that validate
+and publish them.
 
 ## Source and generated content
 
@@ -82,7 +83,8 @@ Offline/local upstream source for one channel:
 python3 tools/build.py --channel omega --estuary-source /path/to/skin.estuary
 ```
 
-The build writes archives and a repository tree under `dist/`.
+The build writes the picture add-on, screensaver, repository add-on, compatible
+Estuary skin archives and repository tree under `dist/`.
 
 ## GitHub Actions after a push
 
@@ -113,9 +115,10 @@ update versions and changelog
 → release workflow rebuilds and attaches assets
 ```
 
-The plug-in, repository add-on, Estuary skin, database schema and Query Model
-have different versions. Change only the version that belongs to the modified
-contract.
+The plug-in, screensaver, repository add-on, Estuary skin, database schema and
+Query Model have different versions. Change only the version that belongs to the
+modified contract, and keep the screensaver's declared MyPicsDB 3 dependency
+compatible with the core API it imports.
 
 ## Scheduled upstream refresh
 

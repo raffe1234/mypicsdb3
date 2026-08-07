@@ -23,28 +23,33 @@ that belong to your task.
    request workflow.
 
 For a small documentation-only change, steps 1, 2, 5 and 7 are usually enough.
-For scanner, database, slideshow or skin changes, complete all seven steps.
+For scanner, database, slideshow, screensaver or skin changes, complete all seven
+steps.
 
 ## The project in one paragraph
 
 MyPicsDB 3 is a Kodi picture add-on with an optional home-video catalogue. Kodi
-starts the add-on for browser and action requests and starts a separate service
-for background work. The code reads Kodi picture sources through an adapter,
-extracts metadata, stores a searchable catalogue in SQLite or MySQL/MariaDB,
-and converts database rows into Kodi directory items, widgets and slideshows.
-A separate build tool creates the optional Estuary MyPicsDB 3 skin and Kodi
-repository packages.
+starts the picture add-on for browser and action requests, starts a separate
+service for background work, and can start the optional MyPicsDB 3 Screensaver as
+an independent full-screen UI. The shared core reads Kodi picture sources through
+an adapter, extracts metadata, stores a searchable catalogue in SQLite or
+MySQL/MariaDB, and converts database rows into Kodi directory items, widgets and
+slideshows. A separate build tool creates the optional Estuary MyPicsDB 3 skin,
+the screensaver package and Kodi repository packages.
 
-## The two entry points
+## The three Kodi entry points
 
-There are two small files at the top of the add-on package:
+Kodi can enter the project through three small top-level scripts:
 
 - `plugin.image.mypicsdb3/addon.py` calls `plugin_main()` for menu, widget and
   action requests.
 - `plugin.image.mypicsdb3/service.py` calls `service_main()` for background
-  maintenance, automatic scans and mixed-slideshow monitoring.
+  maintenance, automatic scans and slideshow monitoring.
+- `screensaver.mypicsdb3/default.py` handles screensaver source actions and the
+  full-screen screensaver lifecycle without creating `Runtime`, running
+  migrations or starting scans.
 
-Most implementation code lives under:
+Most shared implementation code lives under:
 
 ```text
 plugin.image.mypicsdb3/resources/lib/mypicsdb3/
@@ -54,7 +59,7 @@ plugin.image.mypicsdb3/resources/lib/mypicsdb3/
 
 ```text
 Kodi
-├── addon.py
+├── plugin.image.mypicsdb3/addon.py
 │   └── entrypoints.plugin_main()
 │       ├── router.parse_request()
 │       ├── KodiContext
@@ -64,18 +69,23 @@ Kodi
 │       │   └── KodiFilesystem
 │       └── PluginUI.dispatch()
 │           ├── browsing and widgets
-│           ├── search and saved collections
+│           ├── search and collections
 │           ├── source and scan actions
 │           └── slideshow actions
 │
-└── service.py
-    └── entrypoints.service_main()
-        └── ServiceLoop
-            ├── automatic scans
-            ├── scan progress and cancellation
-            ├── date-sensitive refreshes
-            ├── setting-change handling
-            └── mixed-slideshow monitoring
+├── plugin.image.mypicsdb3/service.py
+│   └── entrypoints.service_main()
+│       └── ServiceLoop
+│           ├── automatic scans
+│           ├── scan progress and cancellation
+│           ├── date-sensitive refreshes
+│           ├── setting-change handling
+│           └── slideshow/music monitoring
+│
+└── screensaver.mypicsdb3/default.py
+    ├── source picker actions
+    └── ScreensaverReadOnlyProvider
+        └── bounded read-only catalogue queries + full-screen WindowDialog
 ```
 
 The important design direction is:
@@ -120,6 +130,7 @@ all major layers without involving scanner or slideshow complexity.
 | `plugin.image.mypicsdb3/resources/lib/mypicsdb3/` | Main Python package |
 | `plugin.image.mypicsdb3/resources/settings.xml` | Kodi settings UI |
 | `plugin.image.mypicsdb3/resources/language/` | Localized strings |
+| `screensaver.mypicsdb3/` | Optional MyPicsDB-aware Kodi screensaver package |
 | `repository.mypicsdb3/` | Kodi update-repository add-on |
 | `contrib/estuary/` | Pinned upstream versions and maintained Estuary patches |
 | `tests/` | Unit, integration and adapter tests |
@@ -146,6 +157,7 @@ Prefer this page, `ARCHITECTURE.md` and the current source code when they differ
 | Change global or saved search | `search.py`, `query_model.py` | `saved_searches.py`, search tests |
 | Change the smart-filter editor | `smart_filter_editor.py` | `query_model.py`, editor tests |
 | Change a slideshow | `views.py`, `slideshow.py` | `service_loop.py`, slideshow tests |
+| Change the screensaver | `screensaver.mypicsdb3/default.py`, `screensaver.py` | `tests/test_screensaver.py`, screensaver flow guide |
 | Change background behaviour | `service_loop.py` | `kodi.py`, service tests |
 | Change home rows | `preferences.py`, `home_layout_editor.py` | Estuary tests and skin docs |
 | Change the Estuary fork | `contrib/estuary/` | `tools/estuary_skin.py`, skin tests |
@@ -183,7 +195,10 @@ contributor does not need to open one very large architecture document:
 - [Plug-in requests, browsing and widgets](flows/PLUGIN_BROWSING.md)
 - [Scanning, filesystems, metadata and catalogue writes](flows/SCANNING_METADATA.md)
 - [Search, Query Model and saved smart collections](flows/SEARCH_COLLECTIONS.md)
+- [Manual collections](flows/STATIC_COLLECTIONS.md)
 - [Slideshows and the background service](flows/SLIDESHOW_SERVICE.md)
+- [Collection music playlists](flows/COLLECTION_MUSIC.md)
+- [MyPicsDB 3 screensaver](flows/SCREENSAVER.md)
 - [Estuary integration, builds, GitHub Actions and releases](flows/SKIN_BUILD_RELEASE.md)
 
 Start from the [data-flow index](flows/README.md) when you are unsure which one

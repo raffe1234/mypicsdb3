@@ -35,7 +35,7 @@ PowerShell.
 
 Most automated tests use Kodi stubs and do not require a Kodi installation. A
 real Kodi installation is still needed for manual checks involving windows,
-skins, network sources, decoders and playback.
+skins, screensaver lifecycle, network sources, decoders and playback.
 
 ## Branch and pull request workflow
 

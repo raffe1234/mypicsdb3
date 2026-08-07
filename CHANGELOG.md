@@ -26,6 +26,10 @@
   collection. The picker runs its packaged Python file directly, avoiding Kodi's
   deprecated `RunScript`-by-non-script-add-on path, and logs the stored source
   type, id and name for runtime diagnostics.
+- Rework the README installation guidance so repository, Estuary and screensaver
+  paths are explicit and the detailed screensaver setup lives with the rest of
+  the installation instructions. Refresh contributor, architecture, build and
+  data-flow docs for the new third Kodi entry point and screensaver package.
 - Extend build/verification tooling so the new screensaver is indexed in the
   MyPicsDB 3 repository and available as a standalone release package.
 

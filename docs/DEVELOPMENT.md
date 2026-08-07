@@ -12,6 +12,9 @@ New to the project? Read [Start here](START_HERE.md),
 - `db/catalog.py` contains catalogue writes and read models.
 - `scanner.py` never runs from a widget route.
 - `views.py` is the Kodi-specific browser and action layer.
+- `screensaver.py` is a bounded read-only catalogue provider;
+  `screensaver.mypicsdb3/default.py` owns Kodi's screensaver window and settings
+  actions without creating `Runtime`.
 - `tools/estuary_skin.py` creates the separate skin from a pinned official
   Estuary source tree; generated upstream files are not committed.
 
@@ -52,7 +55,7 @@ For offline development, point the builder at a local copy of the official
 python3 tools/build.py --channel omega --estuary-source /path/to/xbmc/addons/skin.estuary
 ```
 
-To test only the plug-in and repository without downloading Estuary:
+To test the plug-in, screensaver and repository without downloading Estuary:
 
 ```bash
 python3 tools/build.py --skip-skin
@@ -99,8 +102,8 @@ add-on checker and publish the packages. Create the release tag only after the
 Kodi supports `minversion` and `maxversion` on repository `<dir>` elements, but
 `kodi-addon-checker` 0.0.36 rejects those attributes in its bundled XML schema.
 The workflows therefore run Kodi's checker for the picture add-on and generated
-skins, while `tools/verify.py` validates the repository add-on, channel ranges
-and URLs directly.
+skins, while `tools/verify.py` validates the screensaver package plus the
+repository add-on, channel ranges and URLs directly.
 
 `kodi-addon-checker` 0.0.36 can also crash if an external Kodi repository
 cannot be loaded and its internal `Repository` object is left without an

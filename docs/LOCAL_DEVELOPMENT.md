@@ -81,8 +81,8 @@ What these commands cover:
 - `tools/verify.py` checks source/package structure, manifests, versions and
   repository contracts;
 - `pytest` runs the normal automated suite with Kodi stubs;
-- `tools/build.py --skip-skin` builds plug-in and repository output without
-  downloading official Estuary source.
+- `tools/build.py --skip-skin` builds plug-in, screensaver and repository output
+  without downloading official Estuary source.
 
 A full build is required before changes that affect Estuary integration,
 repository generation or releases:

@@ -13,7 +13,7 @@ MyPicsDB 3 runs inside Kodi and depends on Kodi for:
 - user dialogs, directory listings and notifications;
 - media display, playlists and playback state;
 - add-on settings and profile storage;
-- skin integration and home-screen widgets.
+- skin integration, home-screen widgets and screensaver lifecycle.
 
 The add-on owns:
 
@@ -22,11 +22,12 @@ The add-on owns:
 - query validation and SQL generation;
 - scan safety, locking, cancellation and checkpoints;
 - conversion of catalogue rows to Kodi views;
-- the optional Estuary fork build and repository packaging.
+- the optional Estuary fork build, screensaver integration and repository
+  packaging.
 
 ## Process model
 
-Kodi starts two independent Python entry points.
+Kodi can start three independent Python entry points.
 
 ### Plug-in process
 
@@ -72,17 +73,36 @@ writing GUI state while Kodi may still be unloading the previous skin or
 unregistering the old add-on instance. Plug-in actions continue to publish
 settings immediately when required.
 
+### Screensaver process
+
+`screensaver.mypicsdb3/default.py` is a separate Kodi screensaver entry point.
+It handles `choose-source` and `clear-source` settings actions, or starts the
+full-screen picture loop when Kodi activates or previews the screensaver.
+
+```text
+screensaver.mypicsdb3/default.py
+→ import the installed MyPicsDB 3 core library
+→ read the selected manual/smart collection id
+→ create ScreensaverReadOnlyProvider
+→ run one bounded read-only catalogue query
+→ create opaque full-screen WindowDialog
+→ rotate fitted still pictures until Kodi deactivates the screensaver
+```
+
+The screensaver deliberately does not create `Runtime`, call migrations, publish
+Home state or start a scan. Its database path is read-only and bounded.
+
 ## Layer and dependency map
 
 ```text
 Entry points
-  addon.py, service.py
+  addon.py, service.py, screensaver.mypicsdb3/default.py
         ↓
 Kodi-facing orchestration
-  entrypoints.py, views.py, service_loop.py, kodi.py
+  entrypoints.py, views.py, service_loop.py, kodi.py, screensaver default.py
         ↓
 Application and domain logic
-  scanner.py, search.py, query_model.py, saved_searches.py,
+  scanner.py, search.py, query_model.py, saved_searches.py, screensaver.py,
   static_collections.py, slideshow.py, preferences.py, home_layout_editor.py
         ↓
 Infrastructure adapters
@@ -195,11 +215,22 @@ feature explicit and picture-only. `kodi.py` and `service_loop.py` own the
 session token, queue fingerprint and cleanup after the native picture slideshow
 ends. Playlist files and music are never imported or modified.
 
+### `screensaver.py`: bounded read-only screensaver provider
+
+`ScreensaverReadOnlyProvider` reads the existing SQLite/MySQL catalogue without
+creating `Runtime` or calling schema initialization. Manual collections resolve
+their ordered still-picture references; saved smart collections parse and
+compile the validated Query Model. Missing media and videos are filtered,
+random mode uses the stored `random_key`, and every session has a hard result
+limit. Kodi-specific window creation and source-selection dialogs remain in the
+separate `screensaver.mypicsdb3/default.py` package.
+
 ### `service_loop.py`: long-running maintenance
 
 The service synchronizes sources, schedules automatic scans, reacts to local
 date changes, notices home-widget limit changes, advances the separate random
-home-row generation on its configured hourly interval advances compatible mixed slideshows after video playback, and cleans up only
+home-row generation on its configured hourly interval, advances compatible mixed
+slideshows after video playback, and cleans up only
 the recognized music queue belonging to a finished collection picture
 slideshow. It must remain responsive to Kodi abort
 requests and defer disruptive work while playback is active when configured.
@@ -208,8 +239,8 @@ requests and defer disruptive work while playback is active when configured.
 
 `contrib/estuary/upstream.json` pins official Estuary sources per Kodi channel.
 Maintained patches are applied by `tools/estuary_skin.py`; generated source is
-not committed. `tools/build.py` creates plug-in, repository, skin and source
-archives plus the published Kodi repository tree.
+not committed. `tools/build.py` creates plug-in, screensaver, repository, skin
+and source archives plus the published Kodi repository tree.
 
 ## Catalogue data model
 
@@ -304,10 +335,19 @@ playlist or interfering with unrelated playback. Manual-collection stills avoid
 that JSON-RPC playlist entirely: a hidden ordered plug-in directory is consumed
 by Kodi's native ``SlideShow`` built-in.
 
+### Screensaver safety
+
+`screensaver.mypicsdb3` is packaged separately but imports the installed MyPicsDB
+3 core library. It may read the configured SQLite/MySQL catalogue and compile
+stored Query Models, but it must not create `Runtime`, run migrations, start
+scans, publish Home state or modify original media. Screensaver database access
+is bounded and read-only by design.
+
 ## Testing architecture
 
 The `tests/` suite installs Kodi module stubs in `tests/conftest.py`. Tests can
-therefore exercise route, adapter and service behaviour without a Kodi process.
+therefore exercise route, adapter, service and screensaver behaviour without a
+Kodi process.
 The suite includes:
 
 - catalogue and migration tests;
@@ -315,6 +355,7 @@ The suite includes:
 - query, search, saved-search and manual-collection tests;
 - UI and Kodi-state tests;
 - slideshow and service-loop tests;
+- screensaver provider, source-selection and window-lifecycle tests;
 - Estuary patch and package-asset tests;
 - optional MariaDB integration tests.
 
@@ -338,8 +379,8 @@ Use the document type that matches the change:
 
 Before opening a pull request, ask:
 
-1. Which process runs this code: one-shot plug-in, long-running service, build
-   tool, or more than one?
+1. Which process runs this code: one-shot plug-in, long-running service,
+   screensaver, build tool, or more than one?
 2. Does the change touch Kodi UI, filesystem I/O, metadata, database state or
    generated packages?
 3. Can a network source be unavailable or a Kodi process stop midway?
@@ -348,11 +389,3 @@ Before opening a pull request, ask:
    migration or release-note update?
 6. Which regression test proves the intended behaviour?
 7. Which real-Kodi checks remain after automated tests pass?
-
-## Screensaver boundary
-
-`screensaver.mypicsdb3` is packaged as a separate Kodi screensaver add-on but
-imports the installed MyPicsDB 3 core library. It may read the configured
-SQLite/MySQL catalogue and compile stored Query Models, but it must not create a
-`Runtime`, run migrations, start scans, publish Home state or modify original
-media. Screensaver database access is bounded and read-only by design.
