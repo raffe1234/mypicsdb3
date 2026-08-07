@@ -167,7 +167,11 @@ class FakeAddon:
         self.settings = {}
 
     def getAddonInfo(self, key):
-        return {"icon": "icon.png", "fanart": "fanart.jpg"}[key]
+        return {
+            "icon": "icon.png",
+            "fanart": "fanart.jpg",
+            "version": "0.8.0",
+        }[key]
 
     def getSetting(self, key):
         return self.settings.get(key, "")
@@ -187,6 +191,8 @@ class FakeKodi:
             minimum_rating_policy="all",
             include_videos=False,
             video_extensions=("mp4", "mov", "m4v", "mkv", "avi"),
+            random_home_refresh_hours=2,
+            debug_logging=False,
         )
         self.debug_messages = []
         self.info_messages = []
@@ -213,6 +219,16 @@ class FakeKodi:
 
     def localize(self, string_id, fallback):
         return fallback
+
+    def installed_addon_version(self, addon_id):
+        return {
+            "screensaver.mypicsdb3": "0.7.0",
+            "repository.mypicsdb3": "0.2.26",
+            "skin.estuary.mypicsdb3": "21.3.16",
+        }.get(addon_id, "")
+
+    def current_skin_id(self):
+        return "skin.estuary.mypicsdb3"
 
     def kodi_picture_sources(self):
         return []
@@ -313,6 +329,8 @@ class FakeCatalog:
             "videos": 2,
             "missing": 1,
             "folders": 4,
+            "sources": 3,
+            "enabled_sources": 2,
         }
 
     def latest_scan(self):
@@ -554,7 +572,7 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 22
+    assert len(calls.items) == 23
     assert calls.items[0][0].endswith("/search")
     assert calls.items[1][0].endswith("/saved-searches")
     assert calls.items[2][0].endswith("/collections")
@@ -584,7 +602,7 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     ui.root()
 
     urls = [url for url, _item, _is_folder in calls.items]
-    assert len(urls) == 19
+    assert len(urls) == 20
     assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
     assert "plugin://plugin.image.mypicsdb3/years" not in urls
     assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
@@ -596,6 +614,7 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     assert "plugin://plugin.image.mypicsdb3/action/refresh-random" in urls
     assert "plugin://plugin.image.mypicsdb3/action/scan" in urls
     assert "plugin://plugin.image.mypicsdb3/status" in urls
+    assert "plugin://plugin.image.mypicsdb3/diagnostics" in urls
     assert "plugin://plugin.image.mypicsdb3/action/settings" in urls
 
 
@@ -638,6 +657,47 @@ def test_scan_status_shows_completed_duration_and_active_elapsed_time(monkeypatc
     labels = [item.label for _url, item, _is_folder in calls.items]
     assert "Scan duration: 4 min 18 sec" in labels
     assert "Elapsed time: 2 min 5 sec" in labels
+
+
+def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.debug_logging = True
+    runtime.kodi.settings.include_videos = True
+    runtime.kodi.scan_state = {
+        "token": "scan-1",
+        "kind": "automatic",
+        "state": "running",
+        "pictures_seen": 12,
+        "started_at": 1000.0,
+        "source": "Private photos",
+        "path": "smb://secret-user:secret-pass@server/private/image.jpg",
+    }
+    monkeypatch.setattr(views.time, "time", lambda: 1125.0)
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("diagnostics", {}))
+
+    labels = [item.label for _url, item, _is_folder in calls.items]
+    joined = "\n".join(labels)
+    assert calls.category == "Diagnostics"
+    assert calls.content == "files"
+    assert "MyPicsDB 3 version: 0.8.0" in labels
+    assert "Screensaver version: 0.7.0" in labels
+    assert "Repository version: 0.2.26" in labels
+    assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
+    assert "Database schema: 7" in labels
+    assert "Query Model version: 1" in labels
+    assert "Sources: 3" in labels
+    assert "Enabled sources: 2" in labels
+    assert "Active scan: Automatic scan - Scan in progress" in labels
+    assert "Elapsed time: 2 min 5 sec" in labels
+    assert "Include videos: On" in labels
+    assert "Debug logging: On" in labels
+    assert "smb://" not in joined
+    assert "secret-pass" not in joined
+    assert "Private photos" not in joined
+    assert calls.items[-1][0].endswith("/action/log-diagnostic")
 
 
 def test_refresh_random_selections_refreshes_widgets_without_scanning(monkeypatch) -> None:

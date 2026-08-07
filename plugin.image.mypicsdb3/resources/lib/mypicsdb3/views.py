@@ -13,6 +13,7 @@ import xbmcgui  # type: ignore
 import xbmcplugin  # type: ignore
 
 from .album_view import save_current_album_view
+from .diagnostics import collect_diagnostics
 from .home_layout_editor import (
     SmartHomeEditorText,
     show_smart_home_layout_editor,
@@ -385,6 +386,7 @@ class PluginUI:
                 ),
                 scan_action,
                 self.add_folder(self.text(30014, "Scan status"), "status"),
+                self.add_folder(self.text(32843, "Diagnostics"), "diagnostics"),
                 self.add_action(self.text(30015, "Settings"), "action/settings"),
             ]
         )
@@ -2182,6 +2184,151 @@ class PluginUI:
                 error=True,
             )
 
+    def diagnostics(self):
+        snapshot = collect_diagnostics(self.runtime)
+        not_installed = self.text(32857, "Not installed")
+        on = self.text(32223, "On")
+        off = self.text(32224, "Off")
+
+        skin = snapshot["skin"]
+        skin_text = str(skin.get("id") or not_installed)
+        if skin.get("version"):
+            skin_text = "%s %s" % (skin_text, skin["version"])
+
+        values = [
+            "%s: %s"
+            % (self.text(32844, "MyPicsDB 3 version"), snapshot["plugin_version"]),
+            "%s: %s"
+            % (
+                self.text(32845, "Screensaver version"),
+                snapshot["screensaver_version"] or not_installed,
+            ),
+            "%s: %s"
+            % (
+                self.text(32846, "Repository version"),
+                snapshot["repository_version"] or not_installed,
+            ),
+            "%s: %s" % (self.text(32847, "Current skin"), skin_text),
+            "%s: %s"
+            % (self.text(30041, "Database backend"), snapshot["backend"]),
+            "%s: %s"
+            % (self.text(32848, "Database schema"), snapshot["schema_version"]),
+            "%s: %s"
+            % (
+                self.text(32849, "Query Model version"),
+                snapshot["query_model_version"],
+            ),
+            "%s: %s"
+            % (self.text(30038, "Indexed media"), snapshot["indexed_media"]),
+            "%s: %s"
+            % (self.text(32601, "Indexed videos"), snapshot["indexed_videos"]),
+            "%s: %s"
+            % (self.text(30039, "Missing media"), snapshot["missing_media"]),
+            "%s: %s"
+            % (self.text(30040, "Indexed albums"), snapshot["indexed_albums"]),
+            "%s: %s" % (self.text(32850, "Sources"), snapshot["sources"]),
+            "%s: %s"
+            % (self.text(32851, "Enabled sources"), snapshot["enabled_sources"]),
+        ]
+
+        last_scan = snapshot["last_scan"]
+        if last_scan.get("finished_at"):
+            values.append(
+                "%s: %s"
+                % (self.text(30036, "Last scan"), last_scan["finished_at"])
+            )
+            if last_scan.get("status"):
+                values.append("Status: %s" % last_scan["status"])
+            if last_scan.get("duration_seconds") is not None:
+                values.append(
+                    "%s: %s"
+                    % (
+                        self.text(32797, "Scan duration"),
+                        format_duration(last_scan["duration_seconds"]),
+                    )
+                )
+        else:
+            values.append(
+                "%s: %s"
+                % (self.text(30036, "Last scan"), self.text(30037, "Never"))
+            )
+
+        active = snapshot["active_scan"]
+        if active:
+            kind = (
+                self.text(32731, "Automatic scan")
+                if active["kind"] == "automatic"
+                else self.text(32732, "Manual scan")
+            )
+            state = (
+                self.text(32735, "Stopping scan")
+                if active["state"] == "cancelling"
+                else self.text(32733, "Scan in progress")
+            )
+            values.append(
+                "%s: %s - %s"
+                % (self.text(32852, "Active scan"), kind, state)
+            )
+            values.append(
+                "%s: %s"
+                % (self.text(30047, "Pictures found"), active["pictures_seen"])
+            )
+            if active.get("elapsed_seconds") is not None:
+                values.append(
+                    "%s: %s"
+                    % (
+                        self.text(32798, "Elapsed time"),
+                        format_duration(active["elapsed_seconds"]),
+                    )
+                )
+        else:
+            values.append(
+                "%s: %s"
+                % (
+                    self.text(32852, "Active scan"),
+                    self.text(32730, "No scan is running"),
+                )
+            )
+
+        values.extend(
+            [
+                "%s: %s"
+                % (
+                    self.text(32853, "Home-screen row count"),
+                    snapshot["home_widget_limit"],
+                ),
+                "%s: %s h"
+                % (
+                    self.text(32854, "Random refresh interval"),
+                    snapshot["random_home_refresh_hours"],
+                ),
+                "%s: %s"
+                % (
+                    self.text(32855, "Include videos"),
+                    on if snapshot["include_videos"] else off,
+                ),
+                "%s: %s"
+                % (
+                    self.text(32856, "Debug logging"),
+                    on if snapshot["debug_logging"] else off,
+                ),
+            ]
+        )
+
+        items = [("", self._item(value), False) for value in values]
+        items.append(
+            self.add_action(
+                self.text(32720, "Write diagnostic log entry"),
+                "action/log-diagnostic",
+            )
+        )
+        self.finish(
+            items,
+            content="files",
+            cache=False,
+            category=self.text(32843, "Diagnostics"),
+        )
+
     def status(self):
         overview = self.catalog.overview()
         latest = self.catalog.latest_scan()
@@ -2973,6 +3120,8 @@ class PluginUI:
                 )
                 return self.finish([], content="images", cache=False)
             return self.collection(collection_id, params)
+        if route == "diagnostics":
+            return self.diagnostics()
         if route == "sources":
             return self.sources(params)
         if route == "source":

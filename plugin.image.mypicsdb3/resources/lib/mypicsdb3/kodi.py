@@ -254,6 +254,29 @@ class KodiContext:
         value = self.addon.getLocalizedString(string_id)
         return value or fallback
 
+    def installed_addon_version(self, addon_id: str) -> str:
+        """Return an installed add-on version without raising for optional add-ons."""
+
+        try:
+            addon = (
+                self.addon
+                if addon_id == self.addon_id
+                else xbmcaddon.Addon(addon_id)
+            )
+            return str(addon.getAddonInfo("version") or "")
+        except Exception:
+            return ""
+
+    @staticmethod
+    def current_skin_id() -> str:
+        getter = getattr(xbmc, "getSkinDir", None) if xbmc is not None else None
+        if not callable(getter):
+            return ""
+        try:
+            return str(getter() or "")
+        except Exception:
+            return ""
+
     def notify(
         self,
         message: str,

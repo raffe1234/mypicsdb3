@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0 - 2026-08-07
+
+- Add a read-only **Diagnostics** view to the main MyPicsDB 3 browser. It shows
+  plug-in, screensaver, repository and current-skin versions together with the
+  database backend, schema, Query Model version, catalogue counts and scan state.
+- Keep diagnostics privacy-safe by excluding database credentials, profile paths,
+  source URIs and the current scan path. The collector is structured so a later
+  support-bundle exporter can reuse the same sanitized snapshot.
+- Surface Home row count, random refresh interval, video-indexing state and debug
+  logging state, and keep the existing **Write diagnostic log entry** action
+  available from the diagnostics screen. Database schema 7 is unchanged.
+
 ## 0.7.0 - 2026-08-07
 
 - Add a separate `screensaver.mypicsdb3` Kodi add-on, packaged and published by

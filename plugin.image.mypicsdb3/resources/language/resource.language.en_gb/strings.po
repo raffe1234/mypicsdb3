@@ -1386,3 +1386,63 @@ msgstr "Could not save music playlist"
 msgctxt "#32842"
 msgid "Open Collections"
 msgstr "Open Collections"
+
+msgctxt "#32843"
+msgid "Diagnostics"
+msgstr "Diagnostics"
+
+msgctxt "#32844"
+msgid "MyPicsDB 3 version"
+msgstr "MyPicsDB 3 version"
+
+msgctxt "#32845"
+msgid "Screensaver version"
+msgstr "Screensaver version"
+
+msgctxt "#32846"
+msgid "Repository version"
+msgstr "Repository version"
+
+msgctxt "#32847"
+msgid "Current skin"
+msgstr "Current skin"
+
+msgctxt "#32848"
+msgid "Database schema"
+msgstr "Database schema"
+
+msgctxt "#32849"
+msgid "Query Model version"
+msgstr "Query Model version"
+
+msgctxt "#32850"
+msgid "Sources"
+msgstr "Sources"
+
+msgctxt "#32851"
+msgid "Enabled sources"
+msgstr "Enabled sources"
+
+msgctxt "#32852"
+msgid "Active scan"
+msgstr "Active scan"
+
+msgctxt "#32853"
+msgid "Home-screen row count"
+msgstr "Home-screen row count"
+
+msgctxt "#32854"
+msgid "Random refresh interval"
+msgstr "Random refresh interval"
+
+msgctxt "#32855"
+msgid "Include videos"
+msgstr "Include videos"
+
+msgctxt "#32856"
+msgid "Debug logging"
+msgstr "Debug logging"
+
+msgctxt "#32857"
+msgid "Not installed"
+msgstr "Not installed"

@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.7.0. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.0. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -98,6 +98,9 @@ For the component boundaries and long-lived safety rules, see
   separate from original source files.
 - Stop collection-slideshow music only while the service still recognizes the
   music queue started by that slideshow; a replacement queue is left alone.
+- Open the read-only **Diagnostics** view for privacy-safe version, database,
+  catalogue, scan and Home configuration details without exposing credentials or
+  source paths.
 
 ### Development and delivery
 
