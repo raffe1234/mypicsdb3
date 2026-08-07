@@ -148,8 +148,9 @@ Screensaver and Estuary MyPicsDB 3 updates.
 3. Optional: to show MyPicsDB 3 rows directly on the Pictures home screen, open
    **Add-ons > Install from repository > MyPicsDB 3 Repository > Look and feel >
    Skin > Estuary MyPicsDB 3** and select **Install**.
-4. Optional: open **Add-ons > Install from repository > MyPicsDB 3 Repository
-   > Look and feel > Screensaver > MyPicsDB 3 Screensaver** and select **Install**.
+4. Optional: to use screensaver, open **Add-ons > Install from repository > 
+   MyPicsDB 3 Repository > Look and feel > Screensaver > MyPicsDB 3 Screensaver
+   ** and select **Install**. 
    Then choose it under **Settings > Interface > Screensaver**, open its settings
    and use **Choose collection** to select one manual or saved smart collection.
    No source is selected automatically.
