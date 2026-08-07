@@ -201,6 +201,11 @@ either collection through the plug-in uses **Default album view**.
 `MyPicsDB3.HomeSmartMode1` remains a legacy compatibility property and should
 be ignored by new skin integrations.
 
+
+### Cold-start Home slot materialization
+
+The bundled Estuary fork does not use `Window(Home).Property(MyPicsDB3.HomeRowN)` as an `<include condition>`. All nine slot controls are materialized when `Home.xml` loads. Their runtime visibility reads the persistent `home_row_N` add-on setting, and each slot uses the fixed `home-slot?slot=N` provider. The provider resolves the current built-in, smart or manual row from settings. Home-window properties remain useful for smart/manual headings and generation-based cache invalidation, but delayed service publication is no longer required for the controls to exist.
+
 Media sources can use:
 
 ```xml

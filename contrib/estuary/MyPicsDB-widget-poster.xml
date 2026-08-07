@@ -1,4 +1,211 @@
 <includes>
+	<variable name="MyPicsDBHomeRowLabel1">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),recent_taken)">$ADDON[plugin.image.mypicsdb3 30001]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),recent_added)">$ADDON[plugin.image.mypicsdb3 30002]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),random_memories)">$ADDON[plugin.image.mypicsdb3 30003]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),recent_albums)">$ADDON[plugin.image.mypicsdb3 30004]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),random_albums)">$ADDON[plugin.image.mypicsdb3 30005]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),on_this_day)">$ADDON[plugin.image.mypicsdb3 30006]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),on_this_day_random)">$ADDON[plugin.image.mypicsdb3 32606]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),favorites)">$ADDON[plugin.image.mypicsdb3 30010]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),rated)">$ADDON[plugin.image.mypicsdb3 30011]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),geotagged)">$ADDON[plugin.image.mypicsdb3 30012]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),smart)">$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName1)]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),collection)">$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName1)]</value>
+		<value></value>
+	</variable>
+	<variable name="MyPicsDBHomeRowRandomGeneration1">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),on_this_day_random)">$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]</value>
+		<value>0</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowBrowseMode1">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),on_this_day_random)">never</value>
+		<value>auto</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowLabel2">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),recent_taken)">$ADDON[plugin.image.mypicsdb3 30001]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),recent_added)">$ADDON[plugin.image.mypicsdb3 30002]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),random_memories)">$ADDON[plugin.image.mypicsdb3 30003]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),recent_albums)">$ADDON[plugin.image.mypicsdb3 30004]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),random_albums)">$ADDON[plugin.image.mypicsdb3 30005]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),on_this_day)">$ADDON[plugin.image.mypicsdb3 30006]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),on_this_day_random)">$ADDON[plugin.image.mypicsdb3 32606]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),favorites)">$ADDON[plugin.image.mypicsdb3 30010]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),rated)">$ADDON[plugin.image.mypicsdb3 30011]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),geotagged)">$ADDON[plugin.image.mypicsdb3 30012]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),smart)">$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName2)]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),collection)">$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName2)]</value>
+		<value></value>
+	</variable>
+	<variable name="MyPicsDBHomeRowRandomGeneration2">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),on_this_day_random)">$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]</value>
+		<value>0</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowBrowseMode2">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),on_this_day_random)">never</value>
+		<value>auto</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowLabel3">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),recent_taken)">$ADDON[plugin.image.mypicsdb3 30001]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),recent_added)">$ADDON[plugin.image.mypicsdb3 30002]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),random_memories)">$ADDON[plugin.image.mypicsdb3 30003]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),recent_albums)">$ADDON[plugin.image.mypicsdb3 30004]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),random_albums)">$ADDON[plugin.image.mypicsdb3 30005]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),on_this_day)">$ADDON[plugin.image.mypicsdb3 30006]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),on_this_day_random)">$ADDON[plugin.image.mypicsdb3 32606]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),favorites)">$ADDON[plugin.image.mypicsdb3 30010]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),rated)">$ADDON[plugin.image.mypicsdb3 30011]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),geotagged)">$ADDON[plugin.image.mypicsdb3 30012]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),smart)">$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName3)]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),collection)">$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName3)]</value>
+		<value></value>
+	</variable>
+	<variable name="MyPicsDBHomeRowRandomGeneration3">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),on_this_day_random)">$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]</value>
+		<value>0</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowBrowseMode3">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),on_this_day_random)">never</value>
+		<value>auto</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowLabel4">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),recent_taken)">$ADDON[plugin.image.mypicsdb3 30001]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),recent_added)">$ADDON[plugin.image.mypicsdb3 30002]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),random_memories)">$ADDON[plugin.image.mypicsdb3 30003]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),recent_albums)">$ADDON[plugin.image.mypicsdb3 30004]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),random_albums)">$ADDON[plugin.image.mypicsdb3 30005]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),on_this_day)">$ADDON[plugin.image.mypicsdb3 30006]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),on_this_day_random)">$ADDON[plugin.image.mypicsdb3 32606]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),favorites)">$ADDON[plugin.image.mypicsdb3 30010]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),rated)">$ADDON[plugin.image.mypicsdb3 30011]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),geotagged)">$ADDON[plugin.image.mypicsdb3 30012]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),smart)">$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName4)]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),collection)">$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName4)]</value>
+		<value></value>
+	</variable>
+	<variable name="MyPicsDBHomeRowRandomGeneration4">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),on_this_day_random)">$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]</value>
+		<value>0</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowBrowseMode4">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),on_this_day_random)">never</value>
+		<value>auto</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowLabel5">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),recent_taken)">$ADDON[plugin.image.mypicsdb3 30001]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),recent_added)">$ADDON[plugin.image.mypicsdb3 30002]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),random_memories)">$ADDON[plugin.image.mypicsdb3 30003]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),recent_albums)">$ADDON[plugin.image.mypicsdb3 30004]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),random_albums)">$ADDON[plugin.image.mypicsdb3 30005]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),on_this_day)">$ADDON[plugin.image.mypicsdb3 30006]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),on_this_day_random)">$ADDON[plugin.image.mypicsdb3 32606]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),favorites)">$ADDON[plugin.image.mypicsdb3 30010]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),rated)">$ADDON[plugin.image.mypicsdb3 30011]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),geotagged)">$ADDON[plugin.image.mypicsdb3 30012]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),smart)">$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName5)]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),collection)">$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName5)]</value>
+		<value></value>
+	</variable>
+	<variable name="MyPicsDBHomeRowRandomGeneration5">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),on_this_day_random)">$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]</value>
+		<value>0</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowBrowseMode5">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),on_this_day_random)">never</value>
+		<value>auto</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowLabel6">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),recent_taken)">$ADDON[plugin.image.mypicsdb3 30001]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),recent_added)">$ADDON[plugin.image.mypicsdb3 30002]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),random_memories)">$ADDON[plugin.image.mypicsdb3 30003]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),recent_albums)">$ADDON[plugin.image.mypicsdb3 30004]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),random_albums)">$ADDON[plugin.image.mypicsdb3 30005]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),on_this_day)">$ADDON[plugin.image.mypicsdb3 30006]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),on_this_day_random)">$ADDON[plugin.image.mypicsdb3 32606]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),favorites)">$ADDON[plugin.image.mypicsdb3 30010]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),rated)">$ADDON[plugin.image.mypicsdb3 30011]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),geotagged)">$ADDON[plugin.image.mypicsdb3 30012]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),smart)">$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName6)]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),collection)">$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName6)]</value>
+		<value></value>
+	</variable>
+	<variable name="MyPicsDBHomeRowRandomGeneration6">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),on_this_day_random)">$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]</value>
+		<value>0</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowBrowseMode6">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),on_this_day_random)">never</value>
+		<value>auto</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowLabel7">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),recent_taken)">$ADDON[plugin.image.mypicsdb3 30001]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),recent_added)">$ADDON[plugin.image.mypicsdb3 30002]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),random_memories)">$ADDON[plugin.image.mypicsdb3 30003]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),recent_albums)">$ADDON[plugin.image.mypicsdb3 30004]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),random_albums)">$ADDON[plugin.image.mypicsdb3 30005]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),on_this_day)">$ADDON[plugin.image.mypicsdb3 30006]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),on_this_day_random)">$ADDON[plugin.image.mypicsdb3 32606]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),favorites)">$ADDON[plugin.image.mypicsdb3 30010]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),rated)">$ADDON[plugin.image.mypicsdb3 30011]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),geotagged)">$ADDON[plugin.image.mypicsdb3 30012]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),smart)">$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName7)]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),collection)">$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName7)]</value>
+		<value></value>
+	</variable>
+	<variable name="MyPicsDBHomeRowRandomGeneration7">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),on_this_day_random)">$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]</value>
+		<value>0</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowBrowseMode7">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),on_this_day_random)">never</value>
+		<value>auto</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowLabel8">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),recent_taken)">$ADDON[plugin.image.mypicsdb3 30001]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),recent_added)">$ADDON[plugin.image.mypicsdb3 30002]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),random_memories)">$ADDON[plugin.image.mypicsdb3 30003]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),recent_albums)">$ADDON[plugin.image.mypicsdb3 30004]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),random_albums)">$ADDON[plugin.image.mypicsdb3 30005]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),on_this_day)">$ADDON[plugin.image.mypicsdb3 30006]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),on_this_day_random)">$ADDON[plugin.image.mypicsdb3 32606]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),favorites)">$ADDON[plugin.image.mypicsdb3 30010]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),rated)">$ADDON[plugin.image.mypicsdb3 30011]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),geotagged)">$ADDON[plugin.image.mypicsdb3 30012]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),smart)">$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName8)]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),collection)">$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName8)]</value>
+		<value></value>
+	</variable>
+	<variable name="MyPicsDBHomeRowRandomGeneration8">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),on_this_day_random)">$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]</value>
+		<value>0</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowBrowseMode8">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),on_this_day_random)">never</value>
+		<value>auto</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowLabel9">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),recent_taken)">$ADDON[plugin.image.mypicsdb3 30001]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),recent_added)">$ADDON[plugin.image.mypicsdb3 30002]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),random_memories)">$ADDON[plugin.image.mypicsdb3 30003]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),recent_albums)">$ADDON[plugin.image.mypicsdb3 30004]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),random_albums)">$ADDON[plugin.image.mypicsdb3 30005]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),on_this_day)">$ADDON[plugin.image.mypicsdb3 30006]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),on_this_day_random)">$ADDON[plugin.image.mypicsdb3 32606]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),favorites)">$ADDON[plugin.image.mypicsdb3 30010]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),rated)">$ADDON[plugin.image.mypicsdb3 30011]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),geotagged)">$ADDON[plugin.image.mypicsdb3 30012]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),smart)">$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName9)]</value>
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),collection)">$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName9)]</value>
+		<value></value>
+	</variable>
+	<variable name="MyPicsDBHomeRowRandomGeneration9">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),on_this_day_random)">$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]</value>
+		<value>0</value>
+	</variable>
+	<variable name="MyPicsDBHomeRowBrowseMode9">
+		<value condition="String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),random_memories) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),random_albums) | String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),on_this_day_random)">never</value>
+		<value>auto</value>
+	</variable>
 	<include name="MyPicsDBWidgetPosterLayout">
 		<param name="focused">false</param>
 		<param name="label_color">grey</param>
@@ -29,12 +236,12 @@
 		</definition>
 	</include>
 	<include name="WidgetListPosterMyPicsDB">
-		<param name="onclick_condition">false</param><param name="browse_mode">auto</param><param name="widget_limit">40</param>
+		<param name="onclick_condition">false</param><param name="browse_mode">auto</param><param name="widget_limit">40</param><param name="visible">true</param>
 		<definition>
-			<include content="CategoryLabel"><param name="label">$PARAM[widget_header]</param><param name="list_id" value="$PARAM[list_id]"/></include>
-			<include content="BusyListSpinner"><param name="list_id" value="$PARAM[list_id]"/><param name="posy" value="250"/></include>
+			<include content="CategoryLabel"><param name="label">$PARAM[widget_header]</param><param name="list_id" value="$PARAM[list_id]"/><param name="visible" value="$PARAM[visible]"/></include>
+			<include content="BusyListSpinner"><param name="list_id" value="$PARAM[list_id]"/><param name="posy" value="250"/><param name="visible" value="$PARAM[visible]"/></include>
 			<control type="panel" id="$PARAM[list_id]">
-				<left>0</left><top>115</top><visible>Integer.IsGreater(Container($PARAM[list_id]).NumItems,0) | Container($PARAM[list_id]).IsUpdating</visible><right>0</right><height>518</height>
+				<left>0</left><top>115</top><visible>$PARAM[visible]</visible><visible>Integer.IsGreater(Container($PARAM[list_id]).NumItems,0) | Container($PARAM[list_id]).IsUpdating</visible><right>0</right><height>518</height>
 				<onclick condition="$PARAM[onclick_condition]">$PARAM[onclick_action]</onclick>
 				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),picture)">ShowPicture($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>
 				<onclick condition="String.IsEqual(ListItem.Property(MyPicsDB3.MediaType),video)">PlayMedia($ESCINFO[ListItem.Property(MyPicsDB3.WidgetPath)])</onclick>

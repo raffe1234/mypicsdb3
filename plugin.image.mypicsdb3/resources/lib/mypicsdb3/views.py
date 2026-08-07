@@ -88,6 +88,18 @@ HOME_FAST_IMAGE_EXTENSIONS = frozenset(
 )
 HOME_WIDGET_CANDIDATE_MULTIPLIER = 4
 HOME_WIDGET_CANDIDATE_MAXIMUM = 160
+HOME_SLOT_ROUTE_BY_KEY = {
+    "recent_taken": "recent-taken",
+    "recent_added": "recent-added",
+    "random_memories": "random",
+    "recent_albums": "recent-folders",
+    "random_albums": "random-folders",
+    "on_this_day": "on-this-day",
+    "on_this_day_random": "on-this-day-random",
+    "favorites": "favorites",
+    "rated": "rated",
+    "geotagged": "geotagged",
+}
 
 
 class PluginUI:
@@ -1471,7 +1483,6 @@ class PluginUI:
         self._write_home_layout_items(result, saved_names, collection_names)
         self._invalidate_home_widgets("home layout changed")
         self.kodi.notify(self.text(32214, "Home-screen layout saved"))
-        xbmc.executebuiltin("ReloadSkin()")
 
     def _dynamic_home_slot_snapshot(self) -> Tuple[Tuple[str, str, str], ...]:
         values = []
@@ -3165,6 +3176,34 @@ class PluginUI:
             return self.saved_search_slideshow_pictures(
                 int(params["id"]), params
             )
+        if route == "home-slot":
+            try:
+                slot = int(params.get("slot") or 0)
+            except (TypeError, ValueError):
+                slot = 0
+            if slot < 1 or slot > 9:
+                self.kodi.log.warning(
+                    "Home row ignored because its slot is invalid: %s",
+                    params.get("slot"),
+                )
+                return self.finish([], content="images", cache=False)
+            row = str(
+                self.kodi.addon.getSetting("home_row_%d" % slot) or "none"
+            )
+            builtin_route = HOME_SLOT_ROUTE_BY_KEY.get(row)
+            if builtin_route:
+                return self.dispatch(Request(builtin_route, params))
+            if row == "smart":
+                return self.dispatch(Request("home-smart", params))
+            if row == "collection":
+                return self.dispatch(Request("home-collection", params))
+            if row != "none":
+                self.kodi.log.warning(
+                    "Home row %d ignored because its type is invalid: %s",
+                    slot,
+                    row,
+                )
+            return self.finish([], content="images", cache=False)
         if route == "home-smart":
             try:
                 slot = int(params.get("slot") or 0)

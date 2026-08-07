@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.8.7" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.8.8" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Roll back the experimental full-screen collection integration and startup skin reload, restoring the pre-0.8.4 Home and picture-viewer behavior while retaining diagnostics and support bundles.</news>
+    <news>Make Estuary Home rows materialize independently of delayed service state, using persistent slot settings and a generic home-slot provider so cold startup no longer needs ReloadSkin().</news>
   </extension>
 </addon>

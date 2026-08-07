@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.8 - 2026-08-07
+
+- Make the nine Estuary MyPicsDB 3 Home slots materialize when `Home.xml` loads instead of conditionally expanding them from session-local Home-window properties. Each slot now has one persistent `home-slot?slot=N` provider and dynamic visibility driven by the add-on's saved `home_row_N` setting.
+- Keep Home-window properties for live headings and provider generations, but no longer require the delayed background service to publish them before the row controls exist. This removes the cold-start race without reintroducing `ReloadSkin()`.
+- Preserve selective random-row refresh by resolving a per-slot skin variable to the random generation only for Random memories, Random albums and On this day - random.
+- Home layout saves now invalidate the MyPicsDB providers in place instead of reloading the whole skin. Database schema remains 7. Generated Estuary revisions advance to Omega 21 and Piers 19.
+
 ## 0.8.7 - 2026-08-07
 
 - Roll back the experimental **Add current picture to collection** integration

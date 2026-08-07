@@ -13,791 +13,89 @@
 						<param name="list_id" value="4100"/>
 						<param name="icon_height" value="110"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+					<include content="WidgetListPosterMyPicsDB">
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),none)"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=1&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration1]"/>
 						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently taken"/>
+						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode1]"/>
+						<param name="widget_header" value="$VAR[MyPicsDBHomeRowLabel1]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4200"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+					<include content="WidgetListPosterMyPicsDB">
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),none)"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=2&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration2]"/>
 						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently added"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random memories"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recent albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),on_this_day_random)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day - random"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Favorites"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Rated pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Geotagged pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),smart)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=1&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName1)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),collection)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=1&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName1)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4200"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently taken"/>
+						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode2]"/>
+						<param name="widget_header" value="$VAR[MyPicsDBHomeRowLabel2]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4300"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+					<include content="WidgetListPosterMyPicsDB">
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),none)"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=3&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration3]"/>
 						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently added"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random memories"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recent albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),on_this_day_random)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day - random"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Favorites"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Rated pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Geotagged pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),smart)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=2&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName2)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),collection)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=2&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName2)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4300"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently taken"/>
+						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode3]"/>
+						<param name="widget_header" value="$VAR[MyPicsDBHomeRowLabel3]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4400"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+					<include content="WidgetListPosterMyPicsDB">
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),none)"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=4&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration4]"/>
 						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently added"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random memories"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recent albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),on_this_day_random)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day - random"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Favorites"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Rated pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Geotagged pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),smart)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=3&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName3)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),collection)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=3&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName3)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4400"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently taken"/>
+						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode4]"/>
+						<param name="widget_header" value="$VAR[MyPicsDBHomeRowLabel4]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4500"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+					<include content="WidgetListPosterMyPicsDB">
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),none)"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=5&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration5]"/>
 						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently added"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random memories"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recent albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),on_this_day_random)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day - random"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Favorites"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Rated pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Geotagged pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),smart)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=4&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName4)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),collection)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=4&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName4)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4500"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently taken"/>
+						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode5]"/>
+						<param name="widget_header" value="$VAR[MyPicsDBHomeRowLabel5]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4600"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+					<include content="WidgetListPosterMyPicsDB">
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),none)"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=6&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration6]"/>
 						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently added"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random memories"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recent albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),on_this_day_random)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day - random"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Favorites"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Rated pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Geotagged pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),smart)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=5&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName5)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),collection)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=5&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName5)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4600"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently taken"/>
+						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode6]"/>
+						<param name="widget_header" value="$VAR[MyPicsDBHomeRowLabel6]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4700"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+					<include content="WidgetListPosterMyPicsDB">
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),none)"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=7&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration7]"/>
 						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently added"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random memories"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recent albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),on_this_day_random)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day - random"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Favorites"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Rated pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Geotagged pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),smart)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=6&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName6)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),collection)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=6&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName6)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4700"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently taken"/>
+						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode7]"/>
+						<param name="widget_header" value="$VAR[MyPicsDBHomeRowLabel7]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4800"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+					<include content="WidgetListPosterMyPicsDB">
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),none)"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=8&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration8]"/>
 						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently added"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random memories"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recent albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),on_this_day_random)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day - random"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Favorites"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Rated pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Geotagged pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),smart)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=7&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName7)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),collection)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=7&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName7)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4800"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently taken"/>
+						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode8]"/>
+						<param name="widget_header" value="$VAR[MyPicsDBHomeRowLabel8]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="4900"/>
 					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
+					<include content="WidgetListPosterMyPicsDB">
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),none)"/>
+						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=9&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration9]"/>
 						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently added"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random memories"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recent albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),on_this_day_random)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day - random"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Favorites"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Rated pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Geotagged pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),smart)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=8&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName8)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),collection)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=8&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName8)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="4900"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),recent_taken)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently taken"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),recent_added)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-added?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recently added"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),random_memories)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random memories"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),recent_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/recent-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Recent albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),random_albums)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/random-folders?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Random albums"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),on_this_day)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),on_this_day_random)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/on-this-day-random?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$INFO[Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="On this day - random"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="browse_mode" value="never"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),favorites)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/favorites?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Favorites"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),rated)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/rated?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Rated pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),geotagged)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/geotagged?widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="Geotagged pictures"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),smart)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-smart?slot=9&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeSmartName9)]"/>
-						<param name="widget_target" value="pictures"/>
-						<param name="list_id" value="5000"/>
-					</include>
-					<include content="WidgetListPosterMyPicsDB" condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),collection)">
-						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-collection?slot=9&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]"/>
-						<param name="widget_limit" value="40"/>
-						<param name="widget_header" value="$INFO[Window(Home).Property(MyPicsDB3.HomeCollectionName9)]"/>
+						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode9]"/>
+						<param name="widget_header" value="$VAR[MyPicsDBHomeRowLabel9]"/>
 						<param name="widget_target" value="pictures"/>
 						<param name="list_id" value="5000"/>
 					</include>
 				</control>
-				<include content="WidgetScrollbar" condition="Skin.HasSetting(touchmode)">
+				<include content="WidgetScrollbar">
 					<param name="scrollbar_id" value="4010"/>
 				</include>
 			</control>

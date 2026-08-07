@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.7. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.8. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -704,8 +704,8 @@ to 720. Common choices are:
 - `12` hours for a lower-impact schedule;
 - `24` hours for a daily scan.
 
-The background service first waits through a short, abortable five-second grace
-period before publishing the Home-screen row state. This protects in-place
+The generated Estuary Home screen materializes all nine MyPicsDB 3 slots from persistent add-on settings, so cold startup does not depend on the background service reaching Home first. The background service still waits through a short, abortable five-second grace
+period before publishing supplemental Home-screen state. This protects in-place
 add-on updates while Kodi may still be unloading a skin. It then waits for the
 configured scan startup delay and runs an incremental scan. By default,
 automatic scanning is disabled and scans are deferred while Kodi is playing

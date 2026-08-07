@@ -57,7 +57,7 @@ service.py
 → entrypoints.service_main()
 → create KodiContext and abort monitor
 → wait through an abortable Home-state publication grace period
-→ publish Estuary Home-window state
+→ publish supplemental Estuary Home-window state
 → ServiceLoop.run()
 → initialize catalogue when migrations are available
 → synchronize sources
@@ -70,8 +70,11 @@ locks are part of the architecture rather than incidental implementation
 details. During in-place add-on updates, the service also defers its initial
 Estuary Home-window property writes for five abortable seconds. This avoids
 writing GUI state while Kodi may still be unloading the previous skin or
-unregistering the old add-on instance. Plug-in actions continue to publish
-settings immediately when required.
+unregistering the old add-on instance. The generated Estuary Home controls no
+longer depend on those properties for initial materialization: persistent
+`home_row_N` settings create nine generic `home-slot` controls at Home load.
+Plug-in actions continue to publish settings and generations immediately when
+required.
 
 ### Screensaver process
 

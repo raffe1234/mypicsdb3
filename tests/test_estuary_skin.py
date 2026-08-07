@@ -125,7 +125,7 @@ def test_patch_skin_creates_separate_addon_and_widgets(tmp_path: Path):
     assert dependencies["plugin.image.mypicsdb3"] == "0.2.7"
 
     home = (output / "xml" / "Home.xml").read_text(encoding="utf-8")
-    assert "plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1" in home
+    assert "plugin://plugin.image.mypicsdb3/home-slot?slot=1&amp;widget=1&amp;home=1" in home
     assert 'id="17000"' in home
     includes_home = (output / "xml" / "Includes_Home.xml").read_text(encoding="utf-8")
     assert '<param name="widget_limit">40</param>' in includes_home
@@ -236,11 +236,11 @@ def test_upstream_config_has_versioned_channels_and_history():
     assert set(project.channels) == {"omega", "piers"}
     assert project.channels["omega"].releases[0].ref == "21.3-Omega"
     assert project.channels["omega"].xbmc_gui_version == "5.17.0"
-    assert project.channels["omega"].patch_revision == 20
-    assert project.channels["omega"].releases[0].skin_version == "21.3.20"
+    assert project.channels["omega"].patch_revision == 21
+    assert project.channels["omega"].releases[0].skin_version == "21.3.21"
     assert project.channels["piers"].xbmc_gui_version == "5.17.0"
-    assert project.channels["piers"].patch_revision == 18
-    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.18"
+    assert project.channels["piers"].patch_revision == 19
+    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.19"
     assert project.channels["piers"].releases[0].ref == "22.0b1-Piers"
     assert all(
         len(channel.releases) <= project.retain_versions

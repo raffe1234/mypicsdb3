@@ -137,43 +137,32 @@ def test_general_settings_offer_addon_menu_visibility_editor() -> None:
     assert hidden.findtext("level") == "4"
     assert hidden.findtext("visible") == "false"
 
-def test_home_fragment_has_visible_titles_and_all_routes() -> None:
+def test_home_fragment_materializes_nine_generic_slots_without_service_state() -> None:
     home = (ROOT / "contrib" / "estuary" / "Home-pictures-group.xml").read_text(
+        encoding="utf-8"
+    )
+    widget = (ROOT / "contrib" / "estuary" / "MyPicsDB-widget-poster.xml").read_text(
         encoding="utf-8"
     )
 
     assert "Addon.SettingBool(plugin.image.mypicsdb3,show_media_sources)" in home
+    assert home.count('content="WidgetListPosterMyPicsDB"') == 9
+    assert 'condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow' not in home
     for position in range(1, 10):
-        assert f"Window(Home).Property(MyPicsDB3.HomeRow{position})" in home
-        assert f"Window(Home).Property(MyPicsDB3.HomeSmartMode{position})" not in home
-        assert f"Window(Home).Property(MyPicsDB3.HomeSmartName{position})" in home
-        assert f"Window(Home).Property(MyPicsDB3.HomeCollectionName{position})" in home
-        smart_condition = (
-            f"String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow{position}),smart)"
-        )
-        assert home.count(smart_condition) == 1
-        collection_condition = (
-            f"String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow{position}),collection)"
-        )
-        assert home.count(collection_condition) == 1
-        assert f"home-smart?slot={position}&amp;widget=1&amp;home=1" in home
-        assert f"home-collection?slot={position}&amp;widget=1&amp;home=1" in home
-    for route in ROUTES:
-        assert f"plugin://plugin.image.mypicsdb3/{route}" in home
-    for heading in HEADINGS:
-        assert f'value="{heading}"' in home
-    assert home.count('<param name="widget_limit" value="40"/>') == 108
-    assert home.count("widget=1&amp;home=1") == 108
-    assert home.count("home-smart?slot=") == 9
-    assert home.count("home-collection?slot=") == 9
-    assert "saved-search?id=$INFO[Addon.SettingInt" not in home
-    assert "Addon.SettingStr(plugin.image.mypicsdb3,home_" not in home
-    assert "Addon.SettingInt(plugin.image.mypicsdb3,home_" not in home
-    assert "Addon.SettingInt(plugin.image.mypicsdb3,home_widget_limit)" not in home
-    assert "&amp;limit=" not in home
+        assert f"home-slot?slot={position}&amp;widget=1&amp;home=1" in home
+        assert f"Addon.SettingStr(plugin.image.mypicsdb3,home_row_{position})" in home
+        assert f"$VAR[MyPicsDBHomeRowLabel{position}]" in home
+        assert f"$VAR[MyPicsDBHomeRowRandomGeneration{position}]" in home
+        assert f"$VAR[MyPicsDBHomeRowBrowseMode{position}]" in home
+        assert f'<variable name="MyPicsDBHomeRowLabel{position}">' in widget
+        assert f'<variable name="MyPicsDBHomeRowRandomGeneration{position}">' in widget
+        assert f'<variable name="MyPicsDBHomeRowBrowseMode{position}">' in widget
+    assert "home-smart?slot=" not in home
+    assert "home-collection?slot=" not in home
+    assert home.count('<param name="widget_limit" value="40"/>') == 9
+    assert home.count("widget=1&amp;home=1") == 9
     assert "Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)" in home
-    assert home.count("Window(Home).Property(MyPicsDB3.RandomWidgetGeneration)") == 27
-    assert home.count("random_generation=") == 27
-    assert "WidgetListSquareMyPicsDB" not in home
-    assert "WidgetListLandscapeMyPicsDB" not in home
-    assert "$ADDON[plugin.image.mypicsdb3" not in home
+    assert "Window(Home).Property(MyPicsDB3.HomeRow1)" not in home
+    assert '<param name="visible">true</param>' in widget
+    assert '<param name="visible" value="$PARAM[visible]"/>' in widget
+    assert '<visible>$PARAM[visible]</visible><visible>Integer.IsGreater' in widget

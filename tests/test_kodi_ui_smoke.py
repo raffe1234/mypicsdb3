@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.7",
+            "version": "0.8.8",
         }[key]
 
     def getSetting(self, key):
@@ -692,7 +692,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.7" in labels
+    assert "MyPicsDB 3 version: 0.8.8" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -734,19 +734,19 @@ def test_export_support_bundle_action_reports_generated_filename(monkeypatch) ->
     monkeypatch.setattr(
         views,
         "write_support_bundle",
-        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.7.zip",
+        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.8.zip",
     )
 
     ui.dispatch(views.Request("action/export-support-bundle", {}))
 
     assert runtime.kodi.notifications[-1] == (
-        "Support bundle saved: mypicsdb3-support-test-v0.8.7.zip\n"
+        "Support bundle saved: mypicsdb3-support-test-v0.8.8.zip\n"
         "Support bundle folder: Kodi userdata > addon_data > "
         "plugin.image.mypicsdb3 > support-bundles",
         False,
     )
     assert runtime.kodi.info_messages[-1] == (
-        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.7.zip"
+        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.8.zip"
     )
 
 
@@ -1126,7 +1126,7 @@ def test_home_screen_editor_enables_a_hidden_row(monkeypatch) -> None:
 
     assert runtime.kodi.addon.settings["home_row_7"] == "favorites"
     assert "favorites" in runtime.kodi.addon.settings["home_layout"]
-    assert "ReloadSkin()" in calls.builtins
+    assert "ReloadSkin()" not in calls.builtins
 
 
 def test_album_items_do_not_duplicate_global_save_view_context_action(monkeypatch) -> None:
@@ -1319,13 +1319,13 @@ def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
     views.xbmcgui.ListItem = InfoListItem
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
-    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.7")
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.8")
 
     assert url == ""
     assert item.video_tag_requests == 0
     assert item.properties["IsPlayable"] == "false"
     assert item.properties["MyPicsDB3.MediaType"] == "info"
-    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.7"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.8"
     assert is_folder is False
 
 
@@ -2150,6 +2150,45 @@ def test_picture_info_uses_picture_info_tag_when_available(monkeypatch) -> None:
     assert item.picture_tag.date == "2020-07-17 12:00:00"
     assert item.info["pictures"]["title"] == "image.jpg"
     assert "resolution" not in item.info["pictures"]
+
+
+def test_home_slot_route_resolves_builtin_from_persistent_setting(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.addon.setSetting("home_row_1", "recent_taken")
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "home-slot",
+            {"slot": "1", "widget": "1", "home": "1", "generation": ""},
+        )
+    )
+
+    assert calls.category == "Recently taken"
+    assert calls.items
+    assert calls.ended is True
+
+
+def test_home_slot_route_resolves_smart_and_manual_slots(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    query = views.build_global_search_request("spain").query
+    runtime.catalog.saved_search_objects[42] = types.SimpleNamespace(id=42, name="Spain", query=query)
+    runtime.catalog.collection_objects[9] = types.SimpleNamespace(id=9, name="Family picks")
+    runtime.catalog.collection_rows = [{"id": 9, "name": "Family picks", "available_count": 1}]
+    runtime.kodi.addon.setSetting("home_row_2", "smart")
+    runtime.kodi.addon.setSetting("home_smart_id_2", "42")
+    runtime.kodi.addon.setSetting("home_row_3", "collection")
+    runtime.kodi.addon.setSetting("home_collection_id_3", "9")
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("home-slot", {"slot": "2", "widget": "1", "home": "1"}))
+    assert calls.category == "Spain"
+    calls.items.clear(); calls.ended=False
+    ui.dispatch(views.Request("home-slot", {"slot": "3", "widget": "1", "home": "1"}))
+    assert calls.category == "Family picks"
+    assert calls.ended is True
 
 
 def test_home_smart_route_resolves_saved_search_id_from_slot(monkeypatch) -> None:

@@ -34,10 +34,10 @@ or a scan changes catalogue rows, making Kodi request fresh provider results
 without a complete skin reload. Third-party widgets should omit `home=1` when
 they want the general widget limit and original media order.
 
-The three random home providers also include a second cache-key parameter:
+The bundled slot URL always has a second cache-key field. For non-random slots its skin variable resolves to `0`; for the three random row types it resolves to the live random generation:
 
 ```text
-plugin://plugin.image.mypicsdb3/random?widget=1&home=1&generation=<generation>&random_generation=<random-generation>
+plugin://plugin.image.mypicsdb3/home-slot?slot=1&widget=1&home=1&generation=<generation>&random_generation=<slot-random-generation>
 ```
 
 For bundled random home rows, the plug-in hashes both generation values into a
@@ -46,9 +46,9 @@ return the same selection instead of invoking a fresh random sample.
 
 `MyPicsDB3.RandomWidgetGeneration` advances at the interval configured under
 **Settings > Home screen**, two hours by default. It is also advanced by
-**Refresh random selections**. Because only Random memories, Random albums and
-On this day - random include this parameter, scheduled refreshes do not rerun
-the non-random home providers. Catalogue-changing scans still advance the common
+**Refresh random selections**. Because the per-slot variable changes only for Random memories, Random albums and
+On this day - random, scheduled refreshes do not change the provider URL for
+non-random slots. Catalogue-changing scans still advance the common
 generation and therefore refresh every MyPicsDB 3 row, including the random
 ones.
 
@@ -75,7 +75,7 @@ validates the stored query on every request.
 The bundled Estuary integration uses fixed slot providers instead:
 
 ```text
-plugin://plugin.image.mypicsdb3/home-smart?slot=1&widget=1&home=1&generation=<generation>
+plugin://plugin.image.mypicsdb3/home-slot?slot=1&widget=1&home=1&generation=<generation>&random_generation=<slot-random-generation>
 ```
 
 The plug-in validates the slot and resolves its materialized saved-search ID.
@@ -96,7 +96,7 @@ plugin://plugin.image.mypicsdb3/collection?id=9&widget=1
 The bundled Estuary integration uses a fixed materialized slot instead:
 
 ```text
-plugin://plugin.image.mypicsdb3/home-collection?slot=1&widget=1&home=1&generation=<generation>
+plugin://plugin.image.mypicsdb3/home-slot?slot=1&widget=1&home=1&generation=<generation>&random_generation=<slot-random-generation>
 ```
 
 The plug-in resolves `home_collection_id_1`, applies the configured Home-row
