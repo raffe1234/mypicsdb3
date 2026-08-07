@@ -2471,6 +2471,77 @@ class PluginUI:
         items.append(self.add_action(self.text(30061, "Clean missing records"), "action/cleanup"))
         self.finish(items, content="files", category=self.text(30014, "Scan status"))
 
+    def _add_picture_to_collection(self, picture_id: int) -> None:
+        collections = self.catalog.list_collections()
+        dialog = xbmcgui.Dialog()
+        selection = dialog.select(
+            self.text(32812, "Add to collection"),
+            [self.text(32814, "Create new collection...")]
+            + [str(row["name"]) for row in collections],
+        )
+        if selection < 0:
+            return
+        try:
+            if selection == 0:
+                name = dialog.input(self.text(32805, "Collection name"))
+                if not name:
+                    return
+                collection_id = self.catalog.create_collection(name)
+                collection = self.catalog.get_collection(collection_id)
+            else:
+                row = collections[selection - 1]
+                collection_id = int(row["id"])
+                collection = self.catalog.get_collection(collection_id)
+            if collection is None:
+                self.kodi.notify(
+                    self.text(32809, "Collection was not found"), error=True
+                )
+                return
+            added = self.catalog.add_picture_to_collection(
+                collection_id, int(picture_id)
+            )
+            self.kodi.notify(
+                (
+                    self.text(32815, "Added to '%s'")
+                    if added
+                    else self.text(32816, "Already in '%s'")
+                )
+                % collection.name
+            )
+            if added:
+                self._invalidate_home_widgets(
+                    "manual collection content changed"
+                )
+        except (CollectionValidationError, IndexError) as exc:
+            self.kodi.notify(
+                "%s: %s"
+                % (self.text(32810, "Could not save collection"), exc),
+                error=True,
+            )
+
+    def _add_current_picture_to_collection(self) -> None:
+        getter = getattr(self.kodi, "current_slideshow_picture_uri", None)
+        current_uri = str(getter() if callable(getter) else "").strip()
+        if not current_uri:
+            self.kodi.notify(
+                self.text(32876, "The current picture could not be identified"),
+                error=True,
+            )
+            return
+        resolver = getattr(self.catalog, "picture_for_uri", None)
+        row = resolver(current_uri) if callable(resolver) else None
+        if (
+            not isinstance(row, dict)
+            or int(row.get("id") or 0) <= 0
+            or str(row.get("media_type") or "") != "picture"
+        ):
+            self.kodi.notify(
+                self.text(32877, "The current picture is not available in MyPicsDB 3"),
+                error=True,
+            )
+            return
+        self._add_picture_to_collection(int(row["id"]))
+
     def action(self, route: str, params: Dict[str, str]):
         if route == "action/export-support-bundle":
             try:
@@ -2683,54 +2754,11 @@ class PluginUI:
                     error=True,
                 )
             return
+        if route == "action/add-current-picture-to-collection":
+            self._add_current_picture_to_collection()
+            return
         if route == "action/add-to-collection":
-            picture_id = int(params["id"])
-            collections = self.catalog.list_collections()
-            dialog = xbmcgui.Dialog()
-            selection = dialog.select(
-                self.text(32812, "Add to collection"),
-                [self.text(32814, "Create new collection...")]
-                + [str(row["name"]) for row in collections],
-            )
-            if selection < 0:
-                return
-            try:
-                if selection == 0:
-                    name = dialog.input(self.text(32805, "Collection name"))
-                    if not name:
-                        return
-                    collection_id = self.catalog.create_collection(name)
-                    collection = self.catalog.get_collection(collection_id)
-                else:
-                    row = collections[selection - 1]
-                    collection_id = int(row["id"])
-                    collection = self.catalog.get_collection(collection_id)
-                if collection is None:
-                    self.kodi.notify(
-                        self.text(32809, "Collection was not found"), error=True
-                    )
-                    return
-                added = self.catalog.add_picture_to_collection(
-                    collection_id, picture_id
-                )
-                self.kodi.notify(
-                    (
-                        self.text(32815, "Added to '%s'")
-                        if added
-                        else self.text(32816, "Already in '%s'")
-                    )
-                    % collection.name
-                )
-                if added:
-                    self._invalidate_home_widgets(
-                        "manual collection content changed"
-                    )
-            except (CollectionValidationError, IndexError) as exc:
-                self.kodi.notify(
-                    "%s: %s"
-                    % (self.text(32810, "Could not save collection"), exc),
-                    error=True,
-                )
+            self._add_picture_to_collection(int(params["id"]))
             return
         if route == "action/remove-from-collection":
             try:

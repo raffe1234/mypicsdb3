@@ -472,3 +472,36 @@ def test_service_context_defers_home_state_until_explicitly_enabled() -> None:
     context.refresh_settings()
 
     assert calls == ["limit", "layout", "limit"]
+
+
+def test_current_slideshow_picture_uri_uses_native_slideshow_labels(monkeypatch) -> None:
+    labels = {
+        "Slideshow.Path": "smb://server/photos/Summer/",
+        "Slideshow.Filename": "image one.jpg",
+        "ListItem.PicturePath": "smb://wrong/fallback.jpg",
+    }
+    monkeypatch.setattr(
+        kodi,
+        "xbmc",
+        types.SimpleNamespace(getInfoLabel=lambda label: labels.get(label, "")),
+    )
+
+    assert (
+        kodi.KodiContext.current_slideshow_picture_uri()
+        == "smb://server/photos/Summer/image one.jpg"
+    )
+
+
+def test_current_slideshow_picture_uri_falls_back_to_picture_path(monkeypatch) -> None:
+    labels = {
+        "Slideshow.Path": "",
+        "Slideshow.Filename": "",
+        "ListItem.PicturePath": r"C:\\Photos\\image.jpg",
+    }
+    monkeypatch.setattr(
+        kodi,
+        "xbmc",
+        types.SimpleNamespace(getInfoLabel=lambda label: labels.get(label, "")),
+    )
+
+    assert kodi.KodiContext.current_slideshow_picture_uri() == "C:/Photos/image.jpg"

@@ -126,7 +126,7 @@ def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
     )
 
     assert path.endswith(
-        "support-bundles/mypicsdb3-support-20260807-113045Z-v0.8.3.zip"
+        "support-bundles/mypicsdb3-support-20260807-113045Z-v0.8.4.zip"
     )
     with zipfile.ZipFile(path) as archive:
         assert sorted(archive.namelist()) == ["README.txt", "diagnostics.json"]
@@ -135,7 +135,7 @@ def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
 
     assert payload["format_version"] == 1
     assert payload["generated_at"] == "2026-08-07T11:30:45Z"
-    assert payload["diagnostics"]["plugin_version"] == "0.8.3"
+    assert payload["diagnostics"]["plugin_version"] == "0.8.4"
     assert payload["diagnostics"]["active_scan"] == {
         "kind": "manual",
         "state": "running",

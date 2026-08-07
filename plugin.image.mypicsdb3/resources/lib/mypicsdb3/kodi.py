@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from .config import Settings, from_getter, resolve_home_widget_limit
 from .log import Logger
-from .utils import is_indexable_picture_source_uri, normalize_uri, parse_bool
+from .utils import is_indexable_picture_source_uri, join_uri, normalize_uri, parse_bool
 
 try:
     import xbmc  # type: ignore
@@ -900,6 +900,28 @@ class KodiContext:
             return bool(xbmc.Player().isPlaying())
         except Exception:
             return False
+
+    @staticmethod
+    def current_slideshow_picture_uri() -> str:
+        """Return the current native picture-viewer item without changing playback.
+
+        Kodi exposes the active still picture through the Slideshow labels.  The
+        ListItem fallback is only used outside the native slideshow path (for
+        example when Picture Info is opened from a regular picture listing).
+        """
+        if xbmc is None or not hasattr(xbmc, "getInfoLabel"):
+            return ""
+        try:
+            path = str(xbmc.getInfoLabel("Slideshow.Path") or "").strip()
+            filename = str(xbmc.getInfoLabel("Slideshow.Filename") or "").strip()
+            if path and filename:
+                return join_uri(path, filename)
+            picture_path = str(
+                xbmc.getInfoLabel("ListItem.PicturePath") or ""
+            ).strip()
+            return normalize_uri(picture_path)
+        except Exception:
+            return ""
 
     @staticmethod
     def playing_file() -> str:

@@ -18,6 +18,7 @@ CONFIG_PATH = ROOT / "contrib" / "estuary" / "upstream.json"
 FRAGMENT_PATH = ROOT / "contrib" / "estuary" / "Home-pictures-group.xml"
 PICTURES_FRAGMENT_PATH = ROOT / "contrib" / "estuary" / "MyPics-save-album-view.xml"
 MY_PICS_WIDGET_FRAGMENT_PATH = ROOT / "contrib" / "estuary" / "MyPicsDB-widget-poster.xml"
+PICTURE_INFO_FRAGMENT_PATH = ROOT / "contrib" / "estuary" / "MyPicsDB-picture-info-action.xml"
 DEFAULT_CACHE = ROOT / ".cache" / "estuary"
 DEFAULT_OUTPUT = ROOT / "build" / "skin.estuary.mypicsdb3"
 
@@ -216,6 +217,7 @@ def extract_skin_from_archive(archive_path: Path, output_dir: Path, source_addon
         or not (output_dir / "xml" / "Home.xml").is_file()
         or not (output_dir / "xml" / "Includes_Home.xml").is_file()
         or not (output_dir / "xml" / "MyPics.xml").is_file()
+        or not (output_dir / "xml" / "DialogPictureInfo.xml").is_file()
     ):
         raise RuntimeError("The downloaded archive did not contain a usable Estuary skin")
     return output_dir
@@ -472,6 +474,49 @@ def patch_pictures_xml(
         handle.write(patched)
 
 
+def patch_picture_info_xml(
+    picture_info_path: Path,
+    fragment_path: Path = PICTURE_INFO_FRAGMENT_PATH,
+) -> None:
+    """Add one fail-closed collection action to Estuary's native Picture Info."""
+    picture_info = picture_info_path.read_text(encoding="utf-8-sig")
+    if 'id="9200"' in picture_info:
+        raise RuntimeError("MyPicsDB Picture Info action is already present")
+
+    nav_pattern = re.compile(r'(?m)^(?P<indent>[ \t]*)<ondown>5</ondown>[ \t]*$')
+    picture_info, nav_count = nav_pattern.subn(
+        lambda match: (
+            match.group("indent")
+            + '<ondown condition="Window.IsActive(Slideshow) + !SlideShow.IsVideo + System.HasAddon(plugin.image.mypicsdb3)">9200</ondown>\n'
+            + match.group(0)
+        ),
+        picture_info,
+        count=1,
+    )
+    if nav_count != 1:
+        raise RuntimeError("Could not locate Estuary Picture Info list navigation")
+
+    list_pattern = re.compile(
+        r'(?m)^(?P<indent>[ \t]*)<control type="list" id="5">[ \t]*$'
+    )
+    match = list_pattern.search(picture_info)
+    if match is None:
+        raise RuntimeError("Could not locate Estuary Picture Info metadata list")
+    fragment_lines = fragment_path.read_text(encoding="utf-8").strip().splitlines()
+    fragment = "\n".join(
+        match.group("indent") + line if line else line
+        for line in fragment_lines
+    )
+    picture_info = (
+        picture_info[: match.start()]
+        + fragment
+        + "\n"
+        + picture_info[match.start() :]
+    )
+    with picture_info_path.open("w", encoding="utf-8", newline="\n") as handle:
+        handle.write(picture_info)
+
+
 def patch_skin(
     source_dir: Path,
     output_dir: Path,
@@ -484,6 +529,7 @@ def patch_skin(
         or not (source_dir / "xml" / "Home.xml").is_file()
         or not (source_dir / "xml" / "Includes_Home.xml").is_file()
         or not (source_dir / "xml" / "MyPics.xml").is_file()
+        or not (source_dir / "xml" / "DialogPictureInfo.xml").is_file()
     ):
         raise RuntimeError("The input directory is not a usable Estuary source directory: %s" % source_dir)
     if output_dir.exists():
@@ -495,6 +541,7 @@ def patch_skin(
     patch_widget_poster_limit(output_dir / "xml" / "Includes_Home.xml")
     patch_mypicsdb_widget_poster(output_dir / "xml" / "Includes_Home.xml")
     patch_pictures_xml(output_dir / "xml" / "MyPics.xml")
+    patch_picture_info_xml(output_dir / "xml" / "DialogPictureInfo.xml")
     notice = """# Estuary MyPicsDB 3
 
 This package is generated from Kodi's Estuary source at `{ref}` and patched by

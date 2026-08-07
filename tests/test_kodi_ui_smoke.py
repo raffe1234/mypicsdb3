@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.3",
+            "version": "0.8.4",
         }[key]
 
     def getSetting(self, key):
@@ -217,6 +217,7 @@ class FakeKodi:
         self.home_generations = {"content": 7, "random": 3}
         self.music_session = {}
         self.music_fingerprint = "test-music-fingerprint"
+        self.current_picture_uri = ""
 
     def localize(self, string_id, fallback):
         return fallback
@@ -280,6 +281,9 @@ class FakeKodi:
     def is_playing(self):
         return False
 
+    def current_slideshow_picture_uri(self):
+        return self.current_picture_uri
+
     def music_playlist_fingerprint(self):
         return self.music_fingerprint
 
@@ -319,6 +323,7 @@ class FakeCatalog:
         self.music_playlists = {}
         self.music_playlist_updates = []
         self.music_playlist_clears = []
+        self.picture_uri_rows = {}
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -447,6 +452,9 @@ class FakeCatalog:
                 row.pop("music_playlist_uri", None)
         self.music_playlist_clears.append(key)
         return True
+
+    def picture_for_uri(self, uri):
+        return self.picture_uri_rows.get(str(uri))
 
     def list_collections(self):
         return list(self.collection_rows)
@@ -692,7 +700,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.3" in labels
+    assert "MyPicsDB 3 version: 0.8.4" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -734,19 +742,19 @@ def test_export_support_bundle_action_reports_generated_filename(monkeypatch) ->
     monkeypatch.setattr(
         views,
         "write_support_bundle",
-        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.3.zip",
+        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.4.zip",
     )
 
     ui.dispatch(views.Request("action/export-support-bundle", {}))
 
     assert runtime.kodi.notifications[-1] == (
-        "Support bundle saved: mypicsdb3-support-test-v0.8.3.zip\n"
+        "Support bundle saved: mypicsdb3-support-test-v0.8.4.zip\n"
         "Support bundle folder: Kodi userdata > addon_data > "
         "plugin.image.mypicsdb3 > support-bundles",
         False,
     )
     assert runtime.kodi.info_messages[-1] == (
-        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.3.zip"
+        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.4.zip"
     )
 
 
@@ -1319,13 +1327,13 @@ def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
     views.xbmcgui.ListItem = InfoListItem
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
-    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.3")
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.4")
 
     assert url == ""
     assert item.video_tag_requests == 0
     assert item.properties["IsPlayable"] == "false"
     assert item.properties["MyPicsDB3.MediaType"] == "info"
-    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.3"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.4"
     assert is_folder is False
 
 
@@ -2174,6 +2182,67 @@ def test_home_smart_route_resolves_saved_search_id_from_slot(monkeypatch) -> Non
     assert calls.category == "Spain"
     assert runtime.catalog.query_requests[-1][0] is query
     assert calls.ended is True
+
+
+def test_fullscreen_picture_add_reuses_collection_write_path(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.current_picture_uri = "smb://server/photos/image.jpg"
+    runtime.catalog.picture_uri_rows[runtime.kodi.current_picture_uri] = {
+        "id": 41,
+        "media_type": "picture",
+    }
+    runtime.catalog.collection_rows = [{"id": 9, "name": "Family picks"}]
+    runtime.catalog.collection_objects[9] = types.SimpleNamespace(
+        id=9, name="Family picks"
+    )
+    FakeDialog.select_responses[:] = [1]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("action/add-current-picture-to-collection", {}))
+
+    assert runtime.catalog.added_collection_items == [(9, 41)]
+    assert runtime.kodi.notifications[-1] == ("Added to 'Family picks'", False)
+    assert runtime.kodi.home_invalidations[-1] == "manual collection content changed"
+
+
+def test_fullscreen_picture_add_fails_closed_for_unindexed_item(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.current_picture_uri = "smb://server/photos/not-indexed.jpg"
+    runtime.catalog.collection_rows = [{"id": 9, "name": "Family picks"}]
+    runtime.catalog.collection_objects[9] = types.SimpleNamespace(
+        id=9, name="Family picks"
+    )
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("action/add-current-picture-to-collection", {}))
+
+    assert runtime.catalog.added_collection_items == []
+    assert runtime.catalog.created_collections == []
+    assert runtime.kodi.notifications[-1] == (
+        "The current picture is not available in MyPicsDB 3",
+        True,
+    )
+
+
+def test_fullscreen_picture_add_rejects_video_catalog_row(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.current_picture_uri = "smb://server/photos/clip.mp4"
+    runtime.catalog.picture_uri_rows[runtime.kodi.current_picture_uri] = {
+        "id": 42,
+        "media_type": "video",
+    }
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("action/add-current-picture-to-collection", {}))
+
+    assert runtime.catalog.added_collection_items == []
+    assert runtime.kodi.notifications[-1] == (
+        "The current picture is not available in MyPicsDB 3",
+        True,
+    )
 
 
 def test_manual_collections_list_open_and_use_default_album_view(monkeypatch) -> None:

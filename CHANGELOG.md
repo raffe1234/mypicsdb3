@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.4 - 2026-08-07
+
+- Keep Kodi's native full-screen picture viewer and add a MyPicsDB 3 action to
+  Estuary Picture Info for adding the currently displayed still picture to a
+  manual collection.
+- Resolve the current picture by Kodi's Slideshow path/filename labels and then
+  require an exact, available catalogue URI match before any collection write.
+  Unindexed, missing or video items fail closed with no database mutation.
+- Reuse the existing collection picker/write path so duplicate handling, Home
+  invalidation and collection validation stay identical to list-context adds.
+- Advance the generated Estuary fork revisions to Omega 17 and Piers 15.
+- Database schema remains 7.
+
 ## 0.8.3 - 2026-08-07
 
 - Extend Diagnostics with the session-local Home content and random provider

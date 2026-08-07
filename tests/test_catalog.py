@@ -525,3 +525,32 @@ def test_manual_collection_rename_delete_and_missing_media_are_safe(
             connection,
             "SELECT COUNT(*) AS total FROM collection_items",
         )["total"] == 0
+
+
+def test_picture_for_uri_resolves_exact_available_picture(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "photos"
+    picture_id = add_picture(catalog, root)
+    uri = str(root / "image.jpg")
+
+    row = catalog.picture_for_uri(uri)
+
+    assert row is not None
+    assert row["id"] == picture_id
+    assert row["media_type"] == "picture"
+    assert row["is_missing"] == 0
+
+
+def test_picture_for_uri_rejects_missing_catalog_item(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "photos"
+    picture_id = add_picture(catalog, root)
+    uri = str(root / "image.jpg")
+    with catalog.engine.transaction() as connection:
+        catalog.engine.execute(
+            connection,
+            "UPDATE pictures SET is_missing=1 WHERE id=?",
+            (picture_id,),
+        )
+
+    assert catalog.picture_for_uri(uri) is None
