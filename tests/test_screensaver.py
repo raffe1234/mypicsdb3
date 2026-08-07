@@ -224,3 +224,14 @@ def test_deleted_source_and_limits_fail_safely(tmp_path: Path):
     assert normalize_item_limit("bad") == 250
     assert normalize_slide_seconds(1) == 2
     assert normalize_slide_seconds("bad") == 8
+
+def test_screensaver_ui_uses_window_coordinate_space_for_centering():
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "screensaver.mypicsdb3"
+        / "default.py"
+    ).read_text(encoding="utf-8")
+    assert "window.getWidth()" in source
+    assert "window.getHeight()" in source
+    assert source.count("width, height = _window_canvas_size(window)") == 2
+    assert "centered=true" in source

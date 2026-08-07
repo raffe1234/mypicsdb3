@@ -122,6 +122,24 @@ class _ScreensaverWindow(xbmcgui.WindowDialog):
         self.close()
 
 
+def _window_canvas_size(window):
+    """Return the coordinate space used by controls in this WindowDialog.
+
+    Kodi can expose a physical screen size that differs from the Python window's
+    control coordinate space.  Controls must be sized from the window itself or
+    aspect-ratio preserving images can appear shifted to one side.
+    """
+    try:
+        width = int(window.getWidth())
+        height = int(window.getHeight())
+        if width <= 0 or height <= 0:
+            raise ValueError("invalid WindowDialog size")
+    except (AttributeError, RuntimeError, TypeError, ValueError):
+        width = max(1, int(xbmcgui.getScreenWidth()))
+        height = max(1, int(xbmcgui.getScreenHeight()))
+    return width, height
+
+
 def _add_opaque_background(window, width: int, height: int):
     """Cover the transparent WindowDialog before drawing fitted pictures.
 
@@ -148,8 +166,7 @@ def _add_opaque_background(window, width: int, height: int):
 def _show_fallback(message: str, seconds: int = 10) -> None:
     monitor = _ExitMonitor()
     window = _ScreensaverWindow()
-    width = max(1, int(xbmcgui.getScreenWidth()))
-    height = max(1, int(xbmcgui.getScreenHeight()))
+    width, height = _window_canvas_size(window)
     background = _add_opaque_background(window, width, height)
     label = xbmcgui.ControlLabel(
         int(width * 0.1),
@@ -213,8 +230,9 @@ def _run_screensaver(core, addon) -> None:
 
     monitor = _ExitMonitor()
     window = _ScreensaverWindow()
-    width = max(1, int(xbmcgui.getScreenWidth()))
-    height = max(1, int(xbmcgui.getScreenHeight()))
+    width, height = _window_canvas_size(window)
+    screen_width = max(1, int(xbmcgui.getScreenWidth()))
+    screen_height = max(1, int(xbmcgui.getScreenHeight()))
     background = _add_opaque_background(window, width, height)
     image = xbmcgui.ControlImage(0, 0, width, height, "", aspectRatio=2)
     window.addControl(image)
@@ -232,7 +250,8 @@ def _run_screensaver(core, addon) -> None:
         window.addControl(caption)
     window.show()
     _logger(
-        "Started source_type=%s source_id=%s pictures=%d random=%s canvas=%dx%d opaque_background=true"
+        "Started source_type=%s source_id=%s pictures=%d random=%s "
+        "canvas=%dx%d screen=%dx%d opaque_background=true centered=true"
         % (
             source_type,
             source_id,
@@ -240,6 +259,8 @@ def _run_screensaver(core, addon) -> None:
             str(randomize).lower(),
             width,
             height,
+            screen_width,
+            screen_height,
         )
     )
 

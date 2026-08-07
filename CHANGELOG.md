@@ -18,6 +18,9 @@
 - Make the Python screensaver canvas explicitly opaque. Preview and normal
   activation now put a full-screen black backing control behind fitted pictures,
   so Settings/Home cannot show through the aspect-ratio bars.
+- Size screensaver controls from the `WindowDialog` coordinate space instead of
+  the physical screen dimensions. This keeps aspect-ratio-preserving pictures
+  centered when Kodi's Python window uses a different GUI coordinate size.
 - Extend build/verification tooling so the new screensaver is indexed in the
   MyPicsDB 3 repository and available as a standalone release package.
 
