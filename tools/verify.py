@@ -13,7 +13,11 @@ from typing import Iterable, Sequence
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
-STATIC_ADDONS = [ROOT / "plugin.image.mypicsdb3", ROOT / "repository.mypicsdb3"]
+STATIC_ADDONS = [
+    ROOT / "plugin.image.mypicsdb3",
+    ROOT / "screensaver.mypicsdb3",
+    ROOT / "repository.mypicsdb3",
+]
 
 def fail(message: str) -> None:
     raise SystemExit("ERROR: " + message)
@@ -66,6 +70,9 @@ def verify_release_versions() -> None:
     repository_version = ET.parse(
         ROOT / "repository.mypicsdb3" / "addon.xml"
     ).getroot().attrib.get("version", "")
+    screensaver_version = ET.parse(
+        ROOT / "screensaver.mypicsdb3" / "addon.xml"
+    ).getroot().attrib.get("version", "")
     package_version = read_python_package_version()
 
     plugin_numeric = parse_numeric_version(
@@ -74,12 +81,20 @@ def verify_release_versions() -> None:
     repository_numeric = parse_numeric_version(
         repository_version, "repository.mypicsdb3 version"
     )
+    screensaver_numeric = parse_numeric_version(
+        screensaver_version, "screensaver.mypicsdb3 version"
+    )
     parse_numeric_version(package_version, "mypicsdb3 package version")
 
     if plugin_version != package_version:
         fail(
             "Plug-in and Python package versions differ: plugin=%s, package=%s"
             % (plugin_version, package_version)
+        )
+    if screensaver_numeric > plugin_numeric:
+        fail(
+            "Screensaver version %s cannot be newer than plug-in version %s"
+            % (screensaver_version, plugin_version)
         )
     if repository_numeric > plugin_numeric:
         fail(
@@ -194,6 +209,27 @@ def verify_addon(addon: Path) -> None:
     if addon.name == "repository.mypicsdb3":
         verify_repository_manifest(addon, root)
 
+    if addon.name == "screensaver.mypicsdb3":
+        screensaver_extension = next(
+            (
+                extension
+                for extension in root.findall("extension")
+                if extension.attrib.get("point") == "xbmc.ui.screensaver"
+            ),
+            None,
+        )
+        if screensaver_extension is None:
+            fail("Missing xbmc.ui.screensaver extension in screensaver.mypicsdb3")
+        library = screensaver_extension.attrib.get("library", "").strip()
+        if library != "default.py" or not (addon / library).is_file():
+            fail("screensaver.mypicsdb3 must expose an existing default.py library")
+        dependencies = {
+            node.attrib.get("addon"): node.attrib.get("version")
+            for node in root.findall("./requires/import")
+        }
+        if "plugin.image.mypicsdb3" not in dependencies:
+            fail("screensaver.mypicsdb3 must depend on plugin.image.mypicsdb3")
+
     if addon.name == "skin.estuary.mypicsdb3":
         home = addon / "xml" / "Home.xml"
         if not home.is_file():
@@ -234,7 +270,12 @@ def verify_text_and_xml() -> None:
 
 
 def compile_python() -> None:
-    roots = [ROOT / "plugin.image.mypicsdb3", ROOT / "tools", ROOT / "contrib" / "estuary"]
+    roots = [
+        ROOT / "plugin.image.mypicsdb3",
+        ROOT / "screensaver.mypicsdb3",
+        ROOT / "tools",
+        ROOT / "contrib" / "estuary",
+    ]
     with tempfile.TemporaryDirectory(prefix="mypicsdb3-pyc-") as temp_dir:
         target_root = Path(temp_dir)
         for source_root in roots:

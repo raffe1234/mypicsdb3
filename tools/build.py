@@ -16,7 +16,11 @@ ROOT = Path(__file__).resolve().parents[1]
 DIST = ROOT / "dist"
 BUILD = ROOT / "build"
 PACKAGES = BUILD / "packages"
-STATIC_ADDON_DIRS = [ROOT / "plugin.image.mypicsdb3", ROOT / "repository.mypicsdb3"]
+STATIC_ADDON_DIRS = [
+    ROOT / "plugin.image.mypicsdb3",
+    ROOT / "screensaver.mypicsdb3",
+    ROOT / "repository.mypicsdb3",
+]
 EXCLUDED_PARTS = {
     ".git",
     "dist",
@@ -435,7 +439,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-skin",
         action="store_true",
-        help="Build only the plug-in and repository add-ons",
+        help="Build only the plug-in, screensaver and repository add-ons",
     )
     parser.add_argument(
         "--channel",

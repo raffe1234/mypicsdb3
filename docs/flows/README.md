@@ -114,3 +114,5 @@ Some changes need more than one flow guide:
 3. Open the listed tests and run one focused file.
 4. Note the invariants before editing.
 5. Update the guide when your change alters the described path.
+
+- [MyPicsDB 3 screensaver](SCREENSAVER.md) — explicit collection selection, bounded read-only queries and screensaver lifecycle.

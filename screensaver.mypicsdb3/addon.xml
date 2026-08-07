@@ -1,0 +1,22 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<addon id="screensaver.mypicsdb3" name="MyPicsDB 3 Screensaver" version="0.7.0" provider-name="MyPicsDB 3 contributors">
+  <requires>
+    <import addon="xbmc.python" version="3.0.1" />
+    <import addon="plugin.image.mypicsdb3" version="0.7.0" />
+  </requires>
+  <extension point="xbmc.ui.screensaver" library="default.py" />
+  <extension point="xbmc.addon.metadata">
+    <summary lang="en_GB">Show a MyPicsDB 3 collection as a Kodi screensaver</summary>
+    <description lang="en_GB">Displays still pictures from one saved smart collection or manual MyPicsDB 3 collection. The screensaver is read-only, performs no scans and uses a bounded database query.</description>
+    <disclaimer lang="en_GB">Select a collection explicitly in the screensaver settings. No all-library or geotagged source is selected automatically.</disclaimer>
+    <platform>all</platform>
+    <license>GPL-2.0-only</license>
+    <source>https://github.com/raffe1234/mypicsdb3</source>
+    <website>https://github.com/raffe1234/mypicsdb3</website>
+    <assets>
+      <icon>icon.png</icon>
+      <fanart>fanart.jpg</fanart>
+    </assets>
+    <news>Initial MyPicsDB-aware screensaver with explicit manual/smart collection selection, bounded read-only queries and graceful database/source fallback.</news>
+  </extension>
+</addon>

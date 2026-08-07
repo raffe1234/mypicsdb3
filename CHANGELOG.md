@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.7.0 - 2026-08-07
+
+- Add a separate `screensaver.mypicsdb3` Kodi add-on, packaged and published by
+  the existing repository builder for both Omega and Piers channels. It depends
+  on MyPicsDB 3 but keeps an independent screensaver add-on identity.
+- Let the user explicitly choose one manual collection or saved smart collection
+  as the screensaver source. No all-library, favorites or geotagged source is
+  selected automatically.
+- Add a bounded read-only screensaver provider. Manual collections can preserve
+  explicit item order, smart collections reuse the validated Query Model order,
+  and random mode uses the stored `random_key` pivot rather than `ORDER BY
+  RANDOM()`. Videos and missing media are skipped.
+- Add configurable picture duration, random order, filename display and a hard
+  1,000-picture session cap. Database/source failures show a short fallback
+  instead of starting scans or migrations. Catalogue schema 7 is unchanged.
+- Extend build/verification tooling so the new screensaver is indexed in the
+  MyPicsDB 3 repository and available as a standalone release package.
+
 ## 0.6.0 - 2026-08-07
 
 - Publish still-picture artwork with the original media URI, matching Kodi's

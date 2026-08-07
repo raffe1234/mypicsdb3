@@ -1,0 +1,66 @@
+# MyPicsDB 3 Screensaver English strings
+msgid ""
+msgstr ""
+"Project-Id-Version: MyPicsDB 3 Screensaver\n"
+"Language: en_GB\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgctxt "#32000"
+msgid "MyPicsDB 3"
+msgstr "MyPicsDB 3"
+
+msgctxt "#32001"
+msgid "Choose collection"
+msgstr "Choose collection"
+
+msgctxt "#32002"
+msgid "Clear selected collection"
+msgstr "Clear selected collection"
+
+msgctxt "#32003"
+msgid "Seconds per picture"
+msgstr "Seconds per picture"
+
+msgctxt "#32004"
+msgid "Maximum pictures per session"
+msgstr "Maximum pictures per session"
+
+msgctxt "#32005"
+msgid "Random order"
+msgstr "Random order"
+
+msgctxt "#32006"
+msgid "Show filename"
+msgstr "Show filename"
+
+msgctxt "#32010"
+msgid "Selected collection"
+msgstr "Selected collection"
+
+msgctxt "#32100"
+msgid "Choose which MyPicsDB 3 collection the screensaver may display."
+msgstr "Choose which MyPicsDB 3 collection the screensaver may display."
+
+msgctxt "#32101"
+msgid "Choose one manual collection or saved smart collection. No source is selected automatically."
+msgstr "Choose one manual collection or saved smart collection. No source is selected automatically."
+
+msgctxt "#32102"
+msgid "Remove the current screensaver source selection."
+msgstr "Remove the current screensaver source selection."
+
+msgctxt "#32103"
+msgid "How long each still picture remains on screen."
+msgstr "How long each still picture remains on screen."
+
+msgctxt "#32104"
+msgid "Caps each screensaver database query so very large catalogues stay responsive."
+msgstr "Caps each screensaver database query so very large catalogues stay responsive."
+
+msgctxt "#32105"
+msgid "Use the catalogue random key to choose a bounded random slice without ORDER BY RANDOM()."
+msgstr "Use the catalogue random key to choose a bounded random slice without ORDER BY RANDOM()."
+
+msgctxt "#32106"
+msgid "Show the current filename in the lower-left corner."
+msgstr "Show the current filename in the lower-left corner."

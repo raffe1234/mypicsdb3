@@ -348,3 +348,11 @@ Before opening a pull request, ask:
    migration or release-note update?
 6. Which regression test proves the intended behaviour?
 7. Which real-Kodi checks remain after automated tests pass?
+
+## Screensaver boundary
+
+`screensaver.mypicsdb3` is packaged as a separate Kodi screensaver add-on but
+imports the installed MyPicsDB 3 core library. It may read the configured
+SQLite/MySQL catalogue and compile stored Query Models, but it must not create a
+`Runtime`, run migrations, start scans, publish Home state or modify original
+media. Screensaver database access is bounded and read-only by design.

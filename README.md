@@ -5,10 +5,10 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.6.0 development release. The catalogue, SQLite backend, scanner,
+> Status: 0.7.0 development release. The catalogue, SQLite backend, scanner,
 > browser routes, Estuary fork builder and package builder are covered by
 > automated tests. The schema-1-to-7 migrations, search-document backfill,
-> mixed-media playback, collection music playlists, backup and restore, and
+> mixed-media playback, collection music playlists, the MyPicsDB-aware screensaver, backup and restore, and
 > large-library search performance still require documented validation on real
 > Kodi installations before calling the project production-stable.
 
@@ -70,6 +70,9 @@ For the component boundaries and long-lived safety rules, see
   with normal pagination and **Default album view**.
 - Assign one Kodi music-playlist file to a saved smart collection or manual
   collection, then explicitly start its picture slideshow with that music.
+- Install the separate **MyPicsDB 3 Screensaver** and explicitly choose one saved
+  smart collection or manual collection as its picture source; the screensaver
+  performs bounded read-only queries and never starts a catalogue scan.
 - Run native recursive or ordered picture slideshows and video playlists; mixed
   manual collections let the user choose picture or video playback safely.
 
@@ -146,6 +149,10 @@ MyPicsDB 3 updates.
 3. Optional: to show MyPicsDB 3 rows directly on the Pictures home screen, open
    **MyPicsDB 3 Repository > Look and feel > Skin > Estuary MyPicsDB 3** and
    select **Install**.
+4. Optional: install **MyPicsDB 3 Screensaver** from **Look and feel >
+   Screensaver**, then choose it under **Settings > Interface > Screensaver**.
+   Open its settings and use **Choose collection** to select one manual or saved
+   smart collection. No source is selected automatically.
 
 ### Quick install without the MyPicsDB 3 Repository
 
@@ -159,6 +166,9 @@ releases yourself and install newer packages manually.
 2. Optional: if you use Estuary and want MyPicsDB 3 rows on the Pictures home
    screen, download and install `skin.estuary.mypicsdb3-<version>.zip` in the
    same way, after installing MyPicsDB 3.
+3. Optional: download and install `screensaver.mypicsdb3-<version>.zip`. The
+   screensaver declares MyPicsDB 3 as a dependency and uses its existing
+   catalogue; configure the source under Kodi's Screensaver settings.
 
 ### Quick setup
 
@@ -178,6 +188,31 @@ releases yourself and install newer packages manually.
    - **Metadata** — XMP, IPTC, GPS storage and metadata read limits;
    - **Database** — local SQLite or a shared MySQL/MariaDB catalogue;
    - **Maintenance** — missing-record retention and debug logging.
+
+## MyPicsDB 3 Screensaver
+
+Version 0.7.0 adds a separate `screensaver.mypicsdb3` add-on in the same Kodi
+repository. It intentionally has its own add-on identity so Kodi can select it
+under **Settings > Interface > Screensaver** without turning the picture plug-in
+into a long-running screen UI.
+
+The screensaver does not choose **all pictures**, favorites or geotagged media
+automatically. Open the screensaver's **Settings** and select **Choose
+collection**. The picker lists:
+
+- manual collections, preserving their explicit order when **Random order** is
+  disabled;
+- saved smart collections, using their validated Query Model sort when random
+  order is disabled.
+
+Only still pictures are displayed. Videos in a mixed manual collection are
+skipped. Random mode uses the catalogue's stored random key and a bounded query
+instead of an unbounded database random sort. **Maximum pictures per session**
+is capped at 1,000. The screensaver opens the existing SQLite database read-only
+(or issues SELECT-only queries with the configured MySQL/MariaDB account), never
+runs migrations and never starts a scan. If the database or selected collection
+is unavailable, it shows a short fallback message and exits cleanly when Kodi
+deactivates the screensaver.
 
 ### Optional RAW and HEIF image decoders
 
