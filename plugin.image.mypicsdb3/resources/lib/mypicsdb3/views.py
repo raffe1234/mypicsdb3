@@ -2322,6 +2322,15 @@ class PluginUI:
                     self.text(32856, "Debug logging"),
                     on if snapshot["debug_logging"] else off,
                 ),
+                "%s: %s"
+                % (
+                    self.text(32861, "Support bundle folder"),
+                    self.text(
+                        32862,
+                        "Kodi userdata > addon_data > "
+                        "plugin.image.mypicsdb3 > support-bundles",
+                    ),
+                ),
             ]
         )
 
@@ -2440,8 +2449,18 @@ class PluginUI:
                 os.path.basename(bundle_path),
             )
             self.kodi.notify(
-                self.text(32859, "Support bundle saved: %s")
-                % os.path.basename(bundle_path)
+                "%s\n%s: %s"
+                % (
+                    self.text(32859, "Support bundle saved: %s")
+                    % os.path.basename(bundle_path),
+                    self.text(32861, "Support bundle folder"),
+                    self.text(
+                        32862,
+                        "Kodi userdata > addon_data > "
+                        "plugin.image.mypicsdb3 > support-bundles",
+                    ),
+                ),
+                milliseconds=8000,
             )
             return
         if route == "action/settings":

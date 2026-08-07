@@ -1458,3 +1458,11 @@ msgstr "Support bundle saved: %s"
 msgctxt "#32860"
 msgid "Could not export support bundle"
 msgstr "Could not export support bundle"
+
+msgctxt "#32861"
+msgid "Support bundle folder"
+msgstr "Support bundle folder"
+
+msgctxt "#32862"
+msgid "Kodi userdata > addon_data > plugin.image.mypicsdb3 > support-bundles"
+msgstr "Kodi userdata > addon_data > plugin.image.mypicsdb3 > support-bundles"

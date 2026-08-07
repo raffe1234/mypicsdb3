@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.2 - 2026-08-07
+
+- Show the privacy-safe support-bundle location directly in Diagnostics as
+  `Kodi userdata > addon_data > plugin.image.mypicsdb3 > support-bundles`, so
+  exported files are easier to find without exposing a user-specific local path.
+- Make the export confirmation mention both that folder and the generated ZIP
+  filename. Database schema 7 is unchanged.
+- Raise the plug-in version to 0.8.2 so Kodi reloads the updated UI instead of
+  reusing cached 0.8.1 resources.
+
 ## 0.8.1 - 2026-08-07
 
 - Add **Export support bundle** to Diagnostics. It writes a ZIP in the add-on
