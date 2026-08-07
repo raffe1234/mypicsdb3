@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.8.8" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.8.9" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Make Estuary Home rows materialize independently of delayed service state, using persistent slot settings and a generic home-slot provider so cold startup no longer needs ReloadSkin().</news>
+    <news>Align release verification with the 0.8.8 home-slot architecture so generated Estuary skins pass the full build without changing runtime Home behavior.</news>
   </extension>
 </addon>

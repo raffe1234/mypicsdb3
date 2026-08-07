@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.9 - 2026-08-07
+
+- Fix the release verifier after the 0.8.8 Home startup architecture change. Generated Estuary skins are now checked for all nine `home-slot?slot=N` providers instead of the removed hard-coded `recent-taken` provider URL.
+- Add regression coverage for the generated-skin verification contract so future Home provider changes must update both the skin tests and release verification together.
+- Runtime Home behavior is unchanged from 0.8.8: no `ReloadSkin()`, database schema remains 7, and the Estuary patch revisions remain Omega 21 / Piers 19.
+
 ## 0.8.8 - 2026-08-07
 
 - Make the nine Estuary MyPicsDB 3 Home slots materialize when `Home.xml` loads instead of conditionally expanding them from session-local Home-window properties. Each slot now has one persistent `home-slot?slot=N` provider and dynamic visibility driven by the add-on's saved `home_row_N` setting.

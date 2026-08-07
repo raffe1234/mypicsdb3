@@ -174,6 +174,25 @@ def verify_repository_manifest(addon: Path, root: ET.Element) -> None:
         if datadir is None or datadir.attrib.get("zip") != "true":
             fail("Repository channel %s must serve zipped add-ons" % channel_name)
 
+
+def verify_generated_estuary_home(home_text: str) -> None:
+    """Verify the persistent Home-slot providers required by the Estuary fork."""
+
+    missing = [
+        position
+        for position in range(1, 10)
+        if (
+            "plugin://plugin.image.mypicsdb3/home-slot?slot=%d&amp;widget=1&amp;home=1"
+            % position
+        )
+        not in home_text
+    ]
+    if missing:
+        fail(
+            "Generated skin does not contain all MyPicsDB 3 Pictures home slots: %s"
+            % ", ".join(str(position) for position in missing)
+        )
+
 def verify_addon(addon: Path) -> None:
     if not addon.is_dir():
         fail("Missing add-on directory: %s" % addon)
@@ -235,8 +254,7 @@ def verify_addon(addon: Path) -> None:
         if not home.is_file():
             fail("Generated skin is missing xml/Home.xml")
         home_text = home.read_text(encoding="utf-8")
-        if "plugin://plugin.image.mypicsdb3/recent-taken?widget=1&amp;home=1" not in home_text:
-            fail("Generated skin does not contain the MyPicsDB 3 Pictures widgets")
+        verify_generated_estuary_home(home_text)
         includes_home = addon / "xml" / "Includes_Home.xml"
         if not includes_home.is_file():
             fail("Generated skin is missing xml/Includes_Home.xml")

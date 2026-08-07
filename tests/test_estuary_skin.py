@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import pytest
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
@@ -15,6 +16,7 @@ from estuary_skin import (  # noqa: E402
     extract_skin_from_archive,
     patch_skin,
 )
+from verify import verify_generated_estuary_home  # noqa: E402
 
 
 def config() -> EstuaryConfig:
@@ -125,6 +127,7 @@ def test_patch_skin_creates_separate_addon_and_widgets(tmp_path: Path):
     assert dependencies["plugin.image.mypicsdb3"] == "0.2.7"
 
     home = (output / "xml" / "Home.xml").read_text(encoding="utf-8")
+    verify_generated_estuary_home(home)
     assert "plugin://plugin.image.mypicsdb3/home-slot?slot=1&amp;widget=1&amp;home=1" in home
     assert 'id="17000"' in home
     includes_home = (output / "xml" / "Includes_Home.xml").read_text(encoding="utf-8")
@@ -147,6 +150,18 @@ def test_patch_skin_creates_separate_addon_and_widgets(tmp_path: Path):
     notice = (output / "MYPICSDB3_UPSTREAM.md").read_text(encoding="utf-8")
     assert "Kodi channel: omega" in notice
     assert "21.3-Omega" in notice
+
+
+def test_release_verifier_rejects_missing_home_slot() -> None:
+    home = "\n".join(
+        "plugin://plugin.image.mypicsdb3/home-slot?slot=%d&amp;widget=1&amp;home=1" % position
+        for position in range(1, 9)
+    )
+    with pytest.raises(
+        SystemExit,
+        match=r"Generated skin does not contain all MyPicsDB 3 Pictures home slots: 9",
+    ):
+        verify_generated_estuary_home(home)
 
 
 def test_patch_skin_fails_closed_when_upstream_boundaries_change(tmp_path: Path):
