@@ -1,7 +1,15 @@
 # Changelog
 
-## 0.6.0 - 2026-08-06
+## 0.6.0 - 2026-08-07
 
+- Publish still-picture artwork with the original media URI, matching Kodi's
+  native Media sources browser. This avoids visibly soft embedded EXIF previews
+  being reused for some older JPEGs in Home rows and when opening them from Home;
+  generated video-frame artwork keeps its `image://video@...` path.
+- Start **Choose music playlist** in Kodi's normal profile music-playlist folder
+  instead of at the complete music-source root, while still allowing navigation
+  to playlists stored elsewhere. Home picture context menus also expose **Open
+  Collections**; **Add to collection** remains available on the same items.
 - Add one optional Kodi music-playlist assignment to each saved smart collection
   or manual collection. Collection context menus can assign, change or remove
   `.m3u`, `.m3u8`, `.pls`, `.b4s` and `.wpl` references selected from Kodi music

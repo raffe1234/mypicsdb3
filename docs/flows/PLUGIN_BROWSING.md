@@ -83,7 +83,11 @@ that a row from the historical `pictures` table is always a still image. Still
 pictures must not receive a VideoInfoTag: Kodi can otherwise send their direct
 file paths to VideoPlayer instead of the native picture viewer. Publish
 `MyPicsDB3.WidgetLabel` independently for Estuary captions, and reserve
-VideoInfoTag metadata for actual videos and non-media display items.
+VideoInfoTag metadata for actual videos and non-media display items. Still-image
+artwork should use the original file URI just as Kodi's Media sources browser
+does. Generated video frames continue to use Kodi's `image://video@...` loader.
+This distinction avoids some older JPEGs reusing a tiny embedded EXIF preview as
+Home artwork or full-screen picture content.
 
 ## Rating display policy
 

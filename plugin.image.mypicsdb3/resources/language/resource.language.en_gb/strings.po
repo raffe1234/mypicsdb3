@@ -1382,3 +1382,7 @@ msgstr "No pictures to play with music"
 msgctxt "#32841"
 msgid "Could not save music playlist"
 msgstr "Could not save music playlist"
+
+msgctxt "#32842"
+msgid "Open Collections"
+msgstr "Open Collections"

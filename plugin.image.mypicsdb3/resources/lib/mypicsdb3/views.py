@@ -34,6 +34,7 @@ from .preferences import (
     serialize_persisted_home_layout,
 )
 from .music_playlists import (
+    KODI_MUSIC_PLAYLIST_DIRECTORY,
     MUSIC_PLAYLIST_MASK,
     MUSIC_TARGET_MANUAL,
     MUSIC_TARGET_SMART,
@@ -167,7 +168,14 @@ class PluginUI:
         )
         if is_video and (not thumbnail or thumbnail == media_uri):
             return kodi_generated_video_thumbnail_uri(media_uri)
-        return kodi_image_uri(thumbnail or media_uri)
+        if is_video:
+            return kodi_image_uri(thumbnail)
+        # Keep still-picture artwork on the original file URI, matching Kodi's
+        # native Media sources browser. Explicit image:// wrapping can make
+        # some older JPEGs reuse their tiny embedded EXIF preview in the
+        # texture cache, which then looks soft both in Home rows and when the
+        # picture is opened from that row. Kodi still caches raw artwork URIs.
+        return thumbnail or media_uri
 
     @staticmethod
     def _is_home_widget(params: Optional[Dict[str, str]]) -> bool:
@@ -1017,6 +1025,14 @@ class PluginUI:
             (self.text(30022, "Toggle favorite"), toggle),
             (self.text(32812, "Add to collection"), add_to_collection),
         ]
+        if self._is_home_widget(browse_params):
+            context.append(
+                (
+                    self.text(32842, "Open Collections"),
+                    "ActivateWindow(Pictures,%s,return)"
+                    % self.url("collections"),
+                )
+            )
         if slideshow_route:
             slideshow_params = {
                 key: value
@@ -2281,7 +2297,7 @@ class PluginUI:
                     MUSIC_PLAYLIST_MASK,
                     False,
                     False,
-                    current,
+                    current or KODI_MUSIC_PLAYLIST_DIRECTORY,
                 )
                 selected = str(selected or "").strip()
                 if not selected or selected == current:

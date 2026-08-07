@@ -68,8 +68,11 @@ catalogues therefore upgrade without a rescan.
 
 ## Picker and supported playlist files
 
-The context action opens Kodi's single-file browser against configured music
-sources and filters common ordinary playlist files:
+The context action opens Kodi's single-file browser and starts in Kodi's normal
+profile playlist directory, `special://profile/playlists/music/`. On Windows it
+usually maps below `%APPDATA%\Kodi\userdata\playlists\music\`. The user can
+navigate upward to another configured music source if the playlist is stored
+elsewhere. The picker filters common ordinary playlist files:
 
 - `.m3u`
 - `.m3u8`

@@ -226,8 +226,11 @@ MyPicsDB 3 uses a dedicated picture-poster widget that reserves a caption area
 under each thumbnail, shows a subdued label normally and a brighter scrolling
 label while focused. Standard Estuary movie and TV widgets remain unchanged.
 Widget pictures and still pictures selected inside indexed albums open through
-Kodi's native picture viewer. Still-picture rows deliberately avoid a
-VideoInfoTag so Kodi does not route JPEG/PNG files through VideoPlayer; videos
+Kodi's native picture viewer. Still-picture artwork is also published with the
+original file URI, matching Kodi's Media sources browser; this avoids soft
+low-resolution EXIF previews being reused for some older JPEGs. Still-picture
+rows deliberately avoid a VideoInfoTag so Kodi does not route JPEG/PNG files
+through VideoPlayer; videos
 keep normal playback and album tiles open in the Pictures window. No rescan is
 required for these display choices. Use **Play slideshow from here** on
 a media item or **Play mixed
@@ -581,8 +584,11 @@ separately.
 
 To add music, open the context menu for a manual collection under
 **Collections** or a smart collection under **Saved searches**, then choose
-**Assign music playlist**. Select an ordinary Kodi playlist file (`.m3u`,
-`.m3u8`, `.pls`, `.b4s` or `.wpl`) from a configured music source. Open the
+**Assign music playlist**. The picker starts in Kodi's normal music-playlist
+folder, `special://profile/playlists/music/`, and filters ordinary playlist files
+(`.m3u`, `.m3u8`, `.pls`, `.b4s` or `.wpl`). On Windows this special path is
+normally under `%APPDATA%\Kodi\userdata\playlists\music\`. Navigate upward
+from the picker if the playlist is stored in another Kodi music source. Open the
 collection and choose **Play picture slideshow with music**. The assignment is a
 reference to the playlist file; MyPicsDB does not copy or edit it.
 

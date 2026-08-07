@@ -35,6 +35,7 @@ class FakeDialog:
     multiselect_responses = []
     input_responses = []
     browse_responses = []
+    browse_calls = []
 
     def yesno(self, heading, message):
         return self.__class__.responses.pop(0)
@@ -52,6 +53,9 @@ class FakeDialog:
         self, type, heading, shares, mask="", useThumbs=False,
         treatAsFolder=False, defaultt=""
     ):
+        self.__class__.browse_calls.append(
+            (type, heading, shares, mask, useThumbs, treatAsFolder, defaultt)
+        )
         return self.__class__.browse_responses.pop(0)
 
 
@@ -564,7 +568,7 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert len(calls.items) == 1
     url, item, is_folder = calls.items[0]
     assert url == "smb://server/photos/image.jpg"
-    assert item.art["thumb"] == "image://smb%3A%2F%2Fserver%2Fphotos%2Fimage.jpg/"
+    assert item.art["thumb"] == "smb://server/photos/image.jpg"
     assert item.properties["MyPicsDB3.Camera"] == "Canon EOS R6"
     assert is_folder is False
 
@@ -2108,6 +2112,13 @@ def test_manual_collection_home_route_is_bounded_and_has_no_action_row(monkeypat
     assert not calls.items[0][0].startswith(
         "plugin://plugin.image.mypicsdb3/action/start-slideshow"
     )
+    labels = [label for label, _command in calls.items[0][1].context]
+    assert "Add to collection" in labels
+    assert "Open Collections" in labels
+    assert (
+        "Open Collections",
+        "ActivateWindow(Pictures,plugin://plugin.image.mypicsdb3/collections,return)",
+    ) in calls.items[0][1].context
     assert calls.ended is True
 
 
@@ -2408,11 +2419,21 @@ def test_manual_collection_music_playlist_can_be_assigned_changed_and_removed(
     ]
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
 
-    FakeDialog.browse_responses = ["special://music/trips.m3u"]
+    FakeDialog.browse_calls = []
+    FakeDialog.browse_responses = ["special://profile/playlists/music/trips.m3u"]
     ui.action("action/assign-music-playlist", {"type": "manual", "id": "9"})
 
+    assert FakeDialog.browse_calls[-1] == (
+        1,
+        "Choose music playlist",
+        "music",
+        ".m3u|.m3u8|.pls|.b4s|.wpl",
+        False,
+        False,
+        "special://profile/playlists/music/",
+    )
     assert runtime.catalog.music_playlist_updates == [
-        ("manual", 9, "special://music/trips.m3u")
+        ("manual", 9, "special://profile/playlists/music/trips.m3u")
     ]
     assert runtime.kodi.notifications[-1] == ("Music playlist assigned", False)
     assert calls.builtins[-1] == "Container.Refresh"
