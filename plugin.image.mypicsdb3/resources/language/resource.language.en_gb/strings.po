@@ -1514,15 +1514,3 @@ msgstr "Present"
 msgctxt "#32874"
 msgid "Missing"
 msgstr "Missing"
-
-msgctxt "#32875"
-msgid "Add current picture to collection"
-msgstr "Add current picture to collection"
-
-msgctxt "#32876"
-msgid "The current picture could not be identified"
-msgstr "The current picture could not be identified"
-
-msgctxt "#32877"
-msgid "The current picture is not available in MyPicsDB 3"
-msgstr "The current picture is not available in MyPicsDB 3"

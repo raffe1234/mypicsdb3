@@ -111,23 +111,11 @@ def service_main() -> None:
                 "Service shutdown requested before delayed home state publication"
             )
             return
-        state_checker = getattr(context, "home_layout_state_published", None)
-        home_state_was_present = (
-            bool(state_checker()) if callable(state_checker) else True
-        )
         context.enable_home_state_publishing()
         context.log.info(
             "Home-screen state published after %.1f-second service startup delay",
             HOME_STATE_PUBLISH_DELAY_SECONDS,
         )
-        if not home_state_was_present:
-            reloader = getattr(
-                context, "reload_estuary_home_after_initial_state_publish", None
-            )
-            if callable(reloader) and reloader():
-                context.log.info(
-                    "Reloaded Estuary MyPicsDB 3 after initial Home state publication"
-                )
         ServiceLoop(context, monitor=monitor).run()
     except Exception as exc:
         context.log.error("MyPicsDB 3 service stopped with an error: %s", exc)

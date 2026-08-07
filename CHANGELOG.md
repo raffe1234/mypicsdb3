@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.8.7 - 2026-08-07
+
+- Roll back the experimental **Add current picture to collection** integration
+  introduced in 0.8.4-0.8.6. Estuary Picture Info is returned to the same
+  generated structure used before 0.8.4; Kodi's full-screen viewer, Info dialog
+  focus and keymaps are no longer modified by MyPicsDB 3.
+- Remove the URI resolver and full-screen collection route that could not
+  reliably identify pictures launched from Home. Existing collection actions
+  inside MyPicsDB 3 are unchanged.
+- Remove the 0.8.6 one-time startup `ReloadSkin()` workaround and restore the
+  pre-0.8.4 Home publication behavior. This intentionally separates any future
+  Home-startup investigation from the abandoned Picture Info experiment.
+- Keep all 0.8.0-0.8.3 diagnostics/support-bundle work and database schema 7.
+  Advance the generated Estuary revisions to Omega 20 and Piers 18 so Kodi
+  installs the rollback skin instead of retaining 21.3.19/related builds.
+
 ## 0.8.6 - 2026-08-07
 
 - Bootstrap Estuary MyPicsDB 3 Home rows when Kodi reaches Home before the

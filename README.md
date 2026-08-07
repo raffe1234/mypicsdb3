@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.6. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.7. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -67,10 +67,6 @@ For the component boundaries and long-lived safety rules, see
   pictures and home videos without copying, moving or deleting source files.
 - Reorder manual collection items and browse both smart and manual collections
   with normal pagination and **Default album view**.
-- With **Estuary MyPicsDB 3**, add the indexed still picture currently shown in
-  Kodi's native full-screen viewer by opening **I / Info**. **Add current picture
-  to collection** receives focus directly; press **OK / Enter** to open the
-  collection picker. The `C` context-menu key is not used for this action.
 - Assign one Kodi music-playlist file to a saved smart collection or manual
   collection, then explicitly start its picture slideshow with that music.
 - Install the separate **MyPicsDB 3 Screensaver** and explicitly choose one saved
@@ -548,14 +544,6 @@ Duplicate additions are ignored. **Toggle favorite** adds or removes the item
 from Favorites, and **Open containing album** opens the indexed folder. Album
 context menus can also start a recursive Kodi slideshow.
 
-When using **Estuary MyPicsDB 3**, an indexed still picture can also be added
-without leaving Kodi's native full-screen viewer. Press **I / Info**; **Add
-current picture to collection** is focused directly, so **OK / Enter** opens the
-collection picker. Use **Up / Down** to move back to the normal metadata list if
-you only want to inspect picture information. This is a Picture Info action, not
-a `C` context-menu action. If the current item cannot be resolved to one exact,
-available picture row, MyPicsDB 3 stops without changing a collection.
-
 The Keywords and Rated pictures views depend on metadata embedded in the source
 files. Geotagged pictures requires **Store GPS coordinates** to be enabled
 before the relevant pictures are scanned again.
@@ -619,13 +607,6 @@ Open **Collections** from the main menu to create, rename, open or delete a name
 manual collection. Use **Add to collection** on any indexed picture or home video
 to append it. Inside the collection, use **Remove from collection** to remove only
 the reference; the original file and its catalogue row remain untouched.
-
-With **Estuary MyPicsDB 3** installed, the same collection picker is available
-for the currently displayed indexed still picture: open the full-screen picture
-and press **I / Info**. **Add current picture to collection** receives focus
-directly; press **OK / Enter** to use it, or **Up / Down** to return to the
-metadata list. MyPicsDB 3 does not remap `C`, Info or remote keys. The action
-rejects unindexed, missing and video items before any collection write.
 
 Items are displayed in their stored order. Use **Move up**, **Move down**,
 **Move to top** or **Move to bottom** from an item context menu to change the
@@ -725,12 +706,8 @@ to 720. Common choices are:
 
 The background service first waits through a short, abortable five-second grace
 period before publishing the Home-screen row state. This protects in-place
-add-on updates while Kodi may still be unloading a skin. If Estuary MyPicsDB 3
-already reached Home before those properties existed, the service performs one
-guarded skin reload after publishing them so the conditional Home-row controls
-are created without requiring a trip into the add-on and back. If Home is opened
-later, or the row state already existed, no bootstrap reload is performed. It
-then waits for the configured scan startup delay and runs an incremental scan. By default,
+add-on updates while Kodi may still be unloading a skin. It then waits for the
+configured scan startup delay and runs an incremental scan. By default,
 automatic scanning is disabled and scans are deferred while Kodi is playing
 media. Automatic scans use the same non-modal
 background progress indicator as manual scans. The main menu and **Scan status**

@@ -1031,29 +1031,6 @@ class Catalog:
             random.Random(pivot).shuffle(first)
         return first
 
-    def picture_for_uri(self, uri: str) -> Optional[Dict[str, Any]]:
-        """Resolve one available catalogue row by its exact normalized URI.
-
-        The hash keeps the lookup indexed; comparing the stored URI as well makes
-        the full-screen action fail closed instead of mutating a collection when
-        Kodi reports an unexpected path.
-        """
-        normalized = normalize_uri(uri)
-        if not normalized:
-            return None
-        with self.engine.transaction() as connection:
-            row = self.engine.fetchone(
-                connection,
-                "SELECT id, uri, media_type, is_missing FROM pictures "
-                "WHERE uri_hash=?",
-                (sha256_text(normalized),),
-            )
-        if row is None or bool(row.get("is_missing")):
-            return None
-        if normalize_uri(str(row.get("uri") or "")) != normalized:
-            return None
-        return row
-
     def media_type_for_uri(self, uri: str) -> Optional[str]:
         normalized = normalize_uri(uri)
         if not normalized:

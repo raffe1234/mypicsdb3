@@ -21,7 +21,7 @@ pinned official Estuary archive
 → extract skin.estuary only
 → change add-on id
 → add MyPicsDB 3 dependency
-→ apply maintained Pictures-home and Picture Info patches
+→ apply maintained Pictures-home patches
 → verify generated skin
 → package per Kodi channel
 ```
@@ -49,9 +49,7 @@ are intentionally excluded from Git history.
 
 MyPicsDB 3 exposes stable provider URLs and preferences that skins can read.
 The maintained Estuary fork consumes that contract to show picture rows on the
-Pictures home screen. It also adds the guarded current-picture collection action
-to `DialogPictureInfo.xml`; that skin change has its own focus-navigation
-contract and does not change Kodi keymaps.
+Pictures home screen.
 
 Before changing a provider URL, label, artwork property, row limit or preference
 serialization, read:
@@ -134,8 +132,7 @@ patched home screen and both supported Kodi channels must still build and test.
 
 ## Useful tests
 
-- `tests/test_estuary_skin.py`, including Picture Info insertion, direct focus
-  initialization and focus styling;
+- `tests/test_estuary_skin.py`;
 - `tests/test_estuary_updater.py`;
 - `tests/test_repository_assets.py`;
 - `tests/test_home_layout_editor.py`;
@@ -149,10 +146,6 @@ patched home screen and both supported Kodi channels must still build and test.
 - Upstream tags and hashes remain pinned and reviewable.
 - Both supported Kodi channels are built where the workflow requires them.
 - Public widget URLs remain stable or are documented as compatibility changes.
-- The Picture Info action receives keyboard/remote focus only while visible; its
-  hidden state and the metadata list keep native Estuary navigation.
-- Initial Home-row state may trigger one guarded custom-skin reload only when Home
-  was already loaded before the delayed service published row properties.
 - Repository artwork paths and manifests remain valid.
 - A release tag is created only after the exact main commit is green.
 - The repository add-on version changes only when that add-on changes.

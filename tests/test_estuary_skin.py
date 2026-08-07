@@ -104,20 +104,6 @@ def create_estuary_fixture(path: Path) -> Path:
 """,
         encoding="utf-8",
     )
-    (path / "xml" / "DialogPictureInfo.xml").write_text(
-        """<window>
-  <onload>SetProperty(infobackground,$ESCINFO[ListItem.FolderPath],home)</onload>
-  <controls>
-    <control type="group" id="9000">
-      <control type="list" id="5">
-        <ondown>5</ondown>
-      </control>
-    </control>
-  </controls>
-</window>
-""",
-        encoding="utf-8",
-    )
     (path / "xml" / "Other.xml").write_text("<window />\n", encoding="utf-8")
     return path
 
@@ -157,25 +143,6 @@ def test_patch_skin_creates_separate_addon_and_widgets(tmp_path: Path):
     assert "$ADDON[plugin.image.mypicsdb3 32215]" in pictures
     assert "plugin://plugin.image.mypicsdb3/action/save-album-view" in pictures
     assert pictures.index('id="625"') < pictures.index('id="624"')
-    picture_info = (output / "xml" / "DialogPictureInfo.xml").read_text(encoding="utf-8")
-    assert 'id="9200"' in picture_info
-    assert "plugin://plugin.image.mypicsdb3/action/add-current-picture-to-collection" in picture_info
-    assert '<texturefocus colordiffuse="button_focus">lists/focus.png</texturefocus>' in picture_info
-    assert (
-        '<onload condition="Window.IsActive(Slideshow) + !SlideShow.IsVideo + '
-        'System.HasAddon(plugin.image.mypicsdb3)">SetFocus(9200)</onload>'
-        in picture_info
-    )
-    picture_info_root = ET.fromstring(picture_info)
-    metadata_list = next(
-        control
-        for control in picture_info_root.iter("control")
-        if control.attrib.get("type") == "list" and control.attrib.get("id") == "5"
-    )
-    assert [
-        (node.attrib.get("condition"), (node.text or "").strip())
-        for node in metadata_list.findall("ondown")
-    ] == [(None, "5")]
     assert (output / "xml" / "Other.xml").is_file()
     notice = (output / "MYPICSDB3_UPSTREAM.md").read_text(encoding="utf-8")
     assert "Kodi channel: omega" in notice
@@ -230,23 +197,6 @@ def test_patch_skin_fails_closed_when_widget_poster_changes(tmp_path: Path):
         raise AssertionError("Changed upstream Includes_Home.xml should stop the build")
 
 
-
-def test_patch_skin_fails_closed_when_picture_info_structure_changes(tmp_path: Path):
-    source = create_estuary_fixture(tmp_path / "skin.estuary")
-    (source / "xml" / "DialogPictureInfo.xml").write_text(
-        '<window><control type="list" id="99" /></window>\n',
-        encoding="utf-8",
-    )
-    output = tmp_path / "skin.estuary.mypicsdb3"
-
-    try:
-        patch_skin(source, output, config(), "0.8.6")
-    except RuntimeError as exc:
-        assert "Picture Info" in str(exc)
-    else:
-        raise AssertionError("Changed upstream DialogPictureInfo.xml should stop the build")
-
-
 def test_extract_skin_from_official_archive_layout(tmp_path: Path):
     archive_path = tmp_path / "xbmc.zip"
     with zipfile.ZipFile(archive_path, "w") as archive:
@@ -267,10 +217,6 @@ def test_extract_skin_from_official_archive_layout(tmp_path: Path):
             "<window />",
         )
         archive.writestr(
-            "xbmc-21.3-Omega/addons/skin.estuary/xml/DialogPictureInfo.xml",
-            "<window />",
-        )
-        archive.writestr(
             "xbmc-21.3-Omega/addons/other.addon/addon.xml",
             "<addon />",
         )
@@ -280,7 +226,6 @@ def test_extract_skin_from_official_archive_layout(tmp_path: Path):
     assert (output / "xml" / "Home.xml").is_file()
     assert (output / "xml" / "Includes_Home.xml").is_file()
     assert (output / "xml" / "MyPics.xml").is_file()
-    assert (output / "xml" / "DialogPictureInfo.xml").is_file()
     assert not (output / "other.addon").exists()
 
 
@@ -291,11 +236,11 @@ def test_upstream_config_has_versioned_channels_and_history():
     assert set(project.channels) == {"omega", "piers"}
     assert project.channels["omega"].releases[0].ref == "21.3-Omega"
     assert project.channels["omega"].xbmc_gui_version == "5.17.0"
-    assert project.channels["omega"].patch_revision == 19
-    assert project.channels["omega"].releases[0].skin_version == "21.3.19"
+    assert project.channels["omega"].patch_revision == 20
+    assert project.channels["omega"].releases[0].skin_version == "21.3.20"
     assert project.channels["piers"].xbmc_gui_version == "5.17.0"
-    assert project.channels["piers"].patch_revision == 17
-    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.17"
+    assert project.channels["piers"].patch_revision == 18
+    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.18"
     assert project.channels["piers"].releases[0].ref == "22.0b1-Piers"
     assert all(
         len(channel.releases) <= project.retain_versions

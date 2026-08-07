@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from .config import Settings, from_getter, resolve_home_widget_limit
 from .log import Logger
-from .utils import is_indexable_picture_source_uri, join_uri, normalize_uri, parse_bool
+from .utils import is_indexable_picture_source_uri, normalize_uri, parse_bool
 
 try:
     import xbmc  # type: ignore
@@ -249,65 +249,6 @@ class KodiContext:
 
         self._publish_home_state_on_refresh = True
         self.publish_home_state()
-
-    def home_layout_state_published(self) -> bool:
-        """Return whether the current Kodi session already has Home row state."""
-
-        window = self._home_window()
-        if window is None:
-            return False
-        try:
-            return bool(
-                str(window.getProperty(HOME_ROW_PROPERTY_FORMAT % 1) or "").strip()
-            )
-        except Exception:
-            return False
-
-    @staticmethod
-    def reload_estuary_home_after_initial_state_publish() -> bool:
-        """Reload the optional Estuary fork once when Home loaded before row state.
-
-        Conditional skin includes are expanded when the window XML is loaded. If
-        Kodi reaches Home before the delayed service publishes MyPicsDB row
-        properties, those controls do not exist yet. A one-time skin reload is
-        therefore needed only when the custom Estuary fork is active and Home is
-        still the current window. Returning to Home from another window naturally
-        loads it after the properties are available and needs no reload.
-        """
-
-        if xbmc is None or xbmcgui is None:
-            return False
-        try:
-            skin_id = xbmc.getSkinDir() if hasattr(xbmc, "getSkinDir") else ""
-            current_window = (
-                xbmcgui.getCurrentWindowId()
-                if hasattr(xbmcgui, "getCurrentWindowId")
-                else None
-            )
-        except Exception:
-            return False
-        if skin_id != "skin.estuary.mypicsdb3" or current_window != HOME_WINDOW_ID:
-            return False
-
-        get_visibility = getattr(xbmc, "getCondVisibility", None)
-        if callable(get_visibility):
-            try:
-                unsafe = (
-                    "Player.HasMedia",
-                    "System.HasActiveModalDialog",
-                    "System.ScreenSaverActive",
-                    "System.DPMSActive",
-                )
-                if any(bool(get_visibility(condition)) for condition in unsafe):
-                    return False
-            except Exception:
-                return False
-
-        try:
-            xbmc.executebuiltin("ReloadSkin()")
-            return True
-        except Exception:
-            return False
 
     def localize(self, string_id: int, fallback: str = "") -> str:
         value = self.addon.getLocalizedString(string_id)
@@ -959,28 +900,6 @@ class KodiContext:
             return bool(xbmc.Player().isPlaying())
         except Exception:
             return False
-
-    @staticmethod
-    def current_slideshow_picture_uri() -> str:
-        """Return the current native picture-viewer item without changing playback.
-
-        Kodi exposes the active still picture through the Slideshow labels.  The
-        ListItem fallback is only used outside the native slideshow path (for
-        example when Picture Info is opened from a regular picture listing).
-        """
-        if xbmc is None or not hasattr(xbmc, "getInfoLabel"):
-            return ""
-        try:
-            path = str(xbmc.getInfoLabel("Slideshow.Path") or "").strip()
-            filename = str(xbmc.getInfoLabel("Slideshow.Filename") or "").strip()
-            if path and filename:
-                return join_uri(path, filename)
-            picture_path = str(
-                xbmc.getInfoLabel("ListItem.PicturePath") or ""
-            ).strip()
-            return normalize_uri(picture_path)
-        except Exception:
-            return ""
 
     @staticmethod
     def playing_file() -> str:
