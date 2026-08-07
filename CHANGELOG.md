@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.8.1 - 2026-08-07
+
+- Add **Export support bundle** to Diagnostics. It writes a ZIP in the add-on
+  profile containing a structured `diagnostics.json` snapshot and a short
+  privacy README.
+- Keep the first support bundle deliberately small and privacy-safe: database
+  credentials and host names, profile paths, source URIs, current scan paths
+  and `kodi.log` are not included. Interrupted exports are written through a
+  temporary file and do not leave a bundle that looks complete.
+- Raise the plug-in version to 0.8.1 so Kodi does not reuse the 0.8.0 add-on
+  cache while this diagnostics/support milestone is being runtime-tested.
+  Database schema 7 is unchanged.
+
 ## 0.8.0 - 2026-08-07
 
 - Add a read-only **Diagnostics** view to the main MyPicsDB 3 browser. It shows

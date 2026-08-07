@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
+import os
 import time
+import zipfile
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 from . import SCHEMA_VERSION, VERSION
@@ -112,3 +116,94 @@ def collect_diagnostics(runtime, now: Optional[float] = None) -> Dict[str, Any]:
         "include_videos": bool(getattr(settings, "include_videos", False)),
         "debug_logging": bool(getattr(settings, "debug_logging", False)),
     }
+
+
+SUPPORT_BUNDLE_FORMAT_VERSION = 1
+SUPPORT_BUNDLE_DIRNAME = "support-bundles"
+SUPPORT_BUNDLE_README = """MyPicsDB 3 support bundle\n\nThis bundle is privacy-safe by default. It contains a structured diagnostics\nsnapshot only. It does not include database passwords, database host names,\nKodi/add-on profile paths, source URIs, the current scan path, or kodi.log.\n\nPlease inspect diagnostics.json before sharing the bundle.\n"""
+
+
+def build_support_bundle_payload(
+    runtime,
+    *,
+    now: Optional[float] = None,
+    generated_at: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Build the JSON payload used by the privacy-safe support bundle."""
+
+    timestamp = generated_at or datetime.now(timezone.utc)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    timestamp = timestamp.astimezone(timezone.utc)
+    return {
+        "format_version": SUPPORT_BUNDLE_FORMAT_VERSION,
+        "generated_at": timestamp.isoformat().replace("+00:00", "Z"),
+        "diagnostics": collect_diagnostics(runtime, now=now),
+        "privacy": {
+            "database_credentials_included": False,
+            "database_host_included": False,
+            "profile_paths_included": False,
+            "source_uris_included": False,
+            "current_scan_path_included": False,
+            "kodi_log_included": False,
+        },
+    }
+
+
+def write_support_bundle(
+    runtime,
+    *,
+    output_dir: Optional[str] = None,
+    now: Optional[float] = None,
+    generated_at: Optional[datetime] = None,
+) -> str:
+    """Write a privacy-safe support ZIP and return its absolute local path.
+
+    The default destination is a ``support-bundles`` directory inside the
+    add-on profile. A temporary file is replaced atomically so interrupted
+    writes do not leave a bundle that looks complete.
+    """
+
+    timestamp = generated_at or datetime.now(timezone.utc)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    timestamp = timestamp.astimezone(timezone.utc)
+    payload = build_support_bundle_payload(
+        runtime,
+        now=now,
+        generated_at=timestamp,
+    )
+
+    target_dir = output_dir or os.path.join(
+        str(runtime.kodi.profile_path), SUPPORT_BUNDLE_DIRNAME
+    )
+    os.makedirs(target_dir, exist_ok=True)
+    stamp = timestamp.strftime("%Y%m%d-%H%M%SZ")
+    filename = "mypicsdb3-support-%s-v%s.zip" % (stamp, VERSION)
+    final_path = os.path.join(target_dir, filename)
+    temporary_path = final_path + ".part"
+
+    diagnostics_json = json.dumps(
+        payload,
+        ensure_ascii=False,
+        indent=2,
+        sort_keys=True,
+        default=str,
+    ) + "\n"
+    try:
+        with zipfile.ZipFile(
+            temporary_path,
+            mode="w",
+            compression=zipfile.ZIP_DEFLATED,
+        ) as archive:
+            archive.writestr("diagnostics.json", diagnostics_json)
+            archive.writestr("README.txt", SUPPORT_BUNDLE_README)
+        os.replace(temporary_path, final_path)
+    except Exception:
+        try:
+            if os.path.exists(temporary_path):
+                os.remove(temporary_path)
+        except OSError:
+            pass
+        raise
+    return final_path

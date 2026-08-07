@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import json
+import zipfile
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
-from mypicsdb3.diagnostics import collect_diagnostics
+from mypicsdb3.diagnostics import collect_diagnostics, write_support_bundle
 
 
 class Catalog:
@@ -26,16 +29,18 @@ class Catalog:
 
 
 class Kodi:
-    settings = SimpleNamespace(
-        home_widget_limit=20,
-        random_home_refresh_hours=6,
-        include_videos=True,
-        debug_logging=True,
-        mysql_host="private-db.example",
-        mysql_username="secret-user",
-        mysql_password="secret-password",
-        profile_path="/private/profile",
-    )
+    def __init__(self, profile_path="/private/profile"):
+        self.profile_path = profile_path
+        self.settings = SimpleNamespace(
+            home_widget_limit=20,
+            random_home_refresh_hours=6,
+            include_videos=True,
+            debug_logging=True,
+            mysql_host="private-db.example",
+            mysql_username="secret-user",
+            mysql_password="secret-password",
+            profile_path="/private/profile",
+        )
 
     def installed_addon_version(self, addon_id):
         return {
@@ -87,3 +92,53 @@ def test_collect_diagnostics_excludes_private_connection_and_source_details():
     assert "/private/profile" not in rendered
     assert "Private source" not in rendered
     assert "smb://" not in rendered
+
+
+def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
+    profile = str(tmp_path / "addon-profile")
+    runtime = SimpleNamespace(catalog=Catalog(), kodi=Kodi(profile))
+    generated_at = datetime(2026, 8, 7, 11, 30, 45, tzinfo=timezone.utc)
+
+    path = write_support_bundle(
+        runtime,
+        now=1125.0,
+        generated_at=generated_at,
+    )
+
+    assert path.endswith(
+        "support-bundles/mypicsdb3-support-20260807-113045Z-v0.8.1.zip"
+    )
+    with zipfile.ZipFile(path) as archive:
+        assert sorted(archive.namelist()) == ["README.txt", "diagnostics.json"]
+        payload = json.loads(archive.read("diagnostics.json"))
+        readme = archive.read("README.txt").decode("utf-8")
+
+    assert payload["format_version"] == 1
+    assert payload["generated_at"] == "2026-08-07T11:30:45Z"
+    assert payload["diagnostics"]["plugin_version"] == "0.8.1"
+    assert payload["diagnostics"]["active_scan"] == {
+        "kind": "manual",
+        "state": "running",
+        "pictures_seen": 25,
+        "elapsed_seconds": 125.0,
+    }
+    assert payload["privacy"] == {
+        "database_credentials_included": False,
+        "database_host_included": False,
+        "profile_paths_included": False,
+        "source_uris_included": False,
+        "current_scan_path_included": False,
+        "kodi_log_included": False,
+    }
+
+    exported = json.dumps(payload, ensure_ascii=False)
+    for secret in (
+        "secret-password",
+        "private-db.example",
+        "addon-profile",
+        "smb://",
+        "Private source",
+        "scan-1",
+    ):
+        assert secret not in exported
+    assert "does not include" in readme

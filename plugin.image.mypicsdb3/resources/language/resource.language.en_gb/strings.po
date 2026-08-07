@@ -1446,3 +1446,15 @@ msgstr "Debug logging"
 msgctxt "#32857"
 msgid "Not installed"
 msgstr "Not installed"
+
+msgctxt "#32858"
+msgid "Export support bundle"
+msgstr "Export support bundle"
+
+msgctxt "#32859"
+msgid "Support bundle saved: %s"
+msgstr "Support bundle saved: %s"
+
+msgctxt "#32860"
+msgid "Could not export support bundle"
+msgstr "Could not export support bundle"

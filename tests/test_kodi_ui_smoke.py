@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.0",
+            "version": "0.8.1",
         }[key]
 
     def getSetting(self, key):
@@ -233,7 +233,7 @@ class FakeKodi:
     def kodi_picture_sources(self):
         return []
 
-    def notify(self, message, error=False, milliseconds=4000):
+    def notify(self, message, error=False, milliseconds=4000, force=False):
         self.notifications.append((message, error))
 
     def refresh_settings(self):
@@ -682,7 +682,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.0" in labels
+    assert "MyPicsDB 3 version: 0.8.1" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -697,12 +697,52 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     assert "smb://" not in joined
     assert "secret-pass" not in joined
     assert "Private photos" not in joined
-    for url, item, is_folder in calls.items[:-1]:
+    for url, item, is_folder in calls.items[:-2]:
         assert url == ""
         assert item.properties["IsPlayable"] == "false"
         assert item.properties["MyPicsDB3.MediaType"] == "info"
         assert is_folder is False
-    assert calls.items[-1][0].endswith("/action/log-diagnostic")
+    assert calls.items[-2][0].endswith("/action/log-diagnostic")
+    assert calls.items[-1][0].endswith("/action/export-support-bundle")
+
+
+def test_export_support_bundle_action_reports_generated_filename(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    monkeypatch.setattr(
+        views,
+        "write_support_bundle",
+        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.1.zip",
+    )
+
+    ui.dispatch(views.Request("action/export-support-bundle", {}))
+
+    assert runtime.kodi.notifications[-1] == (
+        "Support bundle saved: mypicsdb3-support-test-v0.8.1.zip",
+        False,
+    )
+    assert runtime.kodi.info_messages[-1] == (
+        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.1.zip"
+    )
+
+
+def test_export_support_bundle_action_reports_failure(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    def fail(_runtime):
+        raise OSError("disk full")
+
+    monkeypatch.setattr(views, "write_support_bundle", fail)
+    ui.dispatch(views.Request("action/export-support-bundle", {}))
+
+    assert runtime.kodi.notifications[-1] == (
+        "Could not export support bundle: disk full",
+        True,
+    )
+
 
 
 def test_refresh_random_selections_refreshes_widgets_without_scanning(monkeypatch) -> None:
@@ -1256,13 +1296,13 @@ def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
     views.xbmcgui.ListItem = InfoListItem
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
-    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.0")
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.1")
 
     assert url == ""
     assert item.video_tag_requests == 0
     assert item.properties["IsPlayable"] == "false"
     assert item.properties["MyPicsDB3.MediaType"] == "info"
-    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.0"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.1"
     assert is_folder is False
 
 

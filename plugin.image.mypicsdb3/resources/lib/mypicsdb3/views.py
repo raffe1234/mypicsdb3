@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import calendar
 import hashlib
+import os
 import sys
 import time
 import uuid
@@ -13,7 +14,7 @@ import xbmcgui  # type: ignore
 import xbmcplugin  # type: ignore
 
 from .album_view import save_current_album_view
-from .diagnostics import collect_diagnostics
+from .diagnostics import collect_diagnostics, write_support_bundle
 from .home_layout_editor import (
     SmartHomeEditorText,
     show_smart_home_layout_editor,
@@ -2331,6 +2332,12 @@ class PluginUI:
                 "action/log-diagnostic",
             )
         )
+        items.append(
+            self.add_action(
+                self.text(32858, "Export support bundle"),
+                "action/export-support-bundle",
+            )
+        )
         self.finish(
             items,
             content="files",
@@ -2417,6 +2424,26 @@ class PluginUI:
         self.finish(items, content="files", category=self.text(30014, "Scan status"))
 
     def action(self, route: str, params: Dict[str, str]):
+        if route == "action/export-support-bundle":
+            try:
+                bundle_path = write_support_bundle(self.runtime)
+            except Exception as exc:
+                self.kodi.log.warning("Could not export support bundle: %s", exc)
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(32860, "Could not export support bundle"), exc),
+                    error=True,
+                )
+                return
+            self.kodi.log.info(
+                "Privacy-safe support bundle exported: %s",
+                os.path.basename(bundle_path),
+            )
+            self.kodi.notify(
+                self.text(32859, "Support bundle saved: %s")
+                % os.path.basename(bundle_path)
+            )
+            return
         if route == "action/settings":
             previous_limit = int(getattr(self.kodi.settings, "home_widget_limit", 10))
             self.kodi.open_settings()
