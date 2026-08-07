@@ -483,19 +483,26 @@ def patch_picture_info_xml(
     if 'id="9200"' in picture_info:
         raise RuntimeError("MyPicsDB Picture Info action is already present")
 
-    nav_pattern = re.compile(r'(?m)^(?P<indent>[ \t]*)<ondown>5</ondown>[ \t]*$')
-    picture_info, nav_count = nav_pattern.subn(
+    # The metadata list is a Kodi container and keeps consuming Up/Down while it
+    # moves between rows, so trying to leave it at the last row proved unreliable
+    # on a real remote. Focus the visible action explicitly when Picture Info opens
+    # over the native slideshow instead, while leaving Estuary's list navigation
+    # untouched for every other Picture Info use.
+    load_pattern = re.compile(
+        r'(?m)^(?P<indent>[ \t]*)<onload>SetProperty\(infobackground,\$ESCINFO\[ListItem\.FolderPath\],home\)</onload>[ \t]*$'
+    )
+    picture_info, load_count = load_pattern.subn(
         lambda match: (
-            match.group("indent")
-            + '<ondown condition="Control.IsVisible(9200)">9200</ondown>\n'
+            match.group(0)
+            + "\n"
             + match.group("indent")
-            + '<ondown condition="!Control.IsVisible(9200)">5</ondown>'
+            + '<onload condition="Window.IsActive(Slideshow) + !SlideShow.IsVideo + System.HasAddon(plugin.image.mypicsdb3)">SetFocus(9200)</onload>'
         ),
         picture_info,
         count=1,
     )
-    if nav_count != 1:
-        raise RuntimeError("Could not locate Estuary Picture Info list navigation")
+    if load_count != 1:
+        raise RuntimeError("Could not locate Estuary Picture Info window initialization")
 
     list_pattern = re.compile(
         r'(?m)^(?P<indent>[ \t]*)<control type="list" id="5">[ \t]*$'

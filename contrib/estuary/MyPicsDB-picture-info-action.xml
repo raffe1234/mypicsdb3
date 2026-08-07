@@ -3,6 +3,13 @@
   <top>780</top>
   <width>480</width>
   <height>40</height>
+  <texturefocus colordiffuse="button_focus">lists/focus.png</texturefocus>
+  <texturenofocus />
+  <font>font12</font>
+  <textcolor>grey</textcolor>
+  <focusedcolor>white</focusedcolor>
+  <align>center</align>
+  <aligny>center</aligny>
   <label>$ADDON[plugin.image.mypicsdb3 32875]</label>
   <onup>5</onup>
   <ondown>5</ondown>

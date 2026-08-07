@@ -41,6 +41,14 @@ can re-query an unchanged provider without changing its visible selection. The
 combined editor remains in the picture add-on; the skin only consumes the nine
 slots.
 
+Because those row-specific `<include condition=...>` blocks are expanded while
+Home XML is loaded, Kodi can reach Home before the delayed service has published
+the row properties. Version 0.8.6 detects that one startup ordering case. If the
+custom Estuary fork is still on Home, no modal dialog/player/screensaver is
+active, and row state was previously absent, the service performs one
+`ReloadSkin()` immediately after publishing the state. Returning to Home later
+needs no reload because the properties already exist before Home is loaded.
+
 The 0.4.4 patch uses Omega patch revision 12 and Piers patch revision 10.
 The plugin-only 0.4.5 stability follow-up keeps those skin revisions unchanged.
 Version 0.4.11 advances Omega to revision 15 and Piers to revision 13 because
@@ -48,8 +56,10 @@ the generated Home fragment removes the legacy square/wide smart-row branches.
 Version 0.5.1 advances Omega to revision 16 and Piers to revision 14 for fixed
 manual-collection Home providers.
 Version 0.8.4 advances Omega to revision 17 and Piers to revision 15 for the
-Picture Info collection action. Version 0.8.5 advances them again to revisions
-18/16 to make that action reachable with keyboard and remote focus navigation.
+Picture Info collection action. Version 0.8.5 advances them to revisions 18/16
+for the first focus-navigation fix. Version 0.8.6 uses revisions 19/17: Picture
+Info focuses the action directly on open, and service startup bootstraps Home
+when its conditional row includes were loaded before MyPicsDB state existed.
 
 ## Picture Info collection action
 
@@ -62,14 +72,11 @@ runs:
 plugin://plugin.image.mypicsdb3/action/add-current-picture-to-collection
 ```
 
-The user flow is **I / Info** -> move **Down** past the last metadata row ->
-**OK / Enter**. The `C` context-menu key and Kodi keymaps are not changed.
-
-Focus navigation is deliberately fail-safe. At the bottom of Estuary's metadata
-list, Down targets control `9200` only when `Control.IsVisible(9200)` is true.
-The fallback back to list control `5` has the inverse condition, so the two
-navigation actions cannot both fire for one key press. When the MyPicsDB action
-is hidden, native Estuary behaviour is preserved.
+The user flow is **I / Info** -> **OK / Enter**. When the action is visible, a
+conditional Picture Info `onload` focuses control `9200` directly and the button
+uses Estuary's normal focus texture. **Up / Down** returns to metadata list
+control `5`. The `C` context-menu key and Kodi keymaps are not changed. When the
+MyPicsDB action is hidden, Picture Info retains native Estuary focus behaviour.
 
 The plug-in then resolves Kodi's current slideshow path and filename to one
 exact, non-missing catalogue URI and requires `media_type=picture` before it
@@ -91,7 +98,7 @@ started manually. It:
 
 The workflow is fail-closed. If the Pictures group can no longer be found
 exactly between Estuary control groups `4000` and `17000`, or the expected
-Picture Info metadata-list navigation cannot be patched exactly once, no new pin
+Picture Info initialization/list structure cannot be patched exactly once, no new pin
 is committed and the previously published skin remains available. A GitHub issue
 named **Automatic Estuary patch failed** is created or updated.
 
@@ -139,8 +146,8 @@ Preview packages use Kodi's supported pre-release ordering:
 Increase `patch_revision` in a channel when the MyPicsDB 3 patch itself changes
 without a new Kodi release. Versions 0.4.9 and 0.4.10 use Omega revision 14 and
 Piers revision 12. Version 0.4.11 uses revisions 15/13, version 0.8.4 uses
-17/15 for Picture Info, and version 0.8.5 uses 18/16 for the corrected focus
-navigation. Then run the updater
+17/15 for Picture Info, version 0.8.5 uses 18/16, and version 0.8.6 uses 19/17
+for direct Picture Info focus plus Home bootstrap. Then run the updater
 so all generated versions are recalculated.
 
 ## Build commands

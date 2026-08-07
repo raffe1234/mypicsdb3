@@ -62,7 +62,7 @@ optional collection context action → Assign music playlist
 | `preferences.py`, `home_layout_editor.py` | Manual collection Home-row persistence and editing |
 | `views.py` | Main-menu route, dialogs, context actions, full-screen Picture Info action, Home provider, browsing and slideshow scope |
 | `kodi.py` | Kodi state helpers, including the current native slideshow picture URI |
-| `contrib/estuary/`, `tools/estuary_skin.py` | Generated Estuary Home rows and focusable Picture Info action |
+| `contrib/estuary/`, `tools/estuary_skin.py` | Generated Estuary Home rows and directly focused Picture Info action |
 | `resources/language/resource.language.en_gb/strings.po` | User-facing collection text |
 | `music_playlists.py`, `music_slideshow.py` | Optional playlist assignment and music playback helpers |
 | `db/migration_steps/v0007_collection_music.py` | Optional schema-7 music mapping |
@@ -101,8 +101,10 @@ is forwarded in collection routes and slideshow actions.
   characters.
 - Adding an already-present item is a no-op and returns `False`.
 - Only indexed, currently non-missing media can be added.
-- The full-screen Picture Info route additionally requires one exact URI match
-  whose catalogue row is explicitly a still picture; otherwise it fails closed.
+- The full-screen Picture Info action receives focus directly when its dialog
+  opens over a still-picture slideshow. The route additionally requires one exact
+  URI match whose catalogue row is explicitly a still picture; otherwise it
+  fails closed.
 - Removing an item deletes only its membership row and compacts positions.
 - Context actions move an item one step or directly to either edge.
 - Deleting a collection cascades membership rows but never deletes a `pictures`
@@ -143,8 +145,8 @@ MyPicsDB started. See [Collection music playlists](COLLECTION_MUSIC.md).
 - `tests/test_kodi_ui_smoke.py` covers routes, Home providers, context actions,
   full-screen collection guardrails and row synchronization;
 - `tests/test_kodi_date_refresh.py` covers current-slideshow URI resolution;
-- `tests/test_estuary_skin.py` covers Picture Info insertion and keyboard/remote
-  focus navigation in the generated Estuary fork;
+- `tests/test_estuary_skin.py` covers Picture Info insertion, explicit dialog-open
+  focus and visible focus styling in the generated Estuary fork;
 - `tests/test_preferences.py` and `tests/test_home_layout_editor.py` cover manual Home rows;
 - `tests/test_mysql_integration.py` contains an opt-in backend round trip.
 

@@ -134,8 +134,8 @@ patched home screen and both supported Kodi channels must still build and test.
 
 ## Useful tests
 
-- `tests/test_estuary_skin.py`, including Picture Info insertion and focus
-  navigation;
+- `tests/test_estuary_skin.py`, including Picture Info insertion, direct focus
+  initialization and focus styling;
 - `tests/test_estuary_updater.py`;
 - `tests/test_repository_assets.py`;
 - `tests/test_home_layout_editor.py`;
@@ -149,8 +149,10 @@ patched home screen and both supported Kodi channels must still build and test.
 - Upstream tags and hashes remain pinned and reviewable.
 - Both supported Kodi channels are built where the workflow requires them.
 - Public widget URLs remain stable or are documented as compatibility changes.
-- The Picture Info action remains reachable by keyboard/remote only while visible,
-  and its hidden state preserves native Estuary list navigation.
+- The Picture Info action receives keyboard/remote focus only while visible; its
+  hidden state and the metadata list keep native Estuary navigation.
+- Initial Home-row state may trigger one guarded custom-skin reload only when Home
+  was already loaded before the delayed service published row properties.
 - Repository artwork paths and manifests remain valid.
 - A release tag is created only after the exact main commit is green.
 - The repository add-on version changes only when that add-on changes.

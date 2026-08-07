@@ -201,6 +201,14 @@ either collection through the plug-in uses **Default album view**.
 `MyPicsDB3.HomeSmartMode1` remains a legacy compatibility property and should
 be ignored by new skin integrations.
 
+The maintained Estuary fork chooses the row type with conditional XML includes.
+Those includes are expanded when Home is loaded, not when the Home-window
+property changes later. Version 0.8.6 therefore performs one guarded custom-skin
+reload only when Kodi reached Home before the delayed service had published any
+row state. If Home opens after publication, no bootstrap reload is required.
+Third-party skins should account for the same startup-ordering issue if they use
+load-time conditional includes.
+
 Media sources can use:
 
 ```xml
@@ -240,12 +248,13 @@ manual-collection picker/write path. A skin should not pass an arbitrary media I
 or source path to bypass those checks.
 
 For keyboard and remote users, the action must be part of the skin's real focus
-graph. The Estuary reference implementation makes Down leave the metadata list
-for the button only while the button is visible, with a mutually exclusive
-fallback to native list navigation when it is hidden. Do not rely on a visible
-button being focusable automatically. Do not remap Kodi's `C`, Info or remote
-keys just to expose this action; the reference flow is **I / Info** -> Down to
-the action -> **OK / Enter**.
+graph. Real-device testing showed that relying on Down to escape Kodi's Picture
+Info metadata container is not reliable. The Estuary reference implementation
+therefore focuses the visible action explicitly from a conditional dialog
+`onload`, gives it a normal Estuary focus texture, and leaves the metadata list's
+native navigation unchanged. The reference flow is **I / Info** -> **OK /
+Enter**; **Up / Down** returns to the metadata list. Do not remap Kodi's `C`,
+Info or remote keys just to expose this action.
 
 Third-party skins may omit this action completely. If they expose it, test both
 the visible and hidden states with keyboard and remote controls on every
@@ -389,8 +398,10 @@ Test in a real Kodi installation:
 - albums open in the Pictures window;
 - focus and Back navigation are logical;
 - keyboard, remote, mouse and touch work where supported;
-- any Picture Info collection action is actually reachable by focus navigation,
-  and hiding it restores the skin's native navigation;
+- any Picture Info collection action receives a visible keyboard/remote focus
+  when shown, and hiding it restores the skin's native navigation;
+- Home rows appear after a cold Kodi start without requiring the user to enter
+  the add-on and return to Home;
 - random rows do not gain an unwanted "more" item;
 - switching skins is safe;
 - skin and Kodi updates do not overwrite a separate fork;

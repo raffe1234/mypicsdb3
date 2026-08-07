@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.6 - 2026-08-07
+
+- Bootstrap Estuary MyPicsDB 3 Home rows when Kodi reaches Home before the
+  delayed background service publishes its row properties. If the properties
+  were missing and the custom Estuary fork is still the active Home window, the
+  service performs one guarded one-time `ReloadSkin()` after publication; no
+  reload is needed when Home is opened later or state was already present.
+- Replace the unreliable attempt to leave Estuary's Picture Info metadata list
+  with explicit dialog-open focus on **Add current picture to collection**. The
+  button now has a visible Estuary focus texture, while the native metadata-list
+  navigation and Kodi keymaps remain unchanged.
+- Advance the generated Estuary fork revisions to Omega 19 and Piers 17. The
+  plug-in version is 0.8.6 and database schema remains 7.
+
 ## 0.8.5 - 2026-08-07
 
 - Fix keyboard and remote focus for **Add current picture to collection** in

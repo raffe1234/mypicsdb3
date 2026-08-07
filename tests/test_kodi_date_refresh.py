@@ -505,3 +505,48 @@ def test_current_slideshow_picture_uri_falls_back_to_picture_path(monkeypatch) -
     )
 
     assert kodi.KodiContext.current_slideshow_picture_uri() == "C:/Photos/image.jpg"
+
+
+def test_initial_home_state_reload_refreshes_custom_estuary_when_home_is_active(monkeypatch) -> None:
+    commands = []
+    monkeypatch.setattr(kodi, "xbmc", fake_xbmc(commands))
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(getCurrentWindowId=lambda: 10000),
+    )
+
+    refreshed = kodi.KodiContext.reload_estuary_home_after_initial_state_publish()
+
+    assert refreshed is True
+    assert commands == ["ReloadSkin()"]
+
+
+def test_initial_home_state_reload_is_skipped_away_from_home(monkeypatch) -> None:
+    commands = []
+    monkeypatch.setattr(kodi, "xbmc", fake_xbmc(commands))
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(getCurrentWindowId=lambda: 10002),
+    )
+
+    refreshed = kodi.KodiContext.reload_estuary_home_after_initial_state_publish()
+
+    assert refreshed is False
+    assert commands == []
+
+
+def test_home_layout_state_published_detects_first_row_property(monkeypatch) -> None:
+    class FakeWindow:
+        def getProperty(self, name):
+            return "recent_taken" if name == "MyPicsDB3.HomeRow1" else ""
+
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(Window=lambda _window_id: FakeWindow()),
+    )
+    context = kodi.KodiContext.__new__(kodi.KodiContext)
+
+    assert context.home_layout_state_published() is True
