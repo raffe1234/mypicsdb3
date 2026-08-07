@@ -15,6 +15,9 @@
 - Add configurable picture duration, random order, filename display and a hard
   1,000-picture session cap. Database/source failures show a short fallback
   instead of starting scans or migrations. Catalogue schema 7 is unchanged.
+- Make the Python screensaver canvas explicitly opaque. Preview and normal
+  activation now put a full-screen black backing control behind fitted pictures,
+  so Settings/Home cannot show through the aspect-ratio bars.
 - Extend build/verification tooling so the new screensaver is indexed in the
   MyPicsDB 3 repository and available as a standalone release package.
 

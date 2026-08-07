@@ -206,7 +206,9 @@ collection**. The picker lists:
   order is disabled.
 
 Only still pictures are displayed. Videos in a mixed manual collection are
-skipped. Random mode uses the catalogue's stored random key and a bounded query
+skipped. Pictures keep their aspect ratio on an opaque black full-screen canvas,
+including when Kodi's **Preview** button launches the screensaver from Settings.
+Random mode uses the catalogue's stored random key and a bounded query
 instead of an unbounded database random sort. **Maximum pictures per session**
 is capped at 1,000. The screensaver opens the existing SQLite database read-only
 (or issues SELECT-only queries with the configured MySQL/MariaDB account), never

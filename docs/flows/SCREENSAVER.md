@@ -36,10 +36,14 @@ and, when necessary, wraps once to the start of the key space. This avoids
 
 ## Display lifecycle
 
-The Python screensaver creates a full-screen `WindowDialog` with one aspect-ratio
-preserving image control. `xbmc.Monitor.onScreensaverDeactivated()` and the Kodi
-abort flag both stop the loop quickly. A direct user action on the dialog also
-closes it. Optional filename text is drawn by a separate label control.
+The Python screensaver creates a full-screen `WindowDialog`. Because Kodi dialog
+windows are overlays, the first control is an opaque full-screen black backing
+texture; this prevents the Settings or Home window from showing through when a
+fitted picture has pillarbox/letterbox space. The picture control is then drawn
+above it with aspect ratio preserved. `xbmc.Monitor.onScreensaverDeactivated()`
+and the Kodi abort flag both stop the loop quickly. A direct user action on the
+dialog also closes it. Optional filename text is drawn by a separate label
+control.
 
 If the database is unavailable, the selected collection was deleted, or no still
 pictures remain, a short text fallback is shown. The screensaver never scans or

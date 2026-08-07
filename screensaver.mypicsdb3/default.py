@@ -122,11 +122,35 @@ class _ScreensaverWindow(xbmcgui.WindowDialog):
         self.close()
 
 
+def _add_opaque_background(window, width: int, height: int):
+    """Cover the transparent WindowDialog before drawing fitted pictures.
+
+    WindowDialog is intentionally an overlay in Kodi.  Without an opaque control,
+    aspect-ratio bars reveal the window that launched Preview (usually the
+    screensaver Settings dialog).  Tinting the add-on's bundled JPEG fully black
+    gives us a skin-independent, packaged texture with no extra media dependency.
+    """
+    addon = xbmcaddon.Addon(SCREENSAVER_ID)
+    texture = os.path.join(_translate(addon.getAddonInfo("path")), "fanart.jpg")
+    background = xbmcgui.ControlImage(
+        0,
+        0,
+        width,
+        height,
+        texture,
+        aspectRatio=0,
+        colorDiffuse="0xFF000000",
+    )
+    window.addControl(background)
+    return background
+
+
 def _show_fallback(message: str, seconds: int = 10) -> None:
     monitor = _ExitMonitor()
     window = _ScreensaverWindow()
     width = max(1, int(xbmcgui.getScreenWidth()))
     height = max(1, int(xbmcgui.getScreenHeight()))
+    background = _add_opaque_background(window, width, height)
     label = xbmcgui.ControlLabel(
         int(width * 0.1),
         int(height * 0.42),
@@ -191,6 +215,7 @@ def _run_screensaver(core, addon) -> None:
     window = _ScreensaverWindow()
     width = max(1, int(xbmcgui.getScreenWidth()))
     height = max(1, int(xbmcgui.getScreenHeight()))
+    background = _add_opaque_background(window, width, height)
     image = xbmcgui.ControlImage(0, 0, width, height, "", aspectRatio=2)
     window.addControl(image)
     caption = None
@@ -207,8 +232,15 @@ def _run_screensaver(core, addon) -> None:
         window.addControl(caption)
     window.show()
     _logger(
-        "Started source_type=%s source_id=%s pictures=%d random=%s"
-        % (source_type, source_id, len(pictures), str(randomize).lower())
+        "Started source_type=%s source_id=%s pictures=%d random=%s canvas=%dx%d opaque_background=true"
+        % (
+            source_type,
+            source_id,
+            len(pictures),
+            str(randomize).lower(),
+            width,
+            height,
+        )
     )
 
     try:
