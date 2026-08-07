@@ -7,10 +7,14 @@ query rules remain owned by MyPicsDB 3.
 
 ## Source selection
 
-`RunScript(screensaver.mypicsdb3,choose-source)` opens a picker containing the
-current manual collections and saved smart collections. The selected type, id
-and display name are stored in the screensaver add-on's own settings. There is no
-default collection and no implicit all-library fallback.
+`RunScript($CWD/default.py,choose-source)` opens a picker containing the
+current manual collections and saved smart collections. The settings dialog closes
+before the picker runs, then the selected type, id and display name are stored in
+the screensaver add-on's own settings. Closing first prevents Kodi's still-open
+settings dialog from writing stale hidden source values back over a newly selected
+manual or smart collection. Reopen Screensaver settings to use Preview after
+changing the source. There is no default collection and no implicit all-library
+fallback.
 
 ## Read-only provider
 

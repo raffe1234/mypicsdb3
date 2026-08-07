@@ -83,6 +83,10 @@ def _choose_source(core, addon) -> None:
     addon.setSetting("source_type", source.source_type)
     addon.setSetting("source_id", str(source.source_id))
     addon.setSetting("source_name", source.name)
+    _logger(
+        "Selected source stored source_type=%s source_id=%s source_name=%r"
+        % (source.source_type, source.source_id, source.name)
+    )
     xbmcgui.Dialog().notification(
         "MyPicsDB 3 Screensaver",
         "Selected: %s" % source.name,
@@ -95,6 +99,7 @@ def _clear_source(addon) -> None:
     addon.setSetting("source_type", "")
     addon.setSetting("source_id", "")
     addon.setSetting("source_name", "")
+    _logger("Collection selection cleared")
     xbmcgui.Dialog().notification(
         "MyPicsDB 3 Screensaver",
         "Collection selection cleared",
@@ -192,6 +197,7 @@ def _show_fallback(message: str, seconds: int = 10) -> None:
 def _run_screensaver(core, addon) -> None:
     source_type = addon.getSetting("source_type")
     source_id = addon.getSetting("source_id")
+    source_name = addon.getSetting("source_name")
     if not source_type or not source_id:
         _show_fallback(
             "Choose a MyPicsDB collection in this screensaver's settings."
@@ -225,7 +231,15 @@ def _run_screensaver(core, addon) -> None:
         _show_fallback("MyPicsDB 3 Screensaver: %s" % exc)
         return
     if not pictures:
-        _show_fallback("The selected MyPicsDB collection has no available pictures.")
+        _logger(
+            "Selected source returned no pictures source_type=%s source_id=%s source_name=%r"
+            % (source_type, source_id, source_name),
+            xbmc.LOGWARNING,
+        )
+        label = source_name or ("%s:%s" % (source_type, source_id))
+        _show_fallback(
+            "The selected MyPicsDB collection has no available pictures: %s" % label
+        )
         return
 
     monitor = _ExitMonitor()
@@ -250,11 +264,12 @@ def _run_screensaver(core, addon) -> None:
         window.addControl(caption)
     window.show()
     _logger(
-        "Started source_type=%s source_id=%s pictures=%d random=%s "
+        "Started source_type=%s source_id=%s source_name=%r pictures=%d random=%s "
         "canvas=%dx%d screen=%dx%d opaque_background=true centered=true"
         % (
             source_type,
             source_id,
+            source_name,
             len(pictures),
             str(randomize).lower(),
             width,

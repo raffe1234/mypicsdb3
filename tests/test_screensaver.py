@@ -235,3 +235,27 @@ def test_screensaver_ui_uses_window_coordinate_space_for_centering():
     assert "window.getHeight()" in source
     assert source.count("width, height = _window_canvas_size(window)") == 2
     assert "centered=true" in source
+
+
+def test_screensaver_source_actions_close_settings_before_writing_selection():
+    settings_xml = (
+        Path(__file__).resolve().parents[1]
+        / "screensaver.mypicsdb3"
+        / "resources"
+        / "settings.xml"
+    ).read_text(encoding="utf-8")
+    assert "RunScript($CWD/default.py,choose-source)" in settings_xml
+    assert "RunScript($CWD/default.py,clear-source)" in settings_xml
+    assert settings_xml.count("<close>true</close>") >= 2
+    assert "RunScript(screensaver.mypicsdb3" not in settings_xml
+
+
+def test_screensaver_logs_selected_source_name_for_runtime_diagnostics():
+    source = (
+        Path(__file__).resolve().parents[1]
+        / "screensaver.mypicsdb3"
+        / "default.py"
+    ).read_text(encoding="utf-8")
+    assert "Selected source stored source_type=%s source_id=%s source_name=%r" in source
+    assert "Started source_type=%s source_id=%s source_name=%r pictures=%d" in source
+    assert "Selected source returned no pictures" in source

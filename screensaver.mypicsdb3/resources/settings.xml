@@ -5,16 +5,16 @@
       <group id="1">
         <setting id="choose_source" type="action" label="32001" help="32101">
           <level>0</level>
-          <data>RunScript(screensaver.mypicsdb3,choose-source)</data>
+          <data>RunScript($CWD/default.py,choose-source)</data>
           <control type="button" format="action">
-            <close>false</close>
+            <close>true</close>
           </control>
         </setting>
         <setting id="clear_source" type="action" label="32002" help="32102">
           <level>0</level>
-          <data>RunScript(screensaver.mypicsdb3,clear-source)</data>
+          <data>RunScript($CWD/default.py,clear-source)</data>
           <control type="button" format="action">
-            <close>false</close>
+            <close>true</close>
           </control>
         </setting>
         <setting id="source_type" type="string" label="32010">

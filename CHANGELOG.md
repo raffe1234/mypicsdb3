@@ -21,6 +21,11 @@
 - Size screensaver controls from the `WindowDialog` coordinate space instead of
   the physical screen dimensions. This keeps aspect-ratio-preserving pictures
   centered when Kodi's Python window uses a different GUI coordinate size.
+- Close the screensaver add-on settings dialog before choosing or clearing a
+  source so stale hidden settings cannot overwrite a newly selected manual
+  collection. The picker runs its packaged Python file directly, avoiding Kodi's
+  deprecated `RunScript`-by-non-script-add-on path, and logs the stored source
+  type, id and name for runtime diagnostics.
 - Extend build/verification tooling so the new screensaver is indexed in the
   MyPicsDB 3 repository and available as a standalone release package.
 
