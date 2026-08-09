@@ -4,7 +4,7 @@ import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Any, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
 
 from .rating_policy import RATING_POLICY_ALL, rating_sql_predicate
 from .search_index import SearchTextError, normalize_search_query
@@ -98,11 +98,18 @@ _FIELD_OPERATORS = {
     "favorite": frozenset({"eq"}),
     "source": frozenset({"eq", "in"}),
     "album": frozenset({"eq", "in"}),
-    "taken_date": frozenset({"between"}),
-    "camera": frozenset({"eq"}),
-    "keyword": frozenset({"eq", "in"}),
+    "taken_date": frozenset({"between", "is_null", "is_not_null"}),
+    "camera": frozenset({"eq", "is_null", "is_not_null"}),
+    "keyword": frozenset({"eq", "in", "is_null", "is_not_null"}),
     "text": frozenset({"contains_tokens"}),
     "media_type": frozenset({"eq", "in"}),
+    "extension": frozenset({"eq", "in"}),
+    "mime_type": frozenset({"eq", "in", "is_null", "is_not_null"}),
+    "country": frozenset({"eq", "is_null", "is_not_null"}),
+    "state": frozenset({"eq", "is_null", "is_not_null"}),
+    "city": frozenset({"eq", "is_null", "is_not_null"}),
+    "sublocation": frozenset({"eq", "is_null", "is_not_null"}),
+    "aspect": frozenset({"eq", "in"}),
 }
 
 
@@ -188,6 +195,26 @@ def _keyword_list(value: Any, path: str) -> Tuple[str, ...]:
     return tuple(sorted(normalized))
 
 
+def _string_list(
+    value: Any,
+    path: str,
+    *,
+    maximum: int,
+    transform: Optional[Callable[[str], str]] = None,
+) -> Tuple[str, ...]:
+    if not isinstance(value, list):
+        raise _path_message(path, "must be a list")
+    if not value:
+        raise _path_message(path, "must not be empty")
+    if len(value) > MAX_LIST_VALUES:
+        raise _path_message(path, "must contain at most %d values" % MAX_LIST_VALUES)
+    parsed = []
+    for index, item in enumerate(value):
+        text = _string(item, "%s[%d]" % (path, index), maximum=maximum)
+        parsed.append(transform(text) if transform else text)
+    return tuple(sorted(set(parsed)))
+
+
 def _camera_value(value: Any, path: str) -> CameraValue:
     mapping = _mapping(value, path)
     _reject_unknown(mapping, ("make", "model"), path)
@@ -263,14 +290,39 @@ def _parse_rule(value: Any, path: str, rule_counter: List[int]) -> QueryRule:
             if parsed not in {"picture", "video"}:
                 raise _path_message(path + ".value", "must be 'picture' or 'video'")
         else:
-            if not isinstance(raw, list):
-                raise _path_message(path + ".value", "must be a list")
-            if not raw:
-                raise _path_message(path + ".value", "must not be empty")
-            values = tuple(sorted({_string(item, "%s.value[%d]" % (path, index), maximum=16).lower() for index, item in enumerate(raw)}))
+            values = _string_list(raw, path + ".value", maximum=16, transform=str.lower)
             if any(item not in {"picture", "video"} for item in values):
                 raise _path_message(path + ".value", "values must be 'picture' or 'video'")
             parsed = values
+    elif field == "extension":
+        parsed = (
+            _string_list(raw, path + ".value", maximum=32, transform=str.lower)
+            if operator == "in"
+            else _string(raw, path + ".value", maximum=32).lower().lstrip(".")
+        )
+        if operator == "in":
+            parsed = tuple(sorted({item.lstrip(".") for item in parsed}))
+        if not parsed or (isinstance(parsed, tuple) and any(not item for item in parsed)):
+            raise _path_message(path + ".value", "must contain a file extension")
+    elif field == "mime_type":
+        parsed = (
+            _string_list(raw, path + ".value", maximum=128, transform=str.lower)
+            if operator == "in"
+            else _string(raw, path + ".value", maximum=128).lower()
+        )
+    elif field in {"country", "state", "city", "sublocation"}:
+        parsed = _string(raw, path + ".value", maximum=255)
+    elif field == "aspect":
+        allowed = {"landscape", "portrait", "square"}
+        if operator == "in":
+            values = _string_list(raw, path + ".value", maximum=16, transform=str.lower)
+            if any(item not in allowed for item in values):
+                raise _path_message(path + ".value", "values must be 'landscape', 'portrait' or 'square'")
+            parsed = values
+        else:
+            parsed = _string(raw, path + ".value", maximum=16).lower()
+            if parsed not in allowed:
+                raise _path_message(path + ".value", "must be 'landscape', 'portrait' or 'square'")
     elif field == "text":
         try:
             normalized_text, tokens = normalize_search_query(raw)
@@ -501,6 +553,10 @@ def _compile_rule(rule: QueryRule) -> Tuple[str, Tuple[Any, ...]]:
         return column + " IN (" + _placeholders(value) + ")", tuple(value)
 
     if field == "taken_date":
+        if operator == "is_null":
+            return "p.taken_at IS NULL", ()
+        if operator == "is_not_null":
+            return "p.taken_at IS NOT NULL", ()
         start_text, end_text = value
         start = date.fromisoformat(start_text)
         end_exclusive = date.fromisoformat(end_text) + timedelta(days=1)
@@ -510,6 +566,11 @@ def _compile_rule(rule: QueryRule) -> Tuple[str, Tuple[Any, ...]]:
         )
 
     if field == "camera":
+        camera_present = "(NULLIF(TRIM(p.camera_make),'') IS NOT NULL OR NULLIF(TRIM(p.camera_model),'') IS NOT NULL)"
+        if operator == "is_null":
+            return "NOT " + camera_present, ()
+        if operator == "is_not_null":
+            return camera_present, ()
         camera: CameraValue = value
         predicates: List[str] = []
         params: List[Any] = []
@@ -522,6 +583,11 @@ def _compile_rule(rule: QueryRule) -> Tuple[str, Tuple[Any, ...]]:
         return " AND ".join(predicates), tuple(params)
 
     if field == "keyword":
+        keyword_exists = "EXISTS (SELECT 1 FROM picture_tags pt WHERE pt.picture_id=p.id)"
+        if operator == "is_null":
+            return "NOT " + keyword_exists, ()
+        if operator == "is_not_null":
+            return keyword_exists, ()
         if operator == "eq":
             predicate = "t.normalized_name=?"
             params = (value,)
@@ -539,6 +605,47 @@ def _compile_rule(rule: QueryRule) -> Tuple[str, Tuple[Any, ...]]:
         if operator == "eq":
             return "p.media_type=?", (value,)
         return "p.media_type IN (" + _placeholders(value) + ")", tuple(value)
+
+    if field == "extension":
+        column = "NULLIF(LOWER(TRIM(p.extension)),'')"
+        if operator == "eq":
+            return column + "=?", (value,)
+        return column + " IN (" + _placeholders(value) + ")", tuple(value)
+
+    if field == "mime_type":
+        column = "NULLIF(LOWER(TRIM(p.mime_type)),'')"
+        if operator == "is_null":
+            return column + " IS NULL", ()
+        if operator == "is_not_null":
+            return column + " IS NOT NULL", ()
+        if operator == "eq":
+            return column + "=?", (value,)
+        return column + " IN (" + _placeholders(value) + ")", tuple(value)
+
+    if field in {"country", "state", "city", "sublocation"}:
+        column = {
+            "country": "p.country",
+            "state": "p.state",
+            "city": "p.city",
+            "sublocation": "p.sublocation",
+        }[field]
+        normalized_column = "NULLIF(TRIM(%s),'')" % column
+        if operator == "is_null":
+            return normalized_column + " IS NULL", ()
+        if operator == "is_not_null":
+            return normalized_column + " IS NOT NULL", ()
+        return normalized_column + "=?", (value,)
+
+    if field == "aspect":
+        display_width = "(CASE WHEN p.orientation IN (5,6,7,8) THEN p.height ELSE p.width END)"
+        display_height = "(CASE WHEN p.orientation IN (5,6,7,8) THEN p.width ELSE p.height END)"
+        predicates = {
+            "landscape": display_width + ">" + display_height,
+            "portrait": display_height + ">" + display_width,
+            "square": display_width + "=" + display_height,
+        }
+        values = (value,) if operator == "eq" else tuple(value)
+        return "(" + " OR ".join(predicates[item] for item in values) + ")", ()
 
     if field == "text":
         search: TextSearchValue = value

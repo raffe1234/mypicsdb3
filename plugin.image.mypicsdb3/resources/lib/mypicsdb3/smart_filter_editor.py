@@ -240,6 +240,12 @@ class SmartFilterEditor:
             ("camera", self.text(32756, "Camera")),
             ("keyword", self.text(32757, "Keyword")),
             ("media_type", self.text(32758, "Media type")),
+            ("extension", self.text(32875, "File extension")),
+            ("country", self.text(32876, "Country")),
+            ("state", self.text(32877, "State or region")),
+            ("city", self.text(32878, "City")),
+            ("sublocation", self.text(32879, "Sublocation")),
+            ("aspect", self.text(32880, "Image shape")),
         )
         preselect = -1
         if existing is not None:
@@ -373,6 +379,79 @@ class SmartFilterEditor:
             "value": "video" if selected == 1 else "picture",
         }
 
+    def _facet_rows(self, field_name: str, existing: Optional[RulePayload]) -> List[Any]:
+        original = self.draft.rules
+        try:
+            if self.draft.match == "all" and existing is not None:
+                self.draft.rules = [rule for rule in original if rule is not existing]
+            elif self.draft.match == "any":
+                # An added OR criterion can expand beyond the current matches, so
+                # show values from the full validated base selection instead of
+                # hiding values that do not already satisfy another OR branch.
+                self.draft.rules = []
+            query = self.build_query()
+            return list(self.catalog.query_facet_counts(query, field_name, 200))
+        except (QueryValidationError, ValueError, RuntimeError) as exc:
+            self._show_message(self.text(32741, "Smart filter editor"), str(exc))
+            return []
+        finally:
+            self.draft.rules = original
+
+    def _rule_scalar_facet(
+        self,
+        field_name: str,
+        heading: str,
+        existing: Optional[RulePayload],
+        prefix: str = "",
+    ) -> Optional[RulePayload]:
+        rows = self._facet_rows(field_name, existing)
+        if not rows:
+            self._show_message(heading, self.text(32766, "No values available"))
+            return None
+        current = str((existing or {}).get("value") or "")
+        values = [str(_value(row, "value", "") or "") for row in rows]
+        labels = [
+            self.text(32884, "%s (%d items)")
+            % (prefix + value, int(_value(row, "picture_count", 0) or 0))
+            for value, row in zip(values, rows)
+        ]
+        preselect = values.index(current) if current in values else -1
+        selected = self.dialog.select(heading, labels, preselect=preselect)
+        if selected < 0:
+            return None
+        return {"type": "rule", "field": field_name, "operator": "eq", "value": values[selected]}
+
+    def _rule_extension(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        return self._rule_scalar_facet(
+            "extension", self.text(32875, "File extension"), existing, prefix="."
+        )
+
+    def _rule_country(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        return self._rule_scalar_facet("country", self.text(32876, "Country"), existing)
+
+    def _rule_state(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        return self._rule_scalar_facet("state", self.text(32877, "State or region"), existing)
+
+    def _rule_city(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        return self._rule_scalar_facet("city", self.text(32878, "City"), existing)
+
+    def _rule_sublocation(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        return self._rule_scalar_facet("sublocation", self.text(32879, "Sublocation"), existing)
+
+    def _rule_aspect(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        values = ("landscape", "portrait", "square")
+        labels = [
+            self.text(32881, "Landscape"),
+            self.text(32882, "Portrait"),
+            self.text(32883, "Square"),
+        ]
+        current = str((existing or {}).get("value") or "landscape")
+        preselect = values.index(current) if current in values else 0
+        selected = self.dialog.select(self.text(32880, "Image shape"), labels, preselect=preselect)
+        if selected < 0:
+            return None
+        return {"type": "rule", "field": "aspect", "operator": "eq", "value": values[selected]}
+
     def _choose_sort(self) -> None:
         options: Sequence[Tuple[str, str, str]] = (
             ("taken_at", "desc", self.text(32777, "Newest taken first")),
@@ -422,6 +501,28 @@ class SmartFilterEditor:
         if field_name == "media_type":
             label = self.text(32760, "Videos") if rule.get("value") == "video" else self.text(32759, "Pictures")
             return "%s: %s" % (self.text(32758, "Media type"), label)
+        facet_labels = {
+            "extension": self.text(32875, "File extension"),
+            "country": self.text(32876, "Country"),
+            "state": self.text(32877, "State or region"),
+            "city": self.text(32878, "City"),
+            "sublocation": self.text(32879, "Sublocation"),
+        }
+        if field_name in facet_labels:
+            value = str(rule.get("value") or "")
+            if field_name == "extension":
+                value = "." + value.lstrip(".")
+            return "%s: %s" % (facet_labels[field_name], value)
+        if field_name == "aspect":
+            aspect_labels = {
+                "landscape": self.text(32881, "Landscape"),
+                "portrait": self.text(32882, "Portrait"),
+                "square": self.text(32883, "Square"),
+            }
+            return "%s: %s" % (
+                self.text(32880, "Image shape"),
+                aspect_labels.get(str(rule.get("value") or ""), str(rule.get("value") or "")),
+            )
         return field_name
 
     @staticmethod

@@ -292,9 +292,15 @@ def test_mysql_query_model_matches_page_count_and_minimum_rating_policy(tmp_path
                     "last_seen_at": now,
                     "taken_at": "2020-07-%02d 10:00:00" % (16 + index),
                     "taken_source": "EXIF",
+                    "width": 6000 if name != "other.jpg" else 2000,
+                    "height": 4000 if name != "other.jpg" else 2000,
+                    "orientation": 1,
+                    "mime_type": "image/jpeg",
                     "camera_make": "Canon",
                     "camera_model": "EOS R6",
                     "rating": rating,
+                    "city": "Stockholm" if name != "other.jpg" else "Paris",
+                    "country": "Sweden" if name != "other.jpg" else "France",
                     "metadata_hash": "query-model-%d" % index,
                     "thumb_uri": "/srv/query-model/" + name,
                 },
@@ -356,6 +362,26 @@ def test_mysql_query_model_matches_page_count_and_minimum_rating_policy(tmp_path
         "selected.jpg",
     ]
     assert catalog.count_query_pictures(query) == 2
+
+    facet_base = {
+        "version": 1,
+        "root": {"type": "group", "match": "all", "negated": False, "children": []},
+        "sort": [],
+        "scope": {"source_ids": [source.id], "include_missing": False, "include_excluded": False},
+        "default_policy": {"apply_min_rating": False},
+    }
+    assert catalog.query_facet_counts(facet_base, "country") == [
+        {"value": "Sweden", "picture_count": 2},
+        {"value": "France", "picture_count": 1},
+    ]
+    aspect_query = dict(facet_base)
+    aspect_query["root"] = {
+        "type": "group",
+        "match": "all",
+        "negated": False,
+        "children": [{"type": "rule", "field": "aspect", "operator": "eq", "value": "square"}],
+    }
+    assert [row["filename"] for row in catalog.query_pictures(aspect_query, 10)] == ["other.jpg"]
 
 
 def test_mysql_saved_search_roundtrip(tmp_path) -> None:

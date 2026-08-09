@@ -4,7 +4,9 @@ MyPicsDB 3 version 0.2.18 introduced an internal, versioned Query Model for
 search, smart filters, saved views and smart collections. Version 0.2.19 uses
 it for Kodi global search. Version 0.2.34 stores canonical version-1 Query
 Model JSON for named saved searches in database schema 5. Version 0.3.0 adds a
-Kodi smart-filter editor for a safe, flat all/any subset of the model.
+Kodi smart-filter editor for a safe, flat all/any subset of the model. Version
+0.8.10 adds backward-compatible metadata facets without changing Query Model
+version 1.
 
 ## Goals
 
@@ -85,11 +87,15 @@ adding operator-specific raw fragments.
 | `favorite` | boolean | `eq` |
 | `source` | positive source ID or ID list | `eq`, `in` |
 | `album` | positive folder/album ID or ID list | `eq`, `in` |
-| `taken_date` | inclusive ISO dates | `between` |
-| `camera` | object with `make` and/or `model` | `eq` |
-| `keyword` | exact keyword or keyword list | `eq`, `in` |
+| `taken_date` | inclusive ISO dates | `between`, `is_null`, `is_not_null` |
+| `camera` | object with `make` and/or `model` | `eq`, `is_null`, `is_not_null` |
+| `keyword` | exact keyword or keyword list | `eq`, `in`, `is_null`, `is_not_null` |
 | `text` | normalized free text | `contains_tokens` |
 | `media_type` | `picture`, `video`, or a list of both | `eq`, `in` |
+| `extension` | extension without a required leading dot | `eq`, `in` |
+| `mime_type` | normalized MIME string | `eq`, `in`, `is_null`, `is_not_null` |
+| `country`, `state`, `city`, `sublocation` | exact stored metadata text | `eq`, `is_null`, `is_not_null` |
+| `aspect` | `landscape`, `portrait`, `square`, or a list | `eq`, `in` |
 
 Keyword matching is exact after `casefold()`, matching the normalized keyword
 stored by the scanner. A single `keyword in [...]` rule means any listed
@@ -99,6 +105,12 @@ The `text` rule uses NFKC normalization, Unicode case folding and alphanumeric
 tokens. Multiple words in one `contains_tokens` value mean AND. The compiler
 matches bound parameters against schema-3 normalized search documents; raw
 search text is never copied into SQL.
+
+`extension` and `mime_type` values are normalized to lowercase. Location values
+use the exact stored metadata text selected from the catalogue. `aspect` is
+derived from stored width and height; EXIF orientations 5 through 8 swap the
+display axes before landscape/portrait comparison. Rows without usable
+dimensions do not match an aspect rule.
 
 Allowed sort fields are `taken_at`, `discovered_at`, `rating`, `filename` and
 `id`, in ascending or descending order. The normalizer always places `id` last
@@ -133,8 +145,11 @@ version and JSON are revalidated every time a saved search is opened.
 
 `Catalog.query_pictures(query, limit, offset)` runs a validated query and
 returns the existing picture-row shape. `Catalog.count_query_pictures(query)`
-counts the same selection. Page limits are restricted to 1 through 1000 and
-offsets must be non-negative.
+counts the same selection. `Catalog.query_facet_counts(query, field, limit)`
+returns bounded counts for allowlisted scalar metadata facets (`extension`,
+`mime_type`, `country`, `state`, `city`, `sublocation`) using that same compiled
+selection and bound parameters. Page limits are restricted to 1 through 1000;
+facet limits are restricted to 1 through 500; offsets must be non-negative.
 
 The query model's `default_policy.apply_min_rating` flag controls whether the
 Kodi client's current local minimum-rating display policy is included. It does
@@ -148,7 +163,9 @@ these fragments rather than introduce separate user-defined SQL paths.
 
 The editor exposes one flat group using **all criteria** or **any criterion**.
 It supports text, date range, minimum rating, favorite state, source, camera,
-keyword and media type, plus sort order and the global-rating-policy toggle. It
+keyword, media type, file extension, stored country/state/city/sublocation and
+image shape, plus sort order and the global-rating-policy toggle. File and
+location choices use bounded facet counts from the validated query selection. It
 previews the count and up to ten filenames before saving the query in schema 5.
 
 Deliberately not included:

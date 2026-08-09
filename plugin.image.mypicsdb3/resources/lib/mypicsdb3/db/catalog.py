@@ -57,6 +57,16 @@ s.label AS source_label
 """
 
 
+QUERY_FACET_EXPRESSIONS = {
+    "extension": "NULLIF(LOWER(TRIM(p.extension)),'')",
+    "mime_type": "NULLIF(LOWER(TRIM(p.mime_type)),'')",
+    "country": "NULLIF(TRIM(p.country),'')",
+    "state": "NULLIF(TRIM(p.state),'')",
+    "city": "NULLIF(TRIM(p.city),'')",
+    "sublocation": "NULLIF(TRIM(p.sublocation),'')",
+}
+
+
 class Catalog:
     def __init__(self, engine: DatabaseEngine, logger=None, rating_policy: str = RATING_POLICY_ALL):
         self.engine = engine
@@ -968,6 +978,36 @@ class Catalog:
                 compiled.params,
             )
         return int((row or {}).get("total") or 0)
+
+    def query_facet_counts(self, query_model: Any, field: str, limit: int = 100) -> List[Dict[str, Any]]:
+        """Return bounded scalar facet counts for the same validated query selection.
+
+        The field name is resolved through a fixed allowlist; callers never supply
+        SQL identifiers or expressions. Empty metadata values are omitted.
+        """
+        if field not in QUERY_FACET_EXPRESSIONS:
+            raise ValueError("Unsupported query facet field %r" % field)
+        if type(limit) is not int:
+            raise ValueError("Query facet limit must be an integer")
+        if limit < 1 or limit > 500:
+            raise ValueError("Query facet limit must be between 1 and 500")
+        compiled = compile_picture_query(query_model, self.rating_policy)
+        expression = QUERY_FACET_EXPRESSIONS[field]
+        sql = (
+            "SELECT %s AS facet_value, COUNT(*) AS picture_count FROM pictures p "
+            "WHERE %s AND %s IS NOT NULL "
+            "GROUP BY %s ORDER BY picture_count DESC, facet_value ASC LIMIT ?"
+            % (expression, compiled.where_sql, expression, expression)
+        )
+        with self.engine.transaction() as connection:
+            rows = self.engine.fetchall(connection, sql, (*compiled.params, limit))
+        return [
+            {
+                "value": row.get("facet_value"),
+                "picture_count": int(row.get("picture_count") or 0),
+            }
+            for row in rows
+        ]
 
     def recent_taken(self, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         return self._pictures("p.taken_at IS NOT NULL", (), "p.taken_at DESC, p.id DESC", limit, offset)

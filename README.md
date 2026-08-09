@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.9. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.10. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -589,11 +589,15 @@ newly indexed matching media can appear the next time the search is opened.
 
 Select **Create smart collection** to build a reusable filter without writing a
 text query. Choose whether all criteria or any criterion must match, then add
-rules for text, date range, rating, favorite state, source, camera, keyword or
-pictures/videos. You can remove or edit criteria, choose the result order,
-preview the matching count and up to ten filenames, and decide whether the
-collection should use the configured global minimum-rating policy. Saving the
-collection opens it immediately and makes it available under **Saved searches**.
+rules for text, date range, rating, favorite state, source, camera, keyword,
+pictures/videos, file extension, stored country/state/city/sublocation or image
+shape. File and location choices show bounded counts from the same validated
+Query Model selection used for the saved collection. Image shape supports
+landscape, portrait and square and honors EXIF rotation when dimensions are
+known. You can remove or edit criteria, choose the result order, preview the
+matching count and up to ten filenames, and decide whether the collection should
+use the configured global minimum-rating policy. Saving the collection opens it
+immediately and makes it available under **Saved searches**.
 Open **Settings > Home screen > Configure home-screen rows** to add that saved
 collection as a Pictures-home row and choose its order. Each row has an inline
 On/Off switch and up/down arrows, matching Kodi's settings pattern. Smart

@@ -38,6 +38,19 @@ class FakeCatalog:
     def tags(self):
         return []
 
+    def query_facet_counts(self, query, field, limit=100):
+        values = {
+            "extension": [
+                {"value": "jpg", "picture_count": 12},
+                {"value": "nef", "picture_count": 4},
+            ],
+            "country": [{"value": "Sweden", "picture_count": 9}],
+            "state": [{"value": "Stockholm", "picture_count": 7}],
+            "city": [{"value": "Stockholm", "picture_count": 6}],
+            "sublocation": [{"value": "Gamla stan", "picture_count": 2}],
+        }
+        return values.get(field, [])[:limit]
+
     def count_query_pictures(self, query):
         self.count_queries.append(query)
         return 2
@@ -116,3 +129,37 @@ def test_editor_can_switch_to_any_and_ignore_global_rating_policy() -> None:
     assert payload["root"]["match"] == "any"
     assert payload["default_policy"] == {"apply_min_rating": False}
     assert payload["root"]["children"][0]["field"] == "favorite"
+
+
+def test_editor_adds_extension_and_orientation_aware_shape_facets() -> None:
+    dialog = FakeDialog(
+        selections=[
+            3,   # Add criterion.
+            8,   # File extension.
+            1,   # .nef.
+            4,   # Add criterion after first rule.
+            13,  # Image shape.
+            1,   # Portrait.
+            7,   # Save with two rules.
+        ],
+        inputs=["Portrait NEF"],
+    )
+
+    result = SmartFilterEditor(FakeCatalog(), dialog, localize).run()
+
+    assert result is not None
+    payload = picture_query_to_dict(result.query)
+    assert payload["root"]["children"] == [
+        {
+            "type": "rule",
+            "field": "extension",
+            "operator": "eq",
+            "value": "nef",
+        },
+        {
+            "type": "rule",
+            "field": "aspect",
+            "operator": "eq",
+            "value": "portrait",
+        },
+    ]

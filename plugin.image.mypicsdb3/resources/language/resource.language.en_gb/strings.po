@@ -1514,3 +1514,43 @@ msgstr "Present"
 msgctxt "#32874"
 msgid "Missing"
 msgstr "Missing"
+
+msgctxt "#32875"
+msgid "File extension"
+msgstr "File extension"
+
+msgctxt "#32876"
+msgid "Country"
+msgstr "Country"
+
+msgctxt "#32877"
+msgid "State or region"
+msgstr "State or region"
+
+msgctxt "#32878"
+msgid "City"
+msgstr "City"
+
+msgctxt "#32879"
+msgid "Sublocation"
+msgstr "Sublocation"
+
+msgctxt "#32880"
+msgid "Image shape"
+msgstr "Image shape"
+
+msgctxt "#32881"
+msgid "Landscape"
+msgstr "Landscape"
+
+msgctxt "#32882"
+msgid "Portrait"
+msgstr "Portrait"
+
+msgctxt "#32883"
+msgid "Square"
+msgstr "Square"
+
+msgctxt "#32884"
+msgid "%s (%d items)"
+msgstr "%s (%d items)"

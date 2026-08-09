@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.10 - 2026-08-07
+
+- Extend Query Model version 1 with additive, allowlisted metadata criteria for file extension, MIME type, country, state/region, city, sublocation and image shape, plus safe null/presence checks for date, camera and keyword metadata. Existing saved version-1 queries remain valid; database schema stays 7.
+- Add bounded scalar facet counts that reuse the same compiled Query Model selection and bound parameters instead of introducing a second raw-SQL filtering path. The Kodi smart-collection editor now offers file-extension and stored-location values with result counts, plus landscape/portrait/square image-shape filtering.
+- Classify image shape from stored dimensions while honoring EXIF orientations 5-8, so rotated portrait pictures are not treated as landscape. No Estuary runtime code changes, so Omega/Piers skin revisions remain unchanged.
+
 ## 0.8.9 - 2026-08-07
 
 - Fix the release verifier after the 0.8.8 Home startup architecture change. Generated Estuary skins are now checked for all nine `home-slot?slot=N` providers instead of the removed hard-coded `recent-taken` provider URL.

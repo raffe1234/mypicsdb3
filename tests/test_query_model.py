@@ -218,6 +218,15 @@ def insert_picture(
     camera_model: str,
     keywords,
     missing: bool = False,
+    extension: str = "jpg",
+    mime_type: str = "image/jpeg",
+    width=None,
+    height=None,
+    orientation=None,
+    city=None,
+    state=None,
+    country=None,
+    sublocation=None,
 ) -> int:
     now = utc_now()
     with catalog.engine.transaction() as connection:
@@ -228,16 +237,24 @@ def insert_picture(
                 "folder_id": folder_id,
                 "uri": root + name,
                 "filename": name,
-                "extension": "jpg",
+                "extension": extension,
                 "file_size": 100,
                 "file_mtime": 1.0,
                 "discovered_at": "2026-07-24 12:00:00",
                 "last_seen_at": now,
                 "taken_at": taken_at,
                 "taken_source": "EXIF",
+                "width": width,
+                "height": height,
+                "orientation": orientation,
+                "mime_type": mime_type,
                 "camera_make": camera_make,
                 "camera_model": camera_model,
                 "rating": rating,
+                "city": city,
+                "state": state,
+                "country": country,
+                "sublocation": sublocation,
                 "metadata_hash": name,
                 "thumb_uri": root + name,
             },
@@ -425,3 +442,101 @@ def test_catalog_media_type_filter_selects_only_requested_kind(tmp_path: Path) -
 
     assert [row["id"] for row in catalog.query_pictures(query, 10)] == [video_id]
     assert picture_id != video_id
+
+
+def test_richer_metadata_rules_are_validated_compiled_and_canonicalized() -> None:
+    query = empty_query(
+        root={
+            "type": "group",
+            "children": [
+                rule("extension", "in", [".JPG", "nef", "jpg"]),
+                rule("mime_type", "eq", "IMAGE/JPEG"),
+                rule("country", "eq", "Sweden"),
+                rule("state", "is_not_null"),
+                rule("city", "eq", "Stockholm"),
+                rule("sublocation", "is_null"),
+                rule("aspect", "eq", "LANDSCAPE"),
+                rule("camera", "is_not_null"),
+                rule("keyword", "is_not_null"),
+                rule("taken_date", "is_not_null"),
+            ],
+        }
+    )
+
+    parsed = parse_picture_query(query)
+    normalized = picture_query_to_dict(parsed)
+    compiled = compile_picture_query(parsed)
+
+    assert normalized["root"]["children"][0]["value"] == ["jpg", "nef"]
+    assert normalized["root"]["children"][1]["value"] == "image/jpeg"
+    assert normalized["root"]["children"][6]["value"] == "landscape"
+    assert "NULLIF(LOWER(TRIM(p.extension)),'') IN (?,?)" in compiled.where_sql
+    assert "NULLIF(LOWER(TRIM(p.mime_type)),'')=?" in compiled.where_sql
+    assert "NULLIF(TRIM(p.country),'')=?" in compiled.where_sql
+    assert "NULLIF(TRIM(p.state),'') IS NOT NULL" in compiled.where_sql
+    assert "NULLIF(TRIM(p.city),'')=?" in compiled.where_sql
+    assert "NULLIF(TRIM(p.sublocation),'') IS NULL" in compiled.where_sql
+    assert "p.orientation IN (5,6,7,8)" in compiled.where_sql
+    assert "picture_tags" in compiled.where_sql
+    assert compiled.params == ("jpg", "nef", "image/jpeg", "Sweden", "Stockholm")
+
+    with pytest.raises(QueryValidationError, match="landscape.*portrait.*square"):
+        parse_picture_query(
+            empty_query(root={"type": "group", "children": [rule("aspect", "eq", "wide")]})
+        )
+
+
+def test_catalog_richer_metadata_filters_and_facet_counts(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    source = catalog.sync_sources([{"label": "Photos", "uri": "/srv/photos"}])[0]
+    now = utc_now()
+    with catalog.engine.transaction() as connection:
+        folder_id = catalog.upsert_folder(connection, source.id, "/srv/photos/", "", "Photos", now)
+
+    landscape = insert_picture(
+        catalog, source.id, folder_id, "/srv/photos/", "stockholm.jpg", 5, False,
+        "2024-06-01 10:00:00", "Canon", "R6", ["Summer"], extension="jpg",
+        width=6000, height=4000, orientation=1, city="Stockholm", state="Stockholm", country="Sweden",
+    )
+    portrait = insert_picture(
+        catalog, source.id, folder_id, "/srv/photos/", "uppsala.nef", 4, False,
+        "2024-06-02 10:00:00", "Nikon", "Z8", [], extension="nef", mime_type="image/x-nikon-nef",
+        width=6000, height=4000, orientation=6, city="Uppsala", state="Uppsala", country="Sweden",
+    )
+    insert_picture(
+        catalog, source.id, folder_id, "/srv/photos/", "square.png", 3, False,
+        "2024-06-03 10:00:00", "", "", [], extension="png", mime_type="image/png",
+        width=2000, height=2000, orientation=1, country="France",
+    )
+
+    filtered = empty_query(
+        root={
+            "type": "group",
+            "children": [
+                rule("country", "eq", "Sweden"),
+                rule("extension", "eq", ".JPG"),
+                rule("aspect", "eq", "landscape"),
+            ],
+        },
+        default_policy={"apply_min_rating": False},
+        sort=[{"field": "filename", "direction": "asc"}],
+    )
+    assert [row["id"] for row in catalog.query_pictures(filtered, 10)] == [landscape]
+
+    portrait_query = empty_query(
+        root={"type": "group", "children": [rule("aspect", "eq", "portrait")]},
+        default_policy={"apply_min_rating": False},
+    )
+    assert [row["id"] for row in catalog.query_pictures(portrait_query, 10)] == [portrait]
+
+    base = empty_query(default_policy={"apply_min_rating": False})
+    extension_counts = catalog.query_facet_counts(base, "extension")
+    assert {row["value"]: row["picture_count"] for row in extension_counts} == {"jpg": 1, "nef": 1, "png": 1}
+    country_counts = catalog.query_facet_counts(base, "country")
+    assert country_counts[0] == {"value": "Sweden", "picture_count": 2}
+    assert country_counts[1] == {"value": "France", "picture_count": 1}
+
+    with pytest.raises(ValueError, match="Unsupported query facet"):
+        catalog.query_facet_counts(base, "filename")
+    with pytest.raises(ValueError, match="between 1 and 500"):
+        catalog.query_facet_counts(base, "city", 0)
