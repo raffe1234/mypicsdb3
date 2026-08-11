@@ -196,7 +196,7 @@ contributor does not need to open one very large architecture document:
 - [Plug-in requests, browsing and widgets](flows/PLUGIN_BROWSING.md)
 - [Scanning, filesystems, metadata and catalogue writes](flows/SCANNING_METADATA.md)
 - [Search, Query Model and saved smart collections](flows/SEARCH_COLLECTIONS.md)
-- [Manual collections](flows/STATIC_COLLECTIONS.md)
+- [Manual collections and query-result snapshots](flows/STATIC_COLLECTIONS.md)
 - [Slideshows and the background service](flows/SLIDESHOW_SERVICE.md)
 - [Collection music playlists](flows/COLLECTION_MUSIC.md)
 - [MyPicsDB 3 screensaver](flows/SCREENSAVER.md)

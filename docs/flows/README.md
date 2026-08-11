@@ -56,7 +56,7 @@ Main files: `scanner.py`, `filesystem.py`, `metadata.py`, `metadata_mapping.py`,
 ### [Search, Query Model and saved smart collections](SEARCH_COLLECTIONS.md)
 
 Read this for global text search, normalized search documents, validated query
-JSON, saved searches, smart-filter editing and smart home rows.
+JSON, saved searches, smart-filter editing, query-result snapshots and smart home rows.
 
 Main files: `search.py`, `search_index.py`, `query_model.py`,
 `saved_searches.py`, `smart_filter_editor.py`, `attention.py`, `db/catalog.py`,
@@ -74,7 +74,7 @@ Main files: `metadata_browser.py`, `views.py`, `query_model.py`, `db/catalog.py`
 ### [Manual collections](STATIC_COLLECTIONS.md)
 
 Read this for named user-selected collections, ordered media references,
-collection context actions, default album view and collection slideshows.
+query-result snapshots, collection context actions, default album view and collection slideshows.
 
 Main files: `static_collections.py`, `db/catalog.py`, `db/schema.py`,
 `db/migration_steps/v0006_static_collections.py`, `views.py`.

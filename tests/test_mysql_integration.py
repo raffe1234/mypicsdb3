@@ -562,6 +562,26 @@ def test_mysql_manual_collection_roundtrip_preserves_mixed_order(tmp_path) -> No
         for row in catalog.pictures_in_collection(collection_id, 10)
     ] == [(media_ids[0], 1)]
     assert catalog.list_collections()[0]["available_count"] == 1
+
+    snapshot_query = {
+        "version": 1,
+        "root": {"type": "group", "match": "all", "negated": False, "children": []},
+        "sort": [{"field": "filename", "direction": "desc"}],
+        "scope": {
+            "source_ids": [source.id],
+            "include_missing": False,
+            "include_excluded": False,
+        },
+        "default_policy": {"apply_min_rating": False},
+    }
+    snapshot_id, snapshot_count = catalog.create_collection_snapshot(
+        "Frozen MySQL result", snapshot_query
+    )
+    assert snapshot_count == 2
+    assert [
+        row["filename"] for row in catalog.pictures_in_collection(snapshot_id, 10)
+    ] == ["photo.jpg", "clip.mp4"]
+
     assert catalog.rename_collection(collection_id, "Renamed picks") is True
     assert catalog.get_collection(collection_id).name == "Renamed picks"
     assert catalog.delete_collection(collection_id) is True

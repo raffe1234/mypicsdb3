@@ -228,8 +228,12 @@ Manual collections are intentionally separate from saved smart searches. This
 module validates names and stored collection metadata. `Catalog` owns ordered
 media references and backend-neutral persistence; `views.py` owns Kodi dialogs,
 context actions, explicit order changes, collection browsing and Home providers.
-A collection never contains query JSON or source-file copies. Dynamic Home rows
-store only validated saved-search or manual-collection IDs.
+Version 0.8.16 can snapshot a validated Query Model result into a manual
+collection: the catalogue selects the complete ordered ID set once inside the
+write transaction and stores those IDs with compact positions. The manual
+collection never contains query JSON or source-file copies, so later query
+matches do not change its membership. Dynamic Home rows store only validated
+saved-search or manual-collection IDs.
 
 ### `music_playlists.py` and `music_slideshow.py`: collection-music boundary
 

@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.15. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.16. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -72,6 +72,9 @@ For the component boundaries and long-lived safety rules, see
   collections with all/any metadata criteria and result preview.
 - Create manual collections containing an explicit shared order of indexed
   pictures and home videos without copying, moving or deleting source files.
+- Freeze a global search, saved smart collection, Browse metadata result or
+  Needs attention result into a new static manual collection with the complete
+  validated result order preserved.
 - Reorder manual collection items and browse both smart and manual collections
   with normal pagination and **Default album view**.
 - Assign one Kodi music-playlist file to a saved smart collection or manual
@@ -680,6 +683,15 @@ Open **Collections** from the main menu to create, rename, open or delete a name
 manual collection. Use **Add to collection** on any indexed picture or home video
 to append it. Inside the collection, use **Remove from collection** to remove only
 the reference; the original file and its catalogue row remain untouched.
+
+Version 0.8.16 also adds **Save current results as collection** at the top of
+global search results, saved smart collections, Browse metadata result pages and
+Needs attention results. It creates a new manual collection from the **complete**
+matching result set, not merely the current page. MyPicsDB 3 asks for a name and
+confirmation count first, then freezes the current validated Query Model order in
+one transaction. Later scans or metadata changes do not add new matches to that
+manual collection; use the original smart/search view when live membership is
+required.
 
 Items are displayed in their stored order. Use **Move up**, **Move down**,
 **Move to top** or **Move to bottom** from an item context menu to change the

@@ -590,11 +590,22 @@ class PluginUI:
             self.text(facet.string_id, facet.fallback),
             self._metadata_value_label(facet.key, value),
         )
+        prefix_items = None
+        if not self._is_home_widget(params):
+            prefix_items = [
+                self._snapshot_results_action(
+                    "metadata",
+                    field=facet.key,
+                    value=str(value),
+                    **self._rating_route_params(params),
+                )
+            ]
         return self.pictures(
             "metadata-result",
             lambda limit, offset: self.catalog.query_pictures(query, limit, offset),
             result_params,
             category,
+            prefix_items=prefix_items,
         )
 
     def needs_attention(self, params: Optional[Dict[str, str]] = None):
@@ -634,6 +645,15 @@ class PluginUI:
             )
         result_params = dict(params)
         result_params["kind"] = preset.key
+        prefix_items = None
+        if not self._is_home_widget(params):
+            prefix_items = [
+                self._snapshot_results_action(
+                    "needs-attention",
+                    kind=preset.key,
+                    **self._rating_route_params(params),
+                )
+            ]
         return self.pictures(
             "needs-attention-result",
             lambda limit, offset: self.catalog.query_pictures(
@@ -643,6 +663,7 @@ class PluginUI:
             ),
             result_params,
             self.text(preset.string_id, preset.fallback),
+            prefix_items=prefix_items,
         )
 
     def search(self, params: Optional[Dict[str, str]] = None):
@@ -677,6 +698,11 @@ class PluginUI:
             "action/save-search",
             q=request.text,
         )
+        snapshot_item = self._snapshot_results_action(
+            "search",
+            q=request.text,
+            **self._rating_route_params(search_params),
+        )
         return self.pictures(
             "search",
             lambda limit, offset: self.catalog.query_pictures(
@@ -686,8 +712,45 @@ class PluginUI:
             ),
             search_params,
             category,
-            prefix_items=[save_item],
+            prefix_items=[save_item, snapshot_item],
         )
+
+    def _snapshot_results_action(self, scope: str, **params):
+        return self.add_action(
+            self.text(32957, "Save current results as collection"),
+            "action/snapshot-results",
+            scope=scope,
+            **params,
+        )
+
+    def _snapshot_query_from_params(
+        self, params: Dict[str, str]
+    ) -> Tuple[Any, str]:
+        scope = str(params.get("scope") or "").strip()
+        if scope == "search":
+            request = build_global_search_request(params.get("q", ""))
+            return request.query, "%s - %s" % (
+                self.text(32500, "Search"), request.text
+            )
+        if scope == "saved-search":
+            saved_id = int(params.get("id") or 0)
+            saved = self.catalog.get_saved_search(saved_id)
+            if saved is None:
+                raise ValueError(self.text(32901, "Source was not found"))
+            return saved.query, saved.name
+        if scope == "metadata":
+            facet = metadata_facet_by_key(params.get("field", ""))
+            value = params.get("value", "")
+            query = metadata_value_query(facet.key, value)
+            name = "%s - %s" % (
+                self.text(facet.string_id, facet.fallback),
+                self._metadata_value_label(facet.key, value),
+            )
+            return query, name
+        if scope == "needs-attention":
+            preset = attention_preset(params.get("kind", ""))
+            return preset.query, self.text(preset.string_id, preset.fallback)
+        raise ValueError("Unknown collection snapshot source")
 
     def _music_playlist_context(
         self, collection_type: str, collection_id: int, playlist_uri: str
@@ -802,15 +865,21 @@ class PluginUI:
         music_uri = self.catalog.get_music_playlist(
             MUSIC_TARGET_SMART, saved.id
         )
-        prefix_items = (
-            [
-                self._music_slideshow_action(
-                    "saved-search", saved.id, music_uri
+        prefix_items = []
+        if not self._is_home_widget(params):
+            prefix_items.append(
+                self._snapshot_results_action(
+                    "saved-search",
+                    id=saved.id,
+                    **self._rating_route_params(params),
                 )
-            ]
-            if music_uri and not self._is_home_widget(params)
-            else None
-        )
+            )
+            if music_uri:
+                prefix_items.append(
+                    self._music_slideshow_action(
+                        "saved-search", saved.id, music_uri
+                    )
+                )
         return self.pictures(
             "saved-search",
             lambda limit, offset: self.catalog.query_pictures(
@@ -3098,6 +3167,70 @@ class PluginUI:
                     ),
                     error=True,
                 )
+            return
+        if route == "action/snapshot-results":
+            progress = None
+            try:
+                query, suggested_name = self._snapshot_query_from_params(params)
+                total = int(self.catalog.count_query_pictures(query))
+                if total <= 0:
+                    self.kodi.notify(self.text(32963, "No matching media to save"))
+                    return
+                dialog = xbmcgui.Dialog()
+                name = dialog.input(
+                    self.text(32958, "Collection snapshot name"),
+                    defaultt=suggested_name[:191],
+                )
+                if not str(name or "").strip():
+                    return
+                if not dialog.yesno(
+                    self.text(32959, "Create collection snapshot?"),
+                    self.text(
+                        32960,
+                        "Create a static manual collection with %d currently "
+                        "matching items? It will not update automatically.",
+                    )
+                    % total,
+                ):
+                    return
+                progress_type = getattr(xbmcgui, "DialogProgressBG", None)
+                if callable(progress_type):
+                    try:
+                        progress = progress_type()
+                        progress.create(
+                            self.text(32964, "Creating collection snapshot"),
+                            "%d %s" % (total, self.text(32965, "items")),
+                        )
+                    except Exception:
+                        progress = None
+                collection_id, item_count = self.catalog.create_collection_snapshot(
+                    name, query
+                )
+                self.kodi.notify(
+                    self.text(32961, "Collection snapshot created (%d items)")
+                    % item_count
+                )
+                xbmc.executebuiltin(
+                    "Container.Update(%s)"
+                    % self.url("collection", id=collection_id)
+                )
+            except (
+                CollectionValidationError,
+                SavedSearchValidationError,
+                TypeError,
+                ValueError,
+            ) as exc:
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(32962, "Could not create collection snapshot"), exc),
+                    error=True,
+                )
+            finally:
+                if progress is not None:
+                    try:
+                        progress.close()
+                    except Exception:
+                        pass
             return
         if route == "action/create-smart-collection":
             try:

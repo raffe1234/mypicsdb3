@@ -14,6 +14,14 @@ picture or home-video context menu
 → Catalog.add_picture_to_collection()
 → append collection_items.position
 
+query-backed result page
+→ Save current results as collection
+→ reconstruct + validate the Query Model from safe route references
+→ count and confirm the complete matching set
+→ Catalog.create_collection_snapshot()
+→ select ordered media IDs once inside one transaction
+→ store compact collection_items.position values
+
 Collections main-menu entry
 → Catalog.list_collections()
 → open collection route
@@ -52,7 +60,7 @@ optional collection context action → Assign music playlist
 | `static_collections.py` | Collection-name and stored-record validation |
 | `db/migration_steps/v0006_static_collections.py` | Schema-5-to-6 migration |
 | `db/schema.py` | Fresh SQLite and MySQL/MariaDB schema |
-| `db/catalog.py` | Collection CRUD, duplicate prevention, ordered membership, reordering and reads |
+| `db/catalog.py` | Collection CRUD, duplicate prevention, Query Model snapshots, ordered membership, reordering and reads |
 | `preferences.py`, `home_layout_editor.py` | Manual collection Home-row persistence and editing |
 | `views.py` | Main-menu route, dialogs, context actions, Home provider, browsing and slideshow scope |
 | `kodi.py`, `contrib/estuary/` | Materialized Home properties and generated Estuary row |
@@ -74,6 +82,13 @@ membership timestamp, replaces the collection rows inside the current transactio
 and inserts the final positive positions, so the unique
 `(collection_id, position)` constraint is never violated and MySQL `INT
 UNSIGNED` remains supported. Pictures and videos remain in one shared order.
+
+A collection snapshot uses the validated Query Model sort, which always includes
+an ID tie-breaker. `Catalog.create_collection_snapshot()` selects that ordered ID
+set once inside the collection-creation transaction and inserts membership in
+batches with 1-based positions. This avoids backend-specific SQL extensions,
+keeps SQLite/MariaDB behaviour aligned and prevents OFFSET paging from changing
+what gets frozen. Empty result sets reject and roll back the new collection.
 
 ## Missing media and rating policy
 
@@ -99,6 +114,8 @@ is forwarded in collection routes and slideshow actions.
 - Deleting a collection cascades membership rows but never deletes a `pictures`
   row or source file.
 - Pictures and videos may coexist in the same collection.
+- A snapshot creates a new collection; it never merges silently into an existing one.
+- Snapshot membership is static even if the originating query later matches different media.
 
 ## Slideshow behaviour
 
@@ -128,8 +145,8 @@ MyPicsDB started. See [Collection music playlists](COLLECTION_MUSIC.md).
 ## Tests
 
 - `tests/test_static_collections.py` validates names and stored records;
-- `tests/test_catalog.py` covers CRUD, duplicates, order, missing media, rating
-  policy, mixed media and deletion safety;
+- `tests/test_catalog.py` covers CRUD, snapshots, rollback, duplicates, order,
+  missing media, rating policy, mixed media and deletion safety;
 - `tests/test_migrations.py` covers schema-5-to-6, schema-6-to-7 and fresh schema 7;
 - `tests/test_kodi_ui_smoke.py` covers routes, Home providers, context actions
   and row synchronization;
@@ -141,6 +158,8 @@ MyPicsDB started. See [Collection music playlists](COLLECTION_MUSIC.md).
 - Manual and smart collections remain different concepts and tables.
 - Source files are never copied, moved, edited or deleted by collection actions.
 - One media row occurs at most once in a collection.
+- Snapshot creation is transactional: an empty/error result cannot leave a partial collection.
+- Snapshot actions store catalogue IDs only; no source file is copied or changed.
 - Stored order is stable, compact and editable across browsing pages, Home rows
   and each selected playback type.
 - A deleted manual collection cannot leave an active Home provider behind.

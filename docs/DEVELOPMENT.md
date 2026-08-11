@@ -16,6 +16,9 @@ New to the project? Read [Start here](START_HERE.md),
   validated Query Model data for result selection; none may introduce raw SQL or
   a second filtering language. Metadata value enumeration belongs to the fixed,
   bounded facet allowlist in `Catalog.query_facet_counts()`.
+- Query-result snapshots must be reconstructed from safe route references and
+  compiled through the same Query Model boundary. Manual collections store only
+  frozen media IDs/order; do not put query JSON or SQL into `collection_items`.
 - `screensaver.py` is a bounded read-only catalogue provider;
   `screensaver.mypicsdb3/default.py` owns Kodi's screensaver window and settings
   actions without creating `Runtime`.

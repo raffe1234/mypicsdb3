@@ -219,3 +219,15 @@ Query Model v1 rules (for example camera make -> `camera eq`, capture year -> a 
 
 This separation is intentional: aggregate SQL remains backend-owned and allowlisted,
 while every user-visible result selection still crosses the validated Query Model boundary.
+## Manual collection snapshots in 0.8.16
+
+Version 0.8.16 can freeze selected query-backed result pages into a manual
+collection. The originating query is reconstructed from safe route references,
+revalidated and compiled through this same version-1 boundary. The catalogue
+then selects the complete ordered media-ID set once inside the collection write
+transaction. The manual collection stores only those IDs and positions: it does
+not persist a second copy of Query Model JSON and does not become another dynamic
+query type.
+
+This preserves the distinction between a saved smart collection (live query) and
+a manual snapshot (static membership) without changing Query Model version 1.

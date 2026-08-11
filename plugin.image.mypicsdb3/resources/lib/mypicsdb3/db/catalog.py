@@ -433,6 +433,74 @@ class Catalog:
             finally:
                 cursor.close()
 
+    def create_collection_snapshot(self, name: str, query_model: Any) -> Tuple[int, int]:
+        """Create one manual collection from the current validated query result.
+
+        Membership and stored order are frozen in one transaction. The Query
+        Model compiler supplies only trusted SQL fragments and bound values;
+        callers never provide SQL identifiers or expressions.
+        """
+        normalized_name = normalize_collection_name(name)
+        compiled = compile_picture_query(query_model, self.rating_policy)
+        now = utc_now()
+        with self.engine.transaction(immediate=True) as connection:
+            existing = self.engine.fetchone(
+                connection,
+                "SELECT id FROM collections WHERE name=?",
+                (normalized_name,),
+            )
+            if existing is not None:
+                raise CollectionValidationError(
+                    "A collection with this name already exists"
+                )
+            try:
+                cursor = self.engine.execute(
+                    connection,
+                    "INSERT INTO collections (name, created_at, updated_at) "
+                    "VALUES (?, ?, ?)",
+                    (normalized_name, now, now),
+                )
+            except self.engine.integrity_errors as exc:
+                raise CollectionValidationError(
+                    "A collection with this name already exists"
+                ) from exc
+            try:
+                collection_id = int(cursor.lastrowid)
+            finally:
+                cursor.close()
+
+            # Fetch the ordered IDs once inside the write transaction. This
+            # freezes one exact statement snapshot without relying on backend-
+            # specific window functions or OFFSET paging while the catalogue may
+            # be changing on another Kodi client. Only IDs are held in memory.
+            rows = self.engine.fetchall(
+                connection,
+                "SELECT p.id FROM pictures p WHERE %s ORDER BY %s"
+                % (compiled.where_sql, compiled.order_by_sql),
+                compiled.params,
+            )
+            picture_ids = [int(row["id"]) for row in rows]
+            if not picture_ids:
+                raise CollectionValidationError(
+                    "The current result does not contain any media"
+                )
+            batch_size = 1000
+            for start in range(0, len(picture_ids), batch_size):
+                batch = picture_ids[start : start + batch_size]
+                cursor = self.engine.executemany(
+                    connection,
+                    "INSERT INTO collection_items "
+                    "(collection_id, picture_id, position, added_at) "
+                    "VALUES (?, ?, ?, ?)",
+                    [
+                        (collection_id, picture_id, start + index + 1, now)
+                        for index, picture_id in enumerate(batch)
+                    ],
+                )
+                cursor.close()
+            item_count = len(picture_ids)
+        return collection_id, item_count
+
     def rename_collection(self, collection_id: int, name: str) -> bool:
         normalized_name = normalize_collection_name(name)
         with self.engine.transaction(immediate=True) as connection:

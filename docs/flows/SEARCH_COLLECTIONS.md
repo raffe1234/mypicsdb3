@@ -20,7 +20,9 @@ smart filter editor or saved query JSON
 ```
 
 Both paths return normal catalogue rows, which `PluginUI` renders with the same
-pagination, media-item and slideshow support as other views.
+pagination, media-item and slideshow support as other views. From version 0.8.16
+these query-backed result pages can also be frozen into a new manual collection;
+the snapshot keeps media IDs and order, not the dynamic query.
 
 ## Files and responsibilities
 
@@ -132,6 +134,25 @@ When adding a filter field:
 videos, exclude catalogue rows already marked missing and follow the ordinary
 minimum-rating display policy. They never trigger scanning or metadata writes.
 
+## Freezing query results into a manual collection
+
+The **Save current results as collection** action is available for global search,
+saved smart collections, curated Browse metadata values and Needs attention
+presets. Kodi routes carry only enough information to reconstruct the trusted
+query (`q`, saved-search ID, metadata facet/value or preset key). `views.py`
+revalidates that reference, counts the current result for confirmation and passes
+the resulting `PictureQuery` to `Catalog.create_collection_snapshot()`.
+
+The catalogue compiles the Query Model through the normal allowlisted compiler,
+selects the complete ordered media-ID list once inside the same transaction that
+creates the collection, and stores compact `collection_items.position` values.
+Only IDs and timestamps are persisted. The query JSON is not copied into the
+manual collection and source media is never copied or modified. A later scan may
+change the live smart/search result without changing the snapshot.
+
+This is deliberately different from saving a smart collection: **smart = live
+query**, **snapshot = static membership**.
+
 ## Dynamic Home rows
 
 A saved smart collection can be added to the Estuary MyPicsDB 3 home layout.
@@ -173,3 +194,5 @@ Changes can span:
 - Search-document schema changes include migration and backfill tests.
 - Deleting or renaming a saved query keeps home-layout references consistent.
 - Smart rows remain live queries rather than cached media-ID lists.
+- Snapshot routes never carry raw Query Model JSON; the query is reconstructed and revalidated.
+- A manual snapshot stores only the selected media IDs and deterministic order.

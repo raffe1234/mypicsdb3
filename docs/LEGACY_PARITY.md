@@ -89,13 +89,14 @@ but it would require an explicit raw-metadata persistence model and is not requi
 for the stable legacy use case. Do not dump uncontrolled raw EXIF names into the
 primary UI.
 
-### 5. Freeze current results into a manual collection
+### 5. Freeze current results into a manual collection — completed in 0.8.16
 
-Legacy workflows could bulk-add filter/tag results to collections. Modern plan:
-**Save current results as manual collection** / snapshot, transactionally copying
-catalogue IDs only. Never copy or move original files.
-
-Recommended target after crash-recovery detour: 0.8.16.
+Legacy workflows could bulk-add filter/tag results to collections. MyPicsDB 3
+0.8.16 modernizes this as **Save current results as collection** for global
+search, saved smart collections, Browse metadata results and Needs attention.
+The complete validated result is frozen transactionally as ordered catalogue IDs
+inside a new manual collection. No query JSON or source-file copies are stored,
+and later query matches do not alter the snapshot.
 
 ### 6. Export/archive selected results
 
@@ -104,7 +105,7 @@ export engine using Kodi VFS, collision handling, cancellation, missing-item
 reporting and a manifest. Archive creation can reuse that engine later. No move
 or delete operation should be introduced as part of parity.
 
-Recommended target: 0.8.16.
+Recommended target: 0.8.17.
 
 ### 7. GPS/map view
 
@@ -136,10 +137,10 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.15
+## Recommended roadmap after 0.8.16
 
 1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
-2. 0.8.16 — collection snapshots.
+2. 0.8.16 — completed: collection snapshots from validated query-backed results.
 3. 0.8.17 — safe export/copy + manifest.
 4. Later — light video metadata, map/location UX, optional generic provider API,
    rebuild catalogue while preserving sources.

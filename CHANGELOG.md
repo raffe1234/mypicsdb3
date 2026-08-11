@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.16 - 2026-08-11
+
+- Add **Save current results as collection** for global search, saved smart collections, Browse metadata result pages and Needs attention result pages. The action creates a new manual collection containing the complete current validated result set, not just the visible page.
+- Freeze membership and deterministic Query Model sort in one database transaction by selecting the ordered media IDs once and inserting only catalogue references into `collection_items`. The snapshot stores no query JSON, never follows later matches automatically and never copies, moves, edits or deletes source media.
+- Keep action routes reference-only: search text, saved-search ID, curated metadata facet/value or built-in preset key are revalidated and reconstructed server-side. Raw Query Model JSON and raw SQL never cross the Kodi route boundary.
+- Keep database schema 9 and Query Model version 1. Add SQLite snapshot/rollback/order tests, Kodi UI coverage and opt-in MariaDB snapshot parity coverage; update README, architecture, search/manual-collection flows and legacy-parity documentation.
+
 ## 0.8.15 - 2026-08-11
 
 - Recover a stale SQLite catalogue-scan lock left by a previous Kodi process before a new scan attempts to acquire ownership. Recovery is limited to the supported local SQLite backend and only removes a lock whose owner hostname matches but process id differs and that process is confirmed absent; shared MariaDB/MySQL locks keep their existing TTL/heartbeat safety and are never broken early.

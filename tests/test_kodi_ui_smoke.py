@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.15",
+            "version": "0.8.16",
         }[key]
 
     def getSetting(self, key):
@@ -313,6 +313,7 @@ class FakeCatalog:
         self.collection_rows = []
         self.collection_objects = {}
         self.created_collections = []
+        self.collection_snapshots = []
         self.renamed_collections = []
         self.deleted_collections = []
         self.added_collection_items = []
@@ -534,6 +535,13 @@ class FakeCatalog:
         self.collection_objects[collection_id] = collection
         self.created_collections.append(name)
         return collection_id
+
+    def create_collection_snapshot(self, name, query):
+        collection_id = max(self.collection_objects, default=0) + 1
+        collection = types.SimpleNamespace(id=collection_id, name=name.strip())
+        self.collection_objects[collection_id] = collection
+        self.collection_snapshots.append((name, query))
+        return collection_id, 1
 
     def rename_collection(self, collection_id, name):
         self.renamed_collections.append((collection_id, name))
@@ -771,7 +779,10 @@ def test_needs_attention_uses_query_model_presets_and_opens_results(monkeypatch)
 
     assert calls.ended is True
     assert calls.category == "Pictures without location"
-    assert len(calls.items) == 1
+    assert len(calls.items) == 2
+    assert calls.items[0][0].endswith(
+        "/action/snapshot-results?scope=needs-attention&kind=missing-location"
+    )
     query, limit, offset = runtime.catalog.query_requests[0]
     assert (limit, offset) == (runtime.kodi.settings.browser_page_size, 0)
     assert [child.field for child in query.root.children] == [
@@ -853,7 +864,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.15" in labels
+    assert "MyPicsDB 3 version: 0.8.16" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -1023,6 +1034,29 @@ def test_rating_policy_is_visible_and_can_be_temporarily_bypassed(monkeypatch) -
     assert calls.category == "Recently taken  [COLOR=grey](Temporary: all pictures)[/COLOR]"
 
 
+def test_snapshot_action_preserves_temporary_all_pictures_rating_policy(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.minimum_rating_policy = "3"
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "search",
+            {"q": "summer", "rating_policy": "all"},
+        )
+    )
+
+    snapshot_urls = [
+        url for url, item, _folder in calls.items
+        if item.label == "Save current results as collection"
+    ]
+    assert snapshot_urls == [
+        "plugin://plugin.image.mypicsdb3/action/snapshot-results?"
+        "scope=search&q=summer&rating_policy=all"
+    ]
+
+
 def test_global_search_prompts_normalizes_and_preserves_pagination(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -1043,7 +1077,11 @@ def test_global_search_prompts_normalizes_and_preserves_pagination(monkeypatch) 
     assert calls.items[0][0] == (
         "plugin://plugin.image.mypicsdb3/action/save-search?q=%C3%A5land+sommar"
     )
-    assert calls.items[2][0] == (
+    assert calls.items[1][0] == (
+        "plugin://plugin.image.mypicsdb3/action/snapshot-results?"
+        "scope=search&q=%C3%A5land+sommar"
+    )
+    assert calls.items[3][0] == (
         "plugin://plugin.image.mypicsdb3/search?offset=1&limit=1&q=%C3%A5land+sommar"
     )
 
@@ -2065,13 +2103,17 @@ def test_saved_search_ui_saves_lists_opens_and_paginates_by_id(monkeypatch) -> N
     assert calls.builtins in ([], ["Container.SetViewMode(55)"])
     assert calls.sleeps[-1:] == [50]
     assert runtime.catalog.query_requests[-1][0] is query
-    assert calls.items[1][0] == (
+    assert calls.items[0][0] == (
+        "plugin://plugin.image.mypicsdb3/action/snapshot-results?"
+        "scope=saved-search&id=42"
+    )
+    assert calls.items[2][0] == (
         "plugin://plugin.image.mypicsdb3/saved-search?offset=1&limit=1&id=42"
     )
     assert "q=" not in calls.items[1][0]
     assert "query" not in calls.items[1][0]
     slideshow_commands = [
-        command for label, command in calls.items[0][1].context
+        command for label, command in calls.items[1][1].context
         if label == "Play slideshow from here"
     ]
     assert slideshow_commands == [
@@ -2724,6 +2766,29 @@ def test_manual_collection_rename_and_delete_keep_home_rows_in_sync(monkeypatch)
     assert runtime.kodi.addon.getSetting("home_row_1") == "none"
     assert runtime.kodi.addon.getSetting("home_collection_id_1") == "0"
     assert calls.builtins[-1] == "ReloadSkin()"
+
+
+def test_query_result_can_be_snapshotted_to_manual_collection(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    FakeDialog.input_responses = ["Summer snapshot"]
+    FakeDialog.responses = [True]
+    ui.action(
+        "action/snapshot-results",
+        {"scope": "search", "q": "summer"},
+    )
+
+    assert len(runtime.catalog.collection_snapshots) == 1
+    name, query = runtime.catalog.collection_snapshots[0]
+    assert name == "Summer snapshot"
+    assert query.root.children[0].field == "text"
+    assert runtime.kodi.notifications[-1] == (
+        "Collection snapshot created (1 items)", False
+    )
+    assert calls.builtins[-1].startswith("Container.Update(")
+
 
 
 def test_manual_collection_actions_create_add_remove_rename_and_delete(

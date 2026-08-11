@@ -1834,3 +1834,39 @@ msgstr "Rating %s"
 msgctxt "#32956"
 msgid "Capture year"
 msgstr "Capture year"
+
+msgctxt "#32957"
+msgid "Save current results as collection"
+msgstr "Save current results as collection"
+
+msgctxt "#32958"
+msgid "Collection snapshot name"
+msgstr "Collection snapshot name"
+
+msgctxt "#32959"
+msgid "Create collection snapshot?"
+msgstr "Create collection snapshot?"
+
+msgctxt "#32960"
+msgid "Create a static manual collection with %d currently matching items? It will not update automatically."
+msgstr "Create a static manual collection with %d currently matching items? It will not update automatically."
+
+msgctxt "#32961"
+msgid "Collection snapshot created (%d items)"
+msgstr "Collection snapshot created (%d items)"
+
+msgctxt "#32962"
+msgid "Could not create collection snapshot"
+msgstr "Could not create collection snapshot"
+
+msgctxt "#32963"
+msgid "No matching media to save"
+msgstr "No matching media to save"
+
+msgctxt "#32964"
+msgid "Creating collection snapshot"
+msgstr "Creating collection snapshot"
+
+msgctxt "#32965"
+msgid "items"
+msgstr "items"

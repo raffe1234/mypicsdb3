@@ -422,6 +422,75 @@ def test_manual_collections_preserve_mixed_media_order_and_reject_duplicates(
 
 
 
+def test_collection_snapshot_freezes_query_membership_and_order(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "snapshot"
+    first = add_picture(catalog, root, "b.jpg", taken_at="2024-01-02 10:00:00")
+    second = add_picture(catalog, root, "a.jpg", taken_at="2024-01-03 10:00:00")
+    source = catalog.sync_sources([{"label": "Photos", "uri": str(root)}])[0]
+    query = {
+        "version": 1,
+        "root": {"type": "group", "match": "all", "negated": False, "children": []},
+        "sort": [{"field": "filename", "direction": "asc"}],
+        "scope": {
+            "source_ids": [source.id],
+            "include_missing": False,
+            "include_excluded": False,
+        },
+        "default_policy": {"apply_min_rating": False},
+    }
+
+    collection_id, item_count = catalog.create_collection_snapshot(
+        "Frozen result", query
+    )
+    assert item_count == 2
+    assert [
+        row["id"] for row in catalog.pictures_in_collection(collection_id, 10)
+    ] == [second, first]
+
+    add_picture(catalog, root, "aa.jpg", taken_at="2024-01-04 10:00:00")
+    assert catalog.collection_available_count(collection_id) == 2
+    assert [
+        row["filename"] for row in catalog.pictures_in_collection(collection_id, 10)
+    ] == ["a.jpg", "b.jpg"]
+
+
+def test_collection_snapshot_rolls_back_when_query_is_empty(tmp_path: Path) -> None:
+    from mypicsdb3.static_collections import CollectionValidationError
+
+    catalog = make_catalog(tmp_path)
+    query = {
+        "version": 1,
+        "root": {
+            "type": "group",
+            "match": "all",
+            "negated": False,
+            "children": [
+                {
+                    "type": "rule",
+                    "field": "country",
+                    "operator": "eq",
+                    "value": "Nowhere",
+                }
+            ],
+        },
+        "sort": [],
+        "scope": {
+            "source_ids": [],
+            "include_missing": False,
+            "include_excluded": False,
+        },
+        "default_policy": {"apply_min_rating": False},
+    }
+    try:
+        catalog.create_collection_snapshot("Empty", query)
+    except CollectionValidationError:
+        pass
+    else:
+        raise AssertionError("Empty snapshots must be rejected")
+    assert catalog.list_collections() == []
+
+
 def test_manual_collection_items_can_be_reordered_and_positions_are_compacted(
     tmp_path: Path,
 ) -> None:
