@@ -19,6 +19,7 @@ MAINTENANCE_INTERVAL_SECONDS = 5.0
 VIDEO_IDLE_CLEAR_POLLS = 3
 MIXED_SLIDESHOW_STARTUP_IDLE_POLLS = 20
 DATABASE_BUSY_RETRY_SECONDS = 2.0
+SCAN_BUSY_RETRY_SECONDS = 60.0
 MUSIC_SLIDESHOW_STARTUP_IDLE_POLLS = 20
 MUSIC_SLIDESHOW_END_IDLE_POLLS = 3
 
@@ -378,6 +379,7 @@ class ServiceLoop:
                         last_progress_at = 0.0
                         user_cancelled = False
                         playback_paused = False
+                        scan_busy = False
 
                         def close_progress_dialog() -> None:
                             nonlocal progress_dialog
@@ -557,8 +559,10 @@ class ServiceLoop:
                                     stats.errors,
                                 )
                         except ScanAlreadyRunning:
+                            scan_busy = True
                             self.kodi.log.info(
-                                "Automatic scan skipped: another scan is already running"
+                                "Automatic scan skipped: another scan is already running; retrying in %d seconds",
+                                int(SCAN_BUSY_RETRY_SECONDS),
                             )
                         except Exception as exc:
                             self.kodi.log.error("Automatic scan failed: %s", exc)
@@ -580,10 +584,15 @@ class ServiceLoop:
                                         )
                         if self._abort_requested():
                             break
-                        self.next_scan_at = (
-                            self.monotonic_provider()
-                            + settings.scan_interval_hours * 3600
-                        )
+                        if scan_busy:
+                            self.next_scan_at = (
+                                self.monotonic_provider() + SCAN_BUSY_RETRY_SECONDS
+                            )
+                        else:
+                            self.next_scan_at = (
+                                self.monotonic_provider()
+                                + settings.scan_interval_hours * 3600
+                            )
                 next_maintenance_at = now + MAINTENANCE_INTERVAL_SECONDS
             if self.monitor.waitForAbort(SERVICE_POLL_SECONDS):
                 break

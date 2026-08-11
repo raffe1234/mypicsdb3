@@ -95,7 +95,7 @@ Legacy workflows could bulk-add filter/tag results to collections. Modern plan:
 **Save current results as manual collection** / snapshot, transactionally copying
 catalogue IDs only. Never copy or move original files.
 
-Recommended target: 0.8.15.
+Recommended target after crash-recovery detour: 0.8.16.
 
 ### 6. Export/archive selected results
 
@@ -136,13 +136,14 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.14
+## Recommended roadmap after 0.8.15
 
-1. 0.8.15 — collection snapshots.
-2. 0.8.16 — safe export/copy + manifest.
-3. Later — light video metadata, map/location UX, optional generic provider API,
+1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
+2. 0.8.16 — collection snapshots.
+3. 0.8.17 — safe export/copy + manifest.
+4. Later — light video metadata, map/location UX, optional generic provider API,
    rebuild catalogue while preserving sources.
-4. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
+5. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
    mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can

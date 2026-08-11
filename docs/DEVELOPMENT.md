@@ -35,6 +35,13 @@ Do not add arbitrary concurrent database writes. A future performance experiment
 use a small bounded worker pool for file stat/metadata reads only, with results committed
 serially and benchmarked on local, SMB, SQLite and MariaDB configurations.
 
+Crash recovery must preserve the same ownership boundary. SQLite may recover only
+a same-host scan lock whose recorded process id differs from the current Kodi
+process and is confirmed absent. MariaDB/MySQL must wait for the shared lock
+heartbeat/TTL. Older
+`scan_runs` rows may be marked `interrupted` only after the new scanner owns the
+global scan lock.
+
 ## Schema changes
 
 Database startup is owned by `db/migrations.py`; do not add ad-hoc DDL to

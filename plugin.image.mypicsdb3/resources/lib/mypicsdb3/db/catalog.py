@@ -54,6 +54,7 @@ from ..utils import (
 from .engine import DatabaseEngine
 from .locks import acquire_lock as acquire_catalog_lock
 from .locks import refresh_lock as refresh_catalog_lock
+from .locks import recover_stale_sqlite_process_lock
 from .locks import release_lock as release_catalog_lock
 from .migrations import MigrationRunner
 
@@ -894,6 +895,21 @@ class Catalog:
 
     def acquire_lock(self, name: str, owner: str, ttl_seconds: int = 1800) -> bool:
         return acquire_catalog_lock(self.engine, name, owner, ttl_seconds)
+
+    def recover_stale_local_lock(self, name: str, current_owner: str) -> Optional[str]:
+        return recover_stale_sqlite_process_lock(self.engine, name, current_owner)
+
+    def interrupt_running_scan_runs(self, message: str) -> int:
+        with self.engine.transaction() as connection:
+            cursor = self.engine.execute(
+                connection,
+                "UPDATE scan_runs SET finished_at=?, status='interrupted', message=? WHERE status='running'",
+                (utc_now(), message),
+            )
+            try:
+                return max(0, int(cursor.rowcount or 0))
+            finally:
+                cursor.close()
 
     def refresh_lock(self, name: str, owner: str, ttl_seconds: int = 1800, connection=None) -> bool:
         return refresh_catalog_lock(

@@ -246,10 +246,63 @@ def test_overlapping_automatic_scan_is_logged_as_skipped(monkeypatch) -> None:
 
     assert (
         "info",
-        "Automatic scan skipped: another scan is already running",
+        "Automatic scan skipped: another scan is already running; retrying in 60 seconds",
     ) in kodi.log.messages
     assert not any(level == "error" for level, _message in kodi.log.messages)
     assert kodi.scan_events == []
+
+
+def test_automatic_scan_busy_lock_retries_before_normal_interval(monkeypatch) -> None:
+    attempts = {"count": 0}
+
+    class RetryMonitor(FakeMonitor):
+        def waitForAbort(self, _timeout):
+            if attempts["count"] >= 2:
+                self.aborted = True
+            return self.aborted
+
+    class Clock:
+        def __init__(self):
+            self.value = -30.0
+
+        def __call__(self):
+            self.value += 30.0
+            return self.value
+
+    monitor = RetryMonitor()
+    kodi = FakeKodi(monitor)
+    initial_catalog = FakeCatalog()
+    scan_catalog = FakeCatalog()
+    loop = ServiceLoop(
+        kodi,
+        date_provider=lambda: date(2026, 7, 29),
+        monotonic_provider=Clock(),
+        monitor=monitor,
+    )
+    loop._runtime_parts = lambda: (kodi.settings, initial_catalog, object())
+
+    monkeypatch.setattr(service_loop, "DatabaseEngine", FakeEngine)
+    monkeypatch.setattr(service_loop, "Catalog", lambda _engine, _log: scan_catalog)
+
+    class BusyScanner:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def scan_sources(self):
+            attempts["count"] += 1
+            raise service_loop.ScanAlreadyRunning("Another scan is already running")
+
+    monkeypatch.setattr(service_loop, "Scanner", BusyScanner)
+
+    loop.run()
+
+    assert attempts["count"] == 2
+    assert sum(
+        1
+        for level, message in kodi.log.messages
+        if level == "info" and "retrying in 60 seconds" in message
+    ) == 2
+
 
 def test_automatic_scan_logs_service_interruption_separately(monkeypatch) -> None:
     monitor = FakeMonitor()

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import os
+import socket
+
+import pytest
 from pathlib import Path
 
 import mypicsdb3.scanner as scanner_module
@@ -9,7 +12,8 @@ from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
 from mypicsdb3.filesystem import LocalFilesystem
 from mypicsdb3.models import MetadataResult
-from mypicsdb3.scanner import Scanner
+from mypicsdb3.db.locks import SCAN_LOCK_NAME
+from mypicsdb3.scanner import ScanAlreadyRunning, Scanner
 
 
 def fake_metadata(path, filesystem, settings, file_size):
@@ -54,6 +58,51 @@ def setup_scanner(
     scanner = Scanner(catalog, LocalFilesystem(), settings, metadata_reader=fake_metadata)
     return catalog, source, scanner
 
+
+
+def test_sqlite_scan_recovers_previous_process_lock_and_marks_run_interrupted(tmp_path: Path) -> None:
+    root = tmp_path / "photos"
+    root.mkdir()
+    (root / "image.jpg").write_bytes(b"image")
+    catalog, source, scanner = setup_scanner(tmp_path, root)
+
+    stale_scan_id = catalog.begin_scan_run(source.id)
+    stale_owner = "%s:%d:stale" % (socket.gethostname(), 2147483000)
+    assert catalog.acquire_lock(SCAN_LOCK_NAME, stale_owner, ttl_seconds=1800)
+
+    stats = scanner.scan_sources()
+
+    assert stats.pictures_seen == 1
+    with catalog.engine.transaction() as connection:
+        stale = catalog.engine.fetchone(
+            connection, "SELECT * FROM scan_runs WHERE id=?", (stale_scan_id,)
+        )
+        lock = catalog.engine.fetchone(
+            connection, "SELECT * FROM locks WHERE name=?", (SCAN_LOCK_NAME,)
+        )
+    assert stale["status"] == "interrupted"
+    assert stale["finished_at"]
+    assert "previous scan did not finish cleanly" in stale["message"]
+    assert lock is None
+
+
+def test_sqlite_scan_does_not_break_same_process_scan_lock(tmp_path: Path) -> None:
+    root = tmp_path / "photos"
+    root.mkdir()
+    (root / "image.jpg").write_bytes(b"image")
+    catalog, _source, scanner = setup_scanner(tmp_path, root)
+    live_owner = "%s:%d:other-scan" % (socket.gethostname(), os.getpid())
+    assert catalog.acquire_lock(SCAN_LOCK_NAME, live_owner, ttl_seconds=1800)
+
+    with pytest.raises(ScanAlreadyRunning):
+        scanner.scan_sources()
+
+    with catalog.engine.transaction() as connection:
+        lock = catalog.engine.fetchone(
+            connection, "SELECT owner FROM locks WHERE name=?", (SCAN_LOCK_NAME,)
+        )
+    assert lock["owner"] == live_owner
+    catalog.release_lock(SCAN_LOCK_NAME, live_owner)
 
 def test_incremental_scan_missing_files_and_unavailable_source(tmp_path: Path) -> None:
     root = tmp_path / "photos"

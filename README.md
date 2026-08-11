@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.14. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.15. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -39,7 +39,9 @@ For the component boundaries and long-lived safety rules, see
   a schedule. Each source can inherit the global scan defaults or override
   recursion, picture/video extensions, video inclusion, exclusions and hidden-file handling.
 - Resume a compatible interrupted scan from the first unfinished folder, show
-  session progress and cancel at a safe file or folder checkpoint.
+  session progress and cancel at a safe file or folder checkpoint. A new scan
+  also recovers a process-owned stale SQLite scan lock left by a crashed Kodi
+  process and records the unfinished historical run as `interrupted`.
 - Protect unavailable SMB/NFS sources and incomplete directory traversals from
   being mistaken for deletion of unseen media.
 - Index EXIF, basic embedded XMP and optional IPTC metadata, including capture
@@ -514,6 +516,17 @@ forces the relevant unchanged pictures to be read again on the next scan. Existi
 rows have no fingerprint immediately after the schema-9 migration, therefore the
 first post-upgrade scan deliberately reindexes picture metadata once. Original
 files are never modified.
+
+If Kodi terminates unexpectedly during a local SQLite scan, the lock row and the
+per-source scan-run row cannot be finalized by normal `finally` handlers. From
+0.8.15 the next scan recognizes a same-host SQLite lock owned by a different Kodi
+process, confirms that recorded process is no longer alive, removes the local
+stale lock, acquires fresh ownership and records the unfinished historical run
+as `interrupted`. A live, same-process or uncertain lock is never broken.
+Shared MySQL/MariaDB catalogues deliberately do not use this shortcut because a
+lock may belong to another Kodi device; their heartbeat/TTL remains authoritative.
+If an automatic scan finds any valid competing lock, it retries after 60 seconds
+instead of waiting the full normal scan interval.
 
 If a folder cannot be listed, Scan status reports `partial`. MyPicsDB 3 still
 indexes folders that were read successfully, but it skips missing-record

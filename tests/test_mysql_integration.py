@@ -90,6 +90,13 @@ def test_mysql_or_mariadb_schema_and_source_roundtrip(tmp_path) -> None:
         ("iptc", "caption/abstract", None, 9),
         ("xmp", "CountryName", "country", 7),
     ]
+    stale_scan_id = catalog.begin_scan_run(sources[0].id)
+    assert catalog.recover_stale_local_lock("catalogue-scan", "host:1234:test") is None
+    assert catalog.interrupt_running_scan_runs("interrupted test") == 1
+    latest = catalog.latest_scan()
+    assert latest["id"] == stale_scan_id
+    assert latest["status"] == "interrupted"
+    assert latest["finished_at"]
     catalog.test_connection()
 
 

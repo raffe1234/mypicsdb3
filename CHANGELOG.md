@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.15 - 2026-08-11
+
+- Recover a stale SQLite catalogue-scan lock left by a previous Kodi process before a new scan attempts to acquire ownership. Recovery is limited to the supported local SQLite backend and only removes a lock whose owner hostname matches but process id differs and that process is confirmed absent; shared MariaDB/MySQL locks keep their existing TTL/heartbeat safety and are never broken early.
+- After obtaining exclusive scan ownership, mark any older `scan_runs.status=running` rows as `interrupted` with a finish time before starting a new source run. Scan status therefore stops reporting a crashed historical run as live forever.
+- Retry an automatic scan after 60 seconds when another scan owns the catalogue instead of postponing the next attempt for the full configured scan interval. Normal successful/failed scan scheduling remains unchanged.
+- Keep database schema 9 and Query Model version 1. Add crash-recovery, same-process lock protection and automatic busy-retry regression coverage, plus scanner/concurrency documentation.
+
 ## 0.8.14 - 2026-08-11
 
 - Add a curated **Browse metadata** hierarchy that modernizes legacy MyPicsDB `Browse by Tags` without exposing arbitrary raw EXIF/XMP/IPTC names. Camera, Location, Capture, Image and Keywords categories lead to bounded value counts and normal paginated Query Model result pages.

@@ -322,6 +322,16 @@ A lock timeout is not permission to continue blindly. The code must prove that
 it still owns the operation before committing destructive or state-changing
 work.
 
+Hard-crash recovery is backend-specific. The default SQLite catalogue is local
+to one Kodi profile, so a new scanner may remove a `catalogue-scan` lock from the
+same hostname only when its recorded process id belongs to a different Kodi
+process and that process is confirmed absent. Shared MariaDB/MySQL never breaks
+a live lock early; another device may own it and the normal heartbeat/TTL
+contract remains authoritative. Once a new
+scanner has acquired exclusive ownership, older scan-run rows left as `running`
+are finalized as `interrupted`. This ordering is part of the concurrency
+invariant.
+
 ## Safety invariants
 
 ### Missing-source safety

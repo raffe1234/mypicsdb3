@@ -25,7 +25,9 @@ Widget routes never start scans.
 Scanner.scan_sources(optional source ids)
 → load enabled sources
 → resolve/freeze effective scan policy for every selected source
+→ for SQLite only, recover a scan lock left by a previous Kodi process
 → acquire shared scan lock
+→ mark older unfinished scan-run rows interrupted while ownership is exclusive
 → prepare compatible local checkpoint
 → skip sources already completed in that checkpoint
 → Scanner.scan_source(source)
@@ -102,6 +104,29 @@ must stop rather than continue writing under a false assumption of exclusivity.
 
 The lock matters especially for a shared MySQL/MariaDB catalogue used by more
 than one Kodi device.
+
+### Crash recovery
+
+A hard Kodi/process crash cannot execute the scanner's normal `finally` cleanup.
+Version 0.8.15 therefore distinguishes the supported backends deliberately:
+
+- local SQLite scan owners include `hostname:pid:token`; before acquiring a new
+  scan lock, a scanner may remove an existing SQLite scan lock only when the
+  hostname matches the current machine, the recorded process id differs from
+  the current Kodi process and that recorded process is confirmed absent. A
+  same-process or uncertain lock is preserved;
+- shared MySQL/MariaDB never uses that process shortcut. Another Kodi device may
+  legitimately own the lock, so heartbeat refresh and TTL expiry remain the
+  authority;
+- after a scanner has successfully obtained exclusive ownership, it converts any
+  older `scan_runs` rows still marked `running` to `interrupted` before creating
+  the next source run. This cannot race another valid scanner because ownership
+  is already exclusive;
+- the automatic service retries a busy scan after 60 seconds rather than waiting
+  the configured multi-hour scan interval.
+
+Do not generalize SQLite crash recovery into "delete any inconvenient lock". The
+backend distinction is intentional and protects shared catalogues.
 
 ## Cancellation
 
@@ -210,7 +235,7 @@ local files, Kodi VFS/SMB, SQLite and shared MariaDB before it can become a defa
 - Never mark unseen media missing after an unavailable or partial traversal.
 - Keep cleanup separate from scanning.
 - Preserve cancellation around slow filesystem and metadata operations.
-- Preserve scan-lock refresh and ownership checks.
+- Preserve scan-lock refresh and ownership checks, including backend-specific stale-lock recovery.
 - Commit checkpoints only after a folder is fully processed.
 - Force a fresh traversal when settings change what can be discovered.
 - Avoid copying complete remote files when a bounded read is sufficient.

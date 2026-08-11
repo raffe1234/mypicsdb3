@@ -134,12 +134,27 @@ class Scanner:
             overall.finished_at = utc_now()
             overall.duration_seconds = time.monotonic() - started_monotonic
             return overall
+        recovered_owner = self.catalog.recover_stale_local_lock(
+            SCAN_LOCK_NAME, self.owner
+        )
+        if recovered_owner and self.logger:
+            self.logger.warning(
+                "Recovered stale SQLite scan lock left by previous Kodi process: %s",
+                recovered_owner,
+            )
         if not self.catalog.acquire_lock(SCAN_LOCK_NAME, self.owner, SCAN_LOCK_TTL_SECONDS):
             raise ScanAlreadyRunning("Another scan is already running")
         self._scan_lock_active = True
         self._scan_lock_refreshed_at = time.monotonic()
         scan_completed = False
         try:
+            interrupted_runs = self.catalog.interrupt_running_scan_runs(
+                "Interrupted because the previous scan did not finish cleanly"
+            )
+            if interrupted_runs and self.logger:
+                self.logger.warning(
+                    "Marked %d unfinished scan run(s) as interrupted", interrupted_runs
+                )
             self._source_policies = {
                 int(source.id): self._effective_source_policy(source) for source in sources
             }
