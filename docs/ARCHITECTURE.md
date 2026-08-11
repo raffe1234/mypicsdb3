@@ -189,8 +189,12 @@ thread-per-file optimization.
 ### `filesystem.py`: local and Kodi VFS adapters
 
 The abstract `Filesystem` operations are small: existence, listing, stat,
-binary reads and temporary materialization. `KodiFilesystem` supports Kodi VFS
-and network URIs; `LocalFilesystem` is useful in tests and tools.
+binary reads and temporary materialization, plus bounded destination-side
+directory creation, copy and text writing used only by explicit export.
+`KodiFilesystem` supports Kodi VFS and network URIs; `LocalFilesystem` is useful
+in tests and tools. Scanner paths remain source-read/catalogue-write only. An
+export may create destination files, but it never writes, moves, renames or
+deletes the configured source media.
 
 ### `metadata.py` and `metadata_mapping.py`: bounded extraction and canonicalization
 
@@ -234,6 +238,22 @@ write transaction and stores those IDs with compact positions. The manual
 collection never contains query JSON or source-file copies, so later query
 matches do not change its membership. Dynamic Home rows store only validated
 saved-search or manual-collection IDs.
+
+### `exporter.py`: explicit destination-copy boundary
+
+Version 0.8.17 keeps media export separate from collection persistence and scan
+code. `views.py` reconstructs a validated query or collection reference and asks
+`Catalog` for the complete deterministic ordered media-ID list before the user
+copy starts. `SafeExporter` owns only destination-side work: creation of a unique
+dedicated folder, portable filename/collision handling, bounded catalogue
+metadata batches, VFS copy, cancellation and the versioned JSON manifest.
+
+The destination folder is rejected when it would sit inside a configured picture
+source. Source URI credentials are used only for the actual VFS operation and
+are stripped before URI provenance is persisted in the manifest. Export performs
+no database writes and has no move/delete source operation. A partial cancelled
+or crashed export is destination state, not catalogue state; already copied
+files are deliberately left in place.
 
 ### `music_playlists.py` and `music_slideshow.py`: collection-music boundary
 

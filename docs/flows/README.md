@@ -79,6 +79,15 @@ query-result snapshots, collection context actions, default album view and colle
 Main files: `static_collections.py`, `db/catalog.py`, `db/schema.py`,
 `db/migration_steps/v0006_static_collections.py`, `views.py`.
 
+### [Safe media export](EXPORT.md)
+
+Read this for 0.8.17 COPY-only result/collection export, frozen selection IDs,
+Kodi VFS destination writes, collision handling, cancellation, source-tree
+protection and the credential-sanitized JSON manifest.
+
+Main files: `exporter.py`, `filesystem.py`, `db/catalog.py`, `views.py`,
+`tests/test_exporter.py`.
+
 ### [Slideshows and the background service](SLIDESHOW_SERVICE.md)
 
 Read this for native picture slideshows, video playlists, mixed database

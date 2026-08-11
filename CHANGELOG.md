@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.17 - 2026-08-11
+
+- Add explicit **Export current results** / **Export collection** actions for global search, saved smart collections, Browse metadata, Needs attention and manual collections. The complete ordered selection is frozen to catalogue IDs before any copy begins; source media are never moved, renamed, edited or deleted.
+- Add a COPY-only `SafeExporter` through the filesystem/VFS boundary. The user chooses a writable parent destination, MyPicsDB 3 creates a unique dedicated export folder outside every configured picture source, never overwrites an existing file and resolves basename collisions with portable ` (2)`, ` (3)` suffixes.
+- Write `mypicsdb3-export-manifest.json` before the first media copy and finalize it as `completed` or `cancelled` with selected/processed/copied/missing/failed/collision counts plus per-item provenance. Credentials embedded in VFS URIs are stripped before any URI reaches the manifest; VFS exception text is not persisted or logged.
+- Keep large exports bounded by fetching at most 500 catalogue metadata rows per batch. Cancellation leaves already copied destination files in place and records the partial result; missing or failed items do not abort the remaining copy. No resume, archive/ZIP, move or delete semantics are introduced.
+- Keep database schema 9 and Query Model version 1. Add LocalFilesystem exporter/collision/cancellation/privacy/source-tree safety coverage, Kodi UI coverage and opt-in MariaDB parity for frozen export selection helpers; update README, architecture, Query Model, collection/search flows and legacy-parity documentation.
+
 ## 0.8.16 - 2026-08-11
 
 - Add **Save current results as collection** for global search, saved smart collections, Browse metadata result pages and Needs attention result pages. The action creates a new manual collection containing the complete current validated result set, not just the visible page.

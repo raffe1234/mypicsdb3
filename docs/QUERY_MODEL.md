@@ -231,3 +231,19 @@ query type.
 
 This preserves the distinction between a saved smart collection (live query) and
 a manual snapshot (static membership) without changing Query Model version 1.
+
+## Safe exports in 0.8.17
+
+Export does not add a query language or change Query Model version 1. Query-backed
+export routes carry only the same safe references used by interactive result
+pages: global search text, saved-search ID, curated metadata facet/value or a
+built-in Needs attention key. `views.py` reconstructs and revalidates the
+`PictureQuery`, then `Catalog.ordered_query_picture_ids()` compiles it through
+the normal allowlisted boundary and freezes the complete deterministic ID order.
+Manual collections instead freeze their stored visible order through
+`ordered_collection_picture_ids()`.
+
+The exporter receives IDs, not SQL or raw Query Model JSON. The export manifest
+does not persist Query Model JSON. This keeps export selection semantics aligned
+with normal browsing, including the current minimum-rating display policy,
+without changing the stored-query contract.

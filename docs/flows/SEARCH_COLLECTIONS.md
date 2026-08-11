@@ -153,6 +153,20 @@ change the live smart/search result without changing the snapshot.
 This is deliberately different from saving a smart collection: **smart = live
 query**, **snapshot = static membership**.
 
+## Exporting a query result
+
+Version 0.8.17 adds **Export current results** to the same query-backed pages.
+The route carries only the safe search/saved-search/metadata/preset reference;
+`views.py` reconstructs and revalidates the `PictureQuery`, then
+`Catalog.ordered_query_picture_ids()` freezes the complete deterministic result
+order once. Export therefore follows the same rating-policy override and Query
+Model semantics as the page the user is viewing.
+
+Unlike a collection snapshot, export does not write collection membership. The
+ordered IDs are passed to the dedicated COPY-only export flow described in
+[Safe media export](EXPORT.md). Raw query JSON and SQL never cross the Kodi route
+boundary or enter the manifest.
+
 ## Dynamic Home rows
 
 A saved smart collection can be added to the Estuary MyPicsDB 3 home layout.

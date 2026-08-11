@@ -594,3 +594,43 @@ def test_manual_collection_rename_delete_and_missing_media_are_safe(
             connection,
             "SELECT COUNT(*) AS total FROM collection_items",
         )["total"] == 0
+
+
+def test_export_selection_helpers_freeze_order_and_return_bounded_metadata(
+    tmp_path: Path,
+) -> None:
+    catalog = make_catalog(tmp_path)
+    root = tmp_path / "export"
+    first = add_picture(catalog, root, "b.jpg", taken_at="2024-01-02 10:00:00")
+    second = add_picture(catalog, root, "a.jpg", taken_at="2024-01-03 10:00:00")
+    source = catalog.sync_sources([{"label": "Photos", "uri": str(root)}])[0]
+    query = {
+        "version": 1,
+        "root": {"type": "group", "match": "all", "negated": False, "children": []},
+        "sort": [{"field": "filename", "direction": "asc"}],
+        "scope": {
+            "source_ids": [source.id],
+            "include_missing": False,
+            "include_excluded": False,
+        },
+        "default_policy": {"apply_min_rating": False},
+    }
+
+    assert catalog.ordered_query_picture_ids(query) == [second, first]
+    collection_id = catalog.create_collection("Export order")
+    assert catalog.add_picture_to_collection(collection_id, first) is True
+    assert catalog.add_picture_to_collection(collection_id, second) is True
+    assert catalog.ordered_collection_picture_ids(collection_id) == [first, second]
+
+    rows = catalog.media_for_export([second, first])
+    by_id = {row["id"]: row for row in rows}
+    assert set(by_id) == {first, second}
+    assert by_id[first]["filename"] == "b.jpg"
+    assert by_id[second]["source_label"] == "Photos"
+
+    try:
+        catalog.media_for_export(list(range(1, 502)))
+    except ValueError as exc:
+        assert "at most 500" in str(exc)
+    else:
+        raise AssertionError("Unbounded export metadata batches must be rejected")

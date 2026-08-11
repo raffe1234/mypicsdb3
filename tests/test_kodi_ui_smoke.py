@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.16",
+            "version": "0.8.17",
         }[key]
 
     def getSetting(self, key):
@@ -439,6 +439,28 @@ class FakeCatalog:
     def count_query_pictures(self, query):
         self.query_requests.append((query, "count", 0))
         return 1
+
+    def ordered_query_picture_ids(self, query):
+        self.query_requests.append((query, "export-ids", 0))
+        return [1]
+
+    def ordered_collection_picture_ids(self, collection_id):
+        self.collection_requests.append(("export-ids", int(collection_id)))
+        return [1]
+
+    def media_for_export(self, picture_ids):
+        return [
+            {
+                "id": int(picture_id),
+                "uri": "smb://server/photos/image.jpg",
+                "filename": "image.jpg",
+                "media_type": "picture",
+                "file_size": 123,
+                "file_mtime": 1000.0,
+                "source_label": "Photos",
+            }
+            for picture_id in picture_ids
+        ]
 
     def query_facet_counts(self, query, field, limit=100, offset=0):
         self.facet_requests.append((query, field, limit, offset))
@@ -779,9 +801,12 @@ def test_needs_attention_uses_query_model_presets_and_opens_results(monkeypatch)
 
     assert calls.ended is True
     assert calls.category == "Pictures without location"
-    assert len(calls.items) == 2
+    assert len(calls.items) == 3
     assert calls.items[0][0].endswith(
         "/action/snapshot-results?scope=needs-attention&kind=missing-location"
+    )
+    assert calls.items[1][0].endswith(
+        "/action/export-results?scope=needs-attention&kind=missing-location"
     )
     query, limit, offset = runtime.catalog.query_requests[0]
     assert (limit, offset) == (runtime.kodi.settings.browser_page_size, 0)
@@ -864,7 +889,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.16" in labels
+    assert "MyPicsDB 3 version: 0.8.17" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -1057,6 +1082,29 @@ def test_snapshot_action_preserves_temporary_all_pictures_rating_policy(monkeypa
     ]
 
 
+def test_export_action_preserves_temporary_all_pictures_rating_policy(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.minimum_rating_policy = "3"
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(
+        views.Request(
+            "search",
+            {"q": "summer", "rating_policy": "all"},
+        )
+    )
+
+    export_urls = [
+        url for url, item, _folder in calls.items
+        if item.label == "Export current results"
+    ]
+    assert export_urls == [
+        "plugin://plugin.image.mypicsdb3/action/export-results?"
+        "scope=search&q=summer&rating_policy=all"
+    ]
+
+
 def test_global_search_prompts_normalizes_and_preserves_pagination(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -1081,7 +1129,11 @@ def test_global_search_prompts_normalizes_and_preserves_pagination(monkeypatch) 
         "plugin://plugin.image.mypicsdb3/action/snapshot-results?"
         "scope=search&q=%C3%A5land+sommar"
     )
-    assert calls.items[3][0] == (
+    assert calls.items[2][0] == (
+        "plugin://plugin.image.mypicsdb3/action/export-results?"
+        "scope=search&q=%C3%A5land+sommar"
+    )
+    assert calls.items[4][0] == (
         "plugin://plugin.image.mypicsdb3/search?offset=1&limit=1&q=%C3%A5land+sommar"
     )
 
@@ -2107,13 +2159,17 @@ def test_saved_search_ui_saves_lists_opens_and_paginates_by_id(monkeypatch) -> N
         "plugin://plugin.image.mypicsdb3/action/snapshot-results?"
         "scope=saved-search&id=42"
     )
-    assert calls.items[2][0] == (
+    assert calls.items[1][0] == (
+        "plugin://plugin.image.mypicsdb3/action/export-results?"
+        "scope=saved-search&id=42"
+    )
+    assert calls.items[3][0] == (
         "plugin://plugin.image.mypicsdb3/saved-search?offset=1&limit=1&id=42"
     )
     assert "q=" not in calls.items[1][0]
     assert "query" not in calls.items[1][0]
     slideshow_commands = [
-        command for label, command in calls.items[1][1].context
+        command for label, command in calls.items[2][1].context
         if label == "Play slideshow from here"
     ]
     assert slideshow_commands == [
@@ -2472,13 +2528,16 @@ def test_manual_collections_list_open_and_use_default_album_view(monkeypatch) ->
     assert calls.items[0][0].startswith(
         "plugin://plugin.image.mypicsdb3/action/start-slideshow?"
     )
-    assert calls.items[1][0] == "smb://server/photos/image.jpg"
-    labels = [label for label, _command in calls.items[1][1].context]
+    assert calls.items[1][0] == (
+        "plugin://plugin.image.mypicsdb3/action/export-results?scope=collection&id=9"
+    )
+    assert calls.items[2][0] == "smb://server/photos/image.jpg"
+    labels = [label for label, _command in calls.items[2][1].context]
     assert "Add to collection" in labels
     assert "Remove from collection" in labels
     slideshow = [
         command
-        for label, command in calls.items[1][1].context
+        for label, command in calls.items[2][1].context
         if label == "Play slideshow from here"
     ]
     assert slideshow == [
@@ -2546,9 +2605,9 @@ def test_manual_collection_context_reorders_items_and_invalidates_home(monkeypat
 
     ui.dispatch(views.Request("collection", {"id": "9"}))
 
-    first_labels = [label for label, _command in calls.items[1][1].context]
-    middle_labels = [label for label, _command in calls.items[2][1].context]
-    last_labels = [label for label, _command in calls.items[3][1].context]
+    first_labels = [label for label, _command in calls.items[2][1].context]
+    middle_labels = [label for label, _command in calls.items[3][1].context]
+    last_labels = [label for label, _command in calls.items[4][1].context]
     assert "Move up" not in first_labels
     assert "Move down" in first_labels
     assert {"Move up", "Move down", "Move to top", "Move to bottom"} <= set(
@@ -2789,6 +2848,78 @@ def test_query_result_can_be_snapshotted_to_manual_collection(monkeypatch) -> No
     )
     assert calls.builtins[-1].startswith("Container.Update(")
 
+
+
+def test_query_result_can_be_exported_with_writable_destination_and_progress(
+    monkeypatch,
+) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    captured = {}
+
+    class FakeProgress:
+        def __init__(self):
+            self.updates = []
+            self.closed = False
+
+        def create(self, heading, message):
+            captured["progress_create"] = (heading, message)
+
+        def iscanceled(self):
+            return False
+
+        def update(self, percent, message):
+            self.updates.append((percent, message))
+
+        def close(self):
+            self.closed = True
+
+    class FakeSafeExporter:
+        def __init__(self, catalog, filesystem, version, logger=None):
+            captured["init"] = (catalog, filesystem, version, logger)
+
+        def export_ids(
+            self, ids, destination, export_name, selection_label,
+            cancelled=None, progress=None,
+        ):
+            captured["export"] = (
+                list(ids), destination, export_name, selection_label
+            )
+            assert cancelled() is False
+            progress(1, 1, "image.jpg")
+            return types.SimpleNamespace(
+                cancelled=False,
+                selected=1,
+                copied=1,
+                missing=0,
+                failed=0,
+                collisions=0,
+                export_uri="smb://server/export/Summer/",
+                manifest_uri=(
+                    "smb://server/export/Summer/mypicsdb3-export-manifest.json"
+                ),
+            )
+
+    monkeypatch.setattr(views, "SafeExporter", FakeSafeExporter)
+    sys.modules["xbmcgui"].DialogProgress = FakeProgress
+    FakeDialog.input_responses = ["Summer export"]
+    FakeDialog.browse_responses = ["smb://server/export/"]
+    FakeDialog.responses = [True]
+
+    ui.action(
+        "action/export-results",
+        {"scope": "search", "q": "summer"},
+    )
+
+    assert captured["export"] == (
+        [1], "smb://server/export/", "Summer export", "Search - summer"
+    )
+    assert captured["init"][2] == "0.8.17"
+    assert FakeDialog.browse_calls[-1][0] == 3
+    assert runtime.kodi.notifications[-1] == (
+        "Export complete: 1 copied, 0 missing, 0 failed", False
+    )
 
 
 def test_manual_collection_actions_create_add_remove_rename_and_delete(

@@ -98,14 +98,21 @@ The complete validated result is frozen transactionally as ordered catalogue IDs
 inside a new manual collection. No query JSON or source-file copies are stored,
 and later query matches do not alter the snapshot.
 
-### 6. Export/archive selected results
+### 6. Export/archive selected results — copy parity completed in 0.8.17
 
-Legacy code exposed export/ZIP paths. Modern plan: first build a safe COPY-only
-export engine using Kodi VFS, collision handling, cancellation, missing-item
-reporting and a manifest. Archive creation can reuse that engine later. No move
-or delete operation should be introduced as part of parity.
+Legacy code exposed export/ZIP paths. MyPicsDB 3 version 0.8.17 implements the
+low-risk, useful part as explicit **COPY-only** export for query-backed results
+and manual collections. The complete ordered selection is frozen first, copied
+through the filesystem/VFS boundary into a unique dedicated destination folder,
+and accompanied by a versioned JSON manifest. Existing destination files are
+never overwritten; basename collisions receive numbered suffixes, missing and
+failed source items are reported, cancellation preserves the already copied
+partial result, and destinations inside configured picture-source trees are
+rejected. Credentials embedded in VFS URIs are stripped from manifest provenance.
 
-Recommended target: 0.8.17.
+The legacy ZIP/archive path is intentionally **not** copied yet. If archive
+creation is useful later, it should reuse the same frozen selection, collision,
+source-safety and manifest boundaries. Move/delete semantics remain out of scope.
 
 ### 7. GPS/map view
 
@@ -137,13 +144,14 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.16
+## Recommended roadmap after 0.8.17
 
 1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
 2. 0.8.16 — completed: collection snapshots from validated query-backed results.
-3. 0.8.17 — safe export/copy + manifest.
+3. 0.8.17 — completed: safe COPY-only export + credential-sanitized manifest.
 4. Later — light video metadata, map/location UX, optional generic provider API,
-   rebuild catalogue while preserving sources.
+   rebuild catalogue while preserving sources; optional archive creation may reuse
+   the 0.8.17 export engine if there is a real user need.
 5. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
    mixed picture/video/music state machine.
 

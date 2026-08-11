@@ -73,6 +73,15 @@ class Filesystem:
     def open_binary(self, path: str):
         raise NotImplementedError
 
+    def makedirs(self, path: str) -> bool:
+        raise NotImplementedError
+
+    def copy(self, source: str, destination: str) -> bool:
+        raise NotImplementedError
+
+    def write_text(self, path: str, text: str) -> None:
+        raise NotImplementedError
+
     def read_prefix(self, path: str, max_bytes: int) -> bytes:
         with self.open_binary(path) as stream:
             return stream.read(max_bytes)
@@ -164,6 +173,23 @@ class CancellationAwareFilesystem(Filesystem):
             raise
         return CheckedBinaryStream(stream, self._check)
 
+    def makedirs(self, path: str) -> bool:
+        self._check()
+        value = self._filesystem.makedirs(path)
+        self._check()
+        return value
+
+    def copy(self, source: str, destination: str) -> bool:
+        self._check()
+        value = self._filesystem.copy(source, destination)
+        self._check()
+        return value
+
+    def write_text(self, path: str, text: str) -> None:
+        self._check()
+        self._filesystem.write_text(path, text)
+        self._check()
+
     @contextlib.contextmanager
     def materialized(self, path: str, max_bytes: Optional[int] = None) -> Iterator[Optional[str]]:
         self._check()
@@ -196,6 +222,26 @@ class KodiFilesystem(Filesystem):
 
     def open_binary(self, path: str) -> KodiFileAdapter:
         return KodiFileAdapter(path)
+
+    def makedirs(self, path: str) -> bool:
+        if xbmcvfs.exists(path):
+            return True
+        return bool(xbmcvfs.mkdirs(path))
+
+    def copy(self, source: str, destination: str) -> bool:
+        return bool(xbmcvfs.copy(source, destination))
+
+    def write_text(self, path: str, text: str) -> None:
+        handle = xbmcvfs.File(path, "w")
+        try:
+            try:
+                written = handle.write(text)
+            except TypeError:
+                written = handle.write(text.encode("utf-8"))
+            if written is False:
+                raise OSError("Kodi VFS write returned false")
+        finally:
+            handle.close()
 
     @contextlib.contextmanager
     def materialized(self, path: str, max_bytes: Optional[int] = None) -> Iterator[Optional[str]]:
@@ -243,6 +289,18 @@ class LocalFilesystem(Filesystem):
 
     def open_binary(self, path: str) -> BinaryIO:
         return open(path, "rb")
+
+    def makedirs(self, path: str) -> bool:
+        os.makedirs(path, exist_ok=True)
+        return True
+
+    def copy(self, source: str, destination: str) -> bool:
+        shutil.copy2(source, destination)
+        return True
+
+    def write_text(self, path: str, text: str) -> None:
+        with open(path, "w", encoding="utf-8", newline="\n") as handle:
+            handle.write(text)
 
     @contextlib.contextmanager
     def materialized(self, path: str, max_bytes: Optional[int] = None) -> Iterator[Optional[str]]:

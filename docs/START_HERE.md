@@ -157,6 +157,7 @@ Prefer this page, `ARCHITECTURE.md` and the current source code when they differ
 | Change global or saved search | `search.py`, `query_model.py` | `saved_searches.py`, search tests |
 | Change the smart-filter editor or Needs attention presets | `smart_filter_editor.py`, `attention.py` | `query_model.py`, editor/UI tests |
 | Change Browse metadata categories/facets | `metadata_browser.py`, `views.py` | `db/catalog.py`, `query_model.py`, facet/UI tests |
+| Change safe media export | `exporter.py`, `views.py` | `filesystem.py`, `db/catalog.py`, `tests/test_exporter.py` |
 | Change a slideshow | `views.py`, `slideshow.py` | `service_loop.py`, slideshow tests |
 | Change the screensaver | `screensaver.mypicsdb3/default.py`, `screensaver.py` | `tests/test_screensaver.py`, screensaver flow guide |
 | Change background behaviour | `service_loop.py` | `kodi.py`, service tests |
@@ -197,6 +198,7 @@ contributor does not need to open one very large architecture document:
 - [Scanning, filesystems, metadata and catalogue writes](flows/SCANNING_METADATA.md)
 - [Search, Query Model and saved smart collections](flows/SEARCH_COLLECTIONS.md)
 - [Manual collections and query-result snapshots](flows/STATIC_COLLECTIONS.md)
+- [Safe COPY-only media export](flows/EXPORT.md)
 - [Slideshows and the background service](flows/SLIDESHOW_SERVICE.md)
 - [Collection music playlists](flows/COLLECTION_MUSIC.md)
 - [MyPicsDB 3 screensaver](flows/SCREENSAVER.md)

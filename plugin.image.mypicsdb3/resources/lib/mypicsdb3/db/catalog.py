@@ -501,6 +501,60 @@ class Catalog:
             item_count = len(picture_ids)
         return collection_id, item_count
 
+    def ordered_query_picture_ids(self, query_model: Any) -> List[int]:
+        """Freeze the current validated query result as ordered catalogue IDs."""
+        compiled = compile_picture_query(query_model, self.rating_policy)
+        with self.engine.transaction() as connection:
+            rows = self.engine.fetchall(
+                connection,
+                "SELECT p.id FROM pictures p WHERE %s ORDER BY %s"
+                % (compiled.where_sql, compiled.order_by_sql),
+                compiled.params,
+            )
+        return [int(row["id"]) for row in rows]
+
+    def ordered_collection_picture_ids(self, collection_id: int) -> List[int]:
+        """Freeze currently visible manual-collection membership in stored order."""
+        if type(collection_id) is not int or collection_id <= 0:
+            raise ValueError("Collection ID must be a positive integer")
+        where, params = self._apply_rating_policy(
+            "ci.collection_id=?", (collection_id,)
+        )
+        with self.engine.transaction() as connection:
+            rows = self.engine.fetchall(
+                connection,
+                "SELECT ci.picture_id AS id FROM collection_items ci "
+                "JOIN pictures p ON p.id=ci.picture_id "
+                "WHERE p.is_missing=0 AND %s "
+                "ORDER BY ci.position, ci.picture_id" % where,
+                params,
+            )
+        return [int(row["id"]) for row in rows]
+
+    def media_for_export(self, picture_ids: Sequence[int]) -> List[Dict[str, Any]]:
+        """Return bounded COPY-only export metadata for catalogue IDs.
+
+        Callers own the original ID order. This method intentionally accepts a
+        bounded batch and never exposes arbitrary SQL identifiers.
+        """
+        ids = [int(value) for value in picture_ids]
+        if not ids:
+            return []
+        if len(ids) > 500:
+            raise ValueError("Export metadata batch must contain at most 500 IDs")
+        if any(value <= 0 for value in ids):
+            raise ValueError("Export media IDs must be positive integers")
+        placeholders = ",".join("?" for _ in ids)
+        with self.engine.transaction() as connection:
+            return self.engine.fetchall(
+                connection,
+                "SELECT p.id, p.uri, p.filename, p.media_type, p.file_size, "
+                "p.file_mtime, s.label AS source_label "
+                "FROM pictures p JOIN sources s ON s.id=p.source_id "
+                "WHERE p.is_missing=0 AND p.id IN (%s)" % placeholders,
+                ids,
+            )
+
     def rename_collection(self, collection_id: int, name: str) -> bool:
         normalized_name = normalize_collection_name(name)
         with self.engine.transaction(immediate=True) as connection:

@@ -581,6 +581,17 @@ def test_mysql_manual_collection_roundtrip_preserves_mixed_order(tmp_path) -> No
     assert [
         row["filename"] for row in catalog.pictures_in_collection(snapshot_id, 10)
     ] == ["photo.jpg", "clip.mp4"]
+    assert catalog.ordered_query_picture_ids(snapshot_query) == [
+        media_ids[1],
+        media_ids[0],
+    ]
+    assert catalog.ordered_collection_picture_ids(snapshot_id) == [
+        media_ids[1],
+        media_ids[0],
+    ]
+    export_rows = catalog.media_for_export([media_ids[1], media_ids[0]])
+    assert {row["id"] for row in export_rows} == set(media_ids)
+    assert {row["source_label"] for row in export_rows} == {"Collection media"}
 
     assert catalog.rename_collection(collection_id, "Renamed picks") is True
     assert catalog.get_collection(collection_id).name == "Renamed picks"

@@ -22,6 +22,11 @@ query-backed result page
 → select ordered media IDs once inside one transaction
 → store compact collection_items.position values
 
+open manual collection
+→ Export collection action
+→ Catalog.ordered_collection_picture_ids() freezes current visible stored order
+→ dedicated safe COPY-only export flow (see EXPORT.md)
+
 Collections main-menu entry
 → Catalog.list_collections()
 → open collection route
@@ -63,6 +68,7 @@ optional collection context action → Assign music playlist
 | `db/catalog.py` | Collection CRUD, duplicate prevention, Query Model snapshots, ordered membership, reordering and reads |
 | `preferences.py`, `home_layout_editor.py` | Manual collection Home-row persistence and editing |
 | `views.py` | Main-menu route, dialogs, context actions, Home provider, browsing and slideshow scope |
+| `exporter.py`, `filesystem.py` | Explicit destination-side COPY export; no collection/source mutation |
 | `kodi.py`, `contrib/estuary/` | Materialized Home properties and generated Estuary row |
 | `resources/language/resource.language.en_gb/strings.po` | User-facing collection text |
 | `music_playlists.py`, `music_slideshow.py` | Optional playlist assignment and music playback helpers |
@@ -116,6 +122,8 @@ is forwarded in collection routes and slideshow actions.
 - Pictures and videos may coexist in the same collection.
 - A snapshot creates a new collection; it never merges silently into an existing one.
 - Snapshot membership is static even if the originating query later matches different media.
+- Exporting a collection freezes its currently visible stored order but does not alter the collection or its positions.
+- Export creates destination copies only; it never turns those copies into collection members or source rows.
 
 ## Slideshow behaviour
 
@@ -156,7 +164,7 @@ MyPicsDB started. See [Collection music playlists](COLLECTION_MUSIC.md).
 ## Invariants
 
 - Manual and smart collections remain different concepts and tables.
-- Source files are never copied, moved, edited or deleted by collection actions.
+- Collection persistence/actions never copy, move, edit or delete source files; the separate explicit export action may copy them to a user-selected destination but still never modifies the source.
 - One media row occurs at most once in a collection.
 - Snapshot creation is transactional: an empty/error result cannot leave a partial collection.
 - Snapshot actions store catalogue IDs only; no source file is copied or changed.

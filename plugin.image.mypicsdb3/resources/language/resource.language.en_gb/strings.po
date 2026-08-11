@@ -1870,3 +1870,47 @@ msgstr "Creating collection snapshot"
 msgctxt "#32965"
 msgid "items"
 msgstr "items"
+
+msgctxt "#32966"
+msgid "Export current results"
+msgstr "Export current results"
+
+msgctxt "#32967"
+msgid "Export collection"
+msgstr "Export collection"
+
+msgctxt "#32968"
+msgid "Export folder name"
+msgstr "Export folder name"
+
+msgctxt "#32969"
+msgid "Choose export destination"
+msgstr "Choose export destination"
+
+msgctxt "#32970"
+msgid "Export media?"
+msgstr "Export media?"
+
+msgctxt "#32971"
+msgid "Copy %d matching items to a new export folder? Original files will not be modified."
+msgstr "Copy %d matching items to a new export folder? Original files will not be modified."
+
+msgctxt "#32972"
+msgid "Exporting media"
+msgstr "Exporting media"
+
+msgctxt "#32973"
+msgid "Export complete: %d copied, %d missing, %d failed"
+msgstr "Export complete: %d copied, %d missing, %d failed"
+
+msgctxt "#32974"
+msgid "Export cancelled: %d copied, %d missing, %d failed"
+msgstr "Export cancelled: %d copied, %d missing, %d failed"
+
+msgctxt "#32975"
+msgid "Could not export media"
+msgstr "Could not export media"
+
+msgctxt "#32976"
+msgid "No matching media to export"
+msgstr "No matching media to export"

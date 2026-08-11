@@ -16,6 +16,7 @@ import xbmcplugin  # type: ignore
 from .album_view import save_current_album_view
 from .attention import ATTENTION_PRESETS, attention_preset
 from .diagnostics import collect_diagnostics, write_support_bundle
+from .exporter import ExportError, SafeExporter, normalize_export_name
 from .home_layout_editor import (
     SmartHomeEditorText,
     show_smart_home_layout_editor,
@@ -592,13 +593,14 @@ class PluginUI:
         )
         prefix_items = None
         if not self._is_home_widget(params):
+            action_params = {
+                "field": facet.key,
+                "value": str(value),
+                **self._rating_route_params(params),
+            }
             prefix_items = [
-                self._snapshot_results_action(
-                    "metadata",
-                    field=facet.key,
-                    value=str(value),
-                    **self._rating_route_params(params),
-                )
+                self._snapshot_results_action("metadata", **action_params),
+                self._export_results_action("metadata", **action_params),
             ]
         return self.pictures(
             "metadata-result",
@@ -647,12 +649,13 @@ class PluginUI:
         result_params["kind"] = preset.key
         prefix_items = None
         if not self._is_home_widget(params):
+            action_params = {
+                "kind": preset.key,
+                **self._rating_route_params(params),
+            }
             prefix_items = [
-                self._snapshot_results_action(
-                    "needs-attention",
-                    kind=preset.key,
-                    **self._rating_route_params(params),
-                )
+                self._snapshot_results_action("needs-attention", **action_params),
+                self._export_results_action("needs-attention", **action_params),
             ]
         return self.pictures(
             "needs-attention-result",
@@ -698,11 +701,12 @@ class PluginUI:
             "action/save-search",
             q=request.text,
         )
-        snapshot_item = self._snapshot_results_action(
-            "search",
-            q=request.text,
+        action_params = {
+            "q": request.text,
             **self._rating_route_params(search_params),
-        )
+        }
+        snapshot_item = self._snapshot_results_action("search", **action_params)
+        export_item = self._export_results_action("search", **action_params)
         return self.pictures(
             "search",
             lambda limit, offset: self.catalog.query_pictures(
@@ -712,7 +716,7 @@ class PluginUI:
             ),
             search_params,
             category,
-            prefix_items=[save_item, snapshot_item],
+            prefix_items=[save_item, snapshot_item, export_item],
         )
 
     def _snapshot_results_action(self, scope: str, **params):
@@ -722,6 +726,30 @@ class PluginUI:
             scope=scope,
             **params,
         )
+
+    def _export_results_action(self, scope: str, **params):
+        return self.add_action(
+            self.text(32966, "Export current results"),
+            "action/export-results",
+            scope=scope,
+            **params,
+        )
+
+    def _export_selection_from_params(
+        self, params: Dict[str, str]
+    ) -> Tuple[List[int], str]:
+        scope = str(params.get("scope") or "").strip()
+        if scope == "collection":
+            collection_id = int(params.get("id") or 0)
+            collection = self.catalog.get_collection(collection_id)
+            if collection is None:
+                raise ValueError(self.text(32809, "Collection was not found"))
+            return (
+                self.catalog.ordered_collection_picture_ids(collection_id),
+                collection.name,
+            )
+        query, suggested_name = self._snapshot_query_from_params(params)
+        return self.catalog.ordered_query_picture_ids(query), suggested_name
 
     def _snapshot_query_from_params(
         self, params: Dict[str, str]
@@ -867,12 +895,15 @@ class PluginUI:
         )
         prefix_items = []
         if not self._is_home_widget(params):
+            action_params = {
+                "id": saved.id,
+                **self._rating_route_params(params),
+            }
             prefix_items.append(
-                self._snapshot_results_action(
-                    "saved-search",
-                    id=saved.id,
-                    **self._rating_route_params(params),
-                )
+                self._snapshot_results_action("saved-search", **action_params)
+            )
+            prefix_items.append(
+                self._export_results_action("saved-search", **action_params)
             )
             if music_uri:
                 prefix_items.append(
@@ -982,6 +1013,15 @@ class PluginUI:
                 self.add_action(
                     self.text(32818, "Play collection slideshow"),
                     "action/start-slideshow",
+                    scope="collection",
+                    id=collection_id,
+                    **self._rating_route_params(params),
+                )
+            )
+            items.append(
+                self.add_action(
+                    self.text(32967, "Export collection"),
+                    "action/export-results",
                     scope="collection",
                     id=collection_id,
                     **self._rating_route_params(params),
@@ -3167,6 +3207,128 @@ class PluginUI:
                     ),
                     error=True,
                 )
+            return
+        if route == "action/export-results":
+            progress = None
+            try:
+                picture_ids, suggested_name = self._export_selection_from_params(params)
+                if not picture_ids:
+                    self.kodi.notify(self.text(32976, "No matching media to export"))
+                    return
+                dialog = xbmcgui.Dialog()
+                default_name = normalize_export_name(suggested_name)
+                export_name = dialog.input(
+                    self.text(32968, "Export folder name"),
+                    defaultt=default_name[:120],
+                )
+                if not str(export_name or "").strip():
+                    return
+                destination = dialog.browseSingle(
+                    3,
+                    self.text(32969, "Choose export destination"),
+                    "",
+                    "",
+                    False,
+                    False,
+                    "",
+                )
+                destination = str(destination or "").strip()
+                if not destination:
+                    return
+                if not dialog.yesno(
+                    self.text(32970, "Export media?"),
+                    self.text(
+                        32971,
+                        "Copy %d matching items to a new export folder? "
+                        "Original files will not be modified.",
+                    )
+                    % len(picture_ids),
+                ):
+                    return
+
+                progress_type = getattr(xbmcgui, "DialogProgress", None)
+                if callable(progress_type):
+                    progress = progress_type()
+                    progress.create(
+                        self.text(32972, "Exporting media"),
+                        "%d %s" % (len(picture_ids), self.text(32965, "items")),
+                    )
+
+                def cancelled() -> bool:
+                    if progress is None:
+                        return False
+                    checker = getattr(progress, "iscanceled", None)
+                    return bool(callable(checker) and checker())
+
+                def update_progress(done: int, total: int, filename: str) -> None:
+                    if progress is None:
+                        return
+                    percent = min(100, int((done * 100) / max(1, total)))
+                    message = "%d / %d - %s" % (done, total, filename)
+                    progress.update(percent, message)
+
+                from . import VERSION
+
+                result = SafeExporter(
+                    self.catalog,
+                    self.runtime.filesystem,
+                    VERSION,
+                    logger=self.kodi.log,
+                ).export_ids(
+                    picture_ids,
+                    destination,
+                    str(export_name),
+                    suggested_name,
+                    cancelled=cancelled,
+                    progress=update_progress,
+                )
+                if result.cancelled:
+                    message = self.text(
+                        32974,
+                        "Export cancelled: %d copied, %d missing, %d failed",
+                    ) % (result.copied, result.missing, result.failed)
+                else:
+                    message = self.text(
+                        32973,
+                        "Export complete: %d copied, %d missing, %d failed",
+                    ) % (result.copied, result.missing, result.failed)
+                self.kodi.notify(
+                    message,
+                    error=bool(result.failed),
+                    milliseconds=7000,
+                    force=True,
+                )
+                self.kodi.log.info(
+                    "Media export status=%s selected=%d copied=%d missing=%d "
+                    "failed=%d collisions=%d",
+                    "cancelled" if result.cancelled else "completed",
+                    result.selected,
+                    result.copied,
+                    result.missing,
+                    result.failed,
+                    result.collisions,
+                )
+            except (
+                CollectionValidationError,
+                ExportError,
+                SavedSearchValidationError,
+                OSError,
+                RuntimeError,
+                TypeError,
+                ValueError,
+            ) as exc:
+                self.kodi.notify(
+                    "%s: %s" % (self.text(32975, "Could not export media"), exc),
+                    error=True,
+                    milliseconds=7000,
+                    force=True,
+                )
+            finally:
+                if progress is not None:
+                    try:
+                        progress.close()
+                    except Exception:
+                        pass
             return
         if route == "action/snapshot-results":
             progress = None

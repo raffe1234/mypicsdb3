@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.16. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.17. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -75,6 +75,10 @@ For the component boundaries and long-lived safety rules, see
 - Freeze a global search, saved smart collection, Browse metadata result or
   Needs attention result into a new static manual collection with the complete
   validated result order preserved.
+- Export the complete current result or a manual collection to a new dedicated
+  destination folder with COPY-only Kodi VFS semantics, collision-safe names,
+  cancellation and a JSON manifest; configured picture-source trees are rejected
+  as export destinations and original media are never modified or deleted.
 - Reorder manual collection items and browse both smart and manual collections
   with normal pagination and **Default album view**.
 - Assign one Kodi music-playlist file to a saved smart collection or manual
@@ -692,6 +696,35 @@ confirmation count first, then freezes the current validated Query Model order i
 one transaction. Later scans or metadata changes do not add new matches to that
 manual collection; use the original smart/search view when live membership is
 required.
+
+#### Safe export/copy
+
+Version 0.8.17 adds **Export current results** to global search, saved smart
+collections, Browse metadata and Needs attention, plus **Export collection** for
+manual collections. The complete ordered result is frozen to catalogue IDs
+before copying begins, so paging or later database changes cannot silently alter
+what is being exported.
+
+Choose a folder name and a writable Kodi destination. MyPicsDB 3 always creates
+a new dedicated subfolder and refuses to create it inside any configured picture
+source, which prevents exported duplicates from being indexed back into the same
+catalogue. Existing folders or files are never overwritten: a folder gets a
+numbered suffix when necessary, and same-named media become `name (2).ext`,
+`name (3).ext`, and so on. Names are sanitized for portable destination files.
+
+The exporter uses Kodi's filesystem/VFS adapter and performs **copy only**. It
+never moves, renames, edits or deletes the source media. Missing and failed items
+are reported while later items continue. Cancelling stops before the next media
+copy; files already copied remain in the destination rather than being deleted.
+
+Every export folder contains `mypicsdb3-export-manifest.json`. A preflight
+`running` manifest is written before the first media copy, then finalized as
+`completed` or `cancelled` with selection and per-item results. Credentials
+embedded in network/VFS URIs are removed from manifest provenance. A hard Kodi
+crash may therefore leave a partial folder with a `running` manifest, which is
+intentional evidence of where the export stopped. Export has no resume or ZIP
+mode in 0.8.17; archive creation can be considered later on top of the same safe
+copy engine.
 
 Items are displayed in their stored order. Use **Move up**, **Move down**,
 **Move to top** or **Move to bottom** from an item context menu to change the

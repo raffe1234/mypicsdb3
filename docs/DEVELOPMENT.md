@@ -19,6 +19,11 @@ New to the project? Read [Start here](START_HERE.md),
 - Query-result snapshots must be reconstructed from safe route references and
   compiled through the same Query Model boundary. Manual collections store only
   frozen media IDs/order; do not put query JSON or SQL into `collection_items`.
+- Media exports must freeze ordered catalogue IDs before copying and use
+  `exporter.py` plus the filesystem adapter. Export is destination-side COPY only:
+  never move/delete/edit source media, never overwrite destination files, reject
+  destinations inside configured picture sources, and never persist VFS
+  credentials in manifests or logs.
 - `screensaver.py` is a bounded read-only catalogue provider;
   `screensaver.mypicsdb3/default.py` owns Kodi's screensaver window and settings
   actions without creating `Runtime`.
