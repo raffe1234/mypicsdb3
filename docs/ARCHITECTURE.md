@@ -159,8 +159,8 @@ on the backend when the engine can hide the difference.
 ### `db/catalog.py`: catalogue API
 
 `Catalog` is the main read/write interface for sources, per-source scan
-policies, folders, media, searches, manual collections, collection music-playlist mappings, locks and scan
-runs. It returns dictionaries or
+policies, database-global metadata mapping overrides, folders, media, searches,
+manual collections, collection music-playlist mappings, locks and scan runs. It returns dictionaries or
 domain objects that
 higher layers convert to Kodi UI items. Query methods enforce rating policy and
 use backend-neutral engine operations.
@@ -186,12 +186,15 @@ The abstract `Filesystem` operations are small: existence, listing, stat,
 binary reads and temporary materialization. `KodiFilesystem` supports Kodi VFS
 and network URIs; `LocalFilesystem` is useful in tests and tools.
 
-### `metadata.py`: bounded metadata extraction
+### `metadata.py` and `metadata_mapping.py`: bounded extraction and canonicalization
 
-Metadata extraction normalizes EXIF, embedded XMP and optional IPTC information
-into `MetadataResult`. It works through the filesystem interface and respects
-configured read limits. Video rows use lightweight filename and modification
-information rather than a separate video scraper.
+`metadata.py` reads EXIF, embedded XMP and optional IPTC information through the
+filesystem interface and respects configured read limits. `metadata_mapping.py`
+owns the allowlisted canonical fields, built-in compatibility mappings, custom-rule
+validation, deterministic priority/keyword merge behavior and metadata-index
+fingerprint. Database overrides are applied on top of built-ins; they never create
+SQL identifiers. Video rows use lightweight filename and modification information
+rather than a separate video scraper.
 
 ### `query_model.py`: validated query boundary
 
@@ -316,8 +319,10 @@ misconfigured source paths.
 ### Checkpoint compatibility
 
 A scan checkpoint is reused only when the selected sources, database identity,
-each source's effective scan policy and metadata settings are compatible. The
-effective policy is frozen when the scan starts. A source-policy or global-default
+each source's effective scan policy and the metadata-index fingerprint are
+compatible. The fingerprint covers extraction settings plus the effective
+database-global metadata mapping; the effective source policy and mapping snapshot
+are frozen when the scan starts. A source-policy or global-default
 change that could alter discovered media must force a fresh traversal.
 
 ### Query safety

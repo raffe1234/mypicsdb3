@@ -31,6 +31,7 @@ def make_engine(tmp_path: Path) -> DatabaseEngine:
 def create_schema_one_without_history(engine: DatabaseEngine) -> None:
     with engine.transaction(immediate=True) as connection:
         create_schema(engine, connection)
+        engine.execute(connection, "DROP TABLE IF EXISTS metadata_mapping_rules").close()
         engine.execute(connection, "DROP TABLE IF EXISTS source_scan_policies").close()
         engine.execute(connection, "DROP TABLE IF EXISTS collection_music_playlists").close()
         engine.execute(connection, "DROP TABLE IF EXISTS collection_items").close()
@@ -65,7 +66,7 @@ def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> N
     result = MigrationRunner(engine).initialize()
 
     assert result.created_database is True
-    assert result.current_version == 8
+    assert result.current_version == 9
     assert result.backup_path is None
     assert not (tmp_path / "backups").exists()
     with engine.transaction() as connection:
@@ -108,7 +109,12 @@ def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> N
             "SELECT name FROM sqlite_master WHERE type='table' "
             "AND name='source_scan_policies'",
         )
-    assert [row["version"] for row in rows] == [1, 2, 3, 4, 5, 6, 7, 8]
+        mapping_table = engine.fetchone(
+            connection,
+            "SELECT name FROM sqlite_master WHERE type='table' "
+            "AND name='metadata_mapping_rules'",
+        )
+    assert [row["version"] for row in rows] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
     assert rows[0]["name"] == "initial catalogue schema"
     assert rows[1]["name"] == "year-first date browsing index"
     assert rows[2]["name"] == "normalized global search documents"
@@ -117,6 +123,7 @@ def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> N
     assert rows[5]["name"] == "manual media collections"
     assert rows[6]["name"] == "collection music playlists"
     assert rows[7]["name"] == "per-source scan policies"
+    assert rows[8]["name"] == "metadata mapping overrides"
     assert all(len(row["checksum"]) == 64 for row in rows)
     assert index is not None
     assert search_table is not None
@@ -125,9 +132,11 @@ def test_new_database_records_current_schema_without_backup(tmp_path: Path) -> N
     assert collection_items_table is not None
     assert music_table is not None
     assert source_policy_table is not None
+    assert mapping_table is not None
     with engine.transaction() as connection:
         columns = engine.fetchall(connection, "PRAGMA table_info(pictures)")
     assert any(row["name"] == "media_type" for row in columns)
+    assert any(row["name"] == "metadata_index_hash" for row in columns)
     with engine.transaction() as connection:
         plan = engine.fetchall(
             connection,
@@ -146,14 +155,15 @@ def test_existing_schema_five_adds_manual_collections(tmp_path: Path) -> None:
     engine = make_engine(tmp_path)
     MigrationRunner(engine).initialize()
     with engine.transaction(immediate=True) as connection:
+        engine.execute(connection, "DROP TABLE metadata_mapping_rules").close()
         engine.execute(connection, "DROP TABLE source_scan_policies").close()
         engine.execute(connection, "DROP TABLE collection_music_playlists").close()
         engine.execute(connection, "DROP TABLE collection_items").close()
         engine.execute(connection, "DROP TABLE collections").close()
         engine.execute(
             connection,
-            "DELETE FROM schema_migrations WHERE version IN (?, ?, ?)",
-            (6, 7, 8),
+            "DELETE FROM schema_migrations WHERE version IN (?, ?, ?, ?)",
+            (6, 7, 8, 9),
         ).close()
         engine.execute(
             connection,
@@ -164,8 +174,8 @@ def test_existing_schema_five_adds_manual_collections(tmp_path: Path) -> None:
     result = MigrationRunner(engine).initialize()
 
     assert result.previous_version == 5
-    assert result.current_version == 8
-    assert result.applied_versions == (6, 7, 8)
+    assert result.current_version == 9
+    assert result.applied_versions == (6, 7, 8, 9)
     assert result.backup_path is not None
     with engine.transaction() as connection:
         assert engine.table_exists(connection, "collections")
@@ -184,6 +194,7 @@ def test_existing_schema_four_adds_saved_searches_and_collections(tmp_path: Path
     engine = make_engine(tmp_path)
     MigrationRunner(engine).initialize()
     with engine.transaction(immediate=True) as connection:
+        engine.execute(connection, "DROP TABLE metadata_mapping_rules").close()
         engine.execute(connection, "DROP TABLE source_scan_policies").close()
         engine.execute(connection, "DROP TABLE collection_music_playlists").close()
         engine.execute(connection, "DROP TABLE collection_items").close()
@@ -191,8 +202,8 @@ def test_existing_schema_four_adds_saved_searches_and_collections(tmp_path: Path
         engine.execute(connection, "DROP TABLE saved_searches").close()
         engine.execute(
             connection,
-            "DELETE FROM schema_migrations WHERE version IN (?, ?, ?, ?)",
-            (5, 6, 7, 8),
+            "DELETE FROM schema_migrations WHERE version IN (?, ?, ?, ?, ?)",
+            (5, 6, 7, 8, 9),
         ).close()
         engine.execute(
             connection,
@@ -203,8 +214,8 @@ def test_existing_schema_four_adds_saved_searches_and_collections(tmp_path: Path
     result = MigrationRunner(engine).initialize()
 
     assert result.previous_version == 4
-    assert result.current_version == 8
-    assert result.applied_versions == (5, 6, 7, 8)
+    assert result.current_version == 9
+    assert result.applied_versions == (5, 6, 7, 8, 9)
     assert result.backup_path is not None
     with engine.transaction() as connection:
         assert engine.table_exists(connection, "saved_searches")
@@ -234,8 +245,8 @@ def test_existing_schema_one_is_backed_up_and_registered(tmp_path: Path) -> None
     result = MigrationRunner(engine).initialize()
 
     assert result.bootstrapped_history is True
-    assert result.current_version == 8
-    assert result.applied_versions == (2, 3, 4, 5, 6, 7, 8)
+    assert result.current_version == 9
+    assert result.applied_versions == (2, 3, 4, 5, 6, 7, 8, 9)
     assert result.backup_path is not None
     backup_path = Path(result.backup_path)
     assert backup_path.is_file()
@@ -255,11 +266,11 @@ def test_existing_schema_one_is_backed_up_and_registered(tmp_path: Path) -> None
     with engine.transaction() as connection:
         assert engine.fetchone(
             connection, "SELECT value FROM meta WHERE key='schema_version'"
-        )["value"] == "8"
+        )["value"] == "9"
         assert engine.fetchone(
             connection,
             "SELECT COUNT(*) AS total FROM schema_migrations",
-        )["total"] == 8
+        )["total"] == 9
         assert engine.fetchone(
             connection,
             "SELECT name FROM sqlite_master WHERE type='index' "
@@ -339,8 +350,8 @@ def test_existing_schema_two_backfills_normalized_search_documents(tmp_path: Pat
     result = MigrationRunner(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 8
-    assert result.applied_versions == (3, 4, 5, 6, 7, 8)
+    assert result.current_version == 9
+    assert result.applied_versions == (3, 4, 5, 6, 7, 8, 9)
     assert result.backup_path is not None
     with engine.transaction() as connection:
         row = engine.fetchone(
@@ -364,7 +375,7 @@ def test_existing_schema_two_backfills_normalized_search_documents(tmp_path: Pat
     assert " familj " in row["document"]
     assert " göteborg " in row["document"]
     assert media == {"media_type": "picture"}
-    assert [item["version"] for item in history] == [1, 2, 3, 4, 5, 6, 7, 8]
+    assert [item["version"] for item in history] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
 
 
 def test_schema_marker_reconciles_already_recorded_later_migration(tmp_path: Path) -> None:
@@ -386,7 +397,7 @@ def test_schema_marker_reconciles_already_recorded_later_migration(tmp_path: Pat
     result = MigrationRunner(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 8
+    assert result.current_version == 9
     assert result.applied_versions == (3,)
     with engine.transaction() as connection:
         history = engine.fetchall(
@@ -398,8 +409,8 @@ def test_schema_marker_reconciles_already_recorded_later_migration(tmp_path: Pat
             "SELECT value FROM meta WHERE key=?",
             ("schema_version",),
         )
-    assert [item["version"] for item in history] == [1, 2, 3, 4, 5, 6, 7, 8]
-    assert schema_version == {"value": "8"}
+    assert [item["version"] for item in history] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    assert schema_version == {"value": "9"}
 
 
 def test_newer_schema_is_rejected_before_any_schema_write(tmp_path: Path) -> None:
@@ -527,12 +538,13 @@ def test_existing_schema_six_adds_collection_music_playlists(tmp_path: Path) -> 
     engine = make_engine(tmp_path)
     MigrationRunner(engine).initialize()
     with engine.transaction(immediate=True) as connection:
+        engine.execute(connection, "DROP TABLE metadata_mapping_rules").close()
         engine.execute(connection, "DROP TABLE source_scan_policies").close()
         engine.execute(connection, "DROP TABLE collection_music_playlists").close()
         engine.execute(
             connection,
-            "DELETE FROM schema_migrations WHERE version IN (?, ?)",
-            (7, 8),
+            "DELETE FROM schema_migrations WHERE version IN (?, ?, ?)",
+            (7, 8, 9),
         ).close()
         engine.execute(
             connection,
@@ -543,8 +555,8 @@ def test_existing_schema_six_adds_collection_music_playlists(tmp_path: Path) -> 
     result = MigrationRunner(engine).initialize()
 
     assert result.previous_version == 6
-    assert result.current_version == 8
-    assert result.applied_versions == (7, 8)
+    assert result.current_version == 9
+    assert result.applied_versions == (7, 8, 9)
     assert result.backup_path is not None
     with engine.transaction() as connection:
         assert engine.table_exists(connection, "collection_music_playlists")
@@ -564,8 +576,8 @@ def test_existing_schema_seven_adds_source_scan_policies(tmp_path: Path) -> None
         engine.execute(connection, "DROP TABLE source_scan_policies").close()
         engine.execute(
             connection,
-            "DELETE FROM schema_migrations WHERE version=?",
-            (8,),
+            "DELETE FROM schema_migrations WHERE version IN (?, ?)",
+            (8, 9),
         ).close()
         engine.execute(
             connection,
@@ -577,8 +589,8 @@ def test_existing_schema_seven_adds_source_scan_policies(tmp_path: Path) -> None
     result = MigrationRunner(engine).initialize()
 
     assert result.previous_version == 7
-    assert result.current_version == 8
-    assert result.applied_versions == (8,)
+    assert result.current_version == 9
+    assert result.applied_versions == (8, 9)
     assert result.backup_path is not None
     with engine.transaction() as connection:
         assert engine.table_exists(connection, "source_scan_policies")
@@ -588,3 +600,41 @@ def test_existing_schema_seven_adds_source_scan_policies(tmp_path: Path) -> None
             (8,),
         )
     assert row == {"name": "per-source scan policies"}
+
+
+def test_existing_schema_eight_adds_metadata_mapping_and_reindex_hash(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path)
+    MigrationRunner(engine).initialize()
+    with engine.transaction(immediate=True) as connection:
+        engine.execute(connection, "DROP TABLE metadata_mapping_rules").close()
+        engine.execute(connection, "ALTER TABLE pictures DROP COLUMN metadata_index_hash").close()
+        engine.execute(
+            connection,
+            "DELETE FROM schema_migrations WHERE version=?",
+            (9,),
+        ).close()
+        engine.execute(
+            connection,
+            "UPDATE meta SET value=? WHERE key=?",
+            ("8", "schema_version"),
+        ).close()
+        assert not engine.table_exists(connection, "metadata_mapping_rules")
+        columns = engine.fetchall(connection, "PRAGMA table_info(pictures)")
+        assert all(row["name"] != "metadata_index_hash" for row in columns)
+
+    result = MigrationRunner(engine).initialize()
+
+    assert result.previous_version == 8
+    assert result.current_version == 9
+    assert result.applied_versions == (9,)
+    assert result.backup_path is not None
+    with engine.transaction() as connection:
+        assert engine.table_exists(connection, "metadata_mapping_rules")
+        columns = engine.fetchall(connection, "PRAGMA table_info(pictures)")
+        row = engine.fetchone(
+            connection,
+            "SELECT name FROM schema_migrations WHERE version=?",
+            (9,),
+        )
+    assert any(item["name"] == "metadata_index_hash" for item in columns)
+    assert row == {"name": "metadata mapping overrides"}

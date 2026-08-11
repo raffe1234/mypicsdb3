@@ -151,8 +151,8 @@ Prefer this page, `ARCHITECTURE.md` and the current source code when they differ
 | Add or change a menu route | `views.py` | `router.py`, UI tests |
 | Change a database query | `db/catalog.py` | `query_model.py`, catalogue tests |
 | Change database schema | `db/schema.py` | `db/migrations.py`, migration tests and an ADR |
-| Change scanning | `scanner.py` | `filesystem.py`, `metadata.py`, checkpoint tests |
-| Change metadata extraction | `metadata.py` | `models.py`, metadata tests |
+| Change scanning | `scanner.py` | `filesystem.py`, `metadata.py`, `metadata_mapping.py`, checkpoint tests |
+| Change metadata extraction/mapping | `metadata.py`, `metadata_mapping.py` | `db/catalog.py`, `scanner.py`, metadata/migration tests |
 | Add a setting | `resources/settings.xml` | `config.py`, `kodi.py`, typed-setting tests |
 | Change global or saved search | `search.py`, `query_model.py` | `saved_searches.py`, search tests |
 | Change the smart-filter editor | `smart_filter_editor.py` | `query_model.py`, editor tests |

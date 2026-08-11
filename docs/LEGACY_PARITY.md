@@ -47,14 +47,21 @@ checkpoint compatibility and shared-database semantics. Future source-specific
 metadata depth, schedule or playback-pause settings are intentionally not part
 of 0.8.11.
 
-### 2. Metadata tag translation / combination
+### 2. Metadata tag translation / combination — implemented in 0.8.12
 
-Legacy MyPicsDB could translate, combine or suppress raw metadata tags. Modern
-plan: map allowlisted raw EXIF/XMP/IPTC sources to canonical MyPicsDB 3 fields,
-with deterministic priority/merge strategies and an explicit metadata-reindex
-path. Never allow user text to become an SQL identifier.
+Legacy MyPicsDB could translate, combine or suppress raw metadata tags. MyPicsDB 3
+schema 9 modernizes this with database-global, validated overrides on top of
+built-in EXIF/XMP/IPTC normalization. Canonical targets are allowlisted; scalar
+values use deterministic priority, keywords combine mapped values, and a custom
+ignore rule can suppress a built-in mapping. XMP mappings identify the property
+local name so producer-specific namespace prefixes do not become persistent
+configuration. No user mapping text becomes an SQL identifier.
 
-Recommended target: 0.8.12.
+A per-picture metadata-index fingerprint covers both the effective mapping and
+metadata extraction settings. This provides the explicit reindex path the legacy
+feature lacked: changing a mapping makes the next scan re-read otherwise unchanged
+pictures, while original files remain untouched. Shared MariaDB clients use the
+same stored override set.
 
 ### 3. Negative/presence smart-filter operators and "Needs attention"
 
@@ -123,16 +130,15 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.11
+## Recommended roadmap after 0.8.12
 
-1. 0.8.12 — metadata normalization / tag mapping.
-2. 0.8.13 — smart-filter completeness + Needs attention.
-3. 0.8.14 — Advanced Metadata Browser.
-4. 0.8.15 — collection snapshots.
-5. 0.8.16 — safe export/copy + manifest.
-6. Later — light video metadata, map/location UX, optional generic provider API,
+1. 0.8.13 — smart-filter completeness + Needs attention.
+2. 0.8.14 — Advanced Metadata Browser.
+3. 0.8.15 — collection snapshots.
+4. 0.8.16 — safe export/copy + manifest.
+5. Later — light video metadata, map/location UX, optional generic provider API,
    rebuild catalogue while preserving sources.
-7. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
+6. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
    mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can

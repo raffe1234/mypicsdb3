@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.12 - 2026-08-11
+
+- Add schema 9 with database-global metadata mapping overrides for allowlisted canonical fields. Custom rules can redirect EXIF/XMP/IPTC tags, combine several raw tags through deterministic priority, or suppress a built-in mapping without exposing raw SQL or schema identifiers.
+- Preserve 0.8.11 metadata behavior as built-in mapping defaults while adding a **Metadata mapping** editor. XMP rules normalize namespace prefixes to the property local name, scalar fields use the lowest successful priority, and keywords combine all mapped values.
+- Add `pictures.metadata_index_hash`, covering the effective mapping plus metadata extraction settings. Existing rows intentionally start without the hash after migration, so the next scan re-reads metadata once; later unchanged scans remain incremental. The same fingerprint participates in checkpoint compatibility.
+- Keep Query Model version 1, screensaver/repository versions and Estuary runtime revisions unchanged. Add SQLite migration, opt-in MariaDB schema-8-to-9 coverage, scanner/mapping/UI regression tests, and current architecture/migration/parity documentation.
+
 ## 0.8.11 - 2026-08-11
 
 - Add schema 8 with portable per-source scan policies for recursive traversal, picture/video extensions, video inclusion, exclusions and hidden-file handling. Sources without an override continue to inherit the scanning client's global defaults exactly as before.

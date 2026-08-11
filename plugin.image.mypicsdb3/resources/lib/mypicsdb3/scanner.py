@@ -12,6 +12,7 @@ from .db.catalog import Catalog
 from .db.locks import SCAN_LOCK_NAME
 from .filesystem import CancellationAwareFilesystem, Filesystem
 from .metadata import extract_metadata
+from .metadata_mapping import metadata_index_signature
 from .models import MetadataResult, ScanStats, Source
 from .scan_checkpoint import ScanCheckpointStore
 from .source_scan_policy import SourceScanPolicy, source_scan_policy_from_settings
@@ -54,6 +55,7 @@ class Scanner:
         self.settings = settings
         self.logger = logger
         self.metadata_reader = metadata_reader
+        self._uses_default_metadata_reader = metadata_reader is extract_metadata
         self.cancelled = cancelled or (lambda: False)
         self.progress = progress
         self.started = started
@@ -63,6 +65,8 @@ class Scanner:
         self._scan_lock_refreshed_at = 0.0
         self._scan_connection = None
         self._source_policies: Dict[int, SourceScanPolicy] = {}
+        self._metadata_mapping_overrides = ()
+        self._metadata_index_hash = metadata_index_signature(self.settings, ())
         self.filesystem = CancellationAwareFilesystem(filesystem, self._check_cancelled)
 
     def _effective_source_policy(self, source: Source) -> SourceScanPolicy:
@@ -139,7 +143,16 @@ class Scanner:
             self._source_policies = {
                 int(source.id): self._effective_source_policy(source) for source in sources
             }
-            overall = self.checkpoints.prepare(sources, overall, self._source_policies)
+            mapping_getter = getattr(self.catalog, "list_metadata_mapping_overrides", None)
+            overrides = mapping_getter() if callable(mapping_getter) else ()
+            self._metadata_mapping_overrides = tuple(overrides)
+            self._metadata_index_hash = metadata_index_signature(self.settings, overrides)
+            overall = self.checkpoints.prepare(
+                sources,
+                overall,
+                self._source_policies,
+                self._metadata_index_hash,
+            )
             completed_sources = self.checkpoints.completed_source_ids()
             if self.started:
                 self.started(overall)
@@ -177,6 +190,11 @@ class Scanner:
         started_monotonic = time.monotonic()
         scan_id = self.catalog.begin_scan_run(source.id)
         policy = policy or self._effective_source_policy(source)
+        if not self._scan_lock_active:
+            mapping_getter = getattr(self.catalog, "list_metadata_mapping_overrides", None)
+            overrides = mapping_getter() if callable(mapping_getter) else ()
+            self._metadata_mapping_overrides = tuple(overrides)
+            self._metadata_index_hash = metadata_index_signature(self.settings, overrides)
         root = normalize_uri(source.uri, directory=True)
         restored = self.checkpoints.restore_source(source)
         if restored is None:
@@ -293,18 +311,29 @@ class Scanner:
                             and str(existing.get("media_type") or "picture") == media_type
                             and int(existing["file_size"]) == file_stat.size
                             and abs(float(existing["file_mtime"]) - file_stat.mtime) < 0.001
+                            and str(existing.get("metadata_index_hash") or "")
+                            == self._metadata_index_hash
                         ):
                             self.catalog.touch_picture(connection, int(existing["id"]), folder_id, source.id, scan_started_at)
                             stats.pictures_unchanged += 1
                         else:
                             if media_type == "picture":
                                 metadata_started = time.monotonic()
-                                metadata = self.metadata_reader(
-                                    picture_uri,
-                                    self.filesystem,
-                                    self.settings,
-                                    file_stat.size,
-                                )
+                                if self._uses_default_metadata_reader:
+                                    metadata = extract_metadata(
+                                        picture_uri,
+                                        self.filesystem,
+                                        self.settings,
+                                        file_stat.size,
+                                        mapping_rules=self._metadata_mapping_overrides,
+                                    )
+                                else:
+                                    metadata = self.metadata_reader(
+                                        picture_uri,
+                                        self.filesystem,
+                                        self.settings,
+                                        file_stat.size,
+                                    )
                                 metadata_duration = time.monotonic() - metadata_started
                                 if self.logger and metadata_duration >= SLOW_IO_WARNING_SECONDS:
                                     self.logger.warning(
@@ -350,6 +379,7 @@ class Scanner:
                                 "sublocation": location.get("sublocation"),
                                 "caption": metadata.caption,
                                 "metadata_hash": metadata.metadata_hash,
+                                "metadata_index_hash": self._metadata_index_hash,
                                 # Still pictures use their original URI. Videos leave the
                                 # artwork field empty so the browser can request Kodi's
                                 # native ``image://video@...`` generated-frame loader.

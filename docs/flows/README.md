@@ -50,7 +50,7 @@ Main files: `addon.py`, `entrypoints.py`, `router.py`, `runtime.py`, `views.py`,
 Read this for manual or scheduled scans, source safety, scan locks, cancellation,
 folder checkpoints, EXIF/XMP/IPTC extraction and missing-record handling.
 
-Main files: `scanner.py`, `filesystem.py`, `metadata.py`, `scan_checkpoint.py`,
+Main files: `scanner.py`, `filesystem.py`, `metadata.py`, `metadata_mapping.py`, `scan_checkpoint.py`,
 `db/catalog.py`, `db/locks.py`, `service_loop.py`.
 
 ### [Search, Query Model and saved smart collections](SEARCH_COLLECTIONS.md)

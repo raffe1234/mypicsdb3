@@ -5,6 +5,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ..models import Source
+from ..metadata_mapping import (
+    MetadataMappingRule,
+    normalize_mapping_rule,
+    normalize_source_tag,
+    normalize_source_type,
+)
 from ..source_scan_policy import (
     SourceScanPolicy,
     decode_policy_list,
@@ -763,6 +769,88 @@ class Catalog:
             finally:
                 cursor.close()
 
+    def list_metadata_mapping_overrides(self) -> List[MetadataMappingRule]:
+        with self.engine.transaction() as connection:
+            rows = self.engine.fetchall(
+                connection,
+                "SELECT source_type, source_tag, target_field, rule_priority "
+                "FROM metadata_mapping_rules ORDER BY source_type, rule_priority, source_tag",
+            )
+        return [
+            normalize_mapping_rule(
+                MetadataMappingRule(
+                    source_type=str(row["source_type"]),
+                    source_tag=str(row["source_tag"]),
+                    target_field=row.get("target_field"),
+                    priority=int(row["rule_priority"]),
+                )
+            )
+            for row in rows
+        ]
+
+    def set_metadata_mapping_rule(self, rule: MetadataMappingRule) -> None:
+        normalized = normalize_mapping_rule(rule)
+        normalized_tag = normalized.source_tag.casefold()
+        now = utc_now()
+        with self.engine.transaction() as connection:
+            existing = self.engine.fetchone(
+                connection,
+                "SELECT id FROM metadata_mapping_rules "
+                "WHERE source_type=? AND normalized_tag=?",
+                (normalized.source_type, normalized_tag),
+            )
+            values = (
+                normalized.source_tag,
+                normalized.target_field,
+                int(normalized.priority),
+                now,
+            )
+            if existing is None:
+                self.engine.execute(
+                    connection,
+                    "INSERT INTO metadata_mapping_rules "
+                    "(source_type, source_tag, normalized_tag, target_field, rule_priority, created_at, updated_at) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        normalized.source_type,
+                        normalized.source_tag,
+                        normalized_tag,
+                        normalized.target_field,
+                        int(normalized.priority),
+                        now,
+                        now,
+                    ),
+                ).close()
+            else:
+                self.engine.execute(
+                    connection,
+                    "UPDATE metadata_mapping_rules SET source_tag=?, target_field=?, "
+                    "rule_priority=?, updated_at=? WHERE id=?",
+                    (*values, int(existing["id"])),
+                ).close()
+
+    def clear_metadata_mapping_rule(self, source_type: str, source_tag: str) -> bool:
+        source_type = normalize_source_type(source_type)
+        source_tag = normalize_source_tag(source_type, source_tag)
+        with self.engine.transaction() as connection:
+            cursor = self.engine.execute(
+                connection,
+                "DELETE FROM metadata_mapping_rules WHERE source_type=? AND normalized_tag=?",
+                (source_type, source_tag.casefold()),
+            )
+            try:
+                return int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
+
+    def clear_metadata_mapping_rules(self) -> int:
+        with self.engine.transaction() as connection:
+            cursor = self.engine.execute(connection, "DELETE FROM metadata_mapping_rules")
+            try:
+                return max(0, int(cursor.rowcount or 0))
+            finally:
+                cursor.close()
+
     def delete_source(self, source_id: int) -> bool:
         """Delete a source and the catalogue rows that belong to it.
 
@@ -869,7 +957,7 @@ class Catalog:
             cursor.close()
 
     def find_picture(self, connection, uri: str) -> Optional[Dict[str, Any]]:
-        return self.engine.fetchone(connection, "SELECT id, file_size, file_mtime, media_type, metadata_hash, favorite, discovered_at FROM pictures WHERE uri_hash=?", (sha256_text(uri),))
+        return self.engine.fetchone(connection, "SELECT id, file_size, file_mtime, media_type, metadata_hash, metadata_index_hash, favorite, discovered_at FROM pictures WHERE uri_hash=?", (sha256_text(uri),))
 
     def touch_picture(self, connection, picture_id: int, folder_id: int, source_id: int, seen_at: str) -> None:
         self.engine.execute(connection, "UPDATE pictures SET folder_id=?, source_id=?, last_seen_at=?, is_missing=0, missing_since=NULL WHERE id=?", (folder_id, source_id, seen_at, picture_id)).close()
@@ -892,7 +980,7 @@ class Catalog:
             record.get("taken_at"), record.get("taken_source"), year, month, day, record.get("width"), record.get("height"),
             record.get("orientation"), record.get("mime_type"), record.get("camera_make"), record.get("camera_model"),
             record.get("rating"), record.get("gps_latitude"), record.get("gps_longitude"), record.get("city"), record.get("state"),
-            record.get("country"), record.get("sublocation"), record.get("caption"), record.get("metadata_hash"), record.get("thumb_uri"),
+            record.get("country"), record.get("sublocation"), record.get("caption"), record.get("metadata_hash"), record.get("metadata_index_hash"), record.get("thumb_uri"),
             random.random(),
         )
         cursor = self.engine.execute(connection, """INSERT INTO pictures (
@@ -900,8 +988,8 @@ class Catalog:
             discovered_at, last_seen_at, taken_at, taken_source, taken_year, taken_month, taken_day,
             width, height, orientation, mime_type, camera_make, camera_model, rating,
             gps_latitude, gps_longitude, city, state, country, sublocation, caption,
-            metadata_hash, thumb_uri, random_key, favorite, is_missing
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)""", fields)
+            metadata_hash, metadata_index_hash, thumb_uri, random_key, favorite, is_missing
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0)""", fields)
         try:
             picture_id = int(cursor.lastrowid)
         finally:
@@ -917,7 +1005,7 @@ class Catalog:
             source_id=?, folder_id=?, uri=?, filename=?, extension=?, media_type=?, file_size=?, file_mtime=?, last_seen_at=?,
             taken_at=?, taken_source=?, taken_year=?, taken_month=?, taken_day=?, width=?, height=?, orientation=?,
             mime_type=?, camera_make=?, camera_model=?, rating=?, gps_latitude=?, gps_longitude=?, city=?, state=?,
-            country=?, sublocation=?, caption=?, metadata_hash=?, thumb_uri=?, is_missing=0, missing_since=NULL
+            country=?, sublocation=?, caption=?, metadata_hash=?, metadata_index_hash=?, thumb_uri=?, is_missing=0, missing_since=NULL
             WHERE id=?""", (
                 record["source_id"], record["folder_id"], record["uri"], record["filename"], record["extension"],
                 record.get("media_type", "picture"), record["file_size"], record["file_mtime"], record["last_seen_at"], record.get("taken_at"),
@@ -925,7 +1013,7 @@ class Catalog:
                 record.get("orientation"), record.get("mime_type"), record.get("camera_make"), record.get("camera_model"),
                 record.get("rating"), record.get("gps_latitude"), record.get("gps_longitude"), record.get("city"),
                 record.get("state"), record.get("country"), record.get("sublocation"), record.get("caption"),
-                record.get("metadata_hash"), record.get("thumb_uri"), picture_id,
+                record.get("metadata_hash"), record.get("metadata_index_hash"), record.get("thumb_uri"), picture_id,
             )).close()
         self.replace_tags(connection, picture_id, keyword_values)
         self.replace_search_document(connection, picture_id, record, keyword_values)

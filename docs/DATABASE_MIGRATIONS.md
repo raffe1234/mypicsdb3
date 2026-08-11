@@ -8,7 +8,9 @@ with an explicit picture/video media type. Version 0.2.34 raised it to schema 5
 with validated saved searches. Version 0.5.0 raises it to schema 6 with named
 manual media collections and explicit item order. Version 0.6.0 raises it to
 schema 7 with optional smart/manual collection music-playlist mappings. Version
-0.8.11 raises it to schema 8 with optional per-source scan policies.
+0.8.11 raises it to schema 8 with optional per-source scan policies. Version
+0.8.12 raises it to schema 9 with metadata mapping overrides and a per-picture
+metadata-index fingerprint.
 
 ## Startup sequence
 
@@ -168,6 +170,58 @@ anything missing or touch original files. Policy changes are applied only by a
 later scan. The scanner snapshots effective policies at scan start and includes
 them in checkpoint compatibility, so a changed policy cannot resume from a folder
 checkpoint produced under different discovery rules.
+
+## Schema 9: metadata normalization and mapping overrides
+
+Schema 9 adds a database-global override table and one nullable picture column:
+
+```text
+metadata_mapping_rules
+- id
+- source_type (`exif`, `xmp` or `iptc`)
+- source_tag
+- normalized_tag
+- target_field (nullable = suppress/ignore)
+- rule_priority
+- created_at
+- updated_at
+
+pictures.metadata_index_hash
+```
+
+The override table stores only user customizations. Built-in rules remain in
+`metadata_mapping.py` and intentionally reproduce the metadata precedence used by
+0.8.11. The application validates source types and canonical target fields; raw
+user text is never used as a table name, column name or SQL fragment. A unique
+`(source_type, normalized_tag)` key makes one custom decision authoritative for
+each raw tag. XMP tag identities use the XML property local name rather than a
+producer-selected namespace prefix.
+
+Scalar canonical fields use the lowest-priority mapped tag that yields a usable
+value. `keywords` is multi-valued and combines all mapped values in priority
+order. A custom rule with no target suppresses a built-in tag mapping; redirecting
+a built-in tag replaces its default target/priority. Multiple raw tags may map to
+the same canonical field. GPS, dimensions and orientation keep their existing
+dedicated extraction paths in schema 9.
+
+Mappings live in the catalogue rather than local Kodi settings. This is required
+for shared MySQL/MariaDB deployments: every client reading/writing one catalogue
+must normalize metadata under the same rule set. Changing a mapping does not
+automatically launch a scan and never changes the original media file.
+
+`pictures.metadata_index_hash` fingerprints the effective mapping together with
+metadata extraction settings that affect indexed values (`read_xmp`, `read_iptc`,
+GPS storage and bounded/deep read limits). Existing rows receive `NULL` during
+migration. Consequently, the first later scan re-reads picture metadata once even
+when size and mtime are unchanged, stores the new fingerprint and rebuilds derived
+search data. Subsequent unchanged scans skip that work again. The same fingerprint
+is part of scan-checkpoint compatibility, so a checkpoint created under different
+metadata-index inputs cannot skip the required reindex.
+
+The migration creates the new table and column only. It does not scan sources,
+rewrite canonical metadata during startup, mark rows missing or touch source
+files. SQLite receives the normal pre-migration verified backup; MySQL/MariaDB
+operators remain responsible for external backups.
 
 ## SQLite backups
 

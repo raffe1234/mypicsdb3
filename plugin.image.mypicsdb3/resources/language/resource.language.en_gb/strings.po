@@ -1618,3 +1618,115 @@ msgstr "Source was not found"
 msgctxt "#32902"
 msgid "At least one video extension is required when videos are enabled"
 msgstr "At least one video extension is required when videos are enabled"
+
+msgctxt "#32903"
+msgid "Metadata mapping"
+msgstr "Metadata mapping"
+
+msgctxt "#32904"
+msgid "Add metadata mapping"
+msgstr "Add metadata mapping"
+
+msgctxt "#32905"
+msgid "Reset all custom mappings"
+msgstr "Reset all custom mappings"
+
+msgctxt "#32906"
+msgid "Remove custom mapping"
+msgstr "Remove custom mapping"
+
+msgctxt "#32907"
+msgid "Map tag to"
+msgstr "Map tag to"
+
+msgctxt "#32908"
+msgid "Metadata source"
+msgstr "Metadata source"
+
+msgctxt "#32909"
+msgid "Source tag name"
+msgstr "Source tag name"
+
+msgctxt "#32910"
+msgid "Ignore metadata tag?"
+msgstr "Ignore metadata tag?"
+
+msgctxt "#32911"
+msgid "This tag will not contribute to canonical metadata."
+msgstr "This tag will not contribute to canonical metadata."
+
+msgctxt "#32912"
+msgid "Priority (lower wins)"
+msgstr "Priority (lower wins)"
+
+msgctxt "#32913"
+msgid "Invalid metadata mapping"
+msgstr "Invalid metadata mapping"
+
+msgctxt "#32914"
+msgid "Metadata mapping saved"
+msgstr "Metadata mapping saved"
+
+msgctxt "#32915"
+msgid "Run a scan to reindex metadata"
+msgstr "Run a scan to reindex metadata"
+
+msgctxt "#32916"
+msgid "Metadata mapping was not found"
+msgstr "Metadata mapping was not found"
+
+msgctxt "#32917"
+msgid "Custom metadata mapping removed"
+msgstr "Custom metadata mapping removed"
+
+msgctxt "#32918"
+msgid "Restore the built-in metadata mapping defaults?"
+msgstr "Restore the built-in metadata mapping defaults?"
+
+msgctxt "#32919"
+msgid "Built-in metadata mappings restored"
+msgstr "Built-in metadata mappings restored"
+
+msgctxt "#32920"
+msgid "Ignore this tag"
+msgstr "Ignore this tag"
+
+msgctxt "#32921"
+msgid "Capture date"
+msgstr "Capture date"
+
+msgctxt "#32922"
+msgid "Camera make"
+msgstr "Camera make"
+
+msgctxt "#32923"
+msgid "Camera model"
+msgstr "Camera model"
+
+msgctxt "#32924"
+msgid "Rating"
+msgstr "Rating"
+
+msgctxt "#32925"
+msgid "Keywords"
+msgstr "Keywords"
+
+msgctxt "#32926"
+msgid "Caption"
+msgstr "Caption"
+
+msgctxt "#32927"
+msgid "Country"
+msgstr "Country"
+
+msgctxt "#32928"
+msgid "State or region"
+msgstr "State or region"
+
+msgctxt "#32929"
+msgid "City"
+msgstr "City"
+
+msgctxt "#32930"
+msgid "Sublocation"
+msgstr "Sublocation"

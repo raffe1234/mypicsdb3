@@ -7,7 +7,7 @@ New to the project? Read [Start here](START_HERE.md),
 ## Design boundaries
 
 - `filesystem.py` isolates Kodi VFS operations.
-- `metadata.py` isolates EXIF, XMP and IPTC extraction.
+- `metadata.py` isolates bounded EXIF, XMP and IPTC extraction; `metadata_mapping.py` owns canonical metadata mapping and reindex fingerprints.
 - `db/engine.py` handles SQL parameter syntax and connections.
 - `db/catalog.py` contains catalogue writes and read models.
 - `scanner.py` never runs from a widget route.

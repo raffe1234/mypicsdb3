@@ -10,6 +10,7 @@ from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
 from mypicsdb3.db.schema import create_schema
 from mypicsdb3.search import build_global_search_request
+from mypicsdb3.metadata_mapping import MetadataMappingRule
 from mypicsdb3.source_scan_policy import SourceScanPolicy
 from mypicsdb3.utils import utc_now
 
@@ -78,6 +79,17 @@ def test_mysql_or_mariadb_schema_and_source_roundtrip(tmp_path) -> None:
         exclude_fragments=("#recycle",),
         exclude_hidden=True,
     )
+    catalog.set_metadata_mapping_rule(
+        MetadataMappingRule("xmp", "CountryName", "country", 7)
+    )
+    catalog.set_metadata_mapping_rule(
+        MetadataMappingRule("iptc", "caption/abstract", None, 9)
+    )
+    overrides = catalog.list_metadata_mapping_overrides()
+    assert [(r.source_type, r.source_tag, r.target_field, r.priority) for r in overrides] == [
+        ("iptc", "caption/abstract", None, 9),
+        ("xmp", "CountryName", "country", 7),
+    ]
     catalog.test_connection()
 
 
@@ -85,6 +97,7 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     engine = DatabaseEngine(mysql_settings(tmp_path))
     with engine.transaction() as connection:
         create_schema(engine, connection)
+        engine.execute(connection, "DROP TABLE metadata_mapping_rules").close()
         engine.execute(connection, "DROP TABLE source_scan_policies").close()
         engine.execute(connection, "DROP TABLE collection_music_playlists").close()
         engine.execute(connection, "DROP TABLE collection_items").close()
@@ -123,8 +136,8 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     second = catalog.initialize()
 
     assert first.bootstrapped_history is True
-    assert first.current_version == 8
-    assert first.applied_versions == (2, 3, 4, 5, 6, 7, 8)
+    assert first.current_version == 9
+    assert first.applied_versions == (2, 3, 4, 5, 6, 7, 8, 9)
     assert second.bootstrapped_history is False
     assert second.applied_versions == ()
     with engine.transaction() as connection:
@@ -154,11 +167,54 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
         )
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
-    assert [row["version"] for row in history] == [1, 2, 3, 4, 5, 6, 7, 8]
+    assert [row["version"] for row in history] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
     assert {row["addon_version"] for row in history} == {VERSION}
-    assert count["total"] == 8
+    assert count["total"] == 9
     assert index is not None
     assert search_table is not None
+
+
+def test_existing_mysql_schema_eight_adds_metadata_mapping_schema(tmp_path) -> None:
+    engine = DatabaseEngine(mysql_settings(tmp_path))
+    catalog = Catalog(engine)
+    catalog.initialize()
+    source = catalog.sync_sources([{"label": "Photos", "uri": "/srv/schema-eight"}])[0]
+
+    with engine.transaction() as connection:
+        engine.execute(connection, "DROP TABLE metadata_mapping_rules").close()
+        engine.execute(connection, "ALTER TABLE pictures DROP COLUMN metadata_index_hash").close()
+        engine.execute(connection, "DELETE FROM schema_migrations WHERE version=?", (9,)).close()
+        engine.execute(
+            connection,
+            "UPDATE meta SET value=? WHERE `key`=?",
+            ("8", "schema_version"),
+        ).close()
+
+    result = Catalog(engine).initialize()
+
+    assert result.previous_version == 8
+    assert result.current_version == 9
+    assert result.applied_versions == (9,)
+    with engine.transaction() as connection:
+        mapping_table = engine.fetchone(
+            connection,
+            "SELECT TABLE_NAME AS name FROM information_schema.TABLES "
+            "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='metadata_mapping_rules'",
+        )
+        index_column = engine.fetchone(
+            connection,
+            "SELECT COLUMN_NAME AS name FROM information_schema.COLUMNS "
+            "WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='pictures' "
+            "AND COLUMN_NAME='metadata_index_hash'",
+        )
+        preserved_source = engine.fetchone(
+            connection,
+            "SELECT label FROM sources WHERE id=?",
+            (source.id,),
+        )
+    assert mapping_table is not None
+    assert index_column is not None
+    assert preserved_source == {"label": "Photos"}
 
 
 def test_mysql_rating_policy_matches_group_counts_and_picture_results(tmp_path) -> None:
@@ -263,7 +319,7 @@ def test_existing_mysql_schema_two_backfills_global_search_documents(tmp_path) -
     result = Catalog(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 8
+    assert result.current_version == 9
     assert result.applied_versions == (3,)
     with engine.transaction() as connection:
         row = engine.fetchone(

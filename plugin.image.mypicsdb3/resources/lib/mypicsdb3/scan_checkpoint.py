@@ -111,6 +111,7 @@ class ScanCheckpointStore:
         self,
         sources: Sequence[Source],
         source_policies: Optional[Mapping[int, SourceScanPolicy]] = None,
+        metadata_index_hash: str = "",
     ) -> str:
         default_policy = source_scan_policy_from_settings(self.settings)
         policies = source_policies or {}
@@ -127,6 +128,7 @@ class ScanCheckpointStore:
                 }
                 for source in sources
             ],
+            "metadata_index_hash": str(metadata_index_hash or ""),
             "settings": {
                 "read_xmp": bool(self.settings.read_xmp),
                 "read_iptc": bool(self.settings.read_iptc),
@@ -263,9 +265,12 @@ class ScanCheckpointStore:
         sources: Sequence[Source],
         overall: ScanStats,
         source_policies: Optional[Mapping[int, SourceScanPolicy]] = None,
+        metadata_index_hash: str = "",
     ) -> ScanStats:
         self._source_ids = [int(source.id) for source in sources]
-        self._signature = self._scan_signature(sources, source_policies)
+        self._signature = self._scan_signature(
+            sources, source_policies, metadata_index_hash
+        )
         state = self._read()
         if state and self._is_valid(state, sources):
             self._state = state

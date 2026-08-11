@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.11. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.12. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -43,7 +43,9 @@ For the component boundaries and long-lived safety rules, see
 - Protect unavailable SMB/NFS sources and incomplete directory traversals from
   being mistaken for deletion of unseen media.
 - Index EXIF, basic embedded XMP and optional IPTC metadata, including capture
-  date, camera, dimensions, rating, keywords, caption and stored location.
+  date, camera, dimensions, rating, keywords, caption and stored location. Built-in
+  normalization preserves the established precedence, while database-global custom
+  mappings can redirect, combine or suppress allowlisted EXIF/XMP/IPTC tag sources.
 - Optionally index common home-video formats in the same catalogue without a
   separate video scraper.
 
@@ -183,7 +185,11 @@ releases yourself and install newer packages manually.
    **Refresh Kodi sources**, then enable the sources that MyPicsDB 3 should
    index.
 3. Return to the MyPicsDB 3 main menu and select **Scan now**.
-4. Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings** to adjust:
+4. Optional: open **Metadata mapping** to override how raw EXIF/XMP/IPTC tags
+   contribute to canonical fields such as capture date, camera, keywords, caption
+   and location. Mappings are catalogue-wide, so shared MariaDB clients see the
+   same normalization rules. Run a scan after changing mappings.
+5. Open **Pictures > Picture add-ons > MyPicsDB 3 > Settings** to adjust:
    - **General** — widget size, browser page size, the default album view and
      notifications, plus which browsing nodes are visible in the add-on menu;
    - **Home screen** — Media sources and the content and order of the Estuary
@@ -485,10 +491,18 @@ Sources completed before the interruption are skipped.
 
 Checkpoints are stored in the local Kodi add-on profile and expire after 24
 hours. They are discarded when the source selection, database identity, any
-source's effective scan policy, or metadata settings change. For example, adding
-`nef`, enabling videos or changing recursion for one source after stopping a scan
+source's effective scan policy, metadata extraction settings, or effective
+metadata mapping changes. For example, adding `nef`, enabling videos, changing
+recursion for one source, or changing a metadata mapping after stopping a scan
 deliberately starts a fresh traversal. With a shared MySQL/MariaDB catalogue,
 each Kodi device still keeps its own local traversal checkpoint.
+
+Unchanged files normally skip metadata extraction. Schema 9 adds a per-picture
+metadata-index fingerprint so that a mapping or metadata-extraction setting change
+forces the relevant unchanged pictures to be read again on the next scan. Existing
+rows have no fingerprint immediately after the schema-9 migration, therefore the
+first post-upgrade scan deliberately reindexes picture metadata once. Original
+files are never modified.
 
 If a folder cannot be listed, Scan status reports `partial`. MyPicsDB 3 still
 indexes folders that were read successfully, but it skips missing-record
@@ -541,8 +555,8 @@ the catalogue.
 
 Open **Settings > General > Configure add-on menu** to show or hide the
 configurable catalogue browsing nodes. Search, Collections, Saved searches,
-Create smart collection, Picture sources, Refresh random selections, Scan now,
-Scan status and Settings always remain visible.
+Create smart collection, Picture sources, Metadata mapping, Refresh random
+selections, Scan now, Scan status and Settings always remain visible.
 
 Open the context menu on a picture or indexed home video and select **Add to
 collection** to append it to an existing manual collection or create a new one.
@@ -785,16 +799,18 @@ tested by this project.
 SQLite is recommended for one Kodi device. The database is stored under the
 add-on profile directory and must not be moved to SMB/NFS.
 
-The current development release uses schema version 8 for both SQLite and
+The current development release uses schema version 9 for both SQLite and
 MySQL/MariaDB. Schema 2 adds the year-first date-browsing index. Schema 3 adds
 one normalized search document per picture and backfills existing catalogues.
 Schema 4 adds the picture/video media type. Schema 5 adds validated named saved
 searches. Schema 6 adds manual collection metadata and ordered media references.
 Schema 7 adds one optional music-playlist reference per saved smart or manual
 collection. Schema 8 adds optional per-source scan-policy rows; no policy row
-means the source inherits the scanning client's global defaults. The schema-8
-migration creates an empty policy table only and does not rewrite indexed media
-or require an immediate rescan.
+means the source inherits the scanning client's global defaults. Schema 9 adds
+database-global metadata mapping overrides and a per-picture metadata-index
+fingerprint. The schema-9 migration does not modify source files, but existing
+picture rows intentionally have no fingerprint until the next scan, which causes
+one metadata reindex under the current mapping/extraction rules.
 Existing SQLite databases receive an atomic, integrity-checked backup
 before a schema migration; MySQL/MariaDB operators must keep an external
 backup. See [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before

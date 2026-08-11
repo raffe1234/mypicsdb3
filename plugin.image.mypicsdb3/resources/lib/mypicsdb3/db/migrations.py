@@ -48,6 +48,9 @@ from .migration_steps.v0007_collection_music import (
 from .migration_steps.v0008_source_scan_policies import (
     MIGRATION as SOURCE_SCAN_POLICIES_MIGRATION,
 )
+from .migration_steps.v0009_metadata_mapping import (
+    MIGRATION as METADATA_MAPPING_MIGRATION,
+)
 
 
 @dataclass(frozen=True)
@@ -92,6 +95,7 @@ DEFAULT_MIGRATIONS: Tuple[MigrationStep, ...] = (
     STATIC_COLLECTIONS_MIGRATION,
     COLLECTION_MUSIC_MIGRATION,
     SOURCE_SCAN_POLICIES_MIGRATION,
+    METADATA_MAPPING_MIGRATION,
 )
 MIGRATION_LOCK_TTL_SECONDS = 7200
 

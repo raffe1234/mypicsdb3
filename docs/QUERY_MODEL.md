@@ -6,7 +6,9 @@ it for Kodi global search. Version 0.2.34 stores canonical version-1 Query
 Model JSON for named saved searches in database schema 5. Version 0.3.0 adds a
 Kodi smart-filter editor for a safe, flat all/any subset of the model. Version
 0.8.10 adds backward-compatible metadata facets without changing Query Model
-version 1.
+version 1. Version 0.8.12 adds database-global metadata normalization/mapping
+upstream of the Query Model; the model itself remains version 1 because queries
+continue to target the same canonical catalogue fields.
 
 ## Goals
 
@@ -111,6 +113,13 @@ use the exact stored metadata text selected from the catalogue. `aspect` is
 derived from stored width and height; EXIF orientations 5 through 8 swap the
 display axes before landscape/portrait comparison. Rows without usable
 dimensions do not match an aspect rule.
+
+
+Metadata mapping happens during indexing, before Query Model evaluation. Custom
+EXIF/XMP/IPTC rules may therefore change canonical values such as `camera`,
+`keyword`, `country`, `state`, `city` or `sublocation` after a reindex without
+changing saved query JSON. Saved queries remain structurally compatible and simply
+operate on the current canonical catalogue values.
 
 Allowed sort fields are `taken_at`, `discovered_at`, `rating`, `filename` and
 `id`, in ascending or descending order. The normalizer always places `id` last

@@ -9,6 +9,11 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 from .config import Settings
 from .filesystem import Filesystem
 from .models import MetadataResult
+from .metadata_mapping import (
+    MetadataMappingRule,
+    effective_mapping_rules,
+    mapping_rules_by_source,
+)
 from .utils import decode_text, stable_json_hash, unique_strings
 
 try:
@@ -302,7 +307,125 @@ def _read_iptc(path: str) -> Dict[str, Any]:
     }
 
 
-def extract_metadata(path: str, filesystem: Filesystem, settings: Settings, file_size: int = 0) -> MetadataResult:
+def _keyword_values(value: Any) -> List[str]:
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        items: List[str] = []
+        for item in value:
+            text = decode_text(item).strip()
+            if text:
+                items.append(text)
+        return unique_strings(items)
+    text = decode_text(value).strip()
+    return unique_strings(
+        item.strip() for item in re.split(r"[;,]", text) if item.strip()
+    )
+
+
+def _mapped_raw_values(
+    source_type: str,
+    source_tag: str,
+    exif_tags: Dict[str, Any],
+    xmp_xml: str,
+    iptc_info: Any,
+    target_field: str,
+) -> List[Any]:
+    if source_type == "exif":
+        raw = _tag_value(exif_tags, source_tag)
+        if target_field == "keywords" and source_tag.casefold() == "image xpkeywords":
+            return list(_decode_xp_keywords(raw))
+        if isinstance(raw, (list, tuple)) and target_field != "keywords":
+            return [raw[0]] if raw else []
+        return list(raw) if isinstance(raw, (list, tuple)) else ([raw] if raw is not None else [])
+    if source_type == "xmp":
+        if not xmp_xml:
+            return []
+        if target_field == "keywords":
+            listed = _xmp_list_values(xmp_xml, source_tag)
+            if listed:
+                return list(listed)
+        return list(_xmp_values(xmp_xml, source_tag))
+    if source_type == "iptc" and iptc_info is not None:
+        raw = _iptc_value(iptc_info, source_tag)
+        if isinstance(raw, (list, tuple)):
+            return list(raw)
+        return [raw] if raw is not None else []
+    return []
+
+
+def _coerce_mapped_value(target_field: str, value: Any) -> Any:
+    if target_field == "taken_at":
+        return _normalise_date(value)
+    if target_field == "rating":
+        try:
+            return max(0, min(5, int(float(decode_text(value).strip()))))
+        except (TypeError, ValueError):
+            return None
+    if target_field == "keywords":
+        return _keyword_values(value)
+    text = decode_text(value).replace("\x00", "").strip()
+    return text or None
+
+
+def _apply_mapping_rules(
+    result: MetadataResult,
+    rules: Iterable[MetadataMappingRule],
+    exif_tags: Dict[str, Any],
+    xmp_xml: str,
+    iptc_info: Any,
+) -> None:
+    scalar_values: Dict[str, Tuple[int, str, str, Any]] = {}
+    keywords: List[str] = []
+    for rule in rules:
+        if rule.target_field is None:
+            continue
+        raw_values = _mapped_raw_values(
+            rule.source_type,
+            rule.source_tag,
+            exif_tags,
+            xmp_xml,
+            iptc_info,
+            rule.target_field,
+        )
+        if not raw_values:
+            continue
+        if rule.target_field == "keywords":
+            for raw in raw_values:
+                coerced = _coerce_mapped_value("keywords", raw)
+                if coerced:
+                    keywords.extend(coerced)
+            continue
+        for raw in raw_values:
+            coerced = _coerce_mapped_value(rule.target_field, raw)
+            if coerced is None or coerced == "":
+                continue
+            current = scalar_values.get(rule.target_field)
+            candidate = (int(rule.priority), rule.source_type, rule.source_tag, coerced)
+            if current is None or candidate[0] < current[0]:
+                scalar_values[rule.target_field] = candidate
+            break
+
+    if "taken_at" in scalar_values:
+        _priority, source_type, source_tag, value = scalar_values["taken_at"]
+        result.taken_at = value
+        result.taken_source = source_tag if source_type == "exif" else source_type.upper()
+    for field_name in ("camera_make", "camera_model", "rating", "caption"):
+        if field_name in scalar_values:
+            setattr(result, field_name, scalar_values[field_name][3])
+    for field_name in ("country", "state", "city", "sublocation"):
+        if field_name in scalar_values:
+            result.location[field_name] = scalar_values[field_name][3]
+    result.keywords = unique_strings(keywords)
+
+
+def extract_metadata(
+    path: str,
+    filesystem: Filesystem,
+    settings: Settings,
+    file_size: int = 0,
+    mapping_rules: Optional[Iterable[MetadataMappingRule]] = None,
+) -> MetadataResult:
     result = MetadataResult(mime_type=mimetypes.guess_type(path)[0] or "image/unknown")
     prefix = b""
     try:
@@ -318,12 +441,6 @@ def extract_metadata(path: str, filesystem: Filesystem, settings: Settings, file
                 tags = exifread.process_file(stream, details=False, strict=False)
         except Exception:
             tags = {}
-
-    date_value = _tag_text(tags, "EXIF DateTimeOriginal", "EXIF DateTimeDigitized", "Image DateTime")
-    result.taken_at = _normalise_date(date_value)
-    result.taken_source = "EXIF DateTimeOriginal" if result.taken_at else None
-    result.camera_make = _tag_text(tags, "Image Make") or None
-    result.camera_model = _tag_text(tags, "Image Model") or None
 
     orientation_value = _tag_value(tags, "Image Orientation")
     if isinstance(orientation_value, (list, tuple)) and orientation_value:
@@ -345,16 +462,6 @@ def extract_metadata(path: str, filesystem: Filesystem, settings: Settings, file
     except (TypeError, ValueError):
         pass
 
-    rating_value = _tag_value(tags, "Image Rating")
-    if isinstance(rating_value, (list, tuple)) and rating_value:
-        rating_value = rating_value[0]
-    try:
-        result.rating = max(0, min(5, int(rating_value))) if rating_value is not None else None
-    except (TypeError, ValueError):
-        result.rating = None
-
-    result.keywords.extend(_decode_xp_keywords(_tag_value(tags, "Image XPKeywords")))
-
     if settings.store_gps:
         lat = _tag_value(tags, "GPS GPSLatitude")
         lon = _tag_value(tags, "GPS GPSLongitude")
@@ -363,33 +470,33 @@ def extract_metadata(path: str, filesystem: Filesystem, settings: Settings, file
         result.gps_latitude = _gps_coordinate(lat, lat_ref)
         result.gps_longitude = _gps_coordinate(lon, lon_ref)
 
-    if settings.read_xmp and prefix:
-        xmp = parse_xmp(prefix)
-        if not result.taken_at and xmp.get("taken_at"):
-            result.taken_at = xmp["taken_at"]
-            result.taken_source = "XMP"
-        result.keywords.extend(xmp.get("keywords", []))
-        if result.rating is None and xmp.get("rating") is not None:
-            result.rating = xmp["rating"]
-        result.location.update(xmp.get("location", {}))
-        result.caption = xmp.get("caption") or result.caption
+    effective_rules = effective_mapping_rules(mapping_rules or ())
+    grouped_rules = mapping_rules_by_source(effective_rules)
+    xmp_xml = _xmp_fragment(prefix) if settings.read_xmp and prefix else ""
 
+    iptc_info = None
     if (
         settings.read_iptc
+        and grouped_rules.get("iptc")
         and _is_jpeg_metadata_candidate(path, result.mime_type, prefix)
         and (not file_size or file_size <= settings.deep_metadata_max_mb * 1024 * 1024)
+        and IPTCInfo is not None
     ):
         with filesystem.materialized(path, settings.deep_metadata_max_mb * 1024 * 1024) as local_path:
             if local_path:
-                iptc = _read_iptc(local_path)
-                result.keywords.extend(iptc.get("keywords", []))
-                result.location.update({key: value for key, value in iptc.get("location", {}).items() if value})
-                result.caption = iptc.get("caption") or result.caption
-                if not result.taken_at and iptc.get("date_created"):
-                    result.taken_at = iptc["date_created"]
-                    result.taken_source = "IPTC"
+                try:
+                    iptc_info = IPTCInfo(local_path, force=True)
+                except Exception:
+                    iptc_info = None
 
-    result.keywords = unique_strings(result.keywords)
+    usable_rules = tuple(grouped_rules.get("exif", ()))
+    if settings.read_xmp:
+        usable_rules += tuple(grouped_rules.get("xmp", ()))
+    if settings.read_iptc:
+        usable_rules += tuple(grouped_rules.get("iptc", ()))
+    usable_rules = tuple(sorted(usable_rules, key=lambda rule: (rule.priority, rule.source_type, rule.source_tag.casefold())))
+    _apply_mapping_rules(result, usable_rules, tags, xmp_xml, iptc_info)
+
     if not settings.store_gps:
         result.gps_latitude = None
         result.gps_longitude = None

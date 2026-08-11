@@ -82,7 +82,7 @@ def test_collect_diagnostics_excludes_private_connection_and_source_details():
     snapshot = collect_diagnostics(runtime, now=1125.0)
 
     assert snapshot["backend"] == "mysql"
-    assert snapshot["schema_version"] == 8
+    assert snapshot["schema_version"] == 9
     assert snapshot["query_model_version"] == 1
     assert snapshot["screensaver_version"] == "0.7.0"
     assert snapshot["skin"] == {
@@ -126,7 +126,7 @@ def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
     )
 
     assert path.endswith(
-        "support-bundles/mypicsdb3-support-20260807-113045Z-v0.8.11.zip"
+        "support-bundles/mypicsdb3-support-20260807-113045Z-v0.8.12.zip"
     )
     with zipfile.ZipFile(path) as archive:
         assert sorted(archive.namelist()) == ["README.txt", "diagnostics.json"]
@@ -135,7 +135,7 @@ def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
 
     assert payload["format_version"] == 1
     assert payload["generated_at"] == "2026-08-07T11:30:45Z"
-    assert payload["diagnostics"]["plugin_version"] == "0.8.11"
+    assert payload["diagnostics"]["plugin_version"] == "0.8.12"
     assert payload["diagnostics"]["active_scan"] == {
         "kind": "manual",
         "state": "running",

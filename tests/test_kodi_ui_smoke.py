@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.11",
+            "version": "0.8.12",
         }[key]
 
     def getSetting(self, key):
@@ -323,6 +323,7 @@ class FakeCatalog:
         self.music_playlist_updates = []
         self.music_playlist_clears = []
         self.source_scan_policies = {}
+        self.metadata_mapping_overrides = []
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -369,6 +370,35 @@ class FakeCatalog:
 
     def clear_source_scan_policy(self, source_id):
         return self.source_scan_policies.pop(int(source_id), None) is not None
+
+    def list_metadata_mapping_overrides(self):
+        return list(self.metadata_mapping_overrides)
+
+    def set_metadata_mapping_rule(self, rule):
+        self.metadata_mapping_overrides = [
+            existing for existing in self.metadata_mapping_overrides
+            if not (
+                existing.source_type == rule.source_type
+                and existing.source_tag.casefold() == rule.source_tag.casefold()
+            )
+        ]
+        self.metadata_mapping_overrides.append(rule)
+
+    def clear_metadata_mapping_rule(self, source_type, source_tag):
+        before = len(self.metadata_mapping_overrides)
+        self.metadata_mapping_overrides = [
+            rule for rule in self.metadata_mapping_overrides
+            if not (
+                rule.source_type == str(source_type).casefold()
+                and rule.source_tag.casefold() == str(source_tag).casefold()
+            )
+        ]
+        return len(self.metadata_mapping_overrides) != before
+
+    def clear_metadata_mapping_rules(self):
+        count = len(self.metadata_mapping_overrides)
+        self.metadata_mapping_overrides = []
+        return count
 
     def delete_source(self, source_id):
         self.deleted_sources.append(source_id)
@@ -594,7 +624,7 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 23
+    assert len(calls.items) == 24
     assert calls.items[0][0].endswith("/search")
     assert calls.items[1][0].endswith("/saved-searches")
     assert calls.items[2][0].endswith("/collections")
@@ -624,7 +654,7 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     ui.root()
 
     urls = [url for url, _item, _is_folder in calls.items]
-    assert len(urls) == 20
+    assert len(urls) == 21
     assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
     assert "plugin://plugin.image.mypicsdb3/years" not in urls
     assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
@@ -710,11 +740,11 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.11" in labels
+    assert "MyPicsDB 3 version: 0.8.12" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
-    assert "Database schema: 8" in labels
+    assert "Database schema: 9" in labels
     assert "Query Model version: 1" in labels
     assert "Sources: 3" in labels
     assert "Enabled sources: 2" in labels
@@ -752,19 +782,19 @@ def test_export_support_bundle_action_reports_generated_filename(monkeypatch) ->
     monkeypatch.setattr(
         views,
         "write_support_bundle",
-        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.11.zip",
+        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.12.zip",
     )
 
     ui.dispatch(views.Request("action/export-support-bundle", {}))
 
     assert runtime.kodi.notifications[-1] == (
-        "Support bundle saved: mypicsdb3-support-test-v0.8.11.zip\n"
+        "Support bundle saved: mypicsdb3-support-test-v0.8.12.zip\n"
         "Support bundle folder: Kodi userdata > addon_data > "
         "plugin.image.mypicsdb3 > support-bundles",
         False,
     )
     assert runtime.kodi.info_messages[-1] == (
-        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.11.zip"
+        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.12.zip"
     )
 
 
@@ -861,15 +891,19 @@ def test_rating_policy_is_visible_and_can_be_temporarily_bypassed(monkeypatch) -
     assert calls.items[0][1].label == "Minimum rating: 3+"
     assert calls.items[1][1].label == "Show all pictures temporarily"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/?rating_policy=all"
-    assert calls.items[7][0] == "plugin://plugin.image.mypicsdb3/recent-taken"
+    assert any(
+        url == "plugin://plugin.image.mypicsdb3/recent-taken"
+        for url, _item, _is_folder in calls.items
+    )
 
     ui.dispatch(views.Request("", {"rating_policy": "all"}))
 
     assert runtime.catalog.rating_policy == "all"
     assert calls.items[1][1].label == "Use configured rating filter"
     assert calls.items[1][0] == "plugin://plugin.image.mypicsdb3/"
-    assert calls.items[7][0] == (
-        "plugin://plugin.image.mypicsdb3/recent-taken?rating_policy=all"
+    assert any(
+        url == "plugin://plugin.image.mypicsdb3/recent-taken?rating_policy=all"
+        for url, _item, _is_folder in calls.items
     )
 
     ui.dispatch(views.Request("recent-taken", {"rating_policy": "all"}))
@@ -1337,13 +1371,13 @@ def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
     views.xbmcgui.ListItem = InfoListItem
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
-    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.11")
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.12")
 
     assert url == ""
     assert item.video_tag_requests == 0
     assert item.properties["IsPlayable"] == "false"
     assert item.properties["MyPicsDB3.MediaType"] == "info"
-    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.11"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.12"
     assert is_folder is False
 
 
@@ -2740,6 +2774,37 @@ def test_smart_collection_music_slideshow_uses_picture_only_hidden_route(
     assert [entry[0] for entry in calls.items] == [
         "smb://server/photos/image.jpg"
     ]
+
+
+def test_metadata_mapping_view_and_add_action(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.catalog.metadata_mapping_overrides = [
+        views.MetadataMappingRule("xmp", "CountryName", "country", 20)
+    ]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("metadata-mapping", {}))
+
+    labels = [item.label for _url, item, _is_folder in calls.items]
+    assert calls.category == "Metadata mapping"
+    assert labels[0] == "Add metadata mapping"
+    assert labels[1] == "Reset all custom mappings"
+    assert any("XMP · CountryName → Country" in label for label in labels)
+
+    FakeDialog.select_responses = [0, 9]
+    FakeDialog.input_responses = ["Image City", "40"]
+    ui.action("action/add-metadata-mapping", {})
+
+    added = next(
+        rule for rule in runtime.catalog.metadata_mapping_overrides
+        if rule.source_tag == "Image City"
+    )
+    assert added.source_type == "exif"
+    assert added.target_field == "city"
+    assert added.priority == 40
+    assert any("Metadata mapping saved" in message for message, _error in runtime.kodi.notifications)
+    assert "Container.Refresh" in calls.builtins
 
 
 def test_source_scan_settings_save_and_return_to_global_defaults(monkeypatch) -> None:

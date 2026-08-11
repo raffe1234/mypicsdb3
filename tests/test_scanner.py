@@ -465,3 +465,27 @@ def test_source_scan_policy_overrides_recursion_media_types_and_exclusions(tmp_p
         "secret.jpg",
     }
     assert catalog.overview()["missing"] == 1
+
+
+def test_metadata_mapping_change_reindexes_unchanged_picture(tmp_path: Path) -> None:
+    from mypicsdb3.metadata_mapping import MetadataMappingRule
+
+    root = tmp_path / "photos"
+    root.mkdir()
+    (root / "image.jpg").write_bytes(b"image")
+    catalog, _, scanner = setup_scanner(tmp_path, root)
+
+    first = scanner.scan_sources()
+    assert first.pictures_added == 1
+    second = scanner.scan_sources()
+    assert second.pictures_unchanged == 1
+
+    catalog.set_metadata_mapping_rule(
+        MetadataMappingRule("xmp", "LegacyPlace", "city", 5)
+    )
+    third = scanner.scan_sources()
+    assert third.pictures_updated == 1
+    assert third.pictures_unchanged == 0
+
+    fourth = scanner.scan_sources()
+    assert fourth.pictures_unchanged == 1

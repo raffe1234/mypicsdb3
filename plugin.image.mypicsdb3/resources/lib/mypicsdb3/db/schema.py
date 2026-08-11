@@ -34,6 +34,17 @@ SQLITE_SCHEMA = [
         updated_at TEXT NOT NULL,
         FOREIGN KEY(source_id) REFERENCES sources(id) ON DELETE CASCADE
     )""",
+    """CREATE TABLE IF NOT EXISTS metadata_mapping_rules (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source_type TEXT NOT NULL,
+        source_tag TEXT NOT NULL,
+        normalized_tag TEXT NOT NULL,
+        target_field TEXT,
+        rule_priority INTEGER NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(source_type, normalized_tag)
+    )""",
     """CREATE TABLE IF NOT EXISTS folders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         source_id INTEGER NOT NULL,
@@ -85,6 +96,7 @@ SQLITE_SCHEMA = [
         sublocation TEXT,
         caption TEXT,
         metadata_hash TEXT,
+        metadata_index_hash TEXT,
         thumb_uri TEXT,
         random_key REAL NOT NULL,
         favorite INTEGER NOT NULL DEFAULT 0,
@@ -206,6 +218,17 @@ MYSQL_SCHEMA = [
         CONSTRAINT fk_source_scan_policies_source
             FOREIGN KEY(source_id) REFERENCES sources(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
+    """CREATE TABLE IF NOT EXISTS metadata_mapping_rules (
+        id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        source_type VARCHAR(16) NOT NULL,
+        source_tag VARCHAR(191) NOT NULL,
+        normalized_tag VARCHAR(191) NOT NULL,
+        target_field VARCHAR(32) NULL,
+        rule_priority INT NOT NULL,
+        created_at DATETIME(6) NOT NULL,
+        updated_at DATETIME(6) NOT NULL,
+        UNIQUE KEY uq_metadata_mapping_source_tag (source_type, normalized_tag)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
     """CREATE TABLE IF NOT EXISTS folders (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
         source_id BIGINT UNSIGNED NOT NULL,
@@ -257,6 +280,7 @@ MYSQL_SCHEMA = [
         sublocation VARCHAR(255) NULL,
         caption TEXT NULL,
         metadata_hash CHAR(64) NULL,
+        metadata_index_hash CHAR(64) NULL,
         thumb_uri LONGTEXT NULL,
         random_key DOUBLE NOT NULL,
         favorite TINYINT(1) NOT NULL DEFAULT 0,

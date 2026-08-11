@@ -35,6 +35,7 @@ from .preferences import (
     serialize_home_layout_v2,
     serialize_persisted_home_layout,
 )
+from .metadata_mapping import MetadataMappingRule, SOURCE_TYPES, TARGET_FIELDS
 from .music_playlists import (
     KODI_MUSIC_PLAYLIST_DIRECTORY,
     MUSIC_PLAYLIST_MASK,
@@ -384,6 +385,7 @@ class PluginUI:
                 "action/create-smart-collection",
             ),
             self.add_folder(self.text(30000, "Picture sources"), "sources", **rating_params),
+            self.add_folder(self.text(32903, "Metadata mapping"), "metadata-mapping"),
         ]
         hidden_nodes = parse_hidden_main_menu_nodes(
             self.kodi.addon.getSetting("hidden_main_menu_nodes")
@@ -1586,6 +1588,165 @@ class PluginUI:
 
     def _save_current_album_view(self) -> None:
         save_current_album_view(self.kodi, self.text, xbmc, xbmcgui)
+
+    def _metadata_target_fallback(self, target_field: Optional[str]) -> str:
+        values = {
+            None: self.text(32920, "Ignore this tag"),
+            "taken_at": self.text(32921, "Capture date"),
+            "camera_make": self.text(32922, "Camera make"),
+            "camera_model": self.text(32923, "Camera model"),
+            "rating": self.text(32924, "Rating"),
+            "keywords": self.text(32925, "Keywords"),
+            "caption": self.text(32926, "Caption"),
+            "country": self.text(32927, "Country"),
+            "state": self.text(32928, "State or region"),
+            "city": self.text(32929, "City"),
+            "sublocation": self.text(32930, "Sublocation"),
+        }
+        return values.get(target_field, str(target_field or ""))
+
+    def metadata_mapping(self, params: Optional[Dict[str, str]] = None):
+        overrides = self.catalog.list_metadata_mapping_overrides()
+        items = [
+            self.add_action(
+                self.text(32904, "Add metadata mapping"),
+                "action/add-metadata-mapping",
+            )
+        ]
+        if overrides:
+            items.append(
+                self.add_action(
+                    self.text(32905, "Reset all custom mappings"),
+                    "action/reset-metadata-mappings",
+                )
+            )
+        for rule in overrides:
+            target = self._metadata_target_fallback(rule.target_field)
+            label = "%s · %s → %s  [COLOR=grey](%d)[/COLOR]" % (
+                rule.source_type.upper(),
+                rule.source_tag,
+                target,
+                int(rule.priority),
+            )
+            context = [
+                (
+                    self.text(32906, "Remove custom mapping"),
+                    "RunPlugin(%s)"
+                    % self.url(
+                        "action/remove-metadata-mapping",
+                        source_type=rule.source_type,
+                        source_tag=rule.source_tag,
+                    ),
+                )
+            ]
+            items.append(
+                self.add_action(
+                    label,
+                    "action/edit-metadata-mapping",
+                    context=context,
+                    source_type=rule.source_type,
+                    source_tag=rule.source_tag,
+                )
+            )
+        self.finish(
+            items,
+            content="files",
+            category=self.text(32903, "Metadata mapping"),
+        )
+
+    def _add_metadata_mapping(self) -> None:
+        dialog = xbmcgui.Dialog()
+        source_index = dialog.select(
+            self.text(32908, "Metadata source"),
+            [value.upper() for value in SOURCE_TYPES],
+            preselect=0,
+        )
+        if source_index < 0:
+            return
+        source_type = SOURCE_TYPES[int(source_index)]
+        source_tag = dialog.input(self.text(32909, "Source tag name"), defaultt="")
+        if not str(source_tag or "").strip():
+            return
+        targets: List[Optional[str]] = [None] + list(TARGET_FIELDS)
+        target_index = dialog.select(
+            self.text(32907, "Map tag to"),
+            [self._metadata_target_fallback(target) for target in targets],
+            preselect=1,
+        )
+        if target_index < 0:
+            return
+        target_field = targets[int(target_index)]
+        if target_field is None and not dialog.yesno(
+            self.text(32910, "Ignore metadata tag?"),
+            self.text(32911, "This tag will not contribute to canonical metadata."),
+        ):
+            return
+        priority_text = dialog.input(
+            self.text(32912, "Priority (lower wins)"), defaultt="100"
+        )
+        try:
+            priority = int(priority_text)
+            rule = MetadataMappingRule(source_type, source_tag, target_field, priority)
+            self.catalog.set_metadata_mapping_rule(rule)
+        except (TypeError, ValueError) as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32913, "Invalid metadata mapping"), exc),
+                error=True,
+            )
+            return
+        self.kodi.notify(self.text(32914, "Metadata mapping saved"))
+        self.kodi.notify(self.text(32915, "Run a scan to reindex metadata"))
+        xbmc.executebuiltin("Container.Refresh")
+
+    def _edit_metadata_mapping(self, source_type: str, source_tag: str) -> None:
+        existing = next(
+            (
+                rule
+                for rule in self.catalog.list_metadata_mapping_overrides()
+                if rule.source_type == str(source_type).casefold()
+                and rule.source_tag.casefold() == str(source_tag).casefold()
+            ),
+            None,
+        )
+        if existing is None:
+            self.kodi.notify(self.text(32916, "Metadata mapping was not found"), error=True)
+            return
+        dialog = xbmcgui.Dialog()
+        targets: List[Optional[str]] = [None] + list(TARGET_FIELDS)
+        labels = [self._metadata_target_fallback(target) for target in targets]
+        try:
+            preselect = targets.index(existing.target_field)
+        except ValueError:
+            preselect = 0
+        selected = dialog.select(
+            self.text(32907, "Map tag to"), labels, preselect=preselect
+        )
+        if selected < 0:
+            return
+        target_field = targets[int(selected)]
+        priority_text = dialog.input(
+            self.text(32912, "Priority (lower wins)"),
+            defaultt=str(existing.priority),
+        )
+        try:
+            priority = int(priority_text)
+            self.catalog.set_metadata_mapping_rule(
+                MetadataMappingRule(
+                    existing.source_type,
+                    existing.source_tag,
+                    target_field,
+                    priority,
+                )
+            )
+        except (TypeError, ValueError) as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32913, "Invalid metadata mapping"), exc),
+                error=True,
+            )
+            return
+        self.kodi.notify(self.text(32914, "Metadata mapping saved"))
+        self.kodi.notify(self.text(32915, "Run a scan to reindex metadata"))
+        xbmc.executebuiltin("Container.Refresh")
 
     def _configure_source_scan_policy(self, source_id: int) -> None:
         source = self.catalog.get_source(source_id)
@@ -3023,6 +3184,33 @@ class PluginUI:
         if route == "action/source-scan-settings":
             self._configure_source_scan_policy(int(params["id"]))
             return
+        if route == "action/add-metadata-mapping":
+            self._add_metadata_mapping()
+            return
+        if route == "action/edit-metadata-mapping":
+            self._edit_metadata_mapping(
+                params.get("source_type", ""), params.get("source_tag", "")
+            )
+            return
+        if route == "action/remove-metadata-mapping":
+            removed = self.catalog.clear_metadata_mapping_rule(
+                params.get("source_type", ""), params.get("source_tag", "")
+            )
+            if removed:
+                self.kodi.notify(self.text(32917, "Custom metadata mapping removed"))
+                self.kodi.notify(self.text(32915, "Run a scan to reindex metadata"))
+            xbmc.executebuiltin("Container.Refresh")
+            return
+        if route == "action/reset-metadata-mappings":
+            if xbmcgui.Dialog().yesno(
+                self.text(32905, "Reset all custom mappings"),
+                self.text(32918, "Restore the built-in metadata mapping defaults?"),
+            ):
+                self.catalog.clear_metadata_mapping_rules()
+                self.kodi.notify(self.text(32919, "Built-in metadata mappings restored"))
+                self.kodi.notify(self.text(32915, "Run a scan to reindex metadata"))
+                xbmc.executebuiltin("Container.Refresh")
+            return
         if route == "action/toggle-favorite":
             self.catalog.toggle_favorite(int(params["id"]))
             xbmc.executebuiltin("Container.Refresh")
@@ -3394,6 +3582,8 @@ class PluginUI:
             return self.collection(collection_id, params)
         if route == "diagnostics":
             return self.diagnostics()
+        if route == "metadata-mapping":
+            return self.metadata_mapping(params)
         if route == "sources":
             return self.sources(params)
         if route == "source":

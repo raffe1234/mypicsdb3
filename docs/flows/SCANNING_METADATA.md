@@ -52,7 +52,8 @@ Scanner.scan_sources(optional source ids)
 | --- | --- |
 | `scanner.py` | Traversal, locks, cancellation, changed-file decisions and writes |
 | `filesystem.py` | Kodi VFS/local I/O abstraction and cancellation-aware wrapper |
-| `metadata.py` | EXIF, XMP and optional IPTC extraction and normalization |
+| `metadata.py` | Bounded EXIF, XMP and optional IPTC extraction |
+| `metadata_mapping.py` | Canonical fields, built-in/custom mapping rules, priority/merge semantics and metadata-index fingerprint |
 | `models.py` | Source, file stat, metadata and scan-stat structures |
 | `source_scan_policy.py` | Strict per-source policy normalization, inheritance values and checkpoint payload |
 | `scan_checkpoint.py` | Compatible resumable folder state in the local profile |
@@ -83,7 +84,8 @@ row means **use global defaults**. This is important for compatibility: upgradin
 from 0.8.10 does not silently freeze old global values into the shared database.
 
 When a scan starts, `Scanner` resolves one complete effective policy per selected
-source and keeps that snapshot for the whole scan. A shared MariaDB policy is
+source and snapshots the database-global metadata mapping overrides. It keeps both
+snapshots for the whole scan. A shared MariaDB policy is
 therefore visible to every client, while a source without an override follows the
 local global settings of whichever client actually scans it. Changing a policy
 does not start a scan and never changes original files. On the next complete
@@ -126,7 +128,8 @@ A checkpoint is reused only if relevant inputs are unchanged, including:
 - enabled source selection;
 - database identity;
 - each source's effective recursion, picture/video extensions, video inclusion, exclusions and hidden-file policy;
-- metadata settings that affect indexing.
+- the metadata-index fingerprint, which covers effective metadata mappings and
+  metadata extraction settings that affect indexed values.
 
 When changing scanner inputs, update checkpoint compatibility tests so that a
 stale checkpoint cannot skip files that have become newly eligible.
@@ -143,7 +146,8 @@ media URI
 → EXIF values
 → embedded XMP values
 → optional IPTC values for JPEG
-→ normalized MetadataResult
+→ built-in + database override mapping rules
+→ canonical MetadataResult
 → scanner record
 → Catalog.insert_picture() or update_picture()
 → tags and normalized search document
@@ -154,11 +158,15 @@ time rather than a full video metadata scraper.
 
 ## Unchanged files
 
-The scanner compares stored size and modification information before reading
-metadata again. An unchanged item is touched as seen without repeating
-expensive metadata work. Changes to the unchanged-file rule can have large
-performance and correctness effects on NAS libraries and require regression
-tests.
+The scanner compares stored size, modification information and
+`metadata_index_hash` before deciding to reuse a picture row. The hash covers the
+effective mapping plus metadata extraction settings. An unchanged item with a
+matching hash is touched as seen without repeating expensive metadata work. If the
+mapping or extraction inputs change, the next scan re-reads metadata even when
+size/mtime are unchanged and then stores the new hash. Schema-9 upgrades leave old
+rows without this hash deliberately, causing one safe metadata reindex. Changes to
+this rule can have large performance and correctness effects on NAS libraries and
+require regression tests.
 
 ## Missing records and cleanup
 
@@ -174,6 +182,7 @@ with immediate irreversible deletion.
 - `tests/test_service_scan_progress.py`;
 - service cancellation and shutdown tests;
 - `tests/test_metadata.py`;
+- `tests/test_metadata_mapping.py`;
 - `tests/test_catalog.py`;
 - `tests/test_database_busy_handling.py`;
 - `tests/test_mysql_integration.py` for shared-backend changes.
