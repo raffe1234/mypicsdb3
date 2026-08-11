@@ -23,6 +23,17 @@ SQLITE_SCHEMA = [
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL
     )""",
+    """CREATE TABLE IF NOT EXISTS source_scan_policies (
+        source_id INTEGER PRIMARY KEY,
+        recursive INTEGER NOT NULL,
+        include_videos INTEGER NOT NULL,
+        picture_extensions TEXT NOT NULL,
+        video_extensions TEXT NOT NULL,
+        exclude_fragments TEXT NOT NULL,
+        exclude_hidden INTEGER NOT NULL,
+        updated_at TEXT NOT NULL,
+        FOREIGN KEY(source_id) REFERENCES sources(id) ON DELETE CASCADE
+    )""",
     """CREATE TABLE IF NOT EXISTS folders (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         source_id INTEGER NOT NULL,
@@ -182,6 +193,18 @@ MYSQL_SCHEMA = [
         last_error TEXT NULL,
         created_at DATETIME(6) NOT NULL,
         updated_at DATETIME(6) NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
+    """CREATE TABLE IF NOT EXISTS source_scan_policies (
+        source_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+        recursive TINYINT(1) NOT NULL,
+        include_videos TINYINT(1) NOT NULL,
+        picture_extensions TEXT NOT NULL,
+        video_extensions TEXT NOT NULL,
+        exclude_fragments TEXT NOT NULL,
+        exclude_hidden TINYINT(1) NOT NULL,
+        updated_at DATETIME(6) NOT NULL,
+        CONSTRAINT fk_source_scan_policies_source
+            FOREIGN KEY(source_id) REFERENCES sources(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
     """CREATE TABLE IF NOT EXISTS folders (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

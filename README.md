@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.10. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.11. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -36,7 +36,8 @@ For the component boundaries and long-lived safety rules, see
 ### Catalogue and scanning
 
 - Select one or more existing Kodi picture sources and index them manually or on
-  a schedule.
+  a schedule. Each source can inherit the global scan defaults or override
+  recursion, picture/video extensions, video inclusion, exclusions and hidden-file handling.
 - Resume a compatible interrupted scan from the first unfinished folder, show
   session progress and cancel at a safe file or folder checkpoint.
 - Protect unavailable SMB/NFS sources and incomplete directory traversals from
@@ -437,6 +438,9 @@ Every newly discovered source is disabled by default.
 - Select a disabled source to enable it.
 - The source label changes from **Disabled** to **Enabled**.
 - Use the context menu to enable, disable or start a background scan of only that source.
+- Open **Source scan settings** from the same context menu to keep **Global scan defaults**
+  or save a complete custom policy for only that source. Existing sources keep global
+  behavior until an override is explicitly saved.
 - Select **Refresh Kodi sources** after adding, removing or renaming a source in
   Kodi. If a saved MyPicsDB 3 source no longer exists in Kodi, MyPicsDB 3 asks
   whether to remove it and its indexed pictures. Select **No** to keep it; the
@@ -460,9 +464,11 @@ production scan. Do not remove a shared MySQL/MariaDB catalogue this way.
 
 ### 3. Run the first scan
 
-Return to the MyPicsDB 3 main menu and select **Scan now**. The scan is
-recursive. It visits enabled sources, indexes supported media files and stores
-the catalogue in the selected database. It uses Kodi's non-modal background
+Return to the MyPicsDB 3 main menu and select **Scan now**. By default scanning
+is recursive. Each enabled source is traversed using its effective source policy:
+a saved custom policy when present, otherwise the current global scanning
+defaults. The scanner indexes supported media files and stores the catalogue in
+the selected database. It uses Kodi's non-modal background
 progress indicator, so you can continue using the interface. Exiting Kodi
 cancels the scan safely. While a scan is active, **Scan now** is replaced by
 **Stop scan**. Confirming that action requests a soft stop; the current file
@@ -478,11 +484,11 @@ enabled sources and scan settings continues from the first unfinished folder.
 Sources completed before the interruption are skipped.
 
 Checkpoints are stored in the local Kodi add-on profile and expire after 24
-hours. They are discarded when the source selection, database identity, picture
-or video extensions, exclusions or metadata settings change. For example, adding
-`nef` after stopping a scan deliberately starts a fresh traversal so earlier
-folders are checked for NEF files. With a shared MySQL/MariaDB catalogue, each
-Kodi device still keeps its own local traversal checkpoint.
+hours. They are discarded when the source selection, database identity, any
+source's effective scan policy, or metadata settings change. For example, adding
+`nef`, enabling videos or changing recursion for one source after stopping a scan
+deliberately starts a fresh traversal. With a shared MySQL/MariaDB catalogue,
+each Kodi device still keeps its own local traversal checkpoint.
 
 If a folder cannot be listed, Scan status reports `partial`. MyPicsDB 3 still
 indexes folders that were read successfully, but it skips missing-record
@@ -779,13 +785,16 @@ tested by this project.
 SQLite is recommended for one Kodi device. The database is stored under the
 add-on profile directory and must not be moved to SMB/NFS.
 
-The current development release uses schema version 7 for both SQLite and
+The current development release uses schema version 8 for both SQLite and
 MySQL/MariaDB. Schema 2 adds the year-first date-browsing index. Schema 3 adds
 one normalized search document per picture and backfills existing catalogues.
 Schema 4 adds the picture/video media type. Schema 5 adds validated named saved
 searches. Schema 6 adds manual collection metadata and ordered media references.
 Schema 7 adds one optional music-playlist reference per saved smart or manual
-collection. Neither migration rewrites indexed media or requires a rescan.
+collection. Schema 8 adds optional per-source scan-policy rows; no policy row
+means the source inherits the scanning client's global defaults. The schema-8
+migration creates an empty policy table only and does not rewrite indexed media
+or require an immediate rescan.
 Existing SQLite databases receive an atomic, integrity-checked backup
 before a schema migration; MySQL/MariaDB operators must keep an external
 backup. See [docs/DATABASE_MIGRATIONS.md](docs/DATABASE_MIGRATIONS.md) before

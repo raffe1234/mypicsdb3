@@ -14,6 +14,7 @@ from .filesystem import CancellationAwareFilesystem, Filesystem
 from .metadata import extract_metadata
 from .models import MetadataResult, ScanStats, Source
 from .scan_checkpoint import ScanCheckpointStore
+from .source_scan_policy import SourceScanPolicy, source_scan_policy_from_settings
 from .utils import basename_uri, extension_of, join_uri, local_datetime_from_timestamp, normalize_uri, utc_now
 
 
@@ -61,13 +62,18 @@ class Scanner:
         self._scan_lock_active = False
         self._scan_lock_refreshed_at = 0.0
         self._scan_connection = None
+        self._source_policies: Dict[int, SourceScanPolicy] = {}
         self.filesystem = CancellationAwareFilesystem(filesystem, self._check_cancelled)
 
-    def _is_excluded(self, path: str, name: str) -> bool:
-        if self.settings.exclude_hidden and name.startswith("."):
+    def _effective_source_policy(self, source: Source) -> SourceScanPolicy:
+        explicit = self.catalog.get_source_scan_policy(source.id)
+        return explicit if explicit is not None else source_scan_policy_from_settings(self.settings)
+
+    def _is_excluded(self, path: str, name: str, policy: SourceScanPolicy) -> bool:
+        if policy.exclude_hidden and name.startswith("."):
             return True
         lower = path.casefold()
-        return any(fragment in lower for fragment in self.settings.exclude_fragments)
+        return any(fragment in lower for fragment in policy.exclude_fragments)
 
     @staticmethod
     def _is_synology_metadata_directory(path: str, name: str) -> bool:
@@ -83,8 +89,8 @@ class Scanner:
             for candidate in candidates
         )
 
-    def _is_excluded_directory(self, path: str, name: str) -> bool:
-        return self._is_synology_metadata_directory(path, name) or self._is_excluded(path, name)
+    def _is_excluded_directory(self, path: str, name: str, policy: SourceScanPolicy) -> bool:
+        return self._is_synology_metadata_directory(path, name) or self._is_excluded(path, name, policy)
 
     def _check_cancelled(self) -> None:
         if self.cancelled():
@@ -130,7 +136,10 @@ class Scanner:
         self._scan_lock_refreshed_at = time.monotonic()
         scan_completed = False
         try:
-            overall = self.checkpoints.prepare(sources, overall)
+            self._source_policies = {
+                int(source.id): self._effective_source_policy(source) for source in sources
+            }
+            overall = self.checkpoints.prepare(sources, overall, self._source_policies)
             completed_sources = self.checkpoints.completed_source_ids()
             if self.started:
                 self.started(overall)
@@ -139,7 +148,9 @@ class Scanner:
                 if int(source.id) in completed_sources:
                     continue
                 self._check_cancelled()
-                source_stats = self.scan_source(source)
+                source_stats = self.scan_source(
+                    source, self._source_policies[int(source.id)]
+                )
                 overall.merge(source_stats)
                 self.checkpoints.complete_source(source.id, overall)
                 completed_sources.add(int(source.id))
@@ -160,9 +171,12 @@ class Scanner:
         overall.duration_seconds = time.monotonic() - started_monotonic
         return overall
 
-    def scan_source(self, source: Source) -> ScanStats:
+    def scan_source(
+        self, source: Source, policy: Optional[SourceScanPolicy] = None
+    ) -> ScanStats:
         started_monotonic = time.monotonic()
         scan_id = self.catalog.begin_scan_run(source.id)
+        policy = policy or self._effective_source_policy(source)
         root = normalize_uri(source.uri, directory=True)
         restored = self.checkpoints.restore_source(source)
         if restored is None:
@@ -225,7 +239,7 @@ class Scanner:
                     save_folder_checkpoint()
                     continue
                 visited.add(folder_uri)
-                if self._is_excluded_directory(folder_uri, folder_name):
+                if self._is_excluded_directory(folder_uri, folder_name, policy):
                     save_folder_checkpoint()
                     continue
                 folder_id = self.catalog.upsert_folder(connection, source.id, folder_uri, parent_uri, folder_name, scan_started_at)
@@ -250,20 +264,21 @@ class Scanner:
                     save_folder_checkpoint()
                     continue
 
-                for directory in sorted(directories, reverse=True):
-                    child_uri = join_uri(folder_uri, directory, directory=True)
-                    if not self._is_excluded_directory(child_uri, directory):
-                        stack.append((child_uri, folder_uri, directory))
+                if policy.recursive:
+                    for directory in sorted(directories, reverse=True):
+                        child_uri = join_uri(folder_uri, directory, directory=True)
+                        if not self._is_excluded_directory(child_uri, directory, policy):
+                            stack.append((child_uri, folder_uri, directory))
 
                 for filename in sorted(files):
                     self._check_cancelled()
                     picture_uri = join_uri(folder_uri, filename)
-                    if self._is_excluded(picture_uri, filename):
+                    if self._is_excluded(picture_uri, filename, policy):
                         continue
                     extension = extension_of(filename)
-                    if extension in self.settings.extensions:
+                    if extension in policy.picture_extensions:
                         media_type = "picture"
-                    elif self.settings.include_videos and extension in self.settings.video_extensions:
+                    elif policy.include_videos and extension in policy.video_extensions:
                         media_type = "video"
                     else:
                         continue

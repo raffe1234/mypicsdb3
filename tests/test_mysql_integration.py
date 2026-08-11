@@ -10,6 +10,7 @@ from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
 from mypicsdb3.db.schema import create_schema
 from mypicsdb3.search import build_global_search_request
+from mypicsdb3.source_scan_policy import SourceScanPolicy
 from mypicsdb3.utils import utc_now
 
 
@@ -58,6 +59,25 @@ def test_mysql_or_mariadb_schema_and_source_roundtrip(tmp_path) -> None:
     catalog.initialize()
     sources = catalog.sync_sources([{"label": "Test", "uri": "/tmp/photos"}])
     assert sources[0].label == "Test"
+    catalog.set_source_scan_policy(
+        sources[0].id,
+        SourceScanPolicy(
+            recursive=False,
+            include_videos=True,
+            picture_extensions=("jpg", "nef"),
+            video_extensions=("mp4",),
+            exclude_fragments=("#recycle",),
+            exclude_hidden=True,
+        ),
+    )
+    assert catalog.get_source_scan_policy(sources[0].id) == SourceScanPolicy(
+        recursive=False,
+        include_videos=True,
+        picture_extensions=("jpg", "nef"),
+        video_extensions=("mp4",),
+        exclude_fragments=("#recycle",),
+        exclude_hidden=True,
+    )
     catalog.test_connection()
 
 
@@ -65,6 +85,7 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     engine = DatabaseEngine(mysql_settings(tmp_path))
     with engine.transaction() as connection:
         create_schema(engine, connection)
+        engine.execute(connection, "DROP TABLE source_scan_policies").close()
         engine.execute(connection, "DROP TABLE collection_music_playlists").close()
         engine.execute(connection, "DROP TABLE collection_items").close()
         engine.execute(connection, "DROP TABLE collections").close()
@@ -102,8 +123,8 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
     second = catalog.initialize()
 
     assert first.bootstrapped_history is True
-    assert first.current_version == 7
-    assert first.applied_versions == (2, 3, 4, 5, 6, 7)
+    assert first.current_version == 8
+    assert first.applied_versions == (2, 3, 4, 5, 6, 7, 8)
     assert second.bootstrapped_history is False
     assert second.applied_versions == ()
     with engine.transaction() as connection:
@@ -133,9 +154,9 @@ def test_existing_mysql_schema_one_bootstraps_history_without_data_loss(tmp_path
         )
 
     assert source == {"label": "Existing photos", "uri": "/srv/photos/"}
-    assert [row["version"] for row in history] == [1, 2, 3, 4, 5, 6, 7]
+    assert [row["version"] for row in history] == [1, 2, 3, 4, 5, 6, 7, 8]
     assert {row["addon_version"] for row in history} == {VERSION}
-    assert count["total"] == 7
+    assert count["total"] == 8
     assert index is not None
     assert search_table is not None
 
@@ -242,7 +263,7 @@ def test_existing_mysql_schema_two_backfills_global_search_documents(tmp_path) -
     result = Catalog(engine).initialize()
 
     assert result.previous_version == 2
-    assert result.current_version == 7
+    assert result.current_version == 8
     assert result.applied_versions == (3,)
     with engine.transaction() as connection:
         row = engine.fetchone(

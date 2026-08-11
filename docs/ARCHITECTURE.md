@@ -158,8 +158,8 @@ on the backend when the engine can hide the difference.
 
 ### `db/catalog.py`: catalogue API
 
-`Catalog` is the main read/write interface for sources, folders, media,
-searches, manual collections, collection music-playlist mappings, locks and scan
+`Catalog` is the main read/write interface for sources, per-source scan
+policies, folders, media, searches, manual collections, collection music-playlist mappings, locks and scan
 runs. It returns dictionaries or
 domain objects that
 higher layers convert to Kodi UI items. Query methods enforce rating policy and
@@ -251,6 +251,7 @@ At a high level the catalogue stores:
 
 ```text
 sources
+  ├── optional source_scan_policies
   └── folders
        └── pictures/media
             ├── tags/keywords
@@ -315,8 +316,9 @@ misconfigured source paths.
 ### Checkpoint compatibility
 
 A scan checkpoint is reused only when the selected sources, database identity,
-extensions, exclusions and metadata settings are compatible. A setting change
-that could alter discovered media must force a fresh traversal.
+each source's effective scan policy and metadata settings are compatible. The
+effective policy is frozen when the scan starts. A source-policy or global-default
+change that could alter discovered media must force a fresh traversal.
 
 ### Query safety
 

@@ -22,7 +22,7 @@ def test_sqlite_schema_inspector_reports_version_history_and_fingerprint(tmp_pat
     report = inspect_sqlite(settings.sqlite_path)
 
     assert report["backend"] == "sqlite"
-    assert report["schema_version"] == "7"
-    assert [row["version"] for row in report["migration_history"]] == [1, 2, 3, 4, 5, 6, 7]
+    assert report["schema_version"] == "8"
+    assert [row["version"] for row in report["migration_history"]] == [1, 2, 3, 4, 5, 6, 7, 8]
     assert len(report["schema_fingerprint"]) == 64
     assert "schema_migrations" in {table["name"] for table in report["tables"]}

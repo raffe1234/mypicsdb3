@@ -297,3 +297,52 @@ def test_expired_checkpoint_starts_a_new_scan_plan(tmp_path: Path) -> None:
     assert second.current_source(source) is None
     assert restored.started_at == "2026-07-29 13:00:00"
     second.finish()
+
+
+def test_changed_source_policy_discards_saved_checkpoint(tmp_path: Path) -> None:
+    from mypicsdb3.source_scan_policy import SourceScanPolicy
+
+    root = tmp_path / "photos"
+    album_a = root / "A"
+    album_b = root / "B"
+    album_a.mkdir(parents=True)
+    album_b.mkdir(parents=True)
+    (album_a / "a.jpg").write_bytes(b"a")
+    (album_b / "b.jpg").write_bytes(b"b")
+
+    settings, catalog, sources = make_catalog(tmp_path, [("Photos", root)])
+    state = {"cancelled": False}
+    Scanner(
+        catalog,
+        TrackingFilesystem(),
+        settings,
+        metadata_reader=fake_metadata,
+        cancelled=lambda: state["cancelled"],
+        checkpoint_store=CancelAfterCompletedFolder(settings, state),
+    ).scan_sources()
+
+    source = sources[0]
+    catalog.set_source_scan_policy(
+        source.id,
+        SourceScanPolicy(
+            recursive=False,
+            include_videos=False,
+            picture_extensions=("jpg",),
+            video_extensions=("mp4",),
+            exclude_fragments=(),
+            exclude_hidden=True,
+        ),
+    )
+    filesystem = TrackingFilesystem()
+    result = Scanner(
+        catalog,
+        filesystem,
+        settings,
+        metadata_reader=fake_metadata,
+    ).scan_sources()
+
+    assert result.cancelled is False
+    assert root.resolve() in filesystem.listed
+    assert album_a.resolve() not in filesystem.listed
+    assert album_b.resolve() not in filesystem.listed
+    assert not (Path(settings.profile_path) / CHECKPOINT_FILENAME).exists()

@@ -5,6 +5,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from ..models import Source
+from ..source_scan_policy import (
+    SourceScanPolicy,
+    decode_policy_list,
+    encode_policy_list,
+    normalize_source_scan_policy,
+)
 from ..query_model import (
     canonical_picture_query_json,
     compile_picture_query,
@@ -685,6 +691,77 @@ class Catalog:
     def set_source_enabled(self, source_id: int, enabled: bool) -> None:
         with self.engine.transaction() as connection:
             self.engine.execute(connection, "UPDATE sources SET enabled=?, updated_at=? WHERE id=?", (1 if enabled else 0, utc_now(), source_id)).close()
+
+    def get_source_scan_policy(self, source_id: int) -> Optional[SourceScanPolicy]:
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(
+                connection,
+                "SELECT recursive, include_videos, picture_extensions, video_extensions, "
+                "exclude_fragments, exclude_hidden FROM source_scan_policies WHERE source_id=?",
+                (source_id,),
+            )
+        if row is None:
+            return None
+        return normalize_source_scan_policy(
+            SourceScanPolicy(
+                recursive=bool(row["recursive"]),
+                include_videos=bool(row["include_videos"]),
+                picture_extensions=decode_policy_list(row["picture_extensions"]),
+                video_extensions=decode_policy_list(row["video_extensions"]),
+                exclude_fragments=decode_policy_list(row["exclude_fragments"]),
+                exclude_hidden=bool(row["exclude_hidden"]),
+            )
+        )
+
+    def set_source_scan_policy(self, source_id: int, policy: SourceScanPolicy) -> None:
+        normalized = normalize_source_scan_policy(policy)
+        now = utc_now()
+        with self.engine.transaction() as connection:
+            source = self.engine.fetchone(connection, "SELECT id FROM sources WHERE id=?", (source_id,))
+            if source is None:
+                raise ValueError("Source was not found")
+            existing = self.engine.fetchone(
+                connection,
+                "SELECT source_id FROM source_scan_policies WHERE source_id=?",
+                (source_id,),
+            )
+            values = (
+                1 if normalized.recursive else 0,
+                1 if normalized.include_videos else 0,
+                encode_policy_list(normalized.picture_extensions),
+                encode_policy_list(normalized.video_extensions),
+                encode_policy_list(normalized.exclude_fragments),
+                1 if normalized.exclude_hidden else 0,
+                now,
+            )
+            if existing is None:
+                self.engine.execute(
+                    connection,
+                    "INSERT INTO source_scan_policies "
+                    "(source_id, recursive, include_videos, picture_extensions, video_extensions, "
+                    "exclude_fragments, exclude_hidden, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    (source_id, *values),
+                ).close()
+            else:
+                self.engine.execute(
+                    connection,
+                    "UPDATE source_scan_policies SET recursive=?, include_videos=?, "
+                    "picture_extensions=?, video_extensions=?, exclude_fragments=?, "
+                    "exclude_hidden=?, updated_at=? WHERE source_id=?",
+                    (*values, source_id),
+                ).close()
+
+    def clear_source_scan_policy(self, source_id: int) -> bool:
+        with self.engine.transaction() as connection:
+            cursor = self.engine.execute(
+                connection,
+                "DELETE FROM source_scan_policies WHERE source_id=?",
+                (source_id,),
+            )
+            try:
+                return int(cursor.rowcount or 0) > 0
+            finally:
+                cursor.close()
 
     def delete_source(self, source_id: int) -> bool:
         """Delete a source and the catalogue rows that belong to it.

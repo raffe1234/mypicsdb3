@@ -1554,3 +1554,67 @@ msgstr "Square"
 msgctxt "#32884"
 msgid "%s (%d items)"
 msgstr "%s (%d items)"
+
+msgctxt "#32885"
+msgid "Source scan settings"
+msgstr "Source scan settings"
+
+msgctxt "#32886"
+msgid "Global scan defaults"
+msgstr "Global scan defaults"
+
+msgctxt "#32887"
+msgid "Custom scan settings"
+msgstr "Custom scan settings"
+
+msgctxt "#32890"
+msgid "Scan subfolders recursively"
+msgstr "Scan subfolders recursively"
+
+msgctxt "#32891"
+msgid "Picture file extensions"
+msgstr "Picture file extensions"
+
+msgctxt "#32892"
+msgid "Video file extensions"
+msgstr "Video file extensions"
+
+msgctxt "#32893"
+msgid "Excluded path fragments"
+msgstr "Excluded path fragments"
+
+msgctxt "#32894"
+msgid "Exclude hidden files and folders"
+msgstr "Exclude hidden files and folders"
+
+msgctxt "#32895"
+msgid "Save source scan settings?"
+msgstr "Save source scan settings?"
+
+msgctxt "#32896"
+msgid "Source scan settings saved"
+msgstr "Source scan settings saved"
+
+msgctxt "#32897"
+msgid "Source now uses global scan defaults"
+msgstr "Source now uses global scan defaults"
+
+msgctxt "#32898"
+msgid "At least one picture extension is required"
+msgstr "At least one picture extension is required"
+
+msgctxt "#32899"
+msgid "Run a scan to apply the changed source policy"
+msgstr "Run a scan to apply the changed source policy"
+
+msgctxt "#32900"
+msgid "Include videos for this source"
+msgstr "Include videos for this source"
+
+msgctxt "#32901"
+msgid "Source was not found"
+msgstr "Source was not found"
+
+msgctxt "#32902"
+msgid "At least one video extension is required when videos are enabled"
+msgstr "At least one video extension is required when videos are enabled"

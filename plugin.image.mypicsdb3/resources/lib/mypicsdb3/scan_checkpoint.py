@@ -3,10 +3,15 @@ from __future__ import annotations
 import json
 import os
 import time
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Set, Tuple
 
 from .config import Settings
 from .models import ScanStats, Source
+from .source_scan_policy import (
+    SourceScanPolicy,
+    source_scan_policy_from_settings,
+    source_scan_policy_signature_payload,
+)
 from .utils import normalize_uri, sha256_text
 
 
@@ -102,7 +107,13 @@ class ScanCheckpointStore:
             "path": os.path.abspath(self.settings.sqlite_path),
         }
 
-    def _scan_signature(self, sources: Sequence[Source]) -> str:
+    def _scan_signature(
+        self,
+        sources: Sequence[Source],
+        source_policies: Optional[Mapping[int, SourceScanPolicy]] = None,
+    ) -> str:
+        default_policy = source_scan_policy_from_settings(self.settings)
+        policies = source_policies or {}
         payload = {
             "version": CHECKPOINT_VERSION,
             "database": self._database_identity(),
@@ -110,15 +121,13 @@ class ScanCheckpointStore:
                 {
                     "id": int(source.id),
                     "uri": normalize_uri(source.uri, directory=True),
+                    "policy": source_scan_policy_signature_payload(
+                        policies.get(int(source.id), default_policy)
+                    ),
                 }
                 for source in sources
             ],
             "settings": {
-                "extensions": list(self.settings.extensions),
-                "include_videos": bool(self.settings.include_videos),
-                "video_extensions": list(self.settings.video_extensions),
-                "exclude_fragments": list(self.settings.exclude_fragments),
-                "exclude_hidden": bool(self.settings.exclude_hidden),
                 "read_xmp": bool(self.settings.read_xmp),
                 "read_iptc": bool(self.settings.read_iptc),
                 "store_gps": bool(self.settings.store_gps),
@@ -249,9 +258,14 @@ class ScanCheckpointStore:
             return False
         return self._valid_pending(current.get("pending_folders"))
 
-    def prepare(self, sources: Sequence[Source], overall: ScanStats) -> ScanStats:
+    def prepare(
+        self,
+        sources: Sequence[Source],
+        overall: ScanStats,
+        source_policies: Optional[Mapping[int, SourceScanPolicy]] = None,
+    ) -> ScanStats:
         self._source_ids = [int(source.id) for source in sources]
-        self._signature = self._scan_signature(sources)
+        self._signature = self._scan_signature(sources, source_policies)
         state = self._read()
         if state and self._is_valid(state, sources):
             self._state = state

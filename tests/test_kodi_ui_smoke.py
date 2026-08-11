@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.10",
+            "version": "0.8.11",
         }[key]
 
     def getSetting(self, key):
@@ -189,8 +189,11 @@ class FakeKodi:
             browser_page_size=100,
             album_view_mode=55,
             minimum_rating_policy="all",
+            extensions=("jpg", "jpeg", "png", "nef"),
             include_videos=False,
             video_extensions=("mp4", "mov", "m4v", "mkv", "avi"),
+            exclude_fragments=("@eadir", "#recycle"),
+            exclude_hidden=True,
             random_home_refresh_hours=2,
             debug_logging=False,
         )
@@ -319,6 +322,7 @@ class FakeCatalog:
         self.music_playlists = {}
         self.music_playlist_updates = []
         self.music_playlist_clears = []
+        self.source_scan_policies = {}
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -350,7 +354,21 @@ class FakeCatalog:
         }
 
     def get_sources(self):
-        return [types.SimpleNamespace(id=7, label="FotonTest", enabled=False)]
+        return [types.SimpleNamespace(id=7, label="FotonTest", enabled=False, available=True)]
+
+    def get_source(self, source_id):
+        if int(source_id) != 7:
+            return None
+        return types.SimpleNamespace(id=7, label="FotonTest", enabled=False, available=True)
+
+    def get_source_scan_policy(self, source_id):
+        return self.source_scan_policies.get(int(source_id))
+
+    def set_source_scan_policy(self, source_id, policy):
+        self.source_scan_policies[int(source_id)] = policy
+
+    def clear_source_scan_policy(self, source_id):
+        return self.source_scan_policies.pop(int(source_id), None) is not None
 
     def delete_source(self, source_id):
         self.deleted_sources.append(source_id)
@@ -692,11 +710,11 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.10" in labels
+    assert "MyPicsDB 3 version: 0.8.11" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
-    assert "Database schema: 7" in labels
+    assert "Database schema: 8" in labels
     assert "Query Model version: 1" in labels
     assert "Sources: 3" in labels
     assert "Enabled sources: 2" in labels
@@ -734,19 +752,19 @@ def test_export_support_bundle_action_reports_generated_filename(monkeypatch) ->
     monkeypatch.setattr(
         views,
         "write_support_bundle",
-        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.10.zip",
+        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.11.zip",
     )
 
     ui.dispatch(views.Request("action/export-support-bundle", {}))
 
     assert runtime.kodi.notifications[-1] == (
-        "Support bundle saved: mypicsdb3-support-test-v0.8.10.zip\n"
+        "Support bundle saved: mypicsdb3-support-test-v0.8.11.zip\n"
         "Support bundle folder: Kodi userdata > addon_data > "
         "plugin.image.mypicsdb3 > support-bundles",
         False,
     )
     assert runtime.kodi.info_messages[-1] == (
-        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.10.zip"
+        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.11.zip"
     )
 
 
@@ -1319,13 +1337,13 @@ def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
     views.xbmcgui.ListItem = InfoListItem
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
-    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.10")
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.11")
 
     assert url == ""
     assert item.video_tag_requests == 0
     assert item.properties["IsPlayable"] == "false"
     assert item.properties["MyPicsDB3.MediaType"] == "info"
-    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.10"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.11"
     assert is_folder is False
 
 
@@ -2722,3 +2740,32 @@ def test_smart_collection_music_slideshow_uses_picture_only_hidden_route(
     assert [entry[0] for entry in calls.items] == [
         "smb://server/photos/image.jpg"
     ]
+
+
+def test_source_scan_settings_save_and_return_to_global_defaults(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3/sources", 7)
+
+    FakeDialog.select_responses = [1, 1, 1, 0]
+    FakeDialog.responses = [True]
+    FakeDialog.input_responses = ["JPG,NEF", "MP4,MOV", "#Recycle|Private"]
+    ui.action("action/source-scan-settings", {"id": "7"})
+
+    policy = runtime.catalog.source_scan_policies[7]
+    assert policy.recursive is True
+    assert policy.include_videos is True
+    assert policy.picture_extensions == ("jpg", "nef")
+    assert policy.video_extensions == ("mp4", "mov")
+    assert policy.exclude_fragments == ("#recycle", "private")
+    assert policy.exclude_hidden is False
+    assert any("Source scan settings saved" in message for message, _error in runtime.kodi.notifications)
+    assert "Container.Refresh" in calls.builtins
+
+    calls.builtins.clear()
+    FakeDialog.select_responses = [0]
+    ui.action("action/source-scan-settings", {"id": "7"})
+
+    assert runtime.catalog.source_scan_policies == {}
+    assert any("global scan defaults" in message for message, _error in runtime.kodi.notifications)
+    assert "Container.Refresh" in calls.builtins

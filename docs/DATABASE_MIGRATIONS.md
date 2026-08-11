@@ -7,7 +7,8 @@ with normalized global-search documents. Version 0.2.22 raised it to schema 4
 with an explicit picture/video media type. Version 0.2.34 raised it to schema 5
 with validated saved searches. Version 0.5.0 raises it to schema 6 with named
 manual media collections and explicit item order. Version 0.6.0 raises it to
-schema 7 with optional smart/manual collection music-playlist mappings.
+schema 7 with optional smart/manual collection music-playlist mappings. Version
+0.8.11 raises it to schema 8 with optional per-source scan policies.
 
 ## Startup sequence
 
@@ -136,6 +137,37 @@ scan music, rewrite collection contents or touch indexed media. Existing
 schema-6 catalogues therefore upgrade without a rescan. SQLite enforces the two
 allowed target-type values with a check constraint; application validation
 provides the equivalent boundary for MySQL/MariaDB.
+
+
+## Schema 8: per-source scan policies
+
+Schema 8 adds one portable child table keyed by `sources.id`:
+
+```text
+source_scan_policies
+- source_id
+- recursive
+- include_videos
+- picture_extensions
+- video_extensions
+- exclude_fragments
+- exclude_hidden
+- updated_at
+```
+
+There is deliberately no row for the normal inherited case. A source without a
+policy row uses the current global scan settings of the Kodi client that performs
+the scan, preserving pre-0.8.11 behavior. Saving a custom source policy writes a
+complete policy for the fields controlled by the source editor; choosing global
+defaults deletes that row. Extension and exclusion lists are serialized as strict
+JSON text arrays, but neither backend relies on database-native JSON operators.
+
+The foreign key cascades the policy row when its source is deleted. The migration
+creates an empty table only: it does not scan sources, rewrite media rows, mark
+anything missing or touch original files. Policy changes are applied only by a
+later scan. The scanner snapshots effective policies at scan start and includes
+them in checkpoint compatibility, so a changed policy cannot resume from a folder
+checkpoint produced under different discovery rules.
 
 ## SQLite backups
 

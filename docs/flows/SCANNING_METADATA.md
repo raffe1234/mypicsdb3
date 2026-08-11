@@ -24,12 +24,14 @@ Widget routes never start scans.
 ```text
 Scanner.scan_sources(optional source ids)
 → load enabled sources
+→ resolve/freeze effective scan policy for every selected source
 → acquire shared scan lock
 → prepare compatible local checkpoint
 → skip sources already completed in that checkpoint
 → Scanner.scan_source(source)
    → verify source root
    → restore folder stack or start at root
+   → apply that source's recursion/exclusion/media-type policy
    → list directories through CancellationAwareFilesystem
    → upsert folder
    → stat supported media files
@@ -52,6 +54,7 @@ Scanner.scan_sources(optional source ids)
 | `filesystem.py` | Kodi VFS/local I/O abstraction and cancellation-aware wrapper |
 | `metadata.py` | EXIF, XMP and optional IPTC extraction and normalization |
 | `models.py` | Source, file stat, metadata and scan-stat structures |
+| `source_scan_policy.py` | Strict per-source policy normalization, inheritance values and checkpoint payload |
 | `scan_checkpoint.py` | Compatible resumable folder state in the local profile |
 | `db/catalog.py` | Source, folder, media, tag, search-document and scan-run writes |
 | `db/locks.py` | Named lock constants and lock support |
@@ -71,6 +74,22 @@ A source has three distinct situations:
 
 This distinction is required for SMB, NFS and NAS use. An empty result from a
 failed listing is not evidence that a folder is genuinely empty.
+
+
+## Per-source policy and inheritance
+
+Schema 8 stores only explicit overrides in `source_scan_policies`. Absence of a
+row means **use global defaults**. This is important for compatibility: upgrading
+from 0.8.10 does not silently freeze old global values into the shared database.
+
+When a scan starts, `Scanner` resolves one complete effective policy per selected
+source and keeps that snapshot for the whole scan. A shared MariaDB policy is
+therefore visible to every client, while a source without an override follows the
+local global settings of whichever client actually scans it. Changing a policy
+does not start a scan and never changes original files. On the next complete
+scan, catalogue rows that are no longer in policy scope can be soft-marked
+missing; normal retention/cleanup rules remain separate. Synology `@eaDir` trees
+remain unconditionally excluded even if a custom policy has no exclusions.
 
 ## Scan lock
 
@@ -106,8 +125,7 @@ A checkpoint is reused only if relevant inputs are unchanged, including:
 
 - enabled source selection;
 - database identity;
-- picture/video extensions;
-- exclusions;
+- each source's effective recursion, picture/video extensions, video inclusion, exclusions and hidden-file policy;
 - metadata settings that affect indexing.
 
 When changing scanner inputs, update checkpoint compatibility tests so that a

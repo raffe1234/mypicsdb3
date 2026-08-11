@@ -395,3 +395,73 @@ def test_slow_smb_operations_are_logged_without_failing_scan(tmp_path, monkeypat
     assert result.errors == 0
     assert any(message.startswith("Slow directory listing:") for message in messages)
     assert any(message.startswith("Slow media inspection:") for message in messages)
+
+
+def test_source_scan_policy_overrides_recursion_media_types_and_exclusions(tmp_path: Path) -> None:
+    from mypicsdb3.source_scan_policy import SourceScanPolicy
+
+    root = tmp_path / "media"
+    nested = root / "Nested"
+    excluded = root / "Private"
+    nested.mkdir(parents=True)
+    excluded.mkdir(parents=True)
+    (root / "direct.jpg").write_bytes(b"picture")
+    (root / "direct.mp4").write_bytes(b"video")
+    (nested / "nested.jpg").write_bytes(b"nested")
+    (excluded / "secret.jpg").write_bytes(b"secret")
+
+    settings = Settings(
+        profile_path=str(tmp_path / "profile"),
+        extensions=("jpg",),
+        include_videos=False,
+        video_extensions=("mp4",),
+        exclude_fragments=(),
+        exclude_hidden=False,
+    )
+    catalog = Catalog(DatabaseEngine(settings))
+    catalog.initialize()
+    source = catalog.sync_sources([{"label": "Media", "uri": str(root)}])[0]
+    catalog.set_source_enabled(source.id, True)
+    catalog.set_source_scan_policy(
+        source.id,
+        SourceScanPolicy(
+            recursive=False,
+            include_videos=True,
+            picture_extensions=("jpg",),
+            video_extensions=("mp4",),
+            exclude_fragments=("/private/",),
+            exclude_hidden=True,
+        ),
+    )
+
+    first = Scanner(
+        catalog,
+        LocalFilesystem(),
+        settings,
+        metadata_reader=fake_metadata,
+    ).scan_sources()
+
+    assert first.pictures_seen == 2
+    assert {row["filename"] for row in catalog.recent_added(10)} == {
+        "direct.jpg",
+        "direct.mp4",
+    }
+
+    # Removing the override returns to the client-local global defaults:
+    # recursion is on and video indexing is off.
+    catalog.clear_source_scan_policy(source.id)
+    second = Scanner(
+        catalog,
+        LocalFilesystem(),
+        settings,
+        metadata_reader=fake_metadata,
+    ).scan_sources()
+
+    assert second.pictures_seen == 3
+    rows = catalog.recent_added(10)
+    assert {row["filename"] for row in rows} == {
+        "direct.jpg",
+        "nested.jpg",
+        "secret.jpg",
+    }
+    assert catalog.overview()["missing"] == 1

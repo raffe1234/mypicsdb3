@@ -59,6 +59,10 @@ from .search import build_global_search_request
 from .saved_searches import SavedSearchValidationError
 from .static_collections import CollectionValidationError
 from .smart_filter_editor import SmartFilterEditor
+from .source_scan_policy import (
+    SourceScanPolicy,
+    source_scan_policy_from_settings,
+)
 from .scanner import Scanner
 from .slideshow import (
     SlideshowError,
@@ -575,7 +579,7 @@ class PluginUI:
                 category=self.text(32700, "Saved searches"),
             )
         if saved is None:
-            self.kodi.notify(self.text(32709, "Saved search was not found"), error=True)
+            self.kodi.notify(self.text(32901, "Source was not found"), error=True)
             return self.finish(
                 [],
                 content="images",
@@ -920,11 +924,23 @@ class PluginUI:
         items = [self.add_action(self.text(30020, "Refresh Kodi sources"), "action/refresh-sources")]
         for source in sources:
             state = self.text(30018, "Enabled") if source.enabled else self.text(30019, "Disabled")
-            label = "%s  [COLOR=grey](%s)[/COLOR]" % (source.label, state)
+            policy_getter = getattr(self.catalog, "get_source_scan_policy", None)
+            explicit_policy = policy_getter(source.id) if callable(policy_getter) else None
+            policy_state = (
+                self.text(32887, "Custom scan settings")
+                if explicit_policy is not None
+                else self.text(32886, "Global scan defaults")
+            )
+            label = "%s  [COLOR=grey](%s; %s)[/COLOR]" % (source.label, state, policy_state)
             toggle = "RunPlugin(%s)" % self.url("action/toggle-source", id=source.id)
             scan = "RunPlugin(%s)" % self.url("action/scan", source=source.id)
+            scan_settings = "RunPlugin(%s)" % self.url("action/source-scan-settings", id=source.id)
             toggle_label = self.text(30064, "Disable source") if source.enabled else self.text(30063, "Enable source")
-            context = [(toggle_label, toggle), (self.text(30021, "Scan selected source"), scan)]
+            context = [
+                (toggle_label, toggle),
+                (self.text(30021, "Scan selected source"), scan),
+                (self.text(32885, "Source scan settings"), scan_settings),
+            ]
             if source.enabled:
                 items.append(self.add_folder(label, "source", art=self.icon, context=context, id=source.id, **rating_params))
             else:
@@ -1570,6 +1586,126 @@ class PluginUI:
 
     def _save_current_album_view(self) -> None:
         save_current_album_view(self.kodi, self.text, xbmc, xbmcgui)
+
+    def _configure_source_scan_policy(self, source_id: int) -> None:
+        source = self.catalog.get_source(source_id)
+        if source is None:
+            self.kodi.notify(self.text(32901, "Source was not found"), error=True)
+            return
+
+        settings = self.kodi.refresh_settings()
+        global_policy = source_scan_policy_from_settings(settings)
+        explicit = self.catalog.get_source_scan_policy(source_id)
+        dialog = xbmcgui.Dialog()
+        mode = dialog.select(
+            "%s: %s" % (self.text(32885, "Source scan settings"), source.label),
+            [
+                self.text(32886, "Global scan defaults"),
+                self.text(32887, "Custom scan settings"),
+            ],
+            preselect=1 if explicit is not None else 0,
+        )
+        if mode < 0:
+            return
+        if mode == 0:
+            self.catalog.clear_source_scan_policy(source_id)
+            self.kodi.notify(self.text(32897, "Source now uses global scan defaults"))
+            xbmc.executebuiltin("Container.Refresh")
+            return
+
+        current = explicit or global_policy
+
+        def choose_bool(heading: str, value: bool) -> Optional[bool]:
+            selected = dialog.select(
+                heading,
+                [self.text(32224, "Off"), self.text(32223, "On")],
+                preselect=1 if value else 0,
+            )
+            if selected < 0:
+                return None
+            return selected == 1
+
+        recursive = choose_bool(
+            self.text(32890, "Scan subfolders recursively"), current.recursive
+        )
+        if recursive is None:
+            return
+        include_videos = choose_bool(
+            self.text(32900, "Include videos for this source"), current.include_videos
+        )
+        if include_videos is None:
+            return
+        picture_extensions = dialog.input(
+            self.text(32891, "Picture file extensions"),
+            defaultt=",".join(current.picture_extensions),
+        )
+        video_extensions = dialog.input(
+            self.text(32892, "Video file extensions"),
+            defaultt=",".join(current.video_extensions),
+        )
+        exclude_fragments = dialog.input(
+            self.text(32893, "Excluded path fragments"),
+            defaultt="|".join(current.exclude_fragments),
+        )
+        exclude_hidden = choose_bool(
+            self.text(32894, "Exclude hidden files and folders"),
+            current.exclude_hidden,
+        )
+        if exclude_hidden is None:
+            return
+
+        from .utils import split_csv, split_pipe
+
+        pictures = split_csv(picture_extensions)
+        videos = split_csv(video_extensions)
+        if not pictures:
+            self.kodi.notify(
+                self.text(32898, "At least one picture extension is required"),
+                error=True,
+            )
+            return
+        if include_videos and not videos:
+            self.kodi.notify(
+                self.text(32902, "At least one video extension is required when videos are enabled"),
+                error=True,
+            )
+            return
+        policy = SourceScanPolicy(
+            recursive=recursive,
+            include_videos=include_videos,
+            picture_extensions=pictures,
+            video_extensions=videos,
+            exclude_fragments=split_pipe(exclude_fragments),
+            exclude_hidden=exclude_hidden,
+        )
+        summary = (
+            "%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s\n%s: %s"
+            % (
+                self.text(32890, "Scan subfolders recursively"),
+                self.text(32223, "On") if recursive else self.text(32224, "Off"),
+                self.text(32900, "Include videos for this source"),
+                self.text(32223, "On") if include_videos else self.text(32224, "Off"),
+                self.text(32891, "Picture file extensions"),
+                ",".join(pictures),
+                self.text(32892, "Video file extensions"),
+                ",".join(videos) or "-",
+                self.text(32893, "Excluded path fragments"),
+                "|".join(policy.exclude_fragments) or "-",
+                self.text(32894, "Exclude hidden files and folders"),
+                self.text(32223, "On") if exclude_hidden else self.text(32224, "Off"),
+            )
+        )
+        if not dialog.yesno(self.text(32895, "Save source scan settings?"), summary):
+            return
+        self.catalog.set_source_scan_policy(source_id, policy)
+        self.kodi.notify(
+            "%s. %s"
+            % (
+                self.text(32896, "Source scan settings saved"),
+                self.text(32899, "Run a scan to apply the changed source policy"),
+            )
+        )
+        xbmc.executebuiltin("Container.Refresh")
 
     def _slideshow_rows(self, params: Dict[str, str]) -> List[Dict[str, Any]]:
         scope = params.get("scope", "")
@@ -2883,6 +3019,9 @@ class PluginUI:
                 self.catalog.set_source_enabled(source.id, not source.enabled)
                 self.kodi.notify(self.text(30043, "Source enabled") if not source.enabled else self.text(30044, "Source disabled"))
             xbmc.executebuiltin("Container.Refresh")
+            return
+        if route == "action/source-scan-settings":
+            self._configure_source_scan_policy(int(params["id"]))
             return
         if route == "action/toggle-favorite":
             self.catalog.toggle_favorite(int(params["id"]))
