@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.12. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.13. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -546,6 +546,8 @@ After the first successful scan, the add-on main menu provides:
   reopened with normal pagination and slideshow support;
 - **Create smart collection** — combine metadata criteria in a Kodi dialog,
   preview the current result count and save the validated filter.
+- **Needs attention** — live Query Model views for pictures missing capture date,
+  camera metadata, canonical location or keywords.
 
 Select **Refresh random selections** to request new results for Random memories,
 Random albums and On this day - random. With Estuary MyPicsDB 3, the action clears
@@ -555,7 +557,7 @@ the catalogue.
 
 Open **Settings > General > Configure add-on menu** to show or hide the
 configurable catalogue browsing nodes. Search, Collections, Saved searches,
-Create smart collection, Picture sources, Metadata mapping, Refresh random
+Create smart collection, Picture sources, Metadata mapping, Needs attention, Refresh random
 selections, Scan now, Scan status and Settings always remain visible.
 
 Open the context menu on a picture or indexed home video and select **Add to
@@ -609,15 +611,25 @@ newly indexed matching media can appear the next time the search is opened.
 
 Select **Create smart collection** to build a reusable filter without writing a
 text query. Choose whether all criteria or any criterion must match, then add
-rules for text, date range, rating, favorite state, source, camera, keyword,
-pictures/videos, file extension, stored country/state/city/sublocation or image
-shape. File and location choices show bounded counts from the same validated
-Query Model selection used for the saved collection. Image shape supports
-landscape, portrait and square and honors EXIF rotation when dimensions are
-known. You can remove or edit criteria, choose the result order, preview the
-matching count and up to ten filenames, and decide whether the collection should
-use the configured global minimum-rating policy. Saving the collection opens it
-immediately and makes it available under **Saved searches**.
+rules for text, date, rating, favorite state, source, camera, keyword,
+pictures/videos, file extension, MIME type, stored country/state/city/sublocation
+or image shape. Value rules can use **Is** or **Is not** where appropriate;
+date, rating, camera, keyword, MIME and stored-location metadata also expose
+**Exists** / **Missing** when Query Model v1 supports that presence check. Rating
+can be matched exactly, at least, at most or within a range. File, MIME and
+location choices show bounded counts from the same validated Query Model
+selection used for the saved collection. Image shape supports landscape,
+portrait and square and honors EXIF rotation when dimensions are known. You can
+remove or edit criteria, choose the result order, preview the matching count and
+up to ten filenames, and decide whether the collection should use the configured
+global minimum-rating policy. Saving the collection opens it immediately and
+makes it available under **Saved searches**.
+
+Open **Needs attention** to browse live, non-destructive presets for pictures
+without capture date, camera metadata, canonical location or keywords. These
+views are ordinary validated Query Model queries: they do not start a scan,
+write metadata or modify source files, and they follow the same temporary/global
+minimum-rating display policy as other interactive catalogue views.
 Open **Settings > Home screen > Configure home-screen rows** to add that saved
 collection as a Pictures-home row and choose its order. Each row has an inline
 On/Off switch and up/down arrows, matching Kodi's settings pattern. Smart

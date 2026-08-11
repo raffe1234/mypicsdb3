@@ -176,6 +176,58 @@ class SmartFilterEditor:
         if callable(ok):
             ok(heading, message)
 
+    @staticmethod
+    def _rule_core(payload: Optional[RulePayload]) -> Tuple[RulePayload, bool]:
+        """Return the editable rule and whether it is wrapped in a NOT group.
+
+        Query Model v1 already supports negated groups. The editor uses a
+        single-child negated group to express user-facing ``is not`` without
+        adding a second set of SQL operators or changing the Query Model
+        version.
+        """
+        if not payload:
+            return {}, False
+        if (
+            payload.get("type") == "group"
+            and bool(payload.get("negated"))
+            and payload.get("match", "all") == "all"
+        ):
+            children = payload.get("children")
+            if isinstance(children, list) and len(children) == 1 and isinstance(children[0], dict):
+                child = children[0]
+                if child.get("type") == "rule":
+                    return child, True
+        return payload, False
+
+    @staticmethod
+    def _wrap_rule(rule: RulePayload, negated: bool = False) -> RulePayload:
+        if not negated:
+            return rule
+        return {
+            "type": "group",
+            "match": "all",
+            "negated": True,
+            "children": [rule],
+        }
+
+    def _choose_operator(
+        self,
+        heading: str,
+        options: Sequence[Tuple[str, str]],
+        existing: Optional[RulePayload],
+        *,
+        default: str,
+    ) -> Optional[str]:
+        core, negated = self._rule_core(existing)
+        current = str(core.get("operator") or default)
+        if negated and current in {"eq", "contains_tokens"}:
+            current = "not_eq"
+        preselect = next((index for index, item in enumerate(options) if item[0] == current), 0)
+        selected = self.dialog.select(heading, [item[1] for item in options], preselect=preselect)
+        if selected < 0:
+            return None
+        return options[selected][0]
+
     def _save_result(self) -> Optional[SmartFilterResult]:
         try:
             query = self.build_query()
@@ -241,6 +293,7 @@ class SmartFilterEditor:
             ("keyword", self.text(32757, "Keyword")),
             ("media_type", self.text(32758, "Media type")),
             ("extension", self.text(32875, "File extension")),
+            ("mime_type", self.text(32931, "MIME type")),
             ("country", self.text(32876, "Country")),
             ("state", self.text(32877, "State or region")),
             ("city", self.text(32878, "City")),
@@ -249,7 +302,8 @@ class SmartFilterEditor:
         )
         preselect = -1
         if existing is not None:
-            existing_field = str(existing.get("field") or "")
+            existing_rule, _negated = self._rule_core(existing)
+            existing_field = str(existing_rule.get("field") or "")
             preselect = next(
                 (index for index, item in enumerate(types) if item[0] == existing_field),
                 -1,
@@ -263,18 +317,46 @@ class SmartFilterEditor:
             return None
         field_name = types[selected][0]
         editor = getattr(self, "_rule_" + field_name)
-        return editor(existing if existing and existing.get("field") == field_name else None)
+        return editor(existing if existing is not None and existing_field == field_name else None)
 
     def _rule_text(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
-        default = str((existing or {}).get("value") or "")
+        core, negated = self._rule_core(existing)
+        operator = self._choose_operator(
+            self.text(32751, "Text contains words"),
+            (
+                ("contains_tokens", self.text(32932, "Contains")),
+                ("not_eq", self.text(32933, "Does not contain")),
+            ),
+            existing,
+            default="contains_tokens",
+        )
+        if operator is None:
+            return None
+        default = str(core.get("value") or "")
         value = self.dialog.input(self.text(32765, "Filter text"), defaultt=default)
         if not value:
             return None
-        return {"type": "rule", "field": "text", "operator": "contains_tokens", "value": value}
+        rule = {"type": "rule", "field": "text", "operator": "contains_tokens", "value": value}
+        return self._wrap_rule(rule, negated=(operator == "not_eq"))
 
     def _rule_taken_date(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
-        start = str((existing or {}).get("from") or "")
-        end = str((existing or {}).get("to") or "")
+        core, _negated = self._rule_core(existing)
+        operator = self._choose_operator(
+            self.text(32934, "Date"),
+            (
+                ("between", self.text(32935, "Is between")),
+                ("is_not_null", self.text(32936, "Exists")),
+                ("is_null", self.text(32937, "Missing")),
+            ),
+            existing,
+            default="between",
+        )
+        if operator is None:
+            return None
+        if operator in {"is_null", "is_not_null"}:
+            return {"type": "rule", "field": "taken_date", "operator": operator}
+        start = str(core.get("from") or "")
+        end = str(core.get("to") or "")
         start = self.dialog.input(self.text(32763, "From date (YYYY-MM-DD)"), defaultt=start)
         if not start:
             return None
@@ -293,15 +375,52 @@ class SmartFilterEditor:
         return candidate
 
     def _rule_rating(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
-        current = int((existing or {}).get("value") or 1)
+        core, _negated = self._rule_core(existing)
+        operator = self._choose_operator(
+            self.text(32924, "Rating"),
+            (
+                ("gte", self.text(32938, "At least")),
+                ("lte", self.text(32939, "At most")),
+                ("eq", self.text(32940, "Exactly")),
+                ("between", self.text(32935, "Is between")),
+                ("is_not_null", self.text(32936, "Exists")),
+                ("is_null", self.text(32937, "Missing")),
+            ),
+            existing,
+            default="gte",
+        )
+        if operator is None:
+            return None
+        if operator in {"is_null", "is_not_null"}:
+            return {"type": "rule", "field": "rating", "operator": operator}
+        if operator == "between":
+            current_from = int(core.get("from") or 1)
+            current_to = int(core.get("to") or 5)
+            start = self.dialog.select(
+                self.text(32941, "Minimum rating"),
+                [str(value) for value in range(0, 6)],
+                preselect=max(0, min(5, current_from)),
+            )
+            if start < 0:
+                return None
+            end = self.dialog.select(
+                self.text(32942, "Maximum rating"),
+                [str(value) for value in range(0, 6)],
+                preselect=max(0, min(5, current_to)),
+            )
+            if end < 0:
+                return None
+            candidate = {"type": "rule", "field": "rating", "operator": "between", "from": start, "to": end}
+            return candidate if self._validate_candidate(candidate) else None
+        current = int(core.get("value") if core.get("value") is not None else 1)
         selected = self.dialog.select(
-            self.text(32753, "Minimum rating"),
-            [str(value) for value in range(1, 6)],
-            preselect=max(0, min(4, current - 1)),
+            self.text(32924, "Rating"),
+            [str(value) for value in range(0, 6)],
+            preselect=max(0, min(5, current)),
         )
         if selected < 0:
             return None
-        return {"type": "rule", "field": "rating", "operator": "gte", "value": selected + 1}
+        return {"type": "rule", "field": "rating", "operator": operator, "value": selected}
 
     def _rule_favorite(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
         current = bool((existing or {}).get("value", True))
@@ -315,11 +434,20 @@ class SmartFilterEditor:
         return {"type": "rule", "field": "favorite", "operator": "eq", "value": selected == 0}
 
     def _rule_source(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        core, _negated = self._rule_core(existing)
+        operator = self._choose_operator(
+            self.text(32755, "Picture source"),
+            (("eq", self.text(32943, "Is")), ("not_eq", self.text(32944, "Is not"))),
+            existing,
+            default="eq",
+        )
+        if operator is None:
+            return None
         rows = list(self.catalog.get_sources())
         if not rows:
             self._show_message(self.text(32755, "Picture source"), self.text(32766, "No values available"))
             return None
-        current = int((existing or {}).get("value") or 0)
+        current = int(core.get("value") or 0)
         preselect = next((index for index, row in enumerate(rows) if int(_value(row, "id", 0)) == current), -1)
         selected = self.dialog.select(
             self.text(32755, "Picture source"),
@@ -328,14 +456,31 @@ class SmartFilterEditor:
         )
         if selected < 0:
             return None
-        return {"type": "rule", "field": "source", "operator": "eq", "value": int(_value(rows[selected], "id"))}
+        rule = {"type": "rule", "field": "source", "operator": "eq", "value": int(_value(rows[selected], "id"))}
+        return self._wrap_rule(rule, negated=(operator == "not_eq"))
 
     def _rule_camera(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        core, _negated = self._rule_core(existing)
+        operator = self._choose_operator(
+            self.text(32756, "Camera"),
+            (
+                ("eq", self.text(32943, "Is")),
+                ("not_eq", self.text(32944, "Is not")),
+                ("is_not_null", self.text(32936, "Exists")),
+                ("is_null", self.text(32937, "Missing")),
+            ),
+            existing,
+            default="eq",
+        )
+        if operator is None:
+            return None
+        if operator in {"is_null", "is_not_null"}:
+            return {"type": "rule", "field": "camera", "operator": operator}
         rows = list(self.catalog.cameras())
         if not rows:
             self._show_message(self.text(32756, "Camera"), self.text(32766, "No values available"))
             return None
-        current = (existing or {}).get("value") or {}
+        current = core.get("value") or {}
         labels = [self._camera_label(row) for row in rows]
         current_label = self._camera_label(current)
         preselect = labels.index(current_label) if current_label in labels else -1
@@ -348,23 +493,50 @@ class SmartFilterEditor:
             for key, source_key in (("make", "camera_make"), ("model", "camera_model"))
             if str(_value(row, source_key, "") or "")
         }
-        return {"type": "rule", "field": "camera", "operator": "eq", "value": value}
+        rule = {"type": "rule", "field": "camera", "operator": "eq", "value": value}
+        return self._wrap_rule(rule, negated=(operator == "not_eq"))
 
     def _rule_keyword(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        core, _negated = self._rule_core(existing)
+        operator = self._choose_operator(
+            self.text(32757, "Keyword"),
+            (
+                ("eq", self.text(32943, "Is")),
+                ("not_eq", self.text(32944, "Is not")),
+                ("is_not_null", self.text(32936, "Exists")),
+                ("is_null", self.text(32937, "Missing")),
+            ),
+            existing,
+            default="eq",
+        )
+        if operator is None:
+            return None
+        if operator in {"is_null", "is_not_null"}:
+            return {"type": "rule", "field": "keyword", "operator": operator}
         rows = list(self.catalog.tags())
         if not rows:
             self._show_message(self.text(32757, "Keyword"), self.text(32766, "No values available"))
             return None
-        current = str((existing or {}).get("value") or "").casefold()
+        current = str(core.get("value") or "").casefold()
         names = [str(_value(row, "name", "")) for row in rows]
         preselect = next((index for index, name in enumerate(names) if name.casefold() == current), -1)
         selected = self.dialog.select(self.text(32757, "Keyword"), names, preselect=preselect)
         if selected < 0:
             return None
-        return {"type": "rule", "field": "keyword", "operator": "eq", "value": names[selected]}
+        rule = {"type": "rule", "field": "keyword", "operator": "eq", "value": names[selected]}
+        return self._wrap_rule(rule, negated=(operator == "not_eq"))
 
     def _rule_media_type(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
-        current = str((existing or {}).get("value") or "picture")
+        core, _negated = self._rule_core(existing)
+        operator = self._choose_operator(
+            self.text(32758, "Media type"),
+            (("eq", self.text(32943, "Is")), ("not_eq", self.text(32944, "Is not"))),
+            existing,
+            default="eq",
+        )
+        if operator is None:
+            return None
+        current = str(core.get("value") or "picture")
         selected = self.dialog.select(
             self.text(32758, "Media type"),
             [self.text(32759, "Pictures"), self.text(32760, "Videos")],
@@ -372,12 +544,13 @@ class SmartFilterEditor:
         )
         if selected < 0:
             return None
-        return {
+        rule = {
             "type": "rule",
             "field": "media_type",
             "operator": "eq",
             "value": "video" if selected == 1 else "picture",
         }
+        return self._wrap_rule(rule, negated=(operator == "not_eq"))
 
     def _facet_rows(self, field_name: str, existing: Optional[RulePayload]) -> List[Any]:
         original = self.draft.rules
@@ -403,12 +576,30 @@ class SmartFilterEditor:
         heading: str,
         existing: Optional[RulePayload],
         prefix: str = "",
+        allow_presence: bool = False,
     ) -> Optional[RulePayload]:
+        core, _negated = self._rule_core(existing)
+        operators: List[Tuple[str, str]] = [
+            ("eq", self.text(32943, "Is")),
+            ("not_eq", self.text(32944, "Is not")),
+        ]
+        if allow_presence:
+            operators.extend(
+                [
+                    ("is_not_null", self.text(32936, "Exists")),
+                    ("is_null", self.text(32937, "Missing")),
+                ]
+            )
+        operator = self._choose_operator(heading, operators, existing, default="eq")
+        if operator is None:
+            return None
+        if operator in {"is_null", "is_not_null"}:
+            return {"type": "rule", "field": field_name, "operator": operator}
         rows = self._facet_rows(field_name, existing)
         if not rows:
             self._show_message(heading, self.text(32766, "No values available"))
             return None
-        current = str((existing or {}).get("value") or "")
+        current = str(core.get("value") or "")
         values = [str(_value(row, "value", "") or "") for row in rows]
         labels = [
             self.text(32884, "%s (%d items)")
@@ -419,38 +610,54 @@ class SmartFilterEditor:
         selected = self.dialog.select(heading, labels, preselect=preselect)
         if selected < 0:
             return None
-        return {"type": "rule", "field": field_name, "operator": "eq", "value": values[selected]}
+        rule = {"type": "rule", "field": field_name, "operator": "eq", "value": values[selected]}
+        return self._wrap_rule(rule, negated=(operator == "not_eq"))
 
     def _rule_extension(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
         return self._rule_scalar_facet(
             "extension", self.text(32875, "File extension"), existing, prefix="."
         )
 
+    def _rule_mime_type(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        return self._rule_scalar_facet(
+            "mime_type", self.text(32931, "MIME type"), existing, allow_presence=True
+        )
+
     def _rule_country(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
-        return self._rule_scalar_facet("country", self.text(32876, "Country"), existing)
+        return self._rule_scalar_facet("country", self.text(32876, "Country"), existing, allow_presence=True)
 
     def _rule_state(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
-        return self._rule_scalar_facet("state", self.text(32877, "State or region"), existing)
+        return self._rule_scalar_facet("state", self.text(32877, "State or region"), existing, allow_presence=True)
 
     def _rule_city(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
-        return self._rule_scalar_facet("city", self.text(32878, "City"), existing)
+        return self._rule_scalar_facet("city", self.text(32878, "City"), existing, allow_presence=True)
 
     def _rule_sublocation(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
-        return self._rule_scalar_facet("sublocation", self.text(32879, "Sublocation"), existing)
+        return self._rule_scalar_facet("sublocation", self.text(32879, "Sublocation"), existing, allow_presence=True)
 
     def _rule_aspect(self, existing: Optional[RulePayload]) -> Optional[RulePayload]:
+        core, _negated = self._rule_core(existing)
+        operator = self._choose_operator(
+            self.text(32880, "Image shape"),
+            (("eq", self.text(32943, "Is")), ("not_eq", self.text(32944, "Is not"))),
+            existing,
+            default="eq",
+        )
+        if operator is None:
+            return None
         values = ("landscape", "portrait", "square")
         labels = [
             self.text(32881, "Landscape"),
             self.text(32882, "Portrait"),
             self.text(32883, "Square"),
         ]
-        current = str((existing or {}).get("value") or "landscape")
+        current = str(core.get("value") or "landscape")
         preselect = values.index(current) if current in values else 0
         selected = self.dialog.select(self.text(32880, "Image shape"), labels, preselect=preselect)
         if selected < 0:
             return None
-        return {"type": "rule", "field": "aspect", "operator": "eq", "value": values[selected]}
+        rule = {"type": "rule", "field": "aspect", "operator": "eq", "value": values[selected]}
+        return self._wrap_rule(rule, negated=(operator == "not_eq"))
 
     def _choose_sort(self) -> None:
         options: Sequence[Tuple[str, str, str]] = (
@@ -481,38 +688,64 @@ class SmartFilterEditor:
         return labels.get((self.draft.sort_field, self.draft.sort_direction), self.draft.sort_field)
 
     def _rule_label(self, rule: RulePayload) -> str:
-        field_name = str(rule.get("field") or "")
+        core, negated = self._rule_core(rule)
+        field_name = str(core.get("field") or "")
+        operator = str(core.get("operator") or "")
+        relation = self.text(32944, "Is not") if negated else self.text(32943, "Is")
+        if operator == "is_null":
+            relation = self.text(32937, "Missing")
+        elif operator == "is_not_null":
+            relation = self.text(32936, "Exists")
         if field_name == "text":
-            return "%s: %s" % (self.text(32751, "Text contains words"), rule.get("value", ""))
+            label = self.text(32933, "Does not contain") if negated else self.text(32932, "Contains")
+            return "%s: %s" % (label, core.get("value", ""))
         if field_name == "taken_date":
-            return "%s: %s – %s" % (self.text(32752, "Date range"), rule.get("from", ""), rule.get("to", ""))
+            if operator in {"is_null", "is_not_null"}:
+                return "%s: %s" % (self.text(32934, "Date"), relation)
+            return "%s: %s – %s" % (self.text(32752, "Date range"), core.get("from", ""), core.get("to", ""))
         if field_name == "rating":
-            return "%s: %s+" % (self.text(32753, "Minimum rating"), rule.get("value", ""))
+            if operator in {"is_null", "is_not_null"}:
+                return "%s: %s" % (self.text(32924, "Rating"), relation)
+            if operator == "between":
+                return "%s: %s–%s" % (self.text(32924, "Rating"), core.get("from", ""), core.get("to", ""))
+            rating_relation = {
+                "gte": self.text(32938, "At least"),
+                "lte": self.text(32939, "At most"),
+                "eq": self.text(32940, "Exactly"),
+            }.get(operator, operator)
+            return "%s: %s %s" % (self.text(32924, "Rating"), rating_relation, core.get("value", ""))
         if field_name == "favorite":
-            return self.text(32761, "Favorites only") if rule.get("value") else self.text(32762, "Not favorites")
+            return self.text(32761, "Favorites only") if core.get("value") else self.text(32762, "Not favorites")
         if field_name == "source":
-            source_id = int(rule.get("value") or 0)
+            source_id = int(core.get("value") or 0)
             source = next((row for row in self.catalog.get_sources() if int(_value(row, "id", 0)) == source_id), None)
-            return "%s: %s" % (self.text(32755, "Picture source"), _value(source, "label", source_id))
+            return "%s: %s %s" % (self.text(32755, "Picture source"), relation, _value(source, "label", source_id))
         if field_name == "camera":
-            return "%s: %s" % (self.text(32756, "Camera"), self._camera_label(rule.get("value") or {}))
+            if operator in {"is_null", "is_not_null"}:
+                return "%s: %s" % (self.text(32756, "Camera"), relation)
+            return "%s: %s %s" % (self.text(32756, "Camera"), relation, self._camera_label(core.get("value") or {}))
         if field_name == "keyword":
-            return "%s: %s" % (self.text(32757, "Keyword"), rule.get("value", ""))
+            if operator in {"is_null", "is_not_null"}:
+                return "%s: %s" % (self.text(32757, "Keyword"), relation)
+            return "%s: %s %s" % (self.text(32757, "Keyword"), relation, core.get("value", ""))
         if field_name == "media_type":
-            label = self.text(32760, "Videos") if rule.get("value") == "video" else self.text(32759, "Pictures")
-            return "%s: %s" % (self.text(32758, "Media type"), label)
+            label = self.text(32760, "Videos") if core.get("value") == "video" else self.text(32759, "Pictures")
+            return "%s: %s %s" % (self.text(32758, "Media type"), relation, label)
         facet_labels = {
             "extension": self.text(32875, "File extension"),
+            "mime_type": self.text(32931, "MIME type"),
             "country": self.text(32876, "Country"),
             "state": self.text(32877, "State or region"),
             "city": self.text(32878, "City"),
             "sublocation": self.text(32879, "Sublocation"),
         }
         if field_name in facet_labels:
-            value = str(rule.get("value") or "")
+            if operator in {"is_null", "is_not_null"}:
+                return "%s: %s" % (facet_labels[field_name], relation)
+            value = str(core.get("value") or "")
             if field_name == "extension":
                 value = "." + value.lstrip(".")
-            return "%s: %s" % (facet_labels[field_name], value)
+            return "%s: %s %s" % (facet_labels[field_name], relation, value)
         if field_name == "aspect":
             aspect_labels = {
                 "landscape": self.text(32881, "Landscape"),
@@ -521,7 +754,10 @@ class SmartFilterEditor:
             }
             return "%s: %s" % (
                 self.text(32880, "Image shape"),
-                aspect_labels.get(str(rule.get("value") or ""), str(rule.get("value") or "")),
+                "%s %s" % (
+                    relation,
+                    aspect_labels.get(str(core.get("value") or ""), str(core.get("value") or "")),
+                ),
             )
         return field_name
 

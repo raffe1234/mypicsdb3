@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.12",
+            "version": "0.8.13",
         }[key]
 
     def getSetting(self, key):
@@ -434,6 +434,10 @@ class FakeCatalog:
         self.query_requests.append((query, limit, offset))
         return self.recent_taken(limit, offset)
 
+    def count_query_pictures(self, query):
+        self.query_requests.append((query, "count", 0))
+        return 1
+
     def list_saved_searches(self):
         return list(self.saved_search_rows)
 
@@ -624,12 +628,14 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 24
+    assert len(calls.items) == 25
     assert calls.items[0][0].endswith("/search")
     assert calls.items[1][0].endswith("/saved-searches")
     assert calls.items[2][0].endswith("/collections")
     assert calls.items[3][0].endswith("/action/create-smart-collection")
     assert calls.items[4][0].endswith("/sources")
+    assert any(url.endswith("/metadata-mapping") for url, _item, _folder in calls.items)
+    assert any(url.endswith("/needs-attention") for url, _item, _folder in calls.items)
 
     calls.ended = False
     ui.dispatch(views.Request("recent-taken", {"limit": "15"}))
@@ -654,7 +660,7 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     ui.root()
 
     urls = [url for url, _item, _is_folder in calls.items]
-    assert len(urls) == 21
+    assert len(urls) == 22
     assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
     assert "plugin://plugin.image.mypicsdb3/years" not in urls
     assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
@@ -663,11 +669,48 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     assert "plugin://plugin.image.mypicsdb3/collections" in urls
     assert "plugin://plugin.image.mypicsdb3/action/create-smart-collection" in urls
     assert "plugin://plugin.image.mypicsdb3/sources" in urls
+    assert "plugin://plugin.image.mypicsdb3/metadata-mapping" in urls
+    assert "plugin://plugin.image.mypicsdb3/needs-attention" in urls
     assert "plugin://plugin.image.mypicsdb3/action/refresh-random" in urls
     assert "plugin://plugin.image.mypicsdb3/action/scan" in urls
     assert "plugin://plugin.image.mypicsdb3/status" in urls
     assert "plugin://plugin.image.mypicsdb3/diagnostics" in urls
     assert "plugin://plugin.image.mypicsdb3/action/settings" in urls
+
+
+def test_needs_attention_uses_query_model_presets_and_opens_results(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("needs-attention", {}))
+
+    assert calls.category == "Needs attention"
+    assert [item.label for _url, item, _folder in calls.items] == [
+        "Pictures without date  [COLOR=grey](1)[/COLOR]",
+        "Pictures without camera  [COLOR=grey](1)[/COLOR]",
+        "Pictures without location  [COLOR=grey](1)[/COLOR]",
+        "Pictures without keywords  [COLOR=grey](1)[/COLOR]",
+    ]
+    assert len(runtime.catalog.query_requests) == 4
+
+    calls.items.clear()
+    calls.ended = False
+    runtime.catalog.query_requests.clear()
+    ui.dispatch(views.Request("needs-attention-result", {"kind": "missing-location"}))
+
+    assert calls.ended is True
+    assert calls.category == "Pictures without location"
+    assert len(calls.items) == 1
+    query, limit, offset = runtime.catalog.query_requests[0]
+    assert (limit, offset) == (runtime.kodi.settings.browser_page_size, 0)
+    assert [child.field for child in query.root.children] == [
+        "media_type",
+        "country",
+        "state",
+        "city",
+        "sublocation",
+    ]
 
 
 def test_root_replaces_scan_now_with_stop_scan_while_scan_is_active(monkeypatch) -> None:
@@ -740,7 +783,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.12" in labels
+    assert "MyPicsDB 3 version: 0.8.13" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -782,19 +825,19 @@ def test_export_support_bundle_action_reports_generated_filename(monkeypatch) ->
     monkeypatch.setattr(
         views,
         "write_support_bundle",
-        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.12.zip",
+        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.13.zip",
     )
 
     ui.dispatch(views.Request("action/export-support-bundle", {}))
 
     assert runtime.kodi.notifications[-1] == (
-        "Support bundle saved: mypicsdb3-support-test-v0.8.12.zip\n"
+        "Support bundle saved: mypicsdb3-support-test-v0.8.13.zip\n"
         "Support bundle folder: Kodi userdata > addon_data > "
         "plugin.image.mypicsdb3 > support-bundles",
         False,
     )
     assert runtime.kodi.info_messages[-1] == (
-        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.12.zip"
+        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.13.zip"
     )
 
 
@@ -1371,13 +1414,13 @@ def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
     views.xbmcgui.ListItem = InfoListItem
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
-    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.12")
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.13")
 
     assert url == ""
     assert item.video_tag_requests == 0
     assert item.properties["IsPlayable"] == "false"
     assert item.properties["MyPicsDB3.MediaType"] == "info"
-    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.12"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.13"
     assert is_folder is False
 
 

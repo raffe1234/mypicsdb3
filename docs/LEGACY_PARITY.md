@@ -63,15 +63,16 @@ feature lacked: changing a mapping makes the next scan re-read otherwise unchang
 pictures, while original files remain untouched. Shared MariaDB clients use the
 same stored override set.
 
-### 3. Negative/presence smart-filter operators and "Needs attention"
+### 3. Negative/presence smart-filter operators and "Needs attention" — implemented in 0.8.13
 
 The old Filter Wizard supported positive/negative tag behavior and no-date
-workflows. Query Model v1 already contains several `is_null`/`is_not_null`
-operators that the Kodi editor does not fully expose. Modern plan: add `is`,
-`is not`, `exists`, `missing`, richer date/rating operators and useful presets
-such as pictures without date/camera/location/keywords.
-
-Recommended target: 0.8.13.
+workflows. MyPicsDB 3 version 0.8.13 exposes the existing Query Model v1
+presence operators as **Exists** / **Missing**, uses controlled negated groups
+for **Is not**, adds exact/upper-bound/range rating choices and makes MIME type a
+first-class editor facet. The **Needs attention** browser reuses the same Query
+Model compiler for pictures without capture date, camera metadata, canonical
+location or keywords. It does not add raw SQL, scan files or modify source
+metadata.
 
 ### 4. Generic metadata/tag browsing
 
@@ -130,15 +131,14 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.12
+## Recommended roadmap after 0.8.13
 
-1. 0.8.13 — smart-filter completeness + Needs attention.
-2. 0.8.14 — Advanced Metadata Browser.
-3. 0.8.15 — collection snapshots.
-4. 0.8.16 — safe export/copy + manifest.
-5. Later — light video metadata, map/location UX, optional generic provider API,
+1. 0.8.14 — Advanced Metadata Browser.
+2. 0.8.15 — collection snapshots.
+3. 0.8.16 — safe export/copy + manifest.
+4. Later — light video metadata, map/location UX, optional generic provider API,
    rebuild catalogue while preserving sources.
-6. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
+5. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
    mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can

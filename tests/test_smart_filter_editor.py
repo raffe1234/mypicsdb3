@@ -33,10 +33,10 @@ class FakeCatalog:
         return []
 
     def cameras(self):
-        return []
+        return [{"camera_make": "Canon", "camera_model": "EOS R6"}]
 
     def tags(self):
-        return []
+        return [{"name": "Holiday"}]
 
     def query_facet_counts(self, query, field, limit=100):
         values = {
@@ -72,10 +72,12 @@ def test_editor_builds_previews_and_returns_validated_smart_collection() -> None
         selections=[
             3,  # Add criterion.
             7,  # Media type.
+            0,  # Is.
             1,  # Videos.
             4,  # Add criterion after first rule.
             2,  # Minimum rating.
-            3,  # Rating 4.
+            0,  # At least.
+            4,  # Rating 4.
             6,  # Preview with two rules.
             7,  # Save with two rules.
         ],
@@ -136,9 +138,11 @@ def test_editor_adds_extension_and_orientation_aware_shape_facets() -> None:
         selections=[
             3,   # Add criterion.
             8,   # File extension.
+            0,   # Is.
             1,   # .nef.
             4,   # Add criterion after first rule.
-            13,  # Image shape.
+            14,  # Image shape (MIME type was added before location facets).
+            0,   # Is.
             1,   # Portrait.
             7,   # Save with two rules.
         ],
@@ -162,4 +166,58 @@ def test_editor_adds_extension_and_orientation_aware_shape_facets() -> None:
             "operator": "eq",
             "value": "portrait",
         },
+    ]
+
+
+def test_editor_uses_query_model_negated_group_for_is_not() -> None:
+    dialog = FakeDialog(
+        selections=[
+            3,  # Add criterion.
+            6,  # Keyword.
+            1,  # Is not.
+            0,  # Holiday.
+            6,  # Save with one rule.
+        ],
+        inputs=["Not holiday"],
+    )
+
+    result = SmartFilterEditor(FakeCatalog(), dialog, localize).run()
+
+    assert result is not None
+    payload = picture_query_to_dict(result.query)
+    assert payload["root"]["children"] == [
+        {
+            "type": "group",
+            "match": "all",
+            "negated": True,
+            "children": [
+                {
+                    "type": "rule",
+                    "field": "keyword",
+                    "operator": "eq",
+                    "value": "holiday",
+                }
+            ],
+        }
+    ]
+
+
+def test_editor_exposes_missing_location_without_requesting_facet_values() -> None:
+    catalog = FakeCatalog()
+    dialog = FakeDialog(
+        selections=[
+            3,   # Add criterion.
+            12,  # City (MIME type shifts the legacy facet indices by one).
+            3,   # Missing.
+            6,   # Save with one rule.
+        ],
+        inputs=["Missing city"],
+    )
+
+    result = SmartFilterEditor(catalog, dialog, localize).run()
+
+    assert result is not None
+    payload = picture_query_to_dict(result.query)
+    assert payload["root"]["children"] == [
+        {"type": "rule", "field": "city", "operator": "is_null"}
     ]

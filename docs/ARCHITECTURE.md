@@ -202,6 +202,13 @@ The Query Model defines supported fields, operators, sort choices and validation
 limits. It is the only supported path from a user-created or stored query to a
 catalogue query. Raw SQL is not accepted from Kodi routes or saved records.
 
+`smart_filter_editor.py` exposes a deliberately bounded Kodi editor for that
+model. Version 0.8.13 represents user-facing **Is not** through controlled
+single-child negated groups and reuses existing presence operators rather than
+adding another SQL/query layer. `attention.py` contains the built-in **Needs
+attention** presets; those presets are normal `PictureQuery` values executed
+through the same `Catalog` count/page methods as saved smart collections.
+
 ### `static_collections.py`: manual-collection boundary
 
 Manual collections are intentionally separate from saved smart searches. This

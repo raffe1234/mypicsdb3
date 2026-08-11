@@ -12,6 +12,8 @@ New to the project? Read [Start here](START_HERE.md),
 - `db/catalog.py` contains catalogue writes and read models.
 - `scanner.py` never runs from a widget route.
 - `views.py` is the Kodi-specific browser and action layer.
+- `smart_filter_editor.py` and `attention.py` must build validated Query Model
+  data; neither module may introduce raw SQL or a second filtering language.
 - `screensaver.py` is a bounded read-only catalogue provider;
   `screensaver.mypicsdb3/default.py` owns Kodi's screensaver window and settings
   actions without creating `Runtime`.

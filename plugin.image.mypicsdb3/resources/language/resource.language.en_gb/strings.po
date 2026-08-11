@@ -1730,3 +1730,79 @@ msgstr "City"
 msgctxt "#32930"
 msgid "Sublocation"
 msgstr "Sublocation"
+
+msgctxt "#32931"
+msgid "MIME type"
+msgstr "MIME type"
+
+msgctxt "#32932"
+msgid "Contains"
+msgstr "Contains"
+
+msgctxt "#32933"
+msgid "Does not contain"
+msgstr "Does not contain"
+
+msgctxt "#32934"
+msgid "Date"
+msgstr "Date"
+
+msgctxt "#32935"
+msgid "Is between"
+msgstr "Is between"
+
+msgctxt "#32936"
+msgid "Exists"
+msgstr "Exists"
+
+msgctxt "#32937"
+msgid "Missing"
+msgstr "Missing"
+
+msgctxt "#32938"
+msgid "At least"
+msgstr "At least"
+
+msgctxt "#32939"
+msgid "At most"
+msgstr "At most"
+
+msgctxt "#32940"
+msgid "Exactly"
+msgstr "Exactly"
+
+msgctxt "#32941"
+msgid "Minimum rating"
+msgstr "Minimum rating"
+
+msgctxt "#32942"
+msgid "Maximum rating"
+msgstr "Maximum rating"
+
+msgctxt "#32943"
+msgid "Is"
+msgstr "Is"
+
+msgctxt "#32944"
+msgid "Is not"
+msgstr "Is not"
+
+msgctxt "#32945"
+msgid "Needs attention"
+msgstr "Needs attention"
+
+msgctxt "#32946"
+msgid "Pictures without date"
+msgstr "Pictures without date"
+
+msgctxt "#32947"
+msgid "Pictures without camera"
+msgstr "Pictures without camera"
+
+msgctxt "#32948"
+msgid "Pictures without location"
+msgstr "Pictures without location"
+
+msgctxt "#32949"
+msgid "Pictures without keywords"
+msgstr "Pictures without keywords"

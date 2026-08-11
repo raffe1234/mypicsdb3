@@ -155,7 +155,7 @@ Prefer this page, `ARCHITECTURE.md` and the current source code when they differ
 | Change metadata extraction/mapping | `metadata.py`, `metadata_mapping.py` | `db/catalog.py`, `scanner.py`, metadata/migration tests |
 | Add a setting | `resources/settings.xml` | `config.py`, `kodi.py`, typed-setting tests |
 | Change global or saved search | `search.py`, `query_model.py` | `saved_searches.py`, search tests |
-| Change the smart-filter editor | `smart_filter_editor.py` | `query_model.py`, editor tests |
+| Change the smart-filter editor or Needs attention presets | `smart_filter_editor.py`, `attention.py` | `query_model.py`, editor/UI tests |
 | Change a slideshow | `views.py`, `slideshow.py` | `service_loop.py`, slideshow tests |
 | Change the screensaver | `screensaver.mypicsdb3/default.py`, `screensaver.py` | `tests/test_screensaver.py`, screensaver flow guide |
 | Change background behaviour | `service_loop.py` | `kodi.py`, service tests |

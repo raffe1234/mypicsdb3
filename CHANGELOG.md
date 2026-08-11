@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.13 - 2026-08-11
+
+- Complete the Kodi smart-filter editor's safe Query Model v1 surface with user-facing `is not`, `exists` and `missing` choices where the existing validated model can represent them. Add exact/upper-bound/range/presence rating choices, date presence checks and MIME-type filtering without changing Query Model version 1 or database schema 9.
+- Express `is not` through Query Model's existing single-child negated groups rather than introducing user-defined SQL or a parallel operator path. Saved version-1 queries remain backward compatible and continue to be revalidated on open.
+- Add a **Needs attention** browser with live Query Model presets for pictures without capture date, camera, canonical location or keywords. Presets respect the normal minimum-rating display policy, exclude missing catalogue rows and do not scan or modify source files.
+- Keep screensaver/repository and Estuary runtime revisions unchanged. Update README, Query Model/search flow, legacy-parity and release documentation, plus editor/UI regression coverage.
+
 ## 0.8.12 - 2026-08-11
 
 - Add schema 9 with database-global metadata mapping overrides for allowlisted canonical fields. Custom rules can redirect EXIF/XMP/IPTC tags, combine several raw tags through deterministic priority, or suppress a built-in mapping without exposing raw SQL or schema identifiers.

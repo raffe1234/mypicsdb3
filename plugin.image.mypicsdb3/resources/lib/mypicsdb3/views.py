@@ -14,6 +14,7 @@ import xbmcgui  # type: ignore
 import xbmcplugin  # type: ignore
 
 from .album_view import save_current_album_view
+from .attention import ATTENTION_PRESETS, attention_preset
 from .diagnostics import collect_diagnostics, write_support_bundle
 from .home_layout_editor import (
     SmartHomeEditorText,
@@ -386,6 +387,7 @@ class PluginUI:
             ),
             self.add_folder(self.text(30000, "Picture sources"), "sources", **rating_params),
             self.add_folder(self.text(32903, "Metadata mapping"), "metadata-mapping"),
+            self.add_folder(self.text(32945, "Needs attention"), "needs-attention", **rating_params),
         ]
         hidden_nodes = parse_hidden_main_menu_nodes(
             self.kodi.addon.getSetting("hidden_main_menu_nodes")
@@ -435,6 +437,54 @@ class PluginUI:
                     ),
                 )
         self.finish(items, content="files", category=self.text(30056, "MyPicsDB 3"))
+
+    def needs_attention(self, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
+        items = []
+        for preset in ATTENTION_PRESETS:
+            total = int(self.catalog.count_query_pictures(preset.query))
+            label = "%s  [COLOR=grey](%d)[/COLOR]" % (
+                self.text(preset.string_id, preset.fallback),
+                total,
+            )
+            items.append(
+                self.add_folder(
+                    label,
+                    "needs-attention-result",
+                    kind=preset.key,
+                    **rating_params,
+                )
+            )
+        self.finish(
+            items,
+            content="files",
+            category=self._rating_category(self.text(32945, "Needs attention"), params),
+        )
+
+    def needs_attention_result(self, kind: str, params: Dict[str, str]):
+        try:
+            preset = attention_preset(kind)
+        except ValueError as exc:
+            self.kodi.notify(str(exc), error=True)
+            return self.finish(
+                [],
+                content="images",
+                cache=False,
+                category=self.text(32945, "Needs attention"),
+            )
+        result_params = dict(params)
+        result_params["kind"] = preset.key
+        return self.pictures(
+            "needs-attention-result",
+            lambda limit, offset: self.catalog.query_pictures(
+                preset.query,
+                limit,
+                offset,
+            ),
+            result_params,
+            self.text(preset.string_id, preset.fallback),
+        )
 
     def search(self, params: Optional[Dict[str, str]] = None):
         search_params = dict(params or {})
@@ -3582,6 +3632,10 @@ class PluginUI:
             return self.collection(collection_id, params)
         if route == "diagnostics":
             return self.diagnostics()
+        if route == "needs-attention":
+            return self.needs_attention(params)
+        if route == "needs-attention-result":
+            return self.needs_attention_result(params.get("kind", ""), params)
         if route == "metadata-mapping":
             return self.metadata_mapping(params)
         if route == "sources":

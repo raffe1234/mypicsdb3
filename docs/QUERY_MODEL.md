@@ -8,7 +8,10 @@ Kodi smart-filter editor for a safe, flat all/any subset of the model. Version
 0.8.10 adds backward-compatible metadata facets without changing Query Model
 version 1. Version 0.8.12 adds database-global metadata normalization/mapping
 upstream of the Query Model; the model itself remains version 1 because queries
-continue to target the same canonical catalogue fields.
+continue to target the same canonical catalogue fields. Version 0.8.13 expands
+the Kodi editor and built-in consumers only: controlled **Is not** choices use
+the model's already-supported negated groups, while existing presence and rating
+operators are exposed without changing the stored query format.
 
 ## Goals
 
@@ -168,18 +171,35 @@ The public compiler result contains reusable `where_sql`, `params` and
 `order_by_sql` fragments. Future preview and facet consumers must build on
 these fragments rather than introduce separate user-defined SQL paths.
 
-## Kodi editor scope in 0.3.0
+## Kodi editor scope in 0.8.13
 
 The editor exposes one flat group using **all criteria** or **any criterion**.
-It supports text, date range, minimum rating, favorite state, source, camera,
-keyword, media type, file extension, stored country/state/city/sublocation and
-image shape, plus sort order and the global-rating-policy toggle. File and
-location choices use bounded facet counts from the validated query selection. It
-previews the count and up to ten filenames before saving the query in schema 5.
+It supports text, date, rating, favorite state, source, camera, keyword, media
+type, file extension, MIME type, stored country/state/city/sublocation and image
+shape, plus sort order and the global-rating-policy toggle. Value fields can use
+**Is** / **Is not** where the UI presents equality; date, rating, camera,
+keyword, MIME and location fields expose the Query Model's existing
+`is_null`/`is_not_null` checks as **Missing** / **Exists**. Rating also exposes
+exact, lower-bound, upper-bound and inclusive-range operators. File, MIME and
+location choices use bounded facet counts from the validated query selection.
+The editor previews the count and up to ten filenames before saving the query in
+schema 5.
+
+The editor does not add a separate `neq` SQL operator. User-facing **Is not** is
+serialized as a single-child Query Model group with `negated=true` around the
+same validated equality rule. This keeps SQL generation inside the compiler and
+keeps already-saved version-1 JSON valid.
+
+Version 0.8.13 also adds **Needs attention** presets. They are ordinary
+`PictureQuery` objects for pictures missing capture date, camera, all four
+canonical location fields, or keywords. Counts and result pages use
+`Catalog.count_query_pictures()` / `Catalog.query_pictures()`; no special raw-SQL
+path, rescan or source-file write is introduced.
 
 Deliberately not included:
 
-- nested or negated groups in the Kodi dialog;
+- arbitrary nested/negated group construction in the Kodi dialog beyond the
+  controlled single-rule **Is not** wrapper;
 - phrase, fuzzy, prefix or relevance-ranked search;
 - raw SQL compatibility mode;
 - query JSON in saved-search plugin URLs; they reference a database ID.

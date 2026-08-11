@@ -31,6 +31,7 @@ pagination, media-item and slideshow support as other views.
 | `query_model.py` | Versioned fields, operators, limits, parsing and SQL compilation |
 | `saved_searches.py` | Saved-search name and record validation |
 | `smart_filter_editor.py` | Kodi dialogs for building a validated query |
+| `attention.py` | Built-in missing-metadata Query Model presets |
 | `db/catalog.py` | Query execution, counts and saved-search persistence |
 | `views.py` | Search UI, saved-search routes, rename/delete and smart row actions |
 | `preferences.py`, `home_layout_editor.py` | Placement of saved smart collections on the home screen |
@@ -101,6 +102,12 @@ main XML dialog keeps Cancel and Save as persistent right-hand buttons while
 criteria, Add criterion and Preview results remain in the scrolling list. Small
 field/value choices continue to use native Kodi select dialogs.
 
+Version 0.8.13 exposes more of Query Model v1 without adding another query
+language. **Is not** uses a controlled one-rule negated group; **Exists** and
+**Missing** reuse allowlisted `is_not_null` / `is_null` operators. Rating can be
+matched exactly, at least, at most or within an inclusive range. MIME type is a
+normal scalar facet alongside file extension and stored location values.
+
 When adding a filter field:
 
 1. define and validate it in `query_model.py`;
@@ -109,6 +116,21 @@ When adding a filter field:
    clearly;
 4. update docs and localization;
 5. test saved-query reopen and invalid stored input.
+
+## Needs attention presets
+
+`attention.py` defines four built-in, read-only Query Model presets:
+
+- pictures without capture date;
+- pictures without camera metadata;
+- pictures with no canonical country/state/city/sublocation value;
+- pictures without keywords.
+
+`PluginUI.needs_attention()` counts each preset through
+`Catalog.count_query_pictures()`, then `needs_attention_result()` pages it with
+`Catalog.query_pictures()`. The presets explicitly select pictures rather than
+videos, exclude catalogue rows already marked missing and follow the ordinary
+minimum-rating display policy. They never trigger scanning or metadata writes.
 
 ## Dynamic Home rows
 
@@ -143,6 +165,8 @@ Changes can span:
 ## Invariants
 
 - Raw SQL never crosses the route, setting or saved-search boundary.
+- Built-in Needs attention views use the same Query Model compiler as saved
+  smart collections; they do not introduce a second filtering path.
 - Stored JSON is revalidated on every open.
 - Query compilation is deterministic and backend-neutral.
 - Validation limits prevent unbounded rule trees and oversized values.

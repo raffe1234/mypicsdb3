@@ -59,7 +59,8 @@ Read this for global text search, normalized search documents, validated query
 JSON, saved searches, smart-filter editing and smart home rows.
 
 Main files: `search.py`, `search_index.py`, `query_model.py`,
-`saved_searches.py`, `smart_filter_editor.py`, `db/catalog.py`, `views.py`.
+`saved_searches.py`, `smart_filter_editor.py`, `attention.py`, `db/catalog.py`,
+`views.py`.
 
 ### [Manual collections](STATIC_COLLECTIONS.md)
 
