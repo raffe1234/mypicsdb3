@@ -696,7 +696,7 @@ class Catalog:
         with self.engine.transaction() as connection:
             row = self.engine.fetchone(
                 connection,
-                "SELECT recursive, include_videos, picture_extensions, video_extensions, "
+                "SELECT `recursive`, include_videos, picture_extensions, video_extensions, "
                 "exclude_fragments, exclude_hidden FROM source_scan_policies WHERE source_id=?",
                 (source_id,),
             )
@@ -738,14 +738,14 @@ class Catalog:
                 self.engine.execute(
                     connection,
                     "INSERT INTO source_scan_policies "
-                    "(source_id, recursive, include_videos, picture_extensions, video_extensions, "
+                    "(source_id, `recursive`, include_videos, picture_extensions, video_extensions, "
                     "exclude_fragments, exclude_hidden, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (source_id, *values),
                 ).close()
             else:
                 self.engine.execute(
                     connection,
-                    "UPDATE source_scan_policies SET recursive=?, include_videos=?, "
+                    "UPDATE source_scan_policies SET `recursive`=?, include_videos=?, "
                     "picture_extensions=?, video_extensions=?, exclude_fragments=?, "
                     "exclude_hidden=?, updated_at=? WHERE source_id=?",
                     (*values, source_id),

@@ -3,6 +3,7 @@
 ## 0.8.11 - 2026-08-11
 
 - Add schema 8 with portable per-source scan policies for recursive traversal, picture/video extensions, video inclusion, exclusions and hidden-file handling. Sources without an override continue to inherit the scanning client's global defaults exactly as before.
+- Quote the schema-8 `recursive` policy column in all SQL so the same schema works on MariaDB/MySQL, where `RECURSIVE` is reserved syntax, while remaining compatible with SQLite databases created by the earlier 0.8.11 development commit.
 - Freeze each source's effective policy at scan start and include it in the local checkpoint signature. Changing a source policy therefore invalidates incompatible resume state instead of skipping media that became newly eligible.
 - Add **Source scan settings** to the Picture sources context menu. Policy changes never touch original files or trigger an automatic scan; the next complete scan applies the new scope and may soft-mark previously indexed out-of-policy rows missing.
 - Add a maintained legacy-parity document based on the old Xycl repositories and Kodi forum references so future work can distinguish verified MyPicsDB/MyPicsDB2 gaps from already-modernized behavior.

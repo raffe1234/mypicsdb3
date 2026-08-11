@@ -88,3 +88,17 @@ def test_source_scan_policy_rejects_empty_picture_extensions(tmp_path: Path) -> 
                 exclude_hidden=True,
             ),
         )
+
+def test_source_scan_policy_schema_quotes_recursive_identifier() -> None:
+    from mypicsdb3.db.migration_steps.v0008_source_scan_policies import MYSQL_TABLE, SQLITE_TABLE
+    from mypicsdb3.db.schema import MYSQL_SCHEMA, SQLITE_SCHEMA
+
+    schema_statements = [
+        statement
+        for statement in (*SQLITE_SCHEMA, *MYSQL_SCHEMA)
+        if "CREATE TABLE IF NOT EXISTS source_scan_policies" in statement
+    ]
+    assert len(schema_statements) == 2
+    assert all("`recursive`" in statement for statement in schema_statements)
+    assert "`recursive`" in SQLITE_TABLE
+    assert "`recursive`" in MYSQL_TABLE

@@ -25,7 +25,7 @@ SQLITE_SCHEMA = [
     )""",
     """CREATE TABLE IF NOT EXISTS source_scan_policies (
         source_id INTEGER PRIMARY KEY,
-        recursive INTEGER NOT NULL,
+        `recursive` INTEGER NOT NULL,
         include_videos INTEGER NOT NULL,
         picture_extensions TEXT NOT NULL,
         video_extensions TEXT NOT NULL,
@@ -196,7 +196,7 @@ MYSQL_SCHEMA = [
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin""",
     """CREATE TABLE IF NOT EXISTS source_scan_policies (
         source_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
-        recursive TINYINT(1) NOT NULL,
+        `recursive` TINYINT(1) NOT NULL,
         include_videos TINYINT(1) NOT NULL,
         picture_extensions TEXT NOT NULL,
         video_extensions TEXT NOT NULL,
