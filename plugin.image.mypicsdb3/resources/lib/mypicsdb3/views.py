@@ -37,6 +37,13 @@ from .preferences import (
     serialize_persisted_home_layout,
 )
 from .metadata_mapping import MetadataMappingRule, SOURCE_TYPES, TARGET_FIELDS
+from .metadata_browser import (
+    CATEGORIES as METADATA_BROWSER_CATEGORIES,
+    category_by_key as metadata_category_by_key,
+    facet_by_key as metadata_facet_by_key,
+    metadata_browser_base_query,
+    metadata_value_query,
+)
 from .music_playlists import (
     KODI_MUSIC_PLAYLIST_DIRECTORY,
     MUSIC_PLAYLIST_MASK,
@@ -387,6 +394,7 @@ class PluginUI:
             ),
             self.add_folder(self.text(30000, "Picture sources"), "sources", **rating_params),
             self.add_folder(self.text(32903, "Metadata mapping"), "metadata-mapping"),
+            self.add_folder(self.text(32950, "Browse metadata"), "metadata-browser", **rating_params),
             self.add_folder(self.text(32945, "Needs attention"), "needs-attention", **rating_params),
         ]
         hidden_nodes = parse_hidden_main_menu_nodes(
@@ -437,6 +445,157 @@ class PluginUI:
                     ),
                 )
         self.finish(items, content="files", category=self.text(30056, "MyPicsDB 3"))
+
+    def metadata_browser(self, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        rating_params = self._rating_route_params(params)
+        items = [
+            self.add_folder(
+                self.text(category.string_id, category.fallback),
+                "metadata-category",
+                category=category.key,
+                **rating_params,
+            )
+            for category in METADATA_BROWSER_CATEGORIES
+        ]
+        self.finish(
+            items,
+            content="files",
+            category=self._rating_category(self.text(32950, "Browse metadata"), params),
+        )
+
+    def metadata_category(self, key: str, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        try:
+            category = metadata_category_by_key(key)
+        except ValueError as exc:
+            self.kodi.notify(str(exc), error=True)
+            return self.finish(
+                [],
+                content="files",
+                cache=False,
+                category=self.text(32950, "Browse metadata"),
+            )
+        rating_params = self._rating_route_params(params)
+        items = []
+        for facet_key in category.facet_keys:
+            facet = metadata_facet_by_key(facet_key)
+            items.append(
+                self.add_folder(
+                    self.text(facet.string_id, facet.fallback),
+                    "metadata-values",
+                    field=facet.key,
+                    **rating_params,
+                )
+            )
+        self.finish(
+            items,
+            content="files",
+            category=self._rating_category(
+                self.text(category.string_id, category.fallback), params
+            ),
+        )
+
+    def _metadata_value_label(self, facet_key: str, value: Any) -> str:
+        text = str(value)
+        if facet_key == "extension":
+            return "." + text.lstrip(".")
+        if facet_key == "aspect":
+            labels = {
+                "landscape": self.text(32881, "Landscape"),
+                "portrait": self.text(32882, "Portrait"),
+                "square": self.text(32883, "Square"),
+            }
+            return labels.get(text.lower(), text)
+        if facet_key == "rating":
+            return self.text(32955, "Rating %s") % text
+        return text
+
+    def metadata_values(self, field: str, params: Optional[Dict[str, str]] = None):
+        params = params or {}
+        try:
+            facet = metadata_facet_by_key(field)
+        except ValueError as exc:
+            self.kodi.notify(str(exc), error=True)
+            return self.finish(
+                [],
+                content="files",
+                cache=False,
+                category=self.text(32950, "Browse metadata"),
+            )
+        default_limit = max(1, min(499, int(self.kodi.settings.browser_page_size)))
+        limit = safe_limit(params.get("limit"), default_limit)
+        limit = max(1, min(499, limit))
+        try:
+            offset = max(0, int(params.get("offset", "0") or 0))
+        except (TypeError, ValueError):
+            offset = 0
+        query = metadata_browser_base_query()
+        rows = self.catalog.query_facet_counts(
+            query, facet.catalog_field, limit + 1, offset
+        )
+        page_rows = rows[:limit]
+        rating_params = self._rating_route_params(params)
+        items = []
+        for row in page_rows:
+            raw_value = row.get("value")
+            label = "%s  [COLOR=grey](%d)[/COLOR]" % (
+                self._metadata_value_label(facet.key, raw_value),
+                int(row.get("picture_count") or 0),
+            )
+            items.append(
+                self.add_folder(
+                    label,
+                    "metadata-result",
+                    field=facet.key,
+                    value=raw_value,
+                    **rating_params,
+                )
+            )
+        if len(rows) > limit:
+            items.append(
+                self._next_page_item(
+                    "metadata-values",
+                    offset,
+                    limit,
+                    field=facet.key,
+                    **rating_params,
+                )
+            )
+        self.finish(
+            items,
+            content="files",
+            cache=False,
+            category=self._rating_category(
+                self.text(facet.string_id, facet.fallback), params
+            ),
+        )
+
+    def metadata_result(self, field: str, value: Any, params: Dict[str, str]):
+        try:
+            facet = metadata_facet_by_key(field)
+            query = metadata_value_query(facet.key, value)
+        except ValueError as exc:
+            self.kodi.notify(str(exc), error=True)
+            return self.finish(
+                [],
+                content="images",
+                cache=False,
+                category=self.text(32950, "Browse metadata"),
+            )
+        result_params = dict(params)
+        result_params["field"] = facet.key
+        result_params["value"] = str(value)
+        category = "%s: %s" % (
+            self.text(facet.string_id, facet.fallback),
+            self._metadata_value_label(facet.key, value),
+        )
+        return self.pictures(
+            "metadata-result",
+            lambda limit, offset: self.catalog.query_pictures(query, limit, offset),
+            result_params,
+            category,
+        )
 
     def needs_attention(self, params: Optional[Dict[str, str]] = None):
         params = params or {}
@@ -3632,6 +3791,16 @@ class PluginUI:
             return self.collection(collection_id, params)
         if route == "diagnostics":
             return self.diagnostics()
+        if route == "metadata-browser":
+            return self.metadata_browser(params)
+        if route == "metadata-category":
+            return self.metadata_category(params.get("category", ""), params)
+        if route == "metadata-values":
+            return self.metadata_values(params.get("field", ""), params)
+        if route == "metadata-result":
+            return self.metadata_result(
+                params.get("field", ""), params.get("value", ""), params
+            )
         if route == "needs-attention":
             return self.needs_attention(params)
         if route == "needs-attention-result":

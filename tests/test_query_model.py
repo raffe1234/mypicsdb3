@@ -535,8 +535,32 @@ def test_catalog_richer_metadata_filters_and_facet_counts(tmp_path: Path) -> Non
     country_counts = catalog.query_facet_counts(base, "country")
     assert country_counts[0] == {"value": "Sweden", "picture_count": 2}
     assert country_counts[1] == {"value": "France", "picture_count": 1}
+    assert catalog.query_facet_counts(base, "camera_make") == [
+        {"value": "Canon", "picture_count": 1},
+        {"value": "Nikon", "picture_count": 1},
+    ]
+    assert catalog.query_facet_counts(base, "taken_year") == [
+        {"value": 2024, "picture_count": 3}
+    ]
+    assert catalog.query_facet_counts(base, "aspect") == [
+        {"value": "landscape", "picture_count": 1},
+        {"value": "portrait", "picture_count": 1},
+        {"value": "square", "picture_count": 1},
+    ]
+    assert catalog.query_facet_counts(base, "rating", 2) == [
+        {"value": 3, "picture_count": 1},
+        {"value": 4, "picture_count": 1},
+    ]
+    assert catalog.query_facet_counts(base, "keyword") == [
+        {"value": "Summer", "picture_count": 1}
+    ]
+    assert catalog.query_facet_counts(base, "country", 1, 1) == [
+        {"value": "France", "picture_count": 1}
+    ]
 
     with pytest.raises(ValueError, match="Unsupported query facet"):
         catalog.query_facet_counts(base, "filename")
     with pytest.raises(ValueError, match="between 1 and 500"):
         catalog.query_facet_counts(base, "city", 0)
+    with pytest.raises(ValueError, match="non-negative"):
+        catalog.query_facet_counts(base, "city", 10, -1)

@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.13. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.14. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -52,7 +52,9 @@ For the component boundaries and long-lived safety rules, see
 ### Browsing, search and metadata
 
 - Browse favorites, ratings, keywords, cameras, year/month/day, folders,
-  geotagged media, recent items and optional videos.
+  geotagged media, recent items and optional videos. Use **Browse metadata** for
+  curated Camera, Location, Capture, Image and Keywords facets with bounded
+  value counts and normal paginated Query Model result pages.
 - Search Unicode-normalized filename, caption, keywords, paths, camera and
   location fields with AND matching.
 - Apply an optional global minimum-picture-rating policy with a temporary
@@ -482,8 +484,17 @@ operation is allowed to finish before the scan records its cancelled state.
 The stop action does not refresh the active Kodi container while the scan
 plug-in call is still finishing, avoiding a Kodi GUI update race.
 
-The first scan can take time on a large local collection or NAS. Subsequent
-scans are incremental: unchanged files are not read and indexed again. MyPicsDB 3
+The first scan can take a long time on a very large local collection or NAS
+because every eligible file must be discovered, stat'ed and, for pictures, have
+its bounded metadata read at least once. Network shares add round-trip latency.
+MyPicsDB 3 deliberately scans one file at a time today: this keeps Kodi VFS use,
+SQLite/MariaDB writes, cancellation and folder checkpoints deterministic rather
+than trading correctness for unmeasured concurrency. If Kodi's own video/music
+library scanners or other add-ons are walking the same NAS at the same time,
+they can compete for disk and network I/O; for a one-time large import it may be
+helpful to let those scans finish or temporarily schedule them separately.
+
+Subsequent scans are incremental: unchanged files are not read and indexed again. MyPicsDB 3
 also saves an atomic local checkpoint after each fully processed folder. If Kodi
 exits, the add-on is updated or **Stop scan** is used, the next scan with the same
 enabled sources and scan settings continues from the first unfinished folder.
@@ -546,6 +557,9 @@ After the first successful scan, the add-on main menu provides:
   reopened with normal pagination and slideshow support;
 - **Create smart collection** — combine metadata criteria in a Kodi dialog,
   preview the current result count and save the validated filter.
+- **Browse metadata** — curated metadata navigation grouped into Camera, Location,
+  Capture, Image and Keywords. Each stored value shows a bounded picture count and
+  opens a normal paginated Query Model result.
 - **Needs attention** — live Query Model views for pictures missing capture date,
   camera metadata, canonical location or keywords.
 
@@ -557,8 +571,8 @@ the catalogue.
 
 Open **Settings > General > Configure add-on menu** to show or hide the
 configurable catalogue browsing nodes. Search, Collections, Saved searches,
-Create smart collection, Picture sources, Metadata mapping, Needs attention, Refresh random
-selections, Scan now, Scan status and Settings always remain visible.
+Create smart collection, Picture sources, Metadata mapping, Browse metadata, Needs attention,
+Refresh random selections, Scan now, Scan status and Settings always remain visible.
 
 Open the context menu on a picture or indexed home video and select **Add to
 collection** to append it to an existing manual collection or create a new one.
@@ -587,6 +601,16 @@ The background service detects a local date change while Kodi is running and
 refreshes date-sensitive views without reloading the complete skin. Both
 **On this day** rows therefore change without forcing every home image to be
 decoded again.
+
+**Browse metadata** is intentionally not a raw EXIF/XMP/IPTC tag dump. It exposes
+only catalogue fields MyPicsDB 3 understands and can query safely: camera make/model;
+country, state/region, city and sublocation; capture year; file extension, MIME type,
+image shape and rating; and normalized keywords. Values are grouped through a fixed
+allowlist in the catalogue layer, counts reuse the current Query Model selection and
+minimum-rating policy, and long value lists are paginated. Choosing a value builds a
+validated Query Model v1 query; no metadata name from a file becomes SQL. **Metadata
+mapping** remains the separate administrative tool for deciding how raw EXIF/XMP/IPTC
+tags feed those canonical fields.
 
 ### 5. Search the whole catalogue
 

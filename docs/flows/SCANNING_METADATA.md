@@ -190,6 +190,21 @@ with immediate irreversible deletion.
 Search the suite for `partial`, `missing`, `checkpoint`, `cancel` and
 `acquire_lock` before changing this flow.
 
+## Large-library performance and concurrency
+
+The scanner currently processes eligible files serially. First scans and explicit
+metadata reindexes therefore reflect the cost of one filesystem stat plus bounded
+metadata inspection per picture; SMB/NFS latency and other Kodi library scanners
+using the same storage can dominate wall-clock time. Once a row's file size, mtime
+and metadata-index fingerprint still match, later incremental scans reuse indexed
+metadata instead of opening the picture again.
+
+Do not optimize this by adding concurrent catalogue writes. A safe future experiment
+would use a small bounded worker pool only for filesystem/stat/metadata-read work,
+then feed completed records back to the existing single ordered catalogue/checkpoint
+commit path. Such a change needs benchmarks and cancellation/lock/checkpoint tests on
+local files, Kodi VFS/SMB, SQLite and shared MariaDB before it can become a default.
+
 ## Invariants
 
 - Never mark unseen media missing after an unavailable or partial traversal.

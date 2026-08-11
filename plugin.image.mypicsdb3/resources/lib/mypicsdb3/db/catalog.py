@@ -72,10 +72,23 @@ s.label AS source_label
 QUERY_FACET_EXPRESSIONS = {
     "extension": "NULLIF(LOWER(TRIM(p.extension)),'')",
     "mime_type": "NULLIF(LOWER(TRIM(p.mime_type)),'')",
+    "camera_make": "NULLIF(TRIM(p.camera_make),'')",
+    "camera_model": "NULLIF(TRIM(p.camera_model),'')",
     "country": "NULLIF(TRIM(p.country),'')",
     "state": "NULLIF(TRIM(p.state),'')",
     "city": "NULLIF(TRIM(p.city),'')",
     "sublocation": "NULLIF(TRIM(p.sublocation),'')",
+    "taken_year": "p.taken_year",
+    "rating": "p.rating",
+    "aspect": (
+        "CASE "
+        "WHEN p.width IS NULL OR p.height IS NULL OR p.width<=0 OR p.height<=0 THEN NULL "
+        "WHEN (CASE WHEN p.orientation IN (5,6,7,8) THEN p.height ELSE p.width END) "
+        "> (CASE WHEN p.orientation IN (5,6,7,8) THEN p.width ELSE p.height END) THEN 'landscape' "
+        "WHEN (CASE WHEN p.orientation IN (5,6,7,8) THEN p.height ELSE p.width END) "
+        "< (CASE WHEN p.orientation IN (5,6,7,8) THEN p.width ELSE p.height END) THEN 'portrait' "
+        "ELSE 'square' END"
+    ),
 }
 
 
@@ -1144,28 +1157,47 @@ class Catalog:
             )
         return int((row or {}).get("total") or 0)
 
-    def query_facet_counts(self, query_model: Any, field: str, limit: int = 100) -> List[Dict[str, Any]]:
-        """Return bounded scalar facet counts for the same validated query selection.
+    def query_facet_counts(
+        self, query_model: Any, field: str, limit: int = 100, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Return bounded facet counts for the same validated query selection.
 
         The field name is resolved through a fixed allowlist; callers never supply
-        SQL identifiers or expressions. Empty metadata values are omitted.
+        SQL identifiers or expressions. Scalar empty values are omitted and the
+        keyword facet uses the normalized tag relation.
         """
-        if field not in QUERY_FACET_EXPRESSIONS:
+        if field != "keyword" and field not in QUERY_FACET_EXPRESSIONS:
             raise ValueError("Unsupported query facet field %r" % field)
         if type(limit) is not int:
             raise ValueError("Query facet limit must be an integer")
         if limit < 1 or limit > 500:
             raise ValueError("Query facet limit must be between 1 and 500")
+        if type(offset) is not int or offset < 0:
+            raise ValueError("Query facet offset must be a non-negative integer")
         compiled = compile_picture_query(query_model, self.rating_policy)
-        expression = QUERY_FACET_EXPRESSIONS[field]
-        sql = (
-            "SELECT %s AS facet_value, COUNT(*) AS picture_count FROM pictures p "
-            "WHERE %s AND %s IS NOT NULL "
-            "GROUP BY %s ORDER BY picture_count DESC, facet_value ASC LIMIT ?"
-            % (expression, compiled.where_sql, expression, expression)
-        )
+        if field == "keyword":
+            sql = (
+                "SELECT t.name AS facet_value, COUNT(*) AS picture_count "
+                "FROM pictures p "
+                "JOIN picture_tags pt ON pt.picture_id=p.id "
+                "JOIN tags t ON t.id=pt.tag_id "
+                "WHERE %s "
+                "GROUP BY t.id, t.name "
+                "ORDER BY picture_count DESC, facet_value ASC LIMIT ? OFFSET ?"
+                % compiled.where_sql
+            )
+            params = (*compiled.params, limit, offset)
+        else:
+            expression = QUERY_FACET_EXPRESSIONS[field]
+            sql = (
+                "SELECT %s AS facet_value, COUNT(*) AS picture_count FROM pictures p "
+                "WHERE %s AND %s IS NOT NULL "
+                "GROUP BY %s ORDER BY picture_count DESC, facet_value ASC LIMIT ? OFFSET ?"
+                % (expression, compiled.where_sql, expression, expression)
+            )
+            params = (*compiled.params, limit, offset)
         with self.engine.transaction() as connection:
-            rows = self.engine.fetchall(connection, sql, (*compiled.params, limit))
+            rows = self.engine.fetchall(connection, sql, params)
         return [
             {
                 "value": row.get("facet_value"),

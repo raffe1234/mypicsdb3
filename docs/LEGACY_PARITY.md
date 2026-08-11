@@ -74,15 +74,20 @@ Model compiler for pictures without capture date, camera metadata, canonical
 location or keywords. It does not add raw SQL, scan files or modify source
 metadata.
 
-### 4. Generic metadata/tag browsing
+### 4. Generic metadata/tag browsing — implemented in 0.8.14
 
 Legacy `Browse by Tags` exposed arbitrary stored tag types and their values.
-Modern plan: an **Advanced Metadata Browser** over curated canonical categories
-(Camera, Location, Capture, Image, Keywords) with bounded facet counts through
-the Query Model/catalogue boundary. An optional "Other metadata" area can come
-later; do not dump uncontrolled raw EXIF names into the primary UI.
+MyPicsDB 3 version 0.8.14 implements the modernized **Browse metadata** path over
+curated canonical categories: Camera, Location, Capture, Image and Keywords.
+The catalogue owns a fixed facet allowlist, value counts are bounded and paginated,
+and selecting a value builds an ordinary validated Query Model v1 query. Camera
+make/model, capture year, image shape, rating and normalized keyword facets join
+the location/file facets introduced earlier. No file-supplied tag name becomes SQL.
 
-Recommended target: 0.8.14.
+An optional advanced "Other metadata" store/browser could still be designed later,
+but it would require an explicit raw-metadata persistence model and is not required
+for the stable legacy use case. Do not dump uncontrolled raw EXIF names into the
+primary UI.
 
 ### 5. Freeze current results into a manual collection
 
@@ -131,14 +136,13 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.13
+## Recommended roadmap after 0.8.14
 
-1. 0.8.14 — Advanced Metadata Browser.
-2. 0.8.15 — collection snapshots.
-3. 0.8.16 — safe export/copy + manifest.
-4. Later — light video metadata, map/location UX, optional generic provider API,
+1. 0.8.15 — collection snapshots.
+2. 0.8.16 — safe export/copy + manifest.
+3. Later — light video metadata, map/location UX, optional generic provider API,
    rebuild catalogue while preserving sources.
-5. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
+4. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
    mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can

@@ -12,8 +12,10 @@ New to the project? Read [Start here](START_HERE.md),
 - `db/catalog.py` contains catalogue writes and read models.
 - `scanner.py` never runs from a widget route.
 - `views.py` is the Kodi-specific browser and action layer.
-- `smart_filter_editor.py` and `attention.py` must build validated Query Model
-  data; neither module may introduce raw SQL or a second filtering language.
+- `smart_filter_editor.py`, `attention.py` and `metadata_browser.py` must build
+  validated Query Model data for result selection; none may introduce raw SQL or
+  a second filtering language. Metadata value enumeration belongs to the fixed,
+  bounded facet allowlist in `Catalog.query_facet_counts()`.
 - `screensaver.py` is a bounded read-only catalogue provider;
   `screensaver.mypicsdb3/default.py` owns Kodi's screensaver window and settings
   actions without creating `Runtime`.
@@ -25,6 +27,13 @@ New to the project? Read [Start here](START_HERE.md),
 A source is marked missing only after its root was confirmed available and a
 complete, non-cancelled traversal finished. Records are soft-marked missing.
 Cleanup removes old missing rows after the configured retention period.
+
+The scanner is intentionally serial today. A first scan or metadata reindex can
+therefore be slow on very large network libraries, but serial traversal preserves
+Kodi VFS behaviour, one ordered database/checkpoint stream and predictable cancellation.
+Do not add arbitrary concurrent database writes. A future performance experiment may
+use a small bounded worker pool for file stat/metadata reads only, with results committed
+serially and benchmarked on local, SMB, SQLite and MariaDB configurations.
 
 ## Schema changes
 

@@ -178,7 +178,13 @@ that plug-in and service startup cannot modify the schema concurrently.
 unchanged-file detection, catalogue writes, missing-row marking, scan locks and
 checkpoints. It accepts callbacks for cancellation, progress and start state.
 The filesystem is wrapped in `CancellationAwareFilesystem` so cancellation and
-lock refresh checks also occur around slow I/O.
+lock refresh checks also occur around slow I/O. The current scanner deliberately
+processes files serially. This keeps Kodi VFS access, the single scan connection,
+folder-level commit/checkpoint ordering and cancellation deterministic on both
+SQLite and shared MariaDB. Any future concurrency should parallelize only measured
+read/metadata work behind a small bounded worker pool while preserving a serial
+catalogue/checkpoint commit boundary; it must not be introduced as an unbounded
+thread-per-file optimization.
 
 ### `filesystem.py`: local and Kodi VFS adapters
 
@@ -208,6 +214,13 @@ single-child negated groups and reuses existing presence operators rather than
 adding another SQL/query layer. `attention.py` contains the built-in **Needs
 attention** presets; those presets are normal `PictureQuery` values executed
 through the same `Catalog` count/page methods as saved smart collections.
+
+`metadata_browser.py` defines the version-0.8.14 curated metadata hierarchy and
+translates a selected browser value back into Query Model v1. `Catalog.query_facet_counts()`
+owns the separate fixed allowlist of aggregate expressions used only to enumerate
+values/counts; these facet identifiers are not persisted query fields and callers
+never provide SQL expressions. Keyword counts join the normalized tag relation,
+while camera/year/aspect/rating/file/location facets remain bounded catalogue queries.
 
 ### `static_collections.py`: manual-collection boundary
 

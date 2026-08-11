@@ -62,6 +62,15 @@ Main files: `search.py`, `search_index.py`, `query_model.py`,
 `saved_searches.py`, `smart_filter_editor.py`, `attention.py`, `db/catalog.py`,
 `views.py`.
 
+
+### [Metadata browsing and facet counts](METADATA_BROWSING.md)
+
+Read this for the 0.8.14 Browse metadata hierarchy, fixed catalogue facet
+allowlist, value pagination and conversion from selected values back into
+validated Query Model result pages.
+
+Main files: `metadata_browser.py`, `views.py`, `query_model.py`, `db/catalog.py`.
+
 ### [Manual collections](STATIC_COLLECTIONS.md)
 
 Read this for named user-selected collections, ordered media references,

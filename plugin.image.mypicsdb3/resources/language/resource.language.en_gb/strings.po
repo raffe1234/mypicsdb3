@@ -1806,3 +1806,31 @@ msgstr "Pictures without location"
 msgctxt "#32949"
 msgid "Pictures without keywords"
 msgstr "Pictures without keywords"
+
+msgctxt "#32950"
+msgid "Browse metadata"
+msgstr "Browse metadata"
+
+msgctxt "#32951"
+msgid "Camera"
+msgstr "Camera"
+
+msgctxt "#32952"
+msgid "Location"
+msgstr "Location"
+
+msgctxt "#32953"
+msgid "Capture"
+msgstr "Capture"
+
+msgctxt "#32954"
+msgid "Image"
+msgstr "Image"
+
+msgctxt "#32955"
+msgid "Rating %s"
+msgstr "Rating %s"
+
+msgctxt "#32956"
+msgid "Capture year"
+msgstr "Capture year"

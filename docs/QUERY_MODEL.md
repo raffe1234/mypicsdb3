@@ -206,3 +206,16 @@ Deliberately not included:
 
 Those features can be added in separate reviewable releases while retaining
 Query Model version 1 or introducing an explicit later version.
+## Browse metadata in 0.8.14
+
+The **Browse metadata** UI does not add Query Model fields or increment the model
+version. `metadata_browser.py` exposes curated Camera, Location, Capture, Image and
+Keywords facets. `Catalog.query_facet_counts()` enumerates their values through a
+separate fixed internal allowlist with a maximum page size and offset; camera make/model,
+capture year and aggregate aspect/rating/keyword keys are therefore catalogue facet
+identifiers, not persisted query fields. Selecting a value is converted into existing
+Query Model v1 rules (for example camera make -> `camera eq`, capture year -> a bounded
+`taken_date between`, and keyword -> `keyword eq`) before result rows are fetched.
+
+This separation is intentional: aggregate SQL remains backend-owned and allowlisted,
+while every user-visible result selection still crosses the validated Query Model boundary.

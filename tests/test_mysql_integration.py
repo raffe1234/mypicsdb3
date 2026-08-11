@@ -451,6 +451,23 @@ def test_mysql_query_model_matches_page_count_and_minimum_rating_policy(tmp_path
         {"value": "Sweden", "picture_count": 2},
         {"value": "France", "picture_count": 1},
     ]
+    assert catalog.query_facet_counts(facet_base, "camera_make") == [
+        {"value": "Canon", "picture_count": 3}
+    ]
+    assert catalog.query_facet_counts(facet_base, "taken_year") == [
+        {"value": 2020, "picture_count": 3}
+    ]
+    assert catalog.query_facet_counts(facet_base, "aspect") == [
+        {"value": "landscape", "picture_count": 2},
+        {"value": "square", "picture_count": 1},
+    ]
+    assert catalog.query_facet_counts(facet_base, "keyword") == [
+        {"value": "Summer", "picture_count": 2},
+        {"value": "Winter", "picture_count": 1},
+    ]
+    assert catalog.query_facet_counts(facet_base, "country", 1, 1) == [
+        {"value": "France", "picture_count": 1}
+    ]
     aspect_query = dict(facet_base)
     aspect_query["root"] = {
         "type": "group",

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.14 - 2026-08-11
+
+- Add a curated **Browse metadata** hierarchy that modernizes legacy MyPicsDB `Browse by Tags` without exposing arbitrary raw EXIF/XMP/IPTC names. Camera, Location, Capture, Image and Keywords categories lead to bounded value counts and normal paginated Query Model result pages.
+- Extend the catalogue's fixed facet allowlist with camera make/model, capture year, image shape, rating and normalized keyword counts. Facet keys remain internal and bounded; selected values are converted back into validated Query Model v1 rules, so database schema 9 and Query Model version 1 remain unchanged.
+- Add offset-aware facet pagination and explicit SQLite/MariaDB coverage for the new portable aggregate queries. Keep original media read-only and keep metadata mapping separate from browsing.
+- Document large-library scan behaviour: first scans and schema-9 metadata reindexes may be slow because picture metadata must be read once, network shares add latency, and the scanner intentionally remains serial for deterministic Kodi VFS, database, cancellation and checkpoint semantics. Parallel metadata workers remain a measured future performance option, not part of this release.
+
 ## 0.8.13 - 2026-08-11
 
 - Complete the Kodi smart-filter editor's safe Query Model v1 surface with user-facing `is not`, `exists` and `missing` choices where the existing validated model can represent them. Add exact/upper-bound/range/presence rating choices, date presence checks and MIME-type filtering without changing Query Model version 1 or database schema 9.

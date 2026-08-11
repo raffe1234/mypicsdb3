@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.13",
+            "version": "0.8.14",
         }[key]
 
     def getSetting(self, key):
@@ -324,6 +324,7 @@ class FakeCatalog:
         self.music_playlist_clears = []
         self.source_scan_policies = {}
         self.metadata_mapping_overrides = []
+        self.facet_requests = []
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -437,6 +438,27 @@ class FakeCatalog:
     def count_query_pictures(self, query):
         self.query_requests.append((query, "count", 0))
         return 1
+
+    def query_facet_counts(self, query, field, limit=100, offset=0):
+        self.facet_requests.append((query, field, limit, offset))
+        values = {
+            "camera_make": [("Canon", 12), ("Nikon", 8)],
+            "camera_model": [("EOS R6", 7)],
+            "country": [("Sweden", 10), ("Spain", 5)],
+            "state": [("Stockholm", 4)],
+            "city": [("Stockholm", 4)],
+            "sublocation": [("Old Town", 2)],
+            "taken_year": [(2024, 20), (2023, 15)],
+            "extension": [("jpg", 18), ("png", 2)],
+            "mime_type": [("image/jpeg", 18)],
+            "aspect": [("landscape", 11), ("portrait", 9)],
+            "rating": [(5, 6), (4, 4)],
+            "keyword": [("Family", 9), ("Summer", 5)],
+        }.get(field, [])
+        return [
+            {"value": value, "picture_count": count}
+            for value, count in values[offset:offset + limit]
+        ]
 
     def list_saved_searches(self):
         return list(self.saved_search_rows)
@@ -628,13 +650,14 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert calls.ended is True
     assert calls.content == "files"
     assert calls.category == "MyPicsDB 3"
-    assert len(calls.items) == 25
+    assert len(calls.items) == 26
     assert calls.items[0][0].endswith("/search")
     assert calls.items[1][0].endswith("/saved-searches")
     assert calls.items[2][0].endswith("/collections")
     assert calls.items[3][0].endswith("/action/create-smart-collection")
     assert calls.items[4][0].endswith("/sources")
     assert any(url.endswith("/metadata-mapping") for url, _item, _folder in calls.items)
+    assert any(url.endswith("/metadata-browser") for url, _item, _folder in calls.items)
     assert any(url.endswith("/needs-attention") for url, _item, _folder in calls.items)
 
     calls.ended = False
@@ -660,7 +683,7 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     ui.root()
 
     urls = [url for url, _item, _is_folder in calls.items]
-    assert len(urls) == 22
+    assert len(urls) == 23
     assert "plugin://plugin.image.mypicsdb3/recent-taken" not in urls
     assert "plugin://plugin.image.mypicsdb3/years" not in urls
     assert "plugin://plugin.image.mypicsdb3/favorites" not in urls
@@ -670,12 +693,59 @@ def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     assert "plugin://plugin.image.mypicsdb3/action/create-smart-collection" in urls
     assert "plugin://plugin.image.mypicsdb3/sources" in urls
     assert "plugin://plugin.image.mypicsdb3/metadata-mapping" in urls
+    assert "plugin://plugin.image.mypicsdb3/metadata-browser" in urls
     assert "plugin://plugin.image.mypicsdb3/needs-attention" in urls
     assert "plugin://plugin.image.mypicsdb3/action/refresh-random" in urls
     assert "plugin://plugin.image.mypicsdb3/action/scan" in urls
     assert "plugin://plugin.image.mypicsdb3/status" in urls
     assert "plugin://plugin.image.mypicsdb3/diagnostics" in urls
     assert "plugin://plugin.image.mypicsdb3/action/settings" in urls
+
+
+def test_metadata_browser_uses_curated_facets_and_query_model_results(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("metadata-browser", {}))
+    assert calls.category == "Browse metadata"
+    assert [item.label for _url, item, _folder in calls.items] == [
+        "Camera", "Location", "Capture", "Image", "Keywords"
+    ]
+
+    calls.items.clear()
+    ui.dispatch(views.Request("metadata-category", {"category": "location"}))
+    assert calls.category == "Location"
+    assert [item.label for _url, item, _folder in calls.items] == [
+        "Country", "State or region", "City", "Sublocation"
+    ]
+
+    calls.items.clear()
+    ui.dispatch(views.Request("metadata-values", {"field": "country"}))
+    assert calls.category == "Country"
+    assert [item.label for _url, item, _folder in calls.items] == [
+        "Sweden  [COLOR=grey](10)[/COLOR]",
+        "Spain  [COLOR=grey](5)[/COLOR]",
+    ]
+    query, field, limit, offset = runtime.catalog.facet_requests[-1]
+    assert field == "country"
+    assert limit == runtime.kodi.settings.browser_page_size + 1
+    assert offset == 0
+    assert query.root.children[0].field == "media_type"
+
+    calls.items.clear()
+    runtime.catalog.query_requests.clear()
+    ui.dispatch(
+        views.Request(
+            "metadata-result",
+            {"field": "camera_make", "value": "Canon"},
+        )
+    )
+    assert calls.category == "Camera make: Canon"
+    query, limit, offset = runtime.catalog.query_requests[0]
+    assert (limit, offset) == (runtime.kodi.settings.browser_page_size, 0)
+    assert query.root.children[1].field == "camera"
+    assert query.root.children[1].value.make == "Canon"
 
 
 def test_needs_attention_uses_query_model_presets_and_opens_results(monkeypatch) -> None:
@@ -783,7 +853,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.13" in labels
+    assert "MyPicsDB 3 version: 0.8.14" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -825,19 +895,19 @@ def test_export_support_bundle_action_reports_generated_filename(monkeypatch) ->
     monkeypatch.setattr(
         views,
         "write_support_bundle",
-        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.13.zip",
+        lambda _runtime: "/private/profile/support-bundles/mypicsdb3-support-test-v0.8.14.zip",
     )
 
     ui.dispatch(views.Request("action/export-support-bundle", {}))
 
     assert runtime.kodi.notifications[-1] == (
-        "Support bundle saved: mypicsdb3-support-test-v0.8.13.zip\n"
+        "Support bundle saved: mypicsdb3-support-test-v0.8.14.zip\n"
         "Support bundle folder: Kodi userdata > addon_data > "
         "plugin.image.mypicsdb3 > support-bundles",
         False,
     )
     assert runtime.kodi.info_messages[-1] == (
-        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.13.zip"
+        "Privacy-safe support bundle exported: mypicsdb3-support-test-v0.8.14.zip"
     )
 
 
@@ -1414,13 +1484,13 @@ def test_info_rows_do_not_publish_video_info_tags(monkeypatch) -> None:
     views.xbmcgui.ListItem = InfoListItem
     ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
 
-    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.13")
+    url, item, is_folder = ui.add_info("MyPicsDB 3 version: 0.8.14")
 
     assert url == ""
     assert item.video_tag_requests == 0
     assert item.properties["IsPlayable"] == "false"
     assert item.properties["MyPicsDB3.MediaType"] == "info"
-    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.13"
+    assert item.properties["MyPicsDB3.WidgetLabel"] == "MyPicsDB 3 version: 0.8.14"
     assert is_folder is False
 
 

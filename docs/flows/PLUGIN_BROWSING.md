@@ -62,7 +62,7 @@ indexed catalogue rows.
 - source and folder browsing;
 - recent, random and on-this-day views;
 - videos, years, months and days;
-- cameras, keywords, favorites, ratings and geotagged media;
+- cameras, keywords, curated metadata facets, Needs attention, favorites, ratings and geotagged media;
 - status and action routes.
 
 When adding a route, keep URL construction inside `PluginUI.url()` or existing
