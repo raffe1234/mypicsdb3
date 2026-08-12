@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.17",
+            "version": "0.8.18",
         }[key]
 
     def getSetting(self, key):
@@ -218,6 +218,7 @@ class FakeKodi:
         self.random_invalidations = []
         self.home_invalidations = []
         self.home_generations = {"content": 7, "random": 3}
+        self.random_home_session_token = "test-session-a"
         self.music_session = {}
         self.music_fingerprint = "test-music-fingerprint"
 
@@ -279,6 +280,9 @@ class FakeKodi:
 
     def home_widget_generations(self):
         return dict(self.home_generations)
+
+    def random_home_widget_session_token(self):
+        return self.random_home_session_token
 
     def is_playing(self):
         return False
@@ -889,7 +893,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.17" in labels
+    assert "MyPicsDB 3 version: 0.8.18" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -1321,6 +1325,8 @@ def test_home_random_seed_stays_stable_until_a_generation_changes(
     assert seed != ui._home_random_seed(
         {**params, "generation": "13"}, "on-this-day-random"
     )
+    runtime.kodi.random_home_session_token = "test-session-b"
+    assert seed != ui._home_random_seed(params, "on-this-day-random")
     assert ui._home_random_seed({"widget": "1"}, "on-this-day-random") is None
 
 
@@ -2915,7 +2921,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.17"
+    assert captured["init"][2] == "0.8.18"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

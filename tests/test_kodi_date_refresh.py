@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import types
+import uuid
 
 import pytest
 
@@ -404,6 +405,43 @@ def test_random_home_widget_invalidation_uses_separate_generation(monkeypatch) -
     assert context.invalidate_random_home_widgets("test") == 2
     assert properties[kodi.RANDOM_HOME_WIDGET_GENERATION_PROPERTY] == "2"
     assert kodi.HOME_WIDGET_GENERATION_PROPERTY not in properties
+
+
+def test_random_home_widget_session_token_is_created_once_per_kodi_session(
+    monkeypatch,
+) -> None:
+    properties = {}
+
+    class FakeWindow:
+        def getProperty(self, key):
+            return properties.get(key, "")
+
+        def setProperty(self, key, value):
+            properties[key] = value
+
+    monkeypatch.setattr(
+        kodi,
+        "xbmcgui",
+        types.SimpleNamespace(Window=lambda window_id: FakeWindow()),
+    )
+    generated = iter(
+        (
+            uuid.UUID("11111111-1111-1111-1111-111111111111"),
+            uuid.UUID("22222222-2222-2222-2222-222222222222"),
+        )
+    )
+    monkeypatch.setattr(kodi.uuid, "uuid4", lambda: next(generated))
+    context = kodi.KodiContext.__new__(kodi.KodiContext)
+
+    first = context.random_home_widget_session_token()
+    second = context.random_home_widget_session_token()
+
+    assert first == "11111111111111111111111111111111"
+    assert second == first
+    assert (
+        properties[kodi.RANDOM_HOME_WIDGET_SESSION_PROPERTY]
+        == "11111111111111111111111111111111"
+    )
 
 
 def test_home_layout_slots_are_published_as_home_window_properties(monkeypatch) -> None:

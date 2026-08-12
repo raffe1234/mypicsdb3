@@ -31,6 +31,7 @@ SCAN_STATUS_PROPERTY = "MyPicsDB3.ScanStatusV1"
 SCAN_CANCEL_PROPERTY = "MyPicsDB3.ScanCancelV1"
 HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.HomeWidgetGeneration"
 RANDOM_HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.RandomWidgetGeneration"
+RANDOM_HOME_WIDGET_SESSION_PROPERTY = "MyPicsDB3.RandomWidgetSessionV1"
 HOME_WIDGET_LIMIT_PROPERTY = "MyPicsDB3.HomeWidgetLimit"
 HOME_LAYOUT_SLOT_COUNT = 9
 HOME_ROW_PROPERTY_FORMAT = "MyPicsDB3.HomeRow%d"
@@ -542,6 +543,38 @@ class KodiContext:
             "Random home-screen widgets",
             reason,
         )
+
+    def random_home_widget_session_token(self) -> str:
+        """Return one random token that stays stable for the current Kodi session.
+
+        Home-window generation counters are intentionally session-local and
+        therefore restart from zero when Kodi starts. A seed derived only from
+        those counters would repeat the same "random" Home rows after every
+        restart. Store one UUID in the Home window so repeated provider queries
+        within the same session remain stable while a new Kodi session receives
+        fresh entropy.
+        """
+
+        window = self._home_window()
+        if window is None:
+            return ""
+        try:
+            token = str(window.getProperty(RANDOM_HOME_WIDGET_SESSION_PROPERTY) or "")
+        except Exception:
+            return ""
+        if token:
+            return token
+
+        candidate = uuid.uuid4().hex
+        try:
+            window.setProperty(RANDOM_HOME_WIDGET_SESSION_PROPERTY, candidate)
+            # Re-read after publishing so two near-simultaneous plug-in
+            # interpreters converge on the Home-window value that won the race.
+            return str(
+                window.getProperty(RANDOM_HOME_WIDGET_SESSION_PROPERTY) or candidate
+            )
+        except Exception:
+            return candidate
 
     @staticmethod
     def home_widget_generations() -> Dict[str, int]:

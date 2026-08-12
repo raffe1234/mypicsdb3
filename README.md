@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.17. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.18. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -366,6 +366,9 @@ generation. The background service advances it at the configured hourly
 interval, so non-random rows keep their current provider results. A scan that
 changes the catalogue, a relevant home-screen setting change or **Refresh random
 selections** can produce a new random selection before the interval expires.
+Each Kodi session also gets its own random seed salt, so restarting Kodi no
+longer restarts these Home rows from the same deterministic picture selection.
+Repeated provider requests inside the same session and generation remain stable.
 
 ### Optional: install MyPicsDB 3 Screensaver
 

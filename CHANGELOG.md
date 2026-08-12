@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.18 - 2026-08-11
+
+- Fix random Home rows repeatedly starting from the same deterministic selection after Kodi restarts. The provider seed now includes one UUID-backed Home-window session token in addition to the existing content and random generations.
+- Keep the 0.4.5 stability guarantee inside a running Kodi session: repeated provider requests with unchanged generations still return the same database pivot, while a new Kodi session, scheduled refresh, scan/settings invalidation or **Refresh random selections** produces fresh entropy.
+- Keep the indexed `random_key` selection path and avoid `ORDER BY RANDOM()` / `RAND()`, so large SQLite and shared MariaDB catalogues retain bounded random-row queries and require no rescan.
+- Keep database schema 9, Query Model version 1, repository version 0.2.26 and Estuary runtime revisions unchanged. Add regression coverage for session-token persistence and seed rotation, plus the previously missing 0.8.16 collection-snapshot patch note.
+
 ## 0.8.17 - 2026-08-11
 
 - Add explicit **Export current results** / **Export collection** actions for global search, saved smart collections, Browse metadata, Needs attention and manual collections. The complete ordered selection is frozen to catalogue IDs before any copy begins; source media are never moved, renamed, edited or deleted.

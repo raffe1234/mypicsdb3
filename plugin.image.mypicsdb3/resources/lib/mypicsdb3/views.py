@@ -254,9 +254,19 @@ class PluginUI:
         if not self._is_home_widget(params):
             return None
         values = params or {}
+        session_token = ""
+        session_getter = getattr(
+            self.kodi, "random_home_widget_session_token", None
+        )
+        if callable(session_getter):
+            try:
+                session_token = str(session_getter() or "")
+            except Exception:
+                session_token = ""
         token = "\x1f".join(
             (
                 str(route or ""),
+                session_token,
                 str(values.get("generation") or "0"),
                 str(values.get("random_generation") or "0"),
             )
