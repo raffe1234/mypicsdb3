@@ -7,7 +7,7 @@ New to the project? Read [Start here](START_HERE.md),
 ## Design boundaries
 
 - `filesystem.py` isolates Kodi VFS operations.
-- `metadata.py` isolates bounded EXIF, XMP and IPTC extraction; `metadata_mapping.py` owns canonical metadata mapping and reindex fingerprints; `metadata_refresh.py` owns explicit serial re-reads of already indexed still pictures.
+- `metadata.py` isolates bounded EXIF, XMP and IPTC extraction, including the JPEG marker-header I/O path and XMP GPS/location compatibility; `metadata_mapping.py` owns canonical metadata mapping and reindex fingerprints; `metadata_refresh.py` owns explicit serial re-reads of already indexed still pictures.
 - `db/engine.py` handles SQL parameter syntax and connections.
 - `db/catalog.py` contains catalogue writes and read models.
 - `scanner.py` never runs from a widget route.

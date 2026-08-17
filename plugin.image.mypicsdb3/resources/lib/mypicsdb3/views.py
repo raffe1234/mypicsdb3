@@ -1523,11 +1523,23 @@ class PluginUI:
                 yes if source.get("gps_longitude_present") else no,
             ),
             "%s: %s" % (self.text(33008, "Embedded XMP found"), yes if source.get("xmp_present") else no),
+            "%s: %s" % (
+                self.text(33020, "XMP GPS latitude"),
+                self._diagnostic_value(source.get("xmp_gps_latitude_raw")),
+            ),
+            "%s: %s" % (
+                self.text(33021, "XMP GPS longitude"),
+                self._diagnostic_value(source.get("xmp_gps_longitude_raw")),
+            ),
+            "%s: %s" % (
+                self.text(33022, "GPS source"),
+                self._diagnostic_value(source.get("gps_source")),
+            ),
             "%s: %s" % (self.text(33009, "IPTC loaded"), yes if source.get("iptc_loaded") else no),
             "%s: %s" % (self.text(33010, "Store GPS coordinates"), yes if store_gps else no),
             "%s: %s"
             % (
-                self.text(33016, "Metadata prefix bytes read"),
+                self.text(33016, "Metadata header bytes buffered"),
                 int(source.get("prefix_bytes_read") or 0),
             ),
             "%s: %s"
@@ -1541,6 +1553,16 @@ class PluginUI:
                 yes if source.get("exif_fallback_used") else no,
             ),
         ]
+        xmp_location_fields = source.get("xmp_location_fields") or {}
+        if xmp_location_fields:
+            lines.append("")
+            lines.append(self.text(33023, "XMP location/GPS fields"))
+            for field_name in sorted(xmp_location_fields, key=lambda value: str(value).casefold())[:12]:
+                field_value = str(xmp_location_fields.get(field_name) or "").strip()
+                if len(field_value) > 160:
+                    field_value = field_value[:157] + "..."
+                lines.append("%s: %s" % (field_name, self._diagnostic_value(field_value)))
+
         if source.get("exif_fallback_used"):
             lines.append(
                 "%s: %s"
@@ -1573,6 +1595,15 @@ class PluginUI:
         else:
             dialog.ok(heading, message)
 
+    def _show_metadata_refresh_busy(self) -> None:
+        xbmcgui.Dialog().ok(
+            self.text(33024, "Metadata refresh unavailable"),
+            self.text(
+                33025,
+                "A catalogue scan, schema migration or another metadata refresh is active. Wait for it to finish and try again.",
+            ),
+        )
+
     def _refresh_picture_metadata(self, picture_id: int) -> None:
         row = self.catalog.picture_by_id(picture_id)
         if not row or str(row.get("media_type") or "picture") != "picture":
@@ -1586,8 +1617,8 @@ class PluginUI:
             return
         try:
             self._metadata_refresher().refresh_picture(picture_id)
-        except MetadataRefreshBusy as exc:
-            self.kodi.notify(str(exc), error=True, milliseconds=7000)
+        except MetadataRefreshBusy:
+            self._show_metadata_refresh_busy()
             return
         except Exception as exc:
             self.kodi.notify(
@@ -1635,8 +1666,8 @@ class PluginUI:
             stats = refresher.refresh_folder(
                 folder_id, cancelled=cancelled, progress=progress
             )
-        except MetadataRefreshBusy as exc:
-            self.kodi.notify(str(exc), error=True, milliseconds=7000)
+        except MetadataRefreshBusy:
+            self._show_metadata_refresh_busy()
             return
         except Exception as exc:
             self.kodi.notify(

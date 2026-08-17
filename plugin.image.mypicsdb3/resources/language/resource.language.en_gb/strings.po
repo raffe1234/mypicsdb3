@@ -2072,8 +2072,8 @@ msgid "Fallback EXIF tags found"
 msgstr "Fallback EXIF tags found"
 
 msgctxt "#33016"
-msgid "Metadata prefix bytes read"
-msgstr "Metadata prefix bytes read"
+msgid "Metadata header bytes buffered"
+msgstr "Metadata header bytes buffered"
 
 msgctxt "#33017"
 msgid "Embedded EXIF block found"
@@ -2086,3 +2086,28 @@ msgstr "Metadata prefix read error"
 msgctxt "#33019"
 msgid "Image dimension probe error"
 msgstr "Image dimension probe error"
+
+
+msgctxt "#33020"
+msgid "XMP GPS latitude"
+msgstr "XMP GPS latitude"
+
+msgctxt "#33021"
+msgid "XMP GPS longitude"
+msgstr "XMP GPS longitude"
+
+msgctxt "#33022"
+msgid "GPS source"
+msgstr "GPS source"
+
+msgctxt "#33023"
+msgid "XMP location/GPS fields"
+msgstr "XMP location/GPS fields"
+
+msgctxt "#33024"
+msgid "Metadata refresh unavailable"
+msgstr "Metadata refresh unavailable"
+
+msgctxt "#33025"
+msgid "A catalogue scan, schema migration or another metadata refresh is active. Wait for it to finish and try again."
+msgstr "A catalogue scan, schema migration or another metadata refresh is active. Wait for it to finish and try again."

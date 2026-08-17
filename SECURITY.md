@@ -23,3 +23,11 @@ The core EXIF resilience fallback is local and read-only. It operates only on th
 already-read metadata prefix, ignores MakerNote/UserComment payloads, makes no
 network requests, and does not log recovered camera/GPS values. Diagnostics shows
 those values only in the local Kodi UI when explicitly requested.
+
+### XMP location diagnostics (0.8.27)
+
+XMP GPS/location compatibility is offline and read-only at extraction time. The
+diagnostics view may display matched location/GPS property names and values only in
+the local Kodi text viewer after the user explicitly opens diagnostics; those values
+must not be copied to normal logs, support-bundle summaries or network requests.
+Reverse geocoding remains out of scope.

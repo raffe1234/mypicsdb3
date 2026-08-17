@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import mimetypes
 import re
 import struct
@@ -36,6 +37,34 @@ _DATE_PATTERNS = (
 
 
 _TIFF_TYPE_SIZES = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8}
+
+
+_XMP_LOCATION_ALIASES = {
+    "city": ("City", "LocationShownCity", "LocationCreatedCity"),
+    "state": (
+        "State",
+        "ProvinceState",
+        "LocationShownProvinceState",
+        "LocationCreatedProvinceState",
+    ),
+    "country": (
+        "Country",
+        "CountryName",
+        "LocationShownCountryName",
+        "LocationCreatedCountryName",
+    ),
+    "sublocation": (
+        "Location",
+        "Sublocation",
+        "SubLocation",
+        "LocationShownSublocation",
+        "LocationCreatedSublocation",
+    ),
+}
+_XMP_GPS_LATITUDE_NAMES = ("GPSLatitude", "LocationShownGPSLatitude", "LocationCreatedGPSLatitude")
+_XMP_GPS_LONGITUDE_NAMES = ("GPSLongitude", "LocationShownGPSLongitude", "LocationCreatedGPSLongitude")
+_XMP_GPS_LATITUDE_REF_NAMES = ("GPSLatitudeRef",)
+_XMP_GPS_LONGITUDE_REF_NAMES = ("GPSLongitudeRef",)
 
 
 def _embedded_exif_tiff(data: bytes) -> bytes:
@@ -256,6 +285,83 @@ def _fallback_exif_tags_from_stream(stream, max_scan_bytes: int) -> Dict[str, An
     return {}
 
 
+def _jpeg_metadata_prefix_from_stream(stream, max_scan_bytes: int) -> bytes:
+    """Read only JPEG header segments needed for metadata extraction.
+
+    JPEG EXIF/XMP and SOF dimension markers live before Start Of Scan.  Walking
+    marker headers and seeking over unrelated APP payloads avoids transferring
+    several megabytes of compressed image data from SMB merely to obtain the
+    metadata prefix.  The logical scan remains bounded by the configured prefix
+    limit and returns a synthetic, valid-enough JPEG header for the existing
+    EXIF/XMP/dimension helpers.
+    """
+    limit = max(64 * 1024, int(max_scan_bytes or 0))
+    stream.seek(0, 0)
+    if stream.read(2) != b"\xff\xd8":
+        return b""
+    buffered = bytearray(b"\xff\xd8")
+    scanned = 2
+    while scanned + 4 <= limit:
+        prefix = stream.read(1)
+        scanned += 1
+        if not prefix:
+            break
+        if prefix != b"\xff":
+            continue
+        marker_byte = stream.read(1)
+        scanned += 1
+        while marker_byte == b"\xff":
+            marker_byte = stream.read(1)
+            scanned += 1
+        if not marker_byte:
+            break
+        marker = marker_byte[0]
+        if marker in {0xD8, 0xD9}:
+            continue
+        if marker == 0xDA:
+            break
+        length_bytes = stream.read(2)
+        scanned += 2
+        if len(length_bytes) != 2:
+            break
+        segment_length = struct.unpack(">H", length_bytes)[0]
+        if segment_length < 2:
+            break
+        payload_length = segment_length - 2
+        if scanned + payload_length > limit:
+            break
+
+        # Keep APP1 (EXIF/XMP) and SOF segments.  Everything else can be
+        # skipped without transferring its payload over VFS/SMB.
+        keep = marker == 0xE1 or marker in {
+            0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7,
+            0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF,
+        }
+        if keep:
+            payload = stream.read(payload_length)
+            scanned += len(payload)
+            if len(payload) != payload_length:
+                break
+            buffered.extend(b"\xff" + bytes((marker,)) + length_bytes + payload)
+        else:
+            stream.seek(payload_length, 1)
+            scanned += payload_length
+    buffered.extend(b"\xff\xd9")
+    return bytes(buffered)
+
+
+def _metadata_prefix(path: str, filesystem: Filesystem, max_bytes: int) -> bytes:
+    """Return a bounded metadata prefix with a JPEG-specific low-I/O path."""
+    with filesystem.open_binary(path) as stream:
+        magic = stream.read(3)
+        stream.seek(0, 0)
+        if magic.startswith(b"\xff\xd8\xff"):
+            return _jpeg_metadata_prefix_from_stream(stream, max_bytes)
+    # Preserve Filesystem.read_prefix overrides for non-JPEG formats and test
+    # adapters; only JPEG takes the marker-aware path above.
+    return filesystem.read_prefix(path, max_bytes)
+
+
 def _as_number(value: Any) -> Optional[float]:
     if value is None:
         return None
@@ -425,11 +531,14 @@ def _xmp_values(xml: str, local_name: str) -> List[str]:
     results: List[str] = []
     for value in _xmp_blocks(xml, local_name):
         value = re.sub(r"<[^>]+>", " ", value)
-        value = re.sub(r"\s+", " ", value).strip()
+        value = html.unescape(re.sub(r"\s+", " ", value).strip())
         if value:
             results.append(value)
     attribute_pattern = rf"\b(?:[\w.-]+:)?{escaped}\s*=\s*[\"']([^\"']+)[\"']"
-    results.extend(re.findall(attribute_pattern, xml, flags=re.IGNORECASE | re.DOTALL))
+    results.extend(
+        html.unescape(value)
+        for value in re.findall(attribute_pattern, xml, flags=re.IGNORECASE | re.DOTALL)
+    )
     return unique_strings(results)
 
 
@@ -443,6 +552,89 @@ def _xmp_list_values(xml: str, *local_names: str) -> List[str]:
                 if value:
                     results.append(value)
     return unique_strings(results)
+
+
+def _xmp_first_value(xml: str, names: Iterable[str]) -> Tuple[str, str]:
+    for name in names:
+        values = _xmp_values(xml, name)
+        if values:
+            return name, values[0]
+    return "", ""
+
+
+def _xmp_coordinate(value: Any, ref: str, maximum: float) -> Optional[float]:
+    """Parse common XMP GPS encodings (decimal, deg/min, or DMS)."""
+    text = html.unescape(decode_text(value)).strip()
+    if not text:
+        return None
+    direction = (str(ref or "").strip().upper()[:1] or "")
+    suffix = re.search(r"([NSEW])\s*$", text, flags=re.IGNORECASE)
+    if suffix:
+        direction = suffix.group(1).upper()
+        text = text[:suffix.start()].strip()
+    numbers = re.findall(r"[-+]?\d+(?:\.\d+)?", text.replace("\u2212", "-"))
+    if not numbers:
+        return None
+    try:
+        parts = [float(item) for item in numbers[:3]]
+    except ValueError:
+        return None
+    sign = -1.0 if parts[0] < 0 else 1.0
+    degrees = abs(parts[0])
+    if len(parts) >= 2:
+        degrees += abs(parts[1]) / 60.0
+    if len(parts) >= 3:
+        degrees += abs(parts[2]) / 3600.0
+    if direction in {"S", "W"}:
+        sign = -1.0
+    elif direction in {"N", "E"}:
+        sign = 1.0
+    coordinate = sign * degrees
+    if abs(coordinate) > float(maximum):
+        return None
+    return round(coordinate, 8)
+
+
+def _xmp_location_data(xml: str) -> Dict[str, Any]:
+    if not xml:
+        return {
+            "location": {},
+            "location_sources": {},
+            "gps_latitude": None,
+            "gps_longitude": None,
+            "matched": {},
+        }
+    location: Dict[str, str] = {}
+    location_sources: Dict[str, str] = {}
+    matched: Dict[str, str] = {}
+    for field, aliases in _XMP_LOCATION_ALIASES.items():
+        source_name, value = _xmp_first_value(xml, aliases)
+        if value:
+            location[field] = value
+            location_sources[field] = source_name
+            matched[source_name] = value
+
+    lat_name, lat_raw = _xmp_first_value(xml, _XMP_GPS_LATITUDE_NAMES)
+    lon_name, lon_raw = _xmp_first_value(xml, _XMP_GPS_LONGITUDE_NAMES)
+    lat_ref_name, lat_ref = _xmp_first_value(xml, _XMP_GPS_LATITUDE_REF_NAMES)
+    lon_ref_name, lon_ref = _xmp_first_value(xml, _XMP_GPS_LONGITUDE_REF_NAMES)
+    for name, value in (
+        (lat_name, lat_raw),
+        (lon_name, lon_raw),
+        (lat_ref_name, lat_ref),
+        (lon_ref_name, lon_ref),
+    ):
+        if name and value:
+            matched[name] = value
+    return {
+        "location": location,
+        "location_sources": location_sources,
+        "gps_latitude": _xmp_coordinate(lat_raw, lat_ref, 90.0) if lat_raw else None,
+        "gps_longitude": _xmp_coordinate(lon_raw, lon_ref, 180.0) if lon_raw else None,
+        "matched": matched,
+        "gps_latitude_raw": lat_raw,
+        "gps_longitude_raw": lon_raw,
+    }
 
 
 def parse_xmp(data: bytes) -> Dict[str, Any]:
@@ -460,24 +652,17 @@ def parse_xmp(data: bytes) -> Dict[str, Any]:
     date_values = []
     for name in ("DateTimeOriginal", "CreateDate", "DateCreated"):
         date_values.extend(_xmp_values(xml, name))
-    location = {}
-    for key, names in {
-        "city": ("City",),
-        "state": ("State", "ProvinceState"),
-        "country": ("Country", "CountryName"),
-        "sublocation": ("Location", "Sublocation"),
-    }.items():
-        for name in names:
-            values = _xmp_values(xml, name)
-            if values:
-                location[key] = values[0]
-                break
+    xmp_location = _xmp_location_data(xml)
+    location = dict(xmp_location["location"])
     caption_values = _xmp_values(xml, "description") or _xmp_values(xml, "Description")
     return {
         "taken_at": _normalise_date(date_values[0]) if date_values else None,
         "keywords": keywords,
         "rating": rating,
         "location": location,
+        "gps_latitude": xmp_location.get("gps_latitude"),
+        "gps_longitude": xmp_location.get("gps_longitude"),
+        "location_fields": dict(xmp_location.get("matched") or {}),
         "caption": caption_values[0] if caption_values else None,
     }
 
@@ -653,7 +838,7 @@ def extract_metadata(
     prefix_error = ""
     dimension_error = ""
     try:
-        prefix = filesystem.read_prefix(path, settings.metadata_prefix_mb * 1024 * 1024)
+        prefix = _metadata_prefix(path, filesystem, settings.metadata_prefix_mb * 1024 * 1024)
     except Exception as exc:
         prefix_error = "%s: %s" % (exc.__class__.__name__, str(exc))
         prefix = b""
@@ -682,8 +867,8 @@ def extract_metadata(
             # still local, serial and bounded by the configured metadata prefix.
             if not tags:
                 try:
-                    retry_prefix = filesystem.read_prefix(
-                        path, settings.metadata_prefix_mb * 1024 * 1024
+                    retry_prefix = _metadata_prefix(
+                        path, filesystem, settings.metadata_prefix_mb * 1024 * 1024
                     )
                 except Exception:
                     retry_prefix = b""
@@ -764,10 +949,24 @@ def extract_metadata(
     effective_rules = effective_mapping_rules(mapping_rules or ())
     grouped_rules = mapping_rules_by_source(effective_rules)
     xmp_xml = _xmp_fragment(prefix) if settings.read_xmp and prefix else ""
+    xmp_location = _xmp_location_data(xmp_xml) if xmp_xml else {
+        "location": {},
+        "location_sources": {},
+        "gps_latitude": None,
+        "gps_longitude": None,
+        "matched": {},
+        "gps_latitude_raw": "",
+        "gps_longitude_raw": "",
+    }
     if diagnostics is not None:
         diagnostics.update({
             "xmp_enabled": bool(settings.read_xmp),
             "xmp_present": bool(xmp_xml),
+            "xmp_location_fields": dict(xmp_location.get("matched") or {}),
+            "xmp_gps_latitude_raw": xmp_location.get("gps_latitude_raw") or "",
+            "xmp_gps_longitude_raw": xmp_location.get("gps_longitude_raw") or "",
+            "xmp_gps_latitude_parsed": xmp_location.get("gps_latitude"),
+            "xmp_gps_longitude_parsed": xmp_location.get("gps_longitude"),
             "iptc_enabled": bool(settings.read_iptc),
             "iptc_available": IPTCInfo is not None,
         })
@@ -798,8 +997,47 @@ def extract_metadata(
     usable_rules = tuple(sorted(usable_rules, key=lambda rule: (rule.priority, rule.source_type, rule.source_tag.casefold())))
     _apply_mapping_rules(result, usable_rules, tags, xmp_xml, iptc_info)
 
+    # Preserve built-in/custom mapping precedence while accepting only the
+    # additional IPTC-extension aliases introduced in 0.8.27. Legacy aliases
+    # such as City/CountryName already flow through metadata_mapping.py and must
+    # remain suppressible/redirectable by user overrides.
+    override_xmp_tags = {
+        str(rule.source_tag or "").rsplit(":", 1)[-1].strip().casefold()
+        for rule in (mapping_rules or ())
+        if str(rule.source_type or "").strip().casefold() == "xmp"
+    }
+    legacy_mapped_aliases = {
+        "city", "state", "provincestate", "country", "countryname",
+        "location", "sublocation",
+    }
+    location_sources = xmp_location.get("location_sources") or {}
+    for field_name, value in (xmp_location.get("location") or {}).items():
+        source_name = str(location_sources.get(field_name) or "").strip()
+        local_name = source_name.rsplit(":", 1)[-1].casefold()
+        if local_name in legacy_mapped_aliases or local_name in override_xmp_tags:
+            continue
+        if value and not result.location.get(field_name):
+            result.location[field_name] = value
+    if settings.store_gps:
+        if result.gps_latitude is None:
+            result.gps_latitude = xmp_location.get("gps_latitude")
+        if result.gps_longitude is None:
+            result.gps_longitude = xmp_location.get("gps_longitude")
+
     if diagnostics is not None:
         diagnostics["store_gps"] = bool(settings.store_gps)
+        if result.gps_latitude is not None and result.gps_longitude is not None:
+            if (
+                _tag_value(tags, "GPS GPSLatitude") is not None
+                and _tag_value(tags, "GPS GPSLongitude") is not None
+            ):
+                diagnostics["gps_source"] = "EXIF"
+            elif xmp_location.get("gps_latitude") is not None and xmp_location.get("gps_longitude") is not None:
+                diagnostics["gps_source"] = "XMP"
+            else:
+                diagnostics["gps_source"] = "mixed"
+        else:
+            diagnostics["gps_source"] = ""
 
     if not settings.store_gps:
         result.gps_latitude = None

@@ -103,3 +103,20 @@ is below the metadata mapping layer: binary JPEG data was passed through Kodi's 
 reach ExifRead/fallback data over SMB without UTF-8 decoding the file contents.
 Existing indexed rows still require explicit refresh after a representative
 diagnostic succeeds.
+
+### XMP location/GPS compatibility and bounded JPEG headers (0.8.27)
+
+Fresh extraction now reports a bounded list of XMP properties relevant to location and
+GPS. Common EXIF-XMP `GPSLatitude` / `GPSLongitude` values can supply coordinates when
+the EXIF GPS IFD did not, and common IPTC Extension `LocationShown*` /
+`LocationCreated*` aliases can fill missing city/state/country/sublocation values. EXIF
+coordinates and explicit/custom metadata mapping continue to win when they already
+produced a canonical value. No reverse geocoding or network lookup is performed.
+
+For JPEG sources, the metadata-prefix helper walks marker headers through Start Of
+Scan and buffers only APP1 (EXIF/XMP) and SOF payloads, seeking over unrelated APP
+segments and compressed pixels. The diagnostics label therefore reports **Metadata
+header bytes buffered**, which may be far smaller than the source file while still
+containing the metadata needed by this flow. Installing 0.8.27 does not force a
+whole-library rewrite: inspect one representative picture, then use explicit refresh
+for rows/folders that should store newly recognized values.

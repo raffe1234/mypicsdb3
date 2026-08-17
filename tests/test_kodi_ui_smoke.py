@@ -199,7 +199,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.26",
+            "version": "0.8.27",
         }[key]
 
     def getSetting(self, key):
@@ -1163,7 +1163,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.26" in labels
+    assert "MyPicsDB 3 version: 0.8.27" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3191,7 +3191,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.26"
+    assert captured["init"][2] == "0.8.27"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False
@@ -3419,3 +3419,89 @@ def test_source_scan_settings_save_and_return_to_global_defaults(monkeypatch) ->
     assert runtime.catalog.source_scan_policies == {}
     assert any("global scan defaults" in message for message, _error in runtime.kodi.notifications)
     assert "Container.Refresh" in calls.builtins
+
+
+def test_metadata_diagnostics_shows_xmp_location_gps_details(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.textviewer_calls = []
+
+    class FakeRefresher:
+        settings = runtime.kodi.settings
+
+        def inspect_picture(self, picture_id):
+            assert picture_id == 1
+            return types.SimpleNamespace(
+                row={
+                    **runtime.catalog.picture_by_id(1),
+                    "camera_make": None,
+                    "camera_model": None,
+                    "gps_latitude": None,
+                    "gps_longitude": None,
+                    "city": None,
+                    "country": None,
+                },
+                fresh=types.SimpleNamespace(
+                    camera_make="Sony",
+                    camera_model="XQ-EC54",
+                    gps_latitude=59.3293,
+                    gps_longitude=18.0686,
+                    location={"city": "Stockholm", "country": "Sweden"},
+                ),
+                source_details={
+                    "exifread_available": True,
+                    "exif_tag_count": 50,
+                    "exif_make": "Sony",
+                    "exif_model": "XQ-EC54",
+                    "gps_latitude_present": False,
+                    "gps_longitude_present": False,
+                    "xmp_present": True,
+                    "xmp_gps_latitude_raw": "59,19.758N",
+                    "xmp_gps_longitude_raw": "18,4.116E",
+                    "xmp_location_fields": {
+                        "GPSLatitude": "59,19.758N",
+                        "GPSLongitude": "18,4.116E",
+                        "LocationShownCity": "Stockholm",
+                    },
+                    "gps_source": "XMP",
+                    "iptc_loaded": False,
+                    "prefix_bytes_read": 812,
+                    "embedded_exif_found": True,
+                    "exif_fallback_used": False,
+                },
+            )
+
+    monkeypatch.setattr(ui, "_metadata_refresher", lambda: FakeRefresher())
+    runtime.kodi.settings.store_gps = True
+
+    ui.action("action/metadata-diagnostics", {"id": "1"})
+
+    _heading, message = views.xbmcgui.Dialog.textviewer_calls[-1]
+    assert "XMP GPS latitude: 59,19.758N" in message
+    assert "XMP GPS longitude: 18,4.116E" in message
+    assert "GPS source: XMP" in message
+    assert "XMP location/GPS fields" in message
+    assert "LocationShownCity: Stockholm" in message
+    assert "Metadata header bytes buffered: 812" in message
+
+
+def test_picture_metadata_refresh_busy_uses_explicit_modal_dialog(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.responses = [True]
+    views.xbmcgui.Dialog.ok_calls = []
+
+    class BusyRefresher:
+        def refresh_picture(self, _picture_id):
+            raise views.MetadataRefreshBusy("busy")
+
+    monkeypatch.setattr(ui, "_metadata_refresher", lambda: BusyRefresher())
+
+    ui.action("action/refresh-metadata-picture", {"id": "1"})
+
+    heading, message = views.xbmcgui.Dialog.ok_calls[-1]
+    assert heading == "Metadata refresh unavailable"
+    assert "catalogue scan" in message
+    assert not any(message == "Metadata refreshed" for message, _error in runtime.kodi.notifications)

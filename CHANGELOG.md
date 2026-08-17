@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.27 - 2026-08-17
+
+- Add XMP location compatibility for still-picture metadata: common EXIF-XMP GPS latitude/longitude properties are normalized when EXIF GPS is absent, and common IPTC Extension `LocationShown*` / `LocationCreated*` city, region, country and sublocation aliases can fill otherwise-empty canonical location fields. EXIF remains first choice for coordinates and custom metadata mapping precedence is preserved.
+- Extend **Metadata diagnostics** with raw XMP GPS values, the final GPS source and a bounded list of matched XMP location/GPS property names so a phone/exported JPEG can be inspected locally before any catalogue write. Existing rows are not force-reindexed on upgrade; use explicit **Refresh metadata** after diagnostics succeeds.
+- Reduce JPEG metadata-prefix I/O by walking marker headers to Start Of Scan, reading only APP1 (EXIF/XMP) and SOF payloads while seeking over unrelated APP segments/compressed image data. The existing configured prefix bound is retained; non-JPEG formats keep the generic bounded prefix path.
+- Make a metadata refresh blocked by an active catalogue scan, schema migration or another refresh explicit in a modal Kodi dialog instead of a transient notification. Keep refresh/scanning serial, source media read-only, database schema 9, Query Model version 1, repository version 0.2.26 and Estuary revisions unchanged.
+
 ## 0.8.26 - 2026-08-17
 
 - Fix Kodi VFS binary metadata reads: `KodiFileAdapter` now uses `xbmcvfs.File.readBytes()` for JPEG/EXIF data instead of the text-oriented `read()`, preventing valid `0xff` JPEG marker bytes from being decoded as UTF-8 before ExifRead or the bounded fallback can inspect them.

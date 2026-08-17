@@ -635,18 +635,23 @@ action or reverse geocoding and never sends coordinates to a network provider.
 
 If Kodi's built-in picture information (`i`) shows camera metadata that is blank in
 MyPicsDB 3, use **Metadata diagnostics** on that picture. It compares the existing
-index with a fresh MyPicsDB extraction and reports whether EXIF Make/Model and GPS
-tags were actually detected. If ExifRead aborts on an unrelated malformed text tag,
-0.8.24+ uses a bounded core EXIF fallback and 0.8.25 also reports how many metadata
-prefix bytes were read, whether an embedded EXIF block was found, and any prefix or
-dimension-probe error. Version 0.8.26 fixes the Kodi VFS boundary itself: binary
-metadata reads use `xbmcvfs.File.readBytes()` rather than the text-oriented `read()`,
-so JPEG marker bytes such as `0xff` are not decoded as UTF-8 before the EXIF parser
-sees them. **Refresh metadata** then re-reads and stores the current
-normalized values for that one picture. Album context menus provide
+index with a fresh MyPicsDB extraction and reports EXIF Make/Model, EXIF GPS-tag
+presence and any matching XMP location/GPS properties. Version 0.8.26 fixes the Kodi
+VFS boundary so JPEG/EXIF data is read as bytes. Version 0.8.27 additionally accepts
+common XMP GPS latitude/longitude plus IPTC Extension `LocationShown*` /
+`LocationCreated*` aliases when the equivalent EXIF/canonical field is absent, and
+shows whether the final coordinate pair came from EXIF or XMP.
+
+For JPEGs, 0.8.27 also walks metadata marker headers and buffers only relevant APP1
+(EXIF/XMP) and SOF segments instead of reading several megabytes of compressed image
+data just to build the metadata prefix. **Refresh metadata** then re-reads and stores
+the current normalized values for that one picture. Album context menus provide
 **Refresh metadata in this folder** for still pictures directly in that folder only;
 subfolders are not included. Both refresh actions are serial, leave original media
-untouched and coordinate with catalogue scans so they cannot write concurrently.
+untouched and coordinate with catalogue scans so they cannot write concurrently. If
+a scan or migration owns the catalogue, Kodi shows an explicit "Metadata refresh
+unavailable" dialog; the request is not queued for later. Existing catalogue rows
+are not automatically rewritten merely by installing 0.8.27.
 
 The default picture-extension list includes Nikon NEF RAW files as well as HEIC,
 HEIF and AVIF. Existing installations that still use the unchanged pre-0.2.44

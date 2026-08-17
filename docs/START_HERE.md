@@ -291,3 +291,11 @@ For the Kodi SMB/VFS byte-stream boundary start in
 diagnostics remain in `metadata.py` and `views.py`. Regression coverage for the
 text-vs-binary VFS distinction lives in `tests/test_filesystem.py`; metadata fallback
 coverage remains in `tests/test_metadata.py`.
+
+## 0.8.27 XMP/location compatibility touchpoints
+
+For XMP GPS/location aliases and the low-I/O JPEG metadata-header walk, start in
+`resources/lib/mypicsdb3/metadata.py`. The local diagnostics report and explicit busy
+refresh dialog are in `views.py`; refresh locking remains in `metadata_refresh.py` and
+`db/locks.py`. Regression coverage lives in `tests/test_metadata.py` and
+`tests/test_kodi_ui_smoke.py`. No schema, Query Model or Estuary change is involved.

@@ -519,3 +519,12 @@ as returning text and `readBytes()` as the binary API. `KodiFileAdapter` therefo
 uses `readBytes()` for metadata streams and normalizes its bytearray result to
 `bytes`. This keeps SMB/VFS access inside Kodi while ensuring JPEG/EXIF marker bytes
 are never subjected to UTF-8 decoding before ExifRead or the bounded fallback.
+
+0.8.27 keeps that byte-stream boundary but avoids treating the configured JPEG
+metadata prefix as a request to transfer compressed pixels. A bounded marker walker
+reads JPEG segment headers through Start Of Scan, keeps only APP1 (EXIF/XMP) and SOF
+payloads needed by the existing parsers, and seeks over unrelated APP/data segments.
+Non-JPEG formats keep the generic bounded prefix path. XMP GPS is a fallback only when
+EXIF did not yield a coordinate; common IPTC Extension location aliases fill only
+canonical fields left empty by the normal/custom mapping path. This preserves mapping
+precedence and does not introduce a network geocoder.

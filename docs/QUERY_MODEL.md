@@ -260,3 +260,9 @@ smart collections and global search rules without a Query Model version bump.
 The diagnostics action is not a query source. Fresh extractor values are displayed
 locally for one selected picture and are not queryable until the user explicitly
 refreshes the catalogue row.
+
+Version 0.8.27 can recognize additional XMP location/GPS representations during a
+metadata read, but it does not add a Query Model field or operator and does not force
+a whole-library reindex. Once an explicit refresh stores a newly recognized canonical
+location value, existing Query Model v1 facets/searches consume it exactly like any
+other stored location metadata.

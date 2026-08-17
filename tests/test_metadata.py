@@ -330,3 +330,148 @@ def test_extract_metadata_stream_fallback_finds_exif_beyond_bad_prefix(monkeypat
     assert round(result.gps_latitude, 4) == 59.3293
     assert round(result.gps_longitude, 4) == 18.0686
     assert diagnostics["exif_fallback_used"] is True
+
+
+def _jpeg_segment(marker: int, payload: bytes) -> bytes:
+    return b"\xff" + bytes((marker,)) + struct.pack(">H", len(payload) + 2) + payload
+
+
+def test_parse_xmp_accepts_common_location_aliases_and_gps_coordinates() -> None:
+    data = b'''<x:xmpmeta xmlns:x="adobe:ns:meta/">
+      <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+               xmlns:exif="http://ns.adobe.com/exif/1.0/"
+               xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/">
+        <rdf:Description exif:GPSLatitude="59,19.758N"
+                         exif:GPSLongitude="18,4.116E"
+                         Iptc4xmpExt:LocationShownCity="Stockholm"
+                         Iptc4xmpExt:LocationShownProvinceState="Stockholm County"
+                         Iptc4xmpExt:LocationShownCountryName="Sweden"
+                         Iptc4xmpExt:LocationShownSublocation="Norrmalm" />
+      </rdf:RDF>
+    </x:xmpmeta>'''
+
+    result = parse_xmp(data)
+
+    assert round(result["gps_latitude"], 4) == 59.3293
+    assert round(result["gps_longitude"], 4) == 18.0686
+    assert result["location"] == {
+        "city": "Stockholm",
+        "state": "Stockholm County",
+        "country": "Sweden",
+        "sublocation": "Norrmalm",
+    }
+    assert result["location_fields"]["GPSLatitude"] == "59,19.758N"
+    assert result["location_fields"]["LocationShownCountryName"] == "Sweden"
+
+
+class _NoGpsExifReader:
+    @staticmethod
+    def process_file(_stream, details=False, strict=False):
+        assert details is False
+        assert strict is False
+        return {
+            "Image Make": _Tag("Sony"),
+            "Image Model": _Tag("XQ-EC54"),
+        }
+
+
+class _XmpGpsFilesystem:
+    def __init__(self):
+        xmp = b'''http://ns.adobe.com/xap/1.0/\x00<x:xmpmeta xmlns:x="adobe:ns:meta/">
+          <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+                   xmlns:exif="http://ns.adobe.com/exif/1.0/"
+                   xmlns:Iptc4xmpExt="http://iptc.org/std/Iptc4xmpExt/2008-02-29/">
+            <rdf:Description exif:GPSLatitude="59,19.758N"
+                             exif:GPSLongitude="18,4.116E"
+                             Iptc4xmpExt:LocationCreatedCity="Stockholm"
+                             Iptc4xmpExt:LocationCreatedCountryName="Sweden" />
+          </rdf:RDF>
+        </x:xmpmeta>'''
+        sof = b"\x08" + struct.pack(">HH", 3024, 4032) + b"\x03" + b"\x00" * 9
+        self.data = (
+            b"\xff\xd8"
+            + _jpeg_segment(0xE1, xmp)
+            + _jpeg_segment(0xC0, sof)
+            + b"\xff\xda\x00\x08" + b"\x00" * 6 + b"compressed-pixels"
+        )
+
+    def open_binary(self, _path):
+        return io.BytesIO(self.data)
+
+    def read_prefix(self, _path, max_bytes):
+        # 0.8.27 JPEG extraction should not use the generic full-prefix path.
+        raise AssertionError("generic read_prefix should not be used for JPEG")
+
+    @contextlib.contextmanager
+    def materialized(self, _path, _max_bytes):
+        yield None
+
+
+def test_extract_metadata_uses_xmp_gps_and_location_when_exif_gps_is_absent(monkeypatch) -> None:
+    filesystem = _XmpGpsFilesystem()
+    settings = SimpleNamespace(
+        metadata_prefix_mb=4,
+        deep_metadata_max_mb=64,
+        store_gps=True,
+        read_xmp=True,
+        read_iptc=False,
+    )
+    monkeypatch.setattr(metadata, "exifread", _NoGpsExifReader())
+    diagnostics = {}
+
+    result = extract_metadata(
+        "picture.jpg",
+        filesystem,
+        settings,
+        file_size=len(filesystem.data),
+        diagnostics=diagnostics,
+    )
+
+    assert result.camera_make == "Sony"
+    assert result.camera_model == "XQ-EC54"
+    assert round(result.gps_latitude, 4) == 59.3293
+    assert round(result.gps_longitude, 4) == 18.0686
+    assert result.location["city"] == "Stockholm"
+    assert result.location["country"] == "Sweden"
+    assert diagnostics["gps_source"] == "XMP"
+    assert diagnostics["xmp_gps_latitude_raw"] == "59,19.758N"
+    assert diagnostics["xmp_gps_longitude_raw"] == "18,4.116E"
+    assert diagnostics["xmp_location_fields"]["LocationCreatedCity"] == "Stockholm"
+
+
+class _CountingBytesIO(io.BytesIO):
+    def __init__(self, data: bytes):
+        super().__init__(data)
+        self.bytes_read = 0
+
+    def read(self, size=-1):
+        value = super().read(size)
+        self.bytes_read += len(value)
+        return value
+
+
+def test_jpeg_metadata_header_skips_large_unrelated_app_payloads() -> None:
+    app2 = b"I" * 60000
+    xmp = b'''http://ns.adobe.com/xap/1.0/\x00<x:xmpmeta xmlns:x="adobe:ns:meta/">
+      <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+               xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/">
+        <rdf:Description photoshop:City="Stockholm" />
+      </rdf:RDF>
+    </x:xmpmeta>'''
+    sof = b"\x08" + struct.pack(">HH", 3024, 4032) + b"\x03" + b"\x00" * 9
+    data = (
+        b"\xff\xd8"
+        + _jpeg_segment(0xE2, app2)
+        + _jpeg_segment(0xE1, xmp)
+        + _jpeg_segment(0xC0, sof)
+        + b"\xff\xda\x00\x08" + b"\x00" * 6
+        + b"P" * 200000
+    )
+    stream = _CountingBytesIO(data)
+
+    header = metadata._jpeg_metadata_prefix_from_stream(stream, 1024 * 1024)
+
+    assert b"Stockholm" in header
+    assert image_dimensions(header) == (4032, 3024)
+    assert len(header) < 2000
+    assert stream.bytes_read < 2000

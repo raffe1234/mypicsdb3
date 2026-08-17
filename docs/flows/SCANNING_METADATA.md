@@ -326,3 +326,16 @@ Kodi's Python VFS has separate text and byte reads. Metadata streams must use
 raise on normal marker bytes such as `0xff`. The seekable `KodiFileAdapter` now uses
 the byte API for both ExifRead and prefix/fallback reads. The extraction pipeline,
 precedence rules and explicit refresh semantics above are otherwise unchanged.
+
+### XMP compatibility and JPEG header I/O (0.8.27)
+
+Metadata extraction can now use common XMP GPS latitude/longitude when EXIF GPS is
+absent and can recognize additional IPTC Extension location aliases. This extractor
+change intentionally does **not** bump the metadata mapping fingerprint or force every
+unchanged catalogue row to be re-read on upgrade; existing rows change only through a
+normal metadata read (new/changed media) or explicit Metadata refresh.
+
+JPEG prefix acquisition no longer transfers the configured multi-megabyte prefix
+blindly. A bounded marker walk reads APP1/SOF payloads and seeks over unrelated data
+through Start Of Scan. Scanner ordering, checkpointing, cancellation and database
+writes remain serial and unchanged.
