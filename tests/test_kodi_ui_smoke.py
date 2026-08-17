@@ -78,8 +78,8 @@ class FakeDialogProgress:
     def create(self, heading, message=""):
         self.__class__.create_calls.append((heading, message))
 
-    def update(self, percent, line1="", line2=""):
-        self.__class__.update_calls.append((percent, line1, line2))
+    def update(self, percent, message=""):
+        self.__class__.update_calls.append((percent, message))
 
     def iscanceled(self):
         return bool(self.__class__.cancelled)
@@ -1068,7 +1068,7 @@ def test_folder_metadata_refresh_is_confirmed_and_reports_progress(monkeypatch) 
 
     assert refreshed == [2]
     assert views.xbmcgui.DialogProgress.create_calls[-1][0] == "Refresh metadata in this folder"
-    assert views.xbmcgui.DialogProgress.update_calls[-1] == (100, "1 / 1", "image.jpg")
+    assert views.xbmcgui.DialogProgress.update_calls[-1] == (100, "1 / 1\nimage.jpg")
     assert any(
         message == "Metadata refresh complete: 1 refreshed, 0 failed"
         for message, _error in runtime.kodi.notifications
@@ -1102,7 +1102,7 @@ def test_whole_library_metadata_refresh_is_confirmed_and_reports_progress(monkey
     ui.action("action/refresh-metadata-all", {})
 
     assert views.xbmcgui.DialogProgress.create_calls[-1][0] == "Refresh all picture metadata"
-    assert views.xbmcgui.DialogProgress.update_calls[-1] == (100, "2 / 2", "two.jpg")
+    assert views.xbmcgui.DialogProgress.update_calls[-1] == (100, "2 / 2\ntwo.jpg")
     assert any(
         message == "All metadata refresh complete: 2 refreshed, 0 failed"
         for message, _error in runtime.kodi.notifications
@@ -1369,7 +1369,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.29" in labels
+    assert "MyPicsDB 3 version: 0.8.30" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3397,7 +3397,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.29"
+    assert captured["init"][2] == "0.8.30"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

@@ -1845,7 +1845,10 @@ class PluginUI:
 
             def progress(index: int, total: int, filename: str) -> None:
                 percent = int((index * 100) / max(1, total))
-                dialog.update(percent, "%d / %d" % (index, total), filename or "")
+                message = "%d / %d" % (index, total)
+                if filename:
+                    message += "\n" + filename
+                dialog.update(percent, message)
 
             refresher = self._metadata_refresher()
             stats = refresher.refresh_folder(
@@ -1930,11 +1933,10 @@ class PluginUI:
 
             def progress(done: int, total: int, filename: str) -> None:
                 percent = min(100, int((int(done) * 100) / max(1, int(total))))
-                progress_dialog.update(
-                    percent,
-                    "%d / %d" % (int(done), int(total)),
-                    filename or "",
-                )
+                message = "%d / %d" % (int(done), int(total))
+                if filename:
+                    message += "\n" + filename
+                progress_dialog.update(percent, message)
 
             stats = refresher.refresh_all(
                 cancelled=cancelled,

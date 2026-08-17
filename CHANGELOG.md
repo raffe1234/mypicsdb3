@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.30 - 2026-08-17
+
+- Fix Kodi 19+ foreground progress-dialog compatibility for **Refresh metadata in this folder** and **Refresh all picture metadata**. `xbmcgui.DialogProgress.update()` now receives the supported `(percent, message)` signature instead of the removed legacy multi-line positional arguments.
+- Keep the progress counter and current filename visible by combining them into the single supported message string. This prevents the 0.8.29 whole-library refresh from aborting on its first progress update after confirmation.
+- Tighten the Kodi UI test double to the modern `DialogProgress.update(percent, message)` contract so this API mismatch cannot be masked by regression tests again.
+- Update the README status line. Database schema 9, Query Model version 1, repository version 0.2.26, scanner semantics and metadata-refresh safety boundaries are unchanged.
+
 ## 0.8.29 - 2026-08-17
 
 - Add **Refresh all picture metadata** at the top of Browse metadata so existing still-picture rows can be re-read with the current EXIF/XMP/IPTC extractor without traversing source trees, rebuilding the catalogue or modifying source files. The operation is serial and intentionally performs no online reverse geocoding.
