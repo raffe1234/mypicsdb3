@@ -28,9 +28,21 @@ class KodiFileAdapter:
     def read(self, size: int = -1) -> bytes:
         if size is None or size < 0:
             size = max(0, self.size() - self._position)
-        data = self._file.read(size)
-        if isinstance(data, str):
-            data = data.encode("latin-1", "replace")
+
+        # Kodi's xbmcvfs.File.read() is a text API and may try to decode
+        # arbitrary JPEG/EXIF bytes as UTF-8. Metadata parsers need the VFS
+        # byte API instead; otherwise a perfectly valid 0xff JPEG marker can
+        # raise UnicodeDecodeError before ExifRead or our fallback sees it.
+        read_bytes = getattr(self._file, "readBytes", None)
+        if callable(read_bytes):
+            data = bytes(read_bytes(size))
+        else:  # Compatibility for very old/test VFS shims without readBytes.
+            data = self._file.read(size)
+            if isinstance(data, str):
+                data = data.encode("latin-1", "replace")
+            elif not isinstance(data, bytes):
+                data = bytes(data)
+
         self._position += len(data)
         return data
 

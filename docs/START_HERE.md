@@ -284,3 +284,10 @@ automatic-scan scheduling, start in `scanner.py`, `service_loop.py` and the
 catalogue `meta_value` helpers in `db/catalog.py`. Regression coverage lives in
 `tests/test_metadata.py`, `tests/test_scanner.py`, `tests/test_catalog.py` and
 `tests/test_service_scan_progress.py`.
+## 0.8.26 Kodi VFS binary-metadata touchpoints
+
+For the Kodi SMB/VFS byte-stream boundary start in
+`resources/lib/mypicsdb3/filesystem.py` (`KodiFileAdapter`). EXIF parsing and
+diagnostics remain in `metadata.py` and `views.py`. Regression coverage for the
+text-vs-binary VFS distinction lives in `tests/test_filesystem.py`; metadata fallback
+coverage remains in `tests/test_metadata.py`.

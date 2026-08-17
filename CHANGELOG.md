@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.26 - 2026-08-17
+
+- Fix Kodi VFS binary metadata reads: `KodiFileAdapter` now uses `xbmcvfs.File.readBytes()` for JPEG/EXIF data instead of the text-oriented `read()`, preventing valid `0xff` JPEG marker bytes from being decoded as UTF-8 before ExifRead or the bounded fallback can inspect them.
+- Preserve the existing seekable file-like adapter contract for ExifRead and metadata prefix reads; bytearray results are normalized to `bytes`, source files remain read-only, and local/test shims without `readBytes()` retain the compatibility path.
+- Keep the 0.8.24/0.8.25 resilient EXIF fallback and diagnostics unchanged above the corrected I/O layer. Existing catalogue rows are not automatically rewritten; use **Metadata diagnostics** and then explicit **Refresh metadata** after confirming Fresh extraction sees the expected camera/GPS values.
+- Keep automatic-scan cadence changes from 0.8.25, serial scanning, database schema 9, Query Model version 1, repository version 0.2.26 and Estuary revisions unchanged.
+
 ## 0.8.25 - 2026-08-17
 
 - Make the 0.8.24 core EXIF recovery path independent of image-dimension probing: a successfully read metadata prefix is no longer discarded when dimension parsing fails, and a bounded JPEG marker walker can locate EXIF from a fresh VFS stream after ExifRead aborts.

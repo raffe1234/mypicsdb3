@@ -513,3 +513,9 @@ bounded JPEG marker walker opens a fresh VFS stream and skips unrelated APP
 segments without decoding them until it locates an EXIF APP1 block or reaches the
 configured/deep-metadata bound. Diagnostics expose prefix byte count, embedded
 EXIF detection and prefix/dimension errors locally.
+
+0.8.26 fixes the VFS layer beneath both parsers. Kodi documents `xbmcvfs.File.read()`
+as returning text and `readBytes()` as the binary API. `KodiFileAdapter` therefore
+uses `readBytes()` for metadata streams and normalizes its bytearray result to
+`bytes`. This keeps SMB/VFS access inside Kodi while ensuring JPEG/EXIF marker bytes
+are never subjected to UTF-8 decoding before ExifRead or the bounded fallback.

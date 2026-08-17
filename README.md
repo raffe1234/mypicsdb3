@@ -639,7 +639,10 @@ index with a fresh MyPicsDB extraction and reports whether EXIF Make/Model and G
 tags were actually detected. If ExifRead aborts on an unrelated malformed text tag,
 0.8.24+ uses a bounded core EXIF fallback and 0.8.25 also reports how many metadata
 prefix bytes were read, whether an embedded EXIF block was found, and any prefix or
-dimension-probe error. **Refresh metadata** then re-reads and stores the current
+dimension-probe error. Version 0.8.26 fixes the Kodi VFS boundary itself: binary
+metadata reads use `xbmcvfs.File.readBytes()` rather than the text-oriented `read()`,
+so JPEG marker bytes such as `0xff` are not decoded as UTF-8 before the EXIF parser
+sees them. **Refresh metadata** then re-reads and stores the current
 normalized values for that one picture. Album context menus provide
 **Refresh metadata in this folder** for still pictures directly in that folder only;
 subfolders are not included. Both refresh actions are serial, leave original media

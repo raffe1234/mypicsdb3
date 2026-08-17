@@ -94,3 +94,12 @@ and image-dimension probe errors. The recovery path also has a bounded fresh-VFS
 JPEG marker walker, so a valid EXIF APP1 block can still be found when the normal
 prefix path is unusable. These diagnostics do not write the catalogue; **Refresh
 metadata** remains the explicit write action.
+### Kodi VFS byte-stream fix (0.8.26)
+
+If diagnostics in 0.8.25 show both `EXIF reader error: UnicodeDecodeError` and
+`Metadata prefix read error: UnicodeDecodeError` with zero prefix bytes, the failure
+is below the metadata mapping layer: binary JPEG data was passed through Kodi's text
+`read()` API. 0.8.26 uses `readBytes()` in `KodiFileAdapter`, so Fresh extraction can
+reach ExifRead/fallback data over SMB without UTF-8 decoding the file contents.
+Existing indexed rows still require explicit refresh after a representative
+diagnostic succeeds.

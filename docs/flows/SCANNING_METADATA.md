@@ -318,3 +318,11 @@ opens a fresh VFS handle and performs a bounded JPEG marker walk that skips
 unrelated APP payloads and reads only the EXIF APP1 segment. The diagnostics view
 shows prefix bytes read, whether an embedded EXIF block was found, and any prefix
 or dimension-probe error before a user chooses to refresh catalogue data.
+
+### Kodi VFS binary reads (0.8.26)
+
+Kodi's Python VFS has separate text and byte reads. Metadata streams must use
+`xbmcvfs.File.readBytes()`; using `read()` can decode binary JPEG bytes as UTF-8 and
+raise on normal marker bytes such as `0xff`. The seekable `KodiFileAdapter` now uses
+the byte API for both ExifRead and prefix/fallback reads. The extraction pipeline,
+precedence rules and explicit refresh semantics above are otherwise unchanged.
