@@ -275,3 +275,12 @@ whole design from the patch.
 For EXIF decode/fallback behaviour start in `resources/lib/mypicsdb3/metadata.py`;
 for the large scrollable diagnostics UI start in `views.py`. Regression coverage is
 in `tests/test_metadata.py` and `tests/test_kodi_ui_smoke.py`.
+
+## 0.8.25 recovery and scan-cadence touchpoints
+
+For prefix retention, JPEG marker-walk fallback and extractor diagnostics, start
+in `resources/lib/mypicsdb3/metadata.py` and `views.py`. For restart-stable
+automatic-scan scheduling, start in `scanner.py`, `service_loop.py` and the
+catalogue `meta_value` helpers in `db/catalog.py`. Regression coverage lives in
+`tests/test_metadata.py`, `tests/test_scanner.py`, `tests/test_catalog.py` and
+`tests/test_service_scan_progress.py`.

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import mypicsdb3.service_loop as service_loop
@@ -57,6 +57,54 @@ class FakeCatalog:
 
     def sync_sources(self, sources):
         self.synced = list(sources)
+
+
+def test_initial_scan_delay_preserves_24h_cadence_across_service_restart(tmp_path) -> None:
+    monitor = FakeMonitor()
+    kodi = FakeKodi(monitor)
+    now = datetime(2026, 8, 17, 10, 0, tzinfo=timezone.utc)
+    loop = ServiceLoop(
+        kodi,
+        utcnow_provider=lambda: now,
+        monitor=monitor,
+    )
+    settings = SimpleNamespace(
+        startup_delay_seconds=60,
+        scan_interval_hours=24,
+        profile_path=str(tmp_path),
+    )
+
+    class CatalogWithLastScan:
+        def meta_value(self, key):
+            assert key == service_loop.LAST_COMPLETE_SCAN_META_KEY
+            return (now - timedelta(hours=2)).strftime("%Y-%m-%d %H:%M:%S.%f")
+
+    delay = loop._initial_scan_delay(settings, CatalogWithLastScan())
+
+    assert delay == 22 * 3600
+    assert any(
+        level == "info" and "cadence preserved across restart" in message
+        for level, message in kodi.log.messages
+    )
+
+
+def test_initial_scan_delay_resumes_local_checkpoint_before_normal_interval(tmp_path) -> None:
+    monitor = FakeMonitor()
+    kodi = FakeKodi(monitor)
+    now = datetime(2026, 8, 17, 10, 0, tzinfo=timezone.utc)
+    loop = ServiceLoop(kodi, utcnow_provider=lambda: now, monitor=monitor)
+    settings = SimpleNamespace(
+        startup_delay_seconds=90,
+        scan_interval_hours=24,
+        profile_path=str(tmp_path),
+    )
+    (tmp_path / service_loop.CHECKPOINT_FILENAME).write_text("{}", encoding="utf-8")
+
+    class CatalogWithLastScan:
+        def meta_value(self, _key):
+            return (now - timedelta(hours=1)).strftime("%Y-%m-%d %H:%M:%S.%f")
+
+    assert loop._initial_scan_delay(settings, CatalogWithLastScan()) == 90
 
 
 class FakeKodi:

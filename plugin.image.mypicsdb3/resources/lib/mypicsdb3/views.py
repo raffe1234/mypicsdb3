@@ -1527,6 +1527,16 @@ class PluginUI:
             "%s: %s" % (self.text(33010, "Store GPS coordinates"), yes if store_gps else no),
             "%s: %s"
             % (
+                self.text(33016, "Metadata prefix bytes read"),
+                int(source.get("prefix_bytes_read") or 0),
+            ),
+            "%s: %s"
+            % (
+                self.text(33017, "Embedded EXIF block found"),
+                yes if source.get("embedded_exif_found") else no,
+            ),
+            "%s: %s"
+            % (
                 self.text(33014, "Core EXIF fallback used"),
                 yes if source.get("exif_fallback_used") else no,
             ),
@@ -1543,6 +1553,16 @@ class PluginUI:
             lines.append(
                 "%s: %s"
                 % (self.text(33011, "EXIF reader error"), source.get("exif_error"))
+            )
+        if source.get("prefix_error"):
+            lines.append(
+                "%s: %s"
+                % (self.text(33018, "Metadata prefix read error"), source.get("prefix_error"))
+            )
+        if source.get("dimension_error"):
+            lines.append(
+                "%s: %s"
+                % (self.text(33019, "Image dimension probe error"), source.get("dimension_error"))
             )
         dialog = xbmcgui.Dialog()
         heading = self.text(32989, "Metadata diagnostics")

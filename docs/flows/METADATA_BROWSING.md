@@ -87,3 +87,10 @@ the bounded core EXIF fallback was used and how many core tags it recovered. A
 reported ExifRead error can therefore coexist with successful Fresh extraction of
 Camera Make/Model or GPS; the error describes the primary parser, not necessarily
 the final normalized result.
+
+0.8.25 adds low-level local diagnostics for cases where the fallback itself does
+not fire: metadata-prefix byte count, embedded-EXIF detection, prefix read errors
+and image-dimension probe errors. The recovery path also has a bounded fresh-VFS
+JPEG marker walker, so a valid EXIF APP1 block can still be found when the normal
+prefix path is unusable. These diagnostics do not write the catalogue; **Refresh
+metadata** remains the explicit write action.

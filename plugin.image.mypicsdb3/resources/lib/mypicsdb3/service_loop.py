@@ -1,15 +1,17 @@
 from __future__ import annotations
 
+import os
 import time
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Callable
 
 from .db import Catalog, DatabaseEngine
 from .db.migrations import MigrationLockError
 from .filesystem import KodiFilesystem
 from .music_slideshow import stop_music_player
-from .scanner import ScanAlreadyRunning, Scanner
+from .scan_checkpoint import CHECKPOINT_FILENAME
+from .scanner import LAST_COMPLETE_SCAN_META_KEY, ScanAlreadyRunning, Scanner
 
 
 DATE_REFRESH_DELAY_SECONDS = 60.0
@@ -185,6 +187,7 @@ class ServiceLoop:
         kodi_context,
         date_provider: Callable[[], date] = date.today,
         monotonic_provider: Callable[[], float] = time.monotonic,
+        utcnow_provider: Callable[[], datetime] = lambda: datetime.now(timezone.utc),
         monitor=None,
     ):
         self.kodi = kodi_context
@@ -192,12 +195,65 @@ class ServiceLoop:
         self.next_scan_at = 0.0
         self.date_provider = date_provider
         self.monotonic_provider = monotonic_provider
+        self.utcnow_provider = utcnow_provider
         self.current_date = self.date_provider()
         self.pending_date_refresh = False
         self.date_refresh_not_before = 0.0
         self.date_refresh_deferred_logged = False
         self.random_home_refresh_hours = 0
         self.next_random_home_refresh_at = 0.0
+
+    def _initial_scan_delay(self, settings, catalog) -> float:
+        """Return seconds until the first automatic scan in this service run.
+
+        A local interrupted-scan checkpoint deliberately wins: resuming an
+        unfinished traversal should not wait the normal 24-hour cadence. With
+        no checkpoint, however, service/Kodi restarts must not reset the scan
+        clock. The last *complete* full scan is persisted in catalogue meta.
+        """
+
+        startup_delay = max(0.0, float(settings.startup_delay_seconds))
+        checkpoint_path = os.path.join(
+            str(getattr(settings, "profile_path", self.kodi.profile_path)).rstrip("/\\"),
+            CHECKPOINT_FILENAME,
+        )
+        if os.path.isfile(checkpoint_path):
+            self.kodi.log.info(
+                "Interrupted scan checkpoint found; resuming after %.0f-second startup delay",
+                startup_delay,
+            )
+            return startup_delay
+
+        getter = getattr(catalog, "meta_value", None)
+        stored = getter(LAST_COMPLETE_SCAN_META_KEY) if callable(getter) else None
+        if not stored:
+            return startup_delay
+        text = str(stored).strip()
+        if text.endswith("Z"):
+            text = text[:-1] + "+00:00"
+        try:
+            completed_at = datetime.fromisoformat(text)
+        except (TypeError, ValueError):
+            return startup_delay
+        if completed_at.tzinfo is None:
+            completed_at = completed_at.replace(tzinfo=timezone.utc)
+        else:
+            completed_at = completed_at.astimezone(timezone.utc)
+        now_utc = self.utcnow_provider()
+        if now_utc.tzinfo is None:
+            now_utc = now_utc.replace(tzinfo=timezone.utc)
+        else:
+            now_utc = now_utc.astimezone(timezone.utc)
+        elapsed = max(0.0, (now_utc - completed_at).total_seconds())
+        interval = max(1.0, float(settings.scan_interval_hours) * 3600.0)
+        remaining = max(0.0, interval - elapsed)
+        delay = max(startup_delay, remaining)
+        if remaining > 0:
+            self.kodi.log.info(
+                "Automatic scan cadence preserved across restart; next scan due in %.1f hours",
+                delay / 3600.0,
+            )
+        return delay
 
     def _maintain_random_home_refresh(self, settings, now: float) -> None:
         hours = max(
@@ -331,7 +387,7 @@ class ServiceLoop:
         except Exception as exc:
             self.kodi.log.warning("Initial source synchronization failed: %s", exc)
         now = self.monotonic_provider()
-        self.next_scan_at = now + settings.startup_delay_seconds
+        self.next_scan_at = now + self._initial_scan_delay(settings, catalog)
         self._maintain_random_home_refresh(settings, now)
         next_maintenance_at = now
         slideshow_monitor = MixedSlideshowVideoMonitor(self.kodi, catalog)

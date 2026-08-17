@@ -1015,6 +1015,53 @@ class Catalog:
                 (1 if available else 0, utc_now(), status, error, utc_now(), source_id),
             ).close()
 
+    def meta_value(self, key: str) -> Optional[str]:
+        """Return one non-schema catalogue meta value.
+
+        The ``meta`` table is intentionally a key/value store in both backends.
+        Runtime state that does not require a structural migration can therefore
+        be persisted here without changing schema version 9.
+        """
+        clean_key = str(key or "").strip()
+        if not clean_key:
+            return None
+        sql = (
+            "SELECT value FROM meta WHERE `key`=?"
+            if self.engine.backend == "mysql"
+            else "SELECT value FROM meta WHERE key=?"
+        )
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(connection, sql, (clean_key,))
+        if not row or row.get("value") is None:
+            return None
+        return str(row.get("value"))
+
+    def set_meta_value(self, key: str, value: str) -> None:
+        clean_key = str(key or "").strip()
+        if not clean_key:
+            raise ValueError("Meta key must not be empty")
+        select_sql = (
+            "SELECT value FROM meta WHERE `key`=?"
+            if self.engine.backend == "mysql"
+            else "SELECT value FROM meta WHERE key=?"
+        )
+        insert_sql = (
+            "INSERT INTO meta (`key`, value) VALUES (?, ?)"
+            if self.engine.backend == "mysql"
+            else "INSERT INTO meta (key, value) VALUES (?, ?)"
+        )
+        update_sql = (
+            "UPDATE meta SET value=? WHERE `key`=?"
+            if self.engine.backend == "mysql"
+            else "UPDATE meta SET value=? WHERE key=?"
+        )
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(connection, select_sql, (clean_key,))
+            if row is None:
+                self.engine.execute(connection, insert_sql, (clean_key, str(value))).close()
+            else:
+                self.engine.execute(connection, update_sql, (str(value), clean_key)).close()
+
     def acquire_lock(self, name: str, owner: str, ttl_seconds: int = 1800) -> bool:
         return acquire_catalog_lock(self.engine, name, owner, ttl_seconds)
 

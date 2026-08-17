@@ -658,3 +658,13 @@ def test_export_selection_helpers_freeze_order_and_return_bounded_metadata(
         assert "at most 500" in str(exc)
     else:
         raise AssertionError("Unbounded export metadata batches must be rejected")
+
+
+def test_catalog_meta_value_roundtrip(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+
+    assert catalog.meta_value("last_complete_scan_at") is None
+    catalog.set_meta_value("last_complete_scan_at", "2026-08-17 10:00:00.000000")
+    assert catalog.meta_value("last_complete_scan_at") == "2026-08-17 10:00:00.000000"
+    catalog.set_meta_value("last_complete_scan_at", "2026-08-17 11:00:00.000000")
+    assert catalog.meta_value("last_complete_scan_at") == "2026-08-17 11:00:00.000000"

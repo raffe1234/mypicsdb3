@@ -33,6 +33,7 @@ class ScanLockLost(RuntimeError):
 
 SCAN_LOCK_TTL_SECONDS = 1800
 SCAN_LOCK_REFRESH_SECONDS = 60
+LAST_COMPLETE_SCAN_META_KEY = "last_complete_scan_at"
 
 
 SLOW_IO_WARNING_SECONDS = 5.0
@@ -205,6 +206,18 @@ class Scanner:
                 self._scan_lock_active = False
         overall.finished_at = utc_now()
         overall.duration_seconds = time.monotonic() - started_monotonic
+        if scan_completed and not overall.cancelled:
+            setter = getattr(self.catalog, "set_meta_value", None)
+            if callable(setter):
+                try:
+                    setter(LAST_COMPLETE_SCAN_META_KEY, overall.finished_at)
+                except Exception as exc:
+                    warning_logger = getattr(self.logger, "warning", None) if self.logger else None
+                    if callable(warning_logger):
+                        warning_logger(
+                            "Could not persist last complete scan timestamp: %s",
+                            exc,
+                        )
         info_logger = getattr(self.logger, "info", None) if self.logger else None
         if callable(info_logger):
             rate = (

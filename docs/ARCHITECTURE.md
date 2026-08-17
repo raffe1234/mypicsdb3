@@ -317,6 +317,14 @@ the recognized music queue belonging to a finished collection picture
 slideshow. It must remain responsive to Kodi abort
 requests and defer disruptive work while playback is active when configured.
 
+From 0.8.25 the automatic-scan clock is restart-stable. A successful full
+catalogue traversal stores `last_complete_scan_at` in the existing catalogue
+`meta` key/value table, and the service calculates the remaining configured
+interval from that UTC timestamp after a Kodi/add-on service restart. A local
+compatible scan checkpoint deliberately overrides that wait so an interrupted
+traversal can resume after the normal startup delay. This adds no schema
+migration and does not make scan I/O concurrent.
+
 ### Estuary and build tools
 
 `contrib/estuary/upstream.json` pins official Estuary sources per Kodi channel.
@@ -497,3 +505,11 @@ fields needed by catalogue browsing: Make, Model, orientation, capture timestamp
 EXIF dimensions and latitude/longitude. It deliberately does not decode MakerNote
 or UserComment and never writes to the source file. XMP/IPTC and normal mapping
 precedence continue unchanged.
+
+0.8.25 hardens that boundary further. Prefix acquisition and image-dimension
+probing are independent, so a dimension parser failure cannot discard bytes that
+still contain valid EXIF. If the prefix fallback is empty after ExifRead fails, a
+bounded JPEG marker walker opens a fresh VFS stream and skips unrelated APP
+segments without decoding them until it locates an EXIF APP1 block or reaches the
+configured/deep-metadata bound. Diagnostics expose prefix byte count, embedded
+EXIF detection and prefix/dimension errors locally.

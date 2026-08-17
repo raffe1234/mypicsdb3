@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.24. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.23. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -636,8 +636,11 @@ action or reverse geocoding and never sends coordinates to a network provider.
 If Kodi's built-in picture information (`i`) shows camera metadata that is blank in
 MyPicsDB 3, use **Metadata diagnostics** on that picture. It compares the existing
 index with a fresh MyPicsDB extraction and reports whether EXIF Make/Model and GPS
-tags were actually detected. **Refresh metadata** then re-reads and stores the
-current normalized values for that one picture. Album context menus provide
+tags were actually detected. If ExifRead aborts on an unrelated malformed text tag,
+0.8.24+ uses a bounded core EXIF fallback and 0.8.25 also reports how many metadata
+prefix bytes were read, whether an embedded EXIF block was found, and any prefix or
+dimension-probe error. **Refresh metadata** then re-reads and stores the current
+normalized values for that one picture. Album context menus provide
 **Refresh metadata in this folder** for still pictures directly in that folder only;
 subfolders are not included. Both refresh actions are serial, leave original media
 untouched and coordinate with catalogue scans so they cannot write concurrently.
@@ -863,7 +866,12 @@ to 720. Common choices are:
 The generated Estuary Home screen materializes all nine MyPicsDB 3 slots from persistent add-on settings, so cold startup does not depend on the background service reaching Home first. The background service still waits through a short, abortable five-second grace
 period before publishing supplemental Home-screen state. This protects in-place
 add-on updates while Kodi may still be unloading a skin. It then waits for the
-configured scan startup delay and runs an incremental scan. By default,
+configured scan startup delay before any scan that is already due. From 0.8.25 the
+timestamp of the last complete full catalogue scan is persisted, so restarting Kodi
+or reloading the add-on service does **not** reset a 24-hour interval and immediately
+schedule another complete scan. A compatible interrupted-scan checkpoint is the
+intentional exception: it resumes after the startup delay so an unfinished traversal
+can complete, and the normal interval is then measured from that completion. By default,
 automatic scanning is disabled and scans are deferred while Kodi is playing
 media. Automatic scans use the same non-modal
 background progress indicator as manual scans. The main menu and **Scan status**

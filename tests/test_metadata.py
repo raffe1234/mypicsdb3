@@ -265,3 +265,68 @@ def test_extract_metadata_recovers_core_exif_when_exifread_unicode_decode_fails(
     assert diagnostics["gps_latitude_present"] is True
     assert diagnostics["gps_longitude_present"] is True
     assert diagnostics["exif_error"].startswith("UnicodeDecodeError:")
+
+
+def test_extract_metadata_keeps_prefix_for_fallback_when_dimension_probe_fails(monkeypatch) -> None:
+    filesystem = _FallbackExifFilesystem()
+    settings = SimpleNamespace(
+        metadata_prefix_mb=1,
+        deep_metadata_max_mb=64,
+        store_gps=True,
+        read_xmp=False,
+        read_iptc=False,
+    )
+    monkeypatch.setattr(metadata, "exifread", _BrokenUnicodeExifReader())
+    monkeypatch.setattr(
+        metadata,
+        "image_dimensions",
+        lambda _data: (_ for _ in ()).throw(ValueError("bad dimensions")),
+    )
+    diagnostics = {}
+
+    result = extract_metadata(
+        "picture.jpg",
+        filesystem,
+        settings,
+        file_size=len(filesystem.data),
+        diagnostics=diagnostics,
+    )
+
+    assert result.camera_make == "Samsung"
+    assert result.camera_model == "SM-S921B"
+    assert diagnostics["exif_fallback_used"] is True
+    assert diagnostics["prefix_bytes_read"] == len(filesystem.data)
+    assert diagnostics["embedded_exif_found"] is True
+    assert diagnostics["dimension_error"].startswith("ValueError:")
+
+
+class _ShortPrefixFallbackFilesystem(_FallbackExifFilesystem):
+    def read_prefix(self, _path, _max_bytes):
+        return self.data[:4]
+
+
+def test_extract_metadata_stream_fallback_finds_exif_beyond_bad_prefix(monkeypatch) -> None:
+    filesystem = _ShortPrefixFallbackFilesystem()
+    settings = SimpleNamespace(
+        metadata_prefix_mb=1,
+        deep_metadata_max_mb=64,
+        store_gps=True,
+        read_xmp=False,
+        read_iptc=False,
+    )
+    monkeypatch.setattr(metadata, "exifread", _BrokenUnicodeExifReader())
+    diagnostics = {}
+
+    result = extract_metadata(
+        "picture.jpg",
+        filesystem,
+        settings,
+        file_size=len(filesystem.data),
+        diagnostics=diagnostics,
+    )
+
+    assert result.camera_make == "Samsung"
+    assert result.camera_model == "SM-S921B"
+    assert round(result.gps_latitude, 4) == 59.3293
+    assert round(result.gps_longitude, 4) == 18.0686
+    assert diagnostics["exif_fallback_used"] is True

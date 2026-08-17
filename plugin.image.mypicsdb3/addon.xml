@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.8.24" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.8.25" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Add explicit metadata refresh and privacy-local diagnostics for indexed still pictures and folders, without rebuilding the catalogue or modifying source files.</news>
+    <news>Harden EXIF recovery after parser decode failures and preserve automatic-scan cadence across Kodi or add-on service restarts while still resuming interrupted checkpoints.</news>
   </extension>
 </addon>

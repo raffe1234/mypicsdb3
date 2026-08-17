@@ -73,6 +73,7 @@ def test_sqlite_scan_recovers_previous_process_lock_and_marks_run_interrupted(tm
     stats = scanner.scan_sources()
 
     assert stats.pictures_seen == 1
+    assert catalog.meta_value("last_complete_scan_at")
     with catalog.engine.transaction() as connection:
         stale = catalog.engine.fetchone(
             connection, "SELECT * FROM scan_runs WHERE id=?", (stale_scan_id,)

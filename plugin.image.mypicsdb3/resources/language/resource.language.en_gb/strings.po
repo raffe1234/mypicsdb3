@@ -2070,3 +2070,19 @@ msgstr "Core EXIF fallback used"
 msgctxt "#33015"
 msgid "Fallback EXIF tags found"
 msgstr "Fallback EXIF tags found"
+
+msgctxt "#33016"
+msgid "Metadata prefix bytes read"
+msgstr "Metadata prefix bytes read"
+
+msgctxt "#33017"
+msgid "Embedded EXIF block found"
+msgstr "Embedded EXIF block found"
+
+msgctxt "#33018"
+msgid "Metadata prefix read error"
+msgstr "Metadata prefix read error"
+
+msgctxt "#33019"
+msgid "Image dimension probe error"
+msgstr "Image dimension probe error"

@@ -190,6 +190,72 @@ def _fallback_exif_tags(data: bytes) -> Dict[str, Any]:
     return tags
 
 
+def _fallback_exif_tags_from_stream(stream, max_scan_bytes: int) -> Dict[str, Any]:
+    """Locate JPEG EXIF without decoding unrelated APP/text payloads.
+
+    The normal fallback works from the configured metadata prefix. Some JPEGs
+    contain large APP segments before EXIF, and a prefix can also be unavailable
+    even though a fresh VFS stream is readable. This marker walker skips segment
+    payloads with ``seek`` and reads only EXIF APP1 data. It is used only after
+    the primary ExifRead path has already failed.
+    """
+
+    try:
+        limit = max(64 * 1024, int(max_scan_bytes or 0))
+        stream.seek(0, 0)
+        if stream.read(2) != b"\xff\xd8":
+            return {}
+        scanned = 2
+        while scanned + 4 <= limit:
+            marker_prefix = stream.read(1)
+            scanned += 1
+            if not marker_prefix:
+                break
+            if marker_prefix != b"\xff":
+                continue
+            marker_byte = stream.read(1)
+            scanned += 1
+            while marker_byte == b"\xff":
+                marker_byte = stream.read(1)
+                scanned += 1
+            if not marker_byte:
+                break
+            marker = marker_byte[0]
+            if marker in {0xD8, 0xD9}:
+                continue
+            if marker == 0xDA:
+                break
+            length_bytes = stream.read(2)
+            scanned += 2
+            if len(length_bytes) != 2:
+                break
+            segment_length = struct.unpack(">H", length_bytes)[0]
+            if segment_length < 2:
+                break
+            payload_length = segment_length - 2
+            if scanned + payload_length > limit:
+                break
+            if marker == 0xE1:
+                payload = stream.read(payload_length)
+                scanned += len(payload)
+                if len(payload) != payload_length:
+                    break
+                if payload.startswith(b"Exif\x00\x00"):
+                    wrapped = (
+                        b"\xff\xd8\xff\xe1"
+                        + struct.pack(">H", segment_length)
+                        + payload
+                        + b"\xff\xd9"
+                    )
+                    return _fallback_exif_tags(wrapped)
+                continue
+            stream.seek(payload_length, 1)
+            scanned += payload_length
+    except Exception:
+        return {}
+    return {}
+
+
 def _as_number(value: Any) -> Optional[float]:
     if value is None:
         return None
@@ -584,11 +650,21 @@ def extract_metadata(
 ) -> MetadataResult:
     result = MetadataResult(mime_type=mimetypes.guess_type(path)[0] or "image/unknown")
     prefix = b""
+    prefix_error = ""
+    dimension_error = ""
     try:
         prefix = filesystem.read_prefix(path, settings.metadata_prefix_mb * 1024 * 1024)
-        result.width, result.height = image_dimensions(prefix)
-    except Exception:
+    except Exception as exc:
+        prefix_error = "%s: %s" % (exc.__class__.__name__, str(exc))
         prefix = b""
+    try:
+        result.width, result.height = image_dimensions(prefix)
+    except Exception as exc:
+        # Keep a successfully read prefix even when dimension probing fails.
+        # The same bytes may still contain a perfectly valid EXIF APP1 block,
+        # which is especially important when ExifRead later aborts on an
+        # unrelated malformed text tag.
+        dimension_error = "%s: %s" % (exc.__class__.__name__, str(exc))
 
     tags: Dict[str, Any] = {}
     exif_error = ""
@@ -601,6 +677,35 @@ def extract_metadata(
         except Exception as exc:
             exif_error = "%s: %s" % (exc.__class__.__name__, str(exc))
             tags = _fallback_exif_tags(prefix)
+            # A failed/empty prefix must not disable the recovery path. Re-read
+            # a bounded prefix from a fresh VFS handle before giving up. This is
+            # still local, serial and bounded by the configured metadata prefix.
+            if not tags:
+                try:
+                    retry_prefix = filesystem.read_prefix(
+                        path, settings.metadata_prefix_mb * 1024 * 1024
+                    )
+                except Exception:
+                    retry_prefix = b""
+                if retry_prefix and retry_prefix != prefix:
+                    tags = _fallback_exif_tags(retry_prefix)
+                    if not prefix:
+                        prefix = retry_prefix
+            if not tags:
+                try:
+                    with filesystem.open_binary(path) as fallback_stream:
+                        tags = _fallback_exif_tags_from_stream(
+                            fallback_stream,
+                            max(
+                                settings.metadata_prefix_mb * 1024 * 1024,
+                                min(
+                                    max(0, int(file_size or 0)),
+                                    settings.deep_metadata_max_mb * 1024 * 1024,
+                                ),
+                            ),
+                        )
+                except Exception:
+                    tags = {}
             exif_fallback_used = bool(tags)
             exif_fallback_tag_count = len(tags)
     elif prefix:
@@ -613,6 +718,10 @@ def extract_metadata(
         diagnostics.update({
             "exifread_available": exifread is not None,
             "exif_error": exif_error,
+            "prefix_bytes_read": len(prefix),
+            "prefix_error": prefix_error,
+            "dimension_error": dimension_error,
+            "embedded_exif_found": bool(_embedded_exif_tiff(prefix)),
             "exif_fallback_used": exif_fallback_used,
             "exif_fallback_tag_count": exif_fallback_tag_count,
             "exif_tag_count": len(tags),

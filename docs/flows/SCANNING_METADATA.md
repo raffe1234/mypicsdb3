@@ -126,6 +126,22 @@ Version 0.8.15 therefore distinguishes the supported backends deliberately:
 - the automatic service retries a busy scan after 60 seconds rather than waiting
   the configured multi-hour scan interval.
 
+### Automatic scan cadence across restarts (0.8.25)
+
+The configured interval is measured from the last **complete full catalogue
+scan**, not from the current service process. On completion the scanner stores a
+UTC `last_complete_scan_at` value in the existing catalogue `meta` table. After
+Kodi or the add-on service restarts, `service_loop.py` subtracts the elapsed wall
+clock time and schedules only the remaining interval. The configured startup
+delay remains a minimum delay for a scan that is already due.
+
+A compatible local checkpoint is intentionally different: it represents an
+unfinished traversal and therefore resumes after the startup delay instead of
+waiting another 24 hours. When that traversal completes, the persisted full-scan
+timestamp is updated and normal interval scheduling resumes. This is why frequent
+add-on updates during one long scan may repeatedly show **Resuming interrupted
+scan** until the scan is finally allowed to finish.
+
 Do not generalize SQLite crash recovery into "delete any inconvenient lock". The
 backend distinction is intentional and protects shared catalogues.
 
@@ -292,3 +308,13 @@ This does **not** automatically rewrite rows that were indexed before 0.8.24. Us
 **Metadata diagnostics** on one representative picture first; if Fresh extraction
 now finds the expected values, use **Refresh metadata** for that picture or
 **Refresh metadata in this folder** for a bounded batch.
+
+### Prefix-independent recovery diagnostics (0.8.25)
+
+Reading the metadata prefix and probing image dimensions are separate operations.
+A malformed dimension segment can no longer clear an otherwise valid prefix. If
+ExifRead fails and the in-memory prefix still yields no core EXIF tags, MyPicsDB
+opens a fresh VFS handle and performs a bounded JPEG marker walk that skips
+unrelated APP payloads and reads only the EXIF APP1 segment. The diagnostics view
+shows prefix bytes read, whether an embedded EXIF block was found, and any prefix
+or dimension-probe error before a user chooses to refresh catalogue data.

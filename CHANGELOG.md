@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.25 - 2026-08-17
+
+- Make the 0.8.24 core EXIF recovery path independent of image-dimension probing: a successfully read metadata prefix is no longer discarded when dimension parsing fails, and a bounded JPEG marker walker can locate EXIF from a fresh VFS stream after ExifRead aborts.
+- Extend **Metadata diagnostics** with prefix byte count, embedded-EXIF detection and prefix/dimension read errors so extractor failures can be distinguished without logging private tag values beyond the explicitly displayed local dialog.
+- Persist the timestamp of the last complete full catalogue scan in the existing `meta` key/value table. Automatic scan cadence now survives Kodi/add-on service restarts instead of scheduling a fresh scan after every startup delay.
+- Preserve resumable-scan behaviour: when a compatible local scan checkpoint exists, the interrupted traversal still resumes after the configured startup delay; the normal multi-hour interval starts from the next complete full scan.
+- Keep scanning serial, database schema 9, Query Model version 1, repository version 0.2.26 and Estuary revisions unchanged. No source file is modified and no network metadata service is introduced.
+
 ## 0.8.24 - 2026-08-17
 
 - Make EXIF extraction resilient when the bundled ExifRead parser aborts on an incorrectly encoded text tag such as a Unicode `UserComment`: a bounded internal TIFF/EXIF fallback recovers only stable core fields (camera make/model, capture date, orientation/dimensions and GPS) from the already-read metadata prefix without touching source files.
