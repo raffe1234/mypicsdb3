@@ -104,8 +104,32 @@ class FakeKodi:
     def begin_scan_status(self, token, kind):
         self.scan_events.append(("begin", token, kind))
 
-    def update_scan_status(self, token, source, path, pictures_seen):
-        self.scan_events.append(("progress", token, source, path, pictures_seen))
+    def update_scan_status(
+        self,
+        token,
+        source,
+        path,
+        pictures_seen,
+        pictures_unchanged=0,
+        metadata_reads=0,
+        pictures_added=0,
+        pictures_updated=0,
+        errors=0,
+    ):
+        self.scan_events.append(
+            (
+                "progress",
+                token,
+                source,
+                path,
+                pictures_seen,
+                pictures_unchanged,
+                metadata_reads,
+                pictures_added,
+                pictures_updated,
+                errors,
+            )
+        )
 
     def finish_scan_status(self, token):
         self.scan_events.append(("finish", token))
@@ -196,7 +220,14 @@ def test_automatic_scan_publishes_progress_and_closes_dialog(monkeypatch) -> Non
             self.progress(
                 SimpleNamespace(label="NikonD7000"),
                 "smb://nas/photos/image.nef",
-                SimpleNamespace(pictures_seen=100),
+                SimpleNamespace(
+                    pictures_seen=100,
+                    pictures_unchanged=60,
+                    metadata_reads=40,
+                    pictures_added=25,
+                    pictures_updated=15,
+                    errors=1,
+                ),
             )
             monitor.aborted = True
             return SimpleNamespace(cancelled=False, pictures_seen=100, errors=0)
@@ -209,7 +240,11 @@ def test_automatic_scan_publishes_progress_and_closes_dialog(monkeypatch) -> Non
     assert scan_catalog.initialized is True
     assert kodi.scan_events[0][0] == "begin"
     assert ("dialog", "MyPicsDB 3", "Automatic scan") in kodi.scan_events
-    assert any(event[0] == "progress" and event[-1] == 100 for event in kodi.scan_events)
+    assert any(
+        event[0] == "progress"
+        and event[4:] == (100, 60, 40, 25, 15, 1)
+        for event in kodi.scan_events
+    )
     assert kodi.scan_events[-1][0] == "finish"
     assert kodi.dialog.closed is True
     assert "Pictures found: 100" in kodi.dialog.updates[-1][2]
@@ -443,7 +478,7 @@ def test_automatic_scan_hides_progress_during_playback(monkeypatch) -> None:
     loop.run()
 
     assert not any(event[0] == "dialog" for event in kodi.scan_events)
-    assert any(event[0] == "progress" and event[-1] == 250 for event in kodi.scan_events)
+    assert any(event[0] == "progress" and event[4] == 250 for event in kodi.scan_events)
     assert kodi.scan_events[-1][0] == "finish"
     assert ("info", "Automatic scan finished: 250 pictures, 0 errors") in kodi.log.messages
 

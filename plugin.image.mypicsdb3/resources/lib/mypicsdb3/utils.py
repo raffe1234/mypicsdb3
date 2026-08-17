@@ -74,6 +74,20 @@ def format_duration(seconds: Any) -> str:
     return " ".join(parts)
 
 
+def format_rate(items: Any, seconds: Any) -> str:
+    """Format an approximate wall-clock scan rate for Kodi list labels."""
+
+    try:
+        count = max(0.0, float(items or 0))
+        elapsed = max(0.0, float(seconds or 0))
+    except (TypeError, ValueError):
+        count = 0.0
+        elapsed = 0.0
+    if elapsed <= 0.0:
+        return "0.00 files/s"
+    return "%.2f files/s" % (count / elapsed)
+
+
 def sha256_text(value: str) -> str:
     return hashlib.sha256(value.encode("utf-8", "surrogatepass")).hexdigest()
 

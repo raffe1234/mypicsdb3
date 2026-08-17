@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.19 - 2026-08-16
+
+- Add low-risk scanner observability before any parallelization work: live Scan status now shows an approximate wall-clock files/second rate plus metadata-read, unchanged, updated and error counters while a scan is running.
+- Measure aggregate directory-listing, file-stat and picture metadata-inspection time inside the existing serial scanner, persist those counters in resumable local checkpoints and emit one privacy-safe end-of-scan summary with discovered/unchanged/metadata-read/added/updated/missing/error totals.
+- Keep filesystem traversal, Kodi VFS access, database writes, folder commits/checkpoints, cancellation and shared MariaDB scan ownership strictly serial. No worker pool, extra media reads, schema migration or Query Model change is introduced.
+- Keep database schema 9, Query Model version 1, repository version 0.2.26 and Estuary runtime revisions unchanged. Add regression coverage and troubleshooting documentation for the new measurements.
+
 ## 0.8.18 - 2026-08-11
 
 - Fix random Home rows repeatedly starting from the same deterministic selection after Kodi restarts. The provider seed now includes one UUID-backed Home-window session token in addition to the existing content and random generations.

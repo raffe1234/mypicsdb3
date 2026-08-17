@@ -335,6 +335,11 @@ class KodiContext:
             "kind": str(kind or "manual"),
             "state": "running",
             "pictures_seen": 0,
+            "pictures_unchanged": 0,
+            "metadata_reads": 0,
+            "pictures_added": 0,
+            "pictures_updated": 0,
+            "errors": 0,
             "source": "",
             "path": "",
             "started_at": time.time(),
@@ -354,6 +359,11 @@ class KodiContext:
         source: str,
         path: str,
         pictures_seen: int,
+        pictures_unchanged: int = 0,
+        metadata_reads: int = 0,
+        pictures_added: int = 0,
+        pictures_updated: int = 0,
+        errors: int = 0,
     ) -> None:
         window = self._home_window()
         if window is None:
@@ -366,6 +376,11 @@ class KodiContext:
                 "source": str(source or ""),
                 "path": str(path or ""),
                 "pictures_seen": max(0, int(pictures_seen or 0)),
+                "pictures_unchanged": max(0, int(pictures_unchanged or 0)),
+                "metadata_reads": max(0, int(metadata_reads or 0)),
+                "pictures_added": max(0, int(pictures_added or 0)),
+                "pictures_updated": max(0, int(pictures_updated or 0)),
+                "errors": max(0, int(errors or 0)),
             }
         )
         try:

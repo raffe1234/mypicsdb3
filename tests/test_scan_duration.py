@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from mypicsdb3.utils import duration_seconds, format_duration
+from mypicsdb3.utils import duration_seconds, format_duration, format_rate
 
 
 def test_duration_seconds_accepts_sqlite_text_and_mysql_datetimes() -> None:
@@ -29,3 +29,10 @@ def test_format_duration_uses_compact_hours_minutes_and_seconds() -> None:
     assert format_duration(258) == "4 min 18 sec"
     assert format_duration(4325) == "1 h 12 min 5 sec"
     assert format_duration(3600) == "1 h"
+
+
+def test_format_rate_handles_elapsed_time_and_invalid_values() -> None:
+    assert format_rate(125, 25) == "5.00 files/s"
+    assert format_rate(1, 3) == "0.33 files/s"
+    assert format_rate(10, 0) == "0.00 files/s"
+    assert format_rate("bad", 5) == "0.00 files/s"

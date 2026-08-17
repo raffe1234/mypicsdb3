@@ -144,15 +144,16 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.17
+## Recommended roadmap after 0.8.19
 
 1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
 2. 0.8.16 — completed: collection snapshots from validated query-backed results.
 3. 0.8.17 — completed: safe COPY-only export + credential-sanitized manifest.
-4. Later — light video metadata, map/location UX, optional generic provider API,
+4. 0.8.19 — completed: scanner observability without parallel I/O or write concurrency.
+5. Later — light video metadata, map/location UX, optional generic provider API,
    rebuild catalogue while preserving sources; optional archive creation may reuse
    the 0.8.17 export engine if there is a real user need.
-5. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
+6. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
    mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can

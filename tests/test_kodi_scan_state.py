@@ -48,6 +48,11 @@ def test_scan_state_is_shared_and_cancelled_by_matching_token(monkeypatch) -> No
         "Photographs",
         "smb://nas/photos/image.nef",
         123,
+        80,
+        43,
+        10,
+        5,
+        2,
     )
 
     status = context.scan_status()
@@ -57,6 +62,11 @@ def test_scan_state_is_shared_and_cancelled_by_matching_token(monkeypatch) -> No
     assert status["source"] == "Photographs"
     assert status["path"].endswith("image.nef")
     assert status["pictures_seen"] == 123
+    assert status["pictures_unchanged"] == 80
+    assert status["metadata_reads"] == 43
+    assert status["pictures_added"] == 10
+    assert status["pictures_updated"] == 5
+    assert status["errors"] == 2
 
     assert context.request_scan_cancel() is True
     assert context.scan_cancel_requested("scan-1") is True

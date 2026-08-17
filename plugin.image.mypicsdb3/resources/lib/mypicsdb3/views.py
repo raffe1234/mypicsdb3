@@ -87,6 +87,7 @@ from .utils import (
     duration_seconds,
     extension_of,
     format_duration,
+    format_rate,
     kodi_generated_video_thumbnail_uri,
     kodi_image_uri,
     parse_bool,
@@ -3082,6 +3083,35 @@ class PluginUI:
                     "%s: %s"
                     % (self.text(32798, "Elapsed time"), format_duration(elapsed))
                 )
+                values.append(
+                    "%s: %s"
+                    % (
+                        self.text(32977, "Current scan rate"),
+                        format_rate(active.get("pictures_seen"), elapsed),
+                    )
+                )
+            values.extend(
+                [
+                    "%s: %s"
+                    % (
+                        self.text(32978, "Metadata reads"),
+                        int(active.get("metadata_reads") or 0),
+                    ),
+                    "%s: %s"
+                    % (
+                        self.text(30049, "Pictures unchanged"),
+                        int(active.get("pictures_unchanged") or 0),
+                    ),
+                    "%s: %s"
+                    % (
+                        self.text(30048, "Pictures updated"),
+                        int(active.get("pictures_added") or 0)
+                        + int(active.get("pictures_updated") or 0),
+                    ),
+                    "%s: %s"
+                    % (self.text(30050, "Errors"), int(active.get("errors") or 0)),
+                ]
+            )
             if active.get("source"):
                 values.append(
                     "%s: %s"
@@ -3925,7 +3955,17 @@ class PluginUI:
             )
             publisher = getattr(self.kodi, "update_scan_status", None)
             if callable(publisher):
-                publisher(scan_token, source.label, path, stats.pictures_seen)
+                publisher(
+                    scan_token,
+                    source.label,
+                    path,
+                    stats.pictures_seen,
+                    getattr(stats, "pictures_unchanged", 0),
+                    getattr(stats, "metadata_reads", 0),
+                    getattr(stats, "pictures_added", 0),
+                    getattr(stats, "pictures_updated", 0),
+                    getattr(stats, "errors", 0),
+                )
             update_dialog(message)
 
         try:
@@ -3960,7 +4000,7 @@ class PluginUI:
                     self.text(30047, "Pictures found"),
                     stats.pictures_seen,
                     self.text(30050, "Errors"),
-                    stats.errors,
+                    getattr(stats, "errors", 0),
                 )
                 if not self._playback_active():
                     self.kodi.notify(

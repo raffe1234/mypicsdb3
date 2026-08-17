@@ -197,6 +197,30 @@ class Scanner:
                 self._scan_lock_active = False
         overall.finished_at = utc_now()
         overall.duration_seconds = time.monotonic() - started_monotonic
+        info_logger = getattr(self.logger, "info", None) if self.logger else None
+        if callable(info_logger):
+            rate = (
+                float(overall.pictures_seen) / overall.duration_seconds
+                if overall.duration_seconds > 0
+                else 0.0
+            )
+            info_logger(
+                "Media scan summary: discovered=%d unchanged=%d metadata_reads=%d "
+                "added=%d updated=%d missing=%d errors=%d duration=%.1fs "
+                "rate=%.2f files/s list_io=%.1fs stat_io=%.1fs metadata=%.1fs",
+                overall.pictures_seen,
+                overall.pictures_unchanged,
+                overall.metadata_reads,
+                overall.pictures_added,
+                overall.pictures_updated,
+                overall.missing_marked,
+                overall.errors,
+                overall.duration_seconds,
+                rate,
+                overall.directory_list_seconds,
+                overall.file_stat_seconds,
+                overall.metadata_read_seconds,
+            )
         return overall
 
     def scan_source(
@@ -278,10 +302,11 @@ class Scanner:
                 folder_id = self.catalog.upsert_folder(connection, source.id, folder_uri, parent_uri, folder_name, scan_started_at)
                 stats.folders_seen += 1
                 changed_since_commit += 1
+                list_started = time.monotonic()
                 try:
-                    list_started = time.monotonic()
                     directories, files = self.filesystem.listdir(folder_uri)
                     list_duration = time.monotonic() - list_started
+                    stats.directory_list_seconds += list_duration
                     if self.logger and list_duration >= SLOW_IO_WARNING_SECONDS:
                         self.logger.warning(
                             "Slow directory listing: %.1fs for %s",
@@ -289,6 +314,7 @@ class Scanner:
                             folder_uri,
                         )
                 except Exception as exc:
+                    stats.directory_list_seconds += time.monotonic() - list_started
                     traversal_complete = False
                     stats.errors += 1
                     stats.error_messages.append("Cannot list %s: %s" % (folder_uri, exc))
@@ -320,7 +346,11 @@ class Scanner:
                         self.progress(source, picture_uri, stats)
                     existing = self.catalog.find_picture(connection, picture_uri)
                     try:
-                        file_stat = self.filesystem.stat(picture_uri)
+                        stat_started = time.monotonic()
+                        try:
+                            file_stat = self.filesystem.stat(picture_uri)
+                        finally:
+                            stats.file_stat_seconds += time.monotonic() - stat_started
                         if (
                             existing
                             and str(existing.get("media_type") or "picture") == media_type
@@ -333,23 +363,27 @@ class Scanner:
                             stats.pictures_unchanged += 1
                         else:
                             if media_type == "picture":
+                                stats.metadata_reads += 1
                                 metadata_started = time.monotonic()
-                                if self._uses_default_metadata_reader:
-                                    metadata = extract_metadata(
-                                        picture_uri,
-                                        self.filesystem,
-                                        self.settings,
-                                        file_stat.size,
-                                        mapping_rules=self._metadata_mapping_overrides,
-                                    )
-                                else:
-                                    metadata = self.metadata_reader(
-                                        picture_uri,
-                                        self.filesystem,
-                                        self.settings,
-                                        file_stat.size,
-                                    )
-                                metadata_duration = time.monotonic() - metadata_started
+                                try:
+                                    if self._uses_default_metadata_reader:
+                                        metadata = extract_metadata(
+                                            picture_uri,
+                                            self.filesystem,
+                                            self.settings,
+                                            file_stat.size,
+                                            mapping_rules=self._metadata_mapping_overrides,
+                                        )
+                                    else:
+                                        metadata = self.metadata_reader(
+                                            picture_uri,
+                                            self.filesystem,
+                                            self.settings,
+                                            file_stat.size,
+                                        )
+                                finally:
+                                    metadata_duration = time.monotonic() - metadata_started
+                                    stats.metadata_read_seconds += metadata_duration
                                 if self.logger and metadata_duration >= SLOW_IO_WARNING_SECONDS:
                                     self.logger.warning(
                                         "Slow media inspection: %.1fs for %s",

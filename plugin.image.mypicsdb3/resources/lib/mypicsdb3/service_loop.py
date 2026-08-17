@@ -488,6 +488,11 @@ class ServiceLoop:
                                     source.label,
                                     path,
                                     stats.pictures_seen,
+                                    getattr(stats, "pictures_unchanged", 0),
+                                    getattr(stats, "metadata_reads", 0),
+                                    getattr(stats, "pictures_added", 0),
+                                    getattr(stats, "pictures_updated", 0),
+                                    getattr(stats, "errors", 0),
                                 )
                             dialog = ensure_progress_dialog()
                             if dialog is not None:
@@ -556,7 +561,7 @@ class ServiceLoop:
                                 self.kodi.log.info(
                                     "Automatic scan finished: %d pictures, %d errors",
                                     stats.pictures_seen,
-                                    stats.errors,
+                                    getattr(stats, "errors", 0),
                                 )
                         except ScanAlreadyRunning:
                             scan_busy = True

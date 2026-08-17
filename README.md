@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.18. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.19. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -550,9 +550,17 @@ Open **Scan status** after a scan to see:
 - indexed and missing-picture counts;
 - indexed-album count;
 - last scan time, duration and status;
-- elapsed time when Scan status is opened or refreshed during a running scan;
-- found, updated and unchanged-picture counts;
+- elapsed time and approximate wall-clock files/second when Scan status is opened or refreshed during a running scan;
+- found, metadata-read, updated and unchanged-picture counts;
 - scan errors.
+
+Version 0.8.19 also writes one privacy-safe summary line at the end of a scan.
+It reports discovered/unchanged/metadata-read/added/updated/missing/error counts,
+wall-clock files/second and aggregate time spent in directory listing, file stat
+and picture metadata inspection. These counters add measurement only: scanning
+remains serial and no extra media reads, worker threads or concurrent database
+writes are introduced. Use the summary to distinguish network/filesystem latency
+from metadata-inspection cost before considering any parallel scanner design.
 
 **Test database connection** and **Clean missing records** are also available
 from the Scan status screen.

@@ -538,3 +538,65 @@ def test_metadata_mapping_change_reindexes_unchanged_picture(tmp_path: Path) -> 
 
     fourth = scanner.scan_sources()
     assert fourth.pictures_unchanged == 1
+
+def test_scan_observability_counts_metadata_reads_and_logs_summary(tmp_path: Path) -> None:
+    root = tmp_path / "photos"
+    root.mkdir()
+    (root / "a.jpg").write_bytes(b"a")
+    (root / "b.jpg").write_bytes(b"b")
+
+    catalog, _source, original = setup_scanner(tmp_path, root)
+    settings = original.settings
+
+    class Log:
+        def __init__(self):
+            self.infos = []
+
+        def info(self, message, *args):
+            self.infos.append(message % args if args else message)
+
+        def warning(self, _message, *_args):
+            pass
+
+        def error(self, _message, *_args):
+            pass
+
+    log = Log()
+    first = Scanner(
+        catalog,
+        LocalFilesystem(),
+        settings,
+        logger=log,
+        metadata_reader=fake_metadata,
+    ).scan_sources()
+
+    assert first.pictures_seen == 2
+    assert first.metadata_reads == 2
+    assert first.pictures_unchanged == 0
+    assert first.directory_list_seconds >= 0.0
+    assert first.file_stat_seconds >= 0.0
+    assert first.metadata_read_seconds >= 0.0
+    assert any(
+        "Media scan summary: discovered=2 unchanged=0 metadata_reads=2" in line
+        and "rate=" in line
+        and "list_io=" in line
+        and "stat_io=" in line
+        and "metadata=" in line
+        for line in log.infos
+    )
+
+    log.infos.clear()
+    second = Scanner(
+        catalog,
+        LocalFilesystem(),
+        settings,
+        logger=log,
+        metadata_reader=fake_metadata,
+    ).scan_sources()
+    assert second.pictures_seen == 2
+    assert second.metadata_reads == 0
+    assert second.pictures_unchanged == 2
+    assert any(
+        "Media scan summary: discovered=2 unchanged=2 metadata_reads=0" in line
+        for line in log.infos
+    )

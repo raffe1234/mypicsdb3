@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.18",
+            "version": "0.8.19",
         }[key]
 
     def getSetting(self, key):
@@ -851,7 +851,12 @@ def test_scan_status_shows_completed_duration_and_active_elapsed_time(monkeypatc
         "token": "scan-1",
         "kind": "manual",
         "state": "running",
-        "pictures_seen": 12,
+        "pictures_seen": 250,
+        "pictures_unchanged": 180,
+        "metadata_reads": 70,
+        "pictures_added": 20,
+        "pictures_updated": 10,
+        "errors": 1,
         "started_at": 1000.0,
     }
     monkeypatch.setattr(views.time, "time", lambda: 1125.0)
@@ -862,6 +867,11 @@ def test_scan_status_shows_completed_duration_and_active_elapsed_time(monkeypatc
     labels = [item.label for _url, item, _is_folder in calls.items]
     assert "Scan duration: 4 min 18 sec" in labels
     assert "Elapsed time: 2 min 5 sec" in labels
+    assert "Current scan rate: 2.00 files/s" in labels
+    assert "Metadata reads: 70" in labels
+    assert "Pictures unchanged: 180" in labels
+    assert "Pictures updated: 30" in labels
+    assert "Errors: 1" in labels
 
 
 def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
@@ -893,7 +903,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.18" in labels
+    assert "MyPicsDB 3 version: 0.8.19" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -2921,7 +2931,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.18"
+    assert captured["init"][2] == "0.8.19"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

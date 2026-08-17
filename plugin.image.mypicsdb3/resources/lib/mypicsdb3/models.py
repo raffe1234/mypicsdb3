@@ -51,8 +51,12 @@ class ScanStats:
     pictures_added: int = 0
     pictures_updated: int = 0
     pictures_unchanged: int = 0
+    metadata_reads: int = 0
     missing_marked: int = 0
     errors: int = 0
+    directory_list_seconds: float = 0.0
+    file_stat_seconds: float = 0.0
+    metadata_read_seconds: float = 0.0
     cancelled: bool = False
     started_at: Optional[str] = None
     finished_at: Optional[str] = None
@@ -63,7 +67,8 @@ class ScanStats:
         for name in (
             "sources_total", "sources_scanned", "sources_unavailable", "folders_seen",
             "pictures_seen", "pictures_added", "pictures_updated", "pictures_unchanged",
-            "missing_marked", "errors"
+            "metadata_reads", "missing_marked", "errors", "directory_list_seconds",
+            "file_stat_seconds", "metadata_read_seconds"
         ):
             setattr(self, name, getattr(self, name) + getattr(other, name))
         self.cancelled = self.cancelled or other.cancelled

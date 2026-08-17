@@ -184,7 +184,11 @@ folder-level commit/checkpoint ordering and cancellation deterministic on both
 SQLite and shared MariaDB. Any future concurrency should parallelize only measured
 read/metadata work behind a small bounded worker pool while preserving a serial
 catalogue/checkpoint commit boundary; it must not be introduced as an unbounded
-thread-per-file optimization.
+thread-per-file optimization. Version 0.8.19 deliberately measures before
+optimizing: scan statistics include metadata-read counts plus aggregate directory
+listing, file-stat and metadata-inspection wall time, and the scanner emits one
+privacy-safe end-of-scan summary with wall-clock files/second. The instrumentation
+does not add media I/O or change traversal/write ordering.
 
 ### `filesystem.py`: local and Kodi VFS adapters
 

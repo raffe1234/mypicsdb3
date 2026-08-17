@@ -1914,3 +1914,11 @@ msgstr "Could not export media"
 msgctxt "#32976"
 msgid "No matching media to export"
 msgstr "No matching media to export"
+
+msgctxt "#32977"
+msgid "Current scan rate"
+msgstr "Current scan rate"
+
+msgctxt "#32978"
+msgid "Metadata reads"
+msgstr "Metadata reads"

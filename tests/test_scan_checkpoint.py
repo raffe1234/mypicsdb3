@@ -346,3 +346,35 @@ def test_changed_source_policy_discards_saved_checkpoint(tmp_path: Path) -> None
     assert album_a.resolve() not in filesystem.listed
     assert album_b.resolve() not in filesystem.listed
     assert not (Path(settings.profile_path) / CHECKPOINT_FILENAME).exists()
+
+def test_checkpoint_preserves_observability_counters(tmp_path: Path) -> None:
+    root = tmp_path / "photos-observability"
+    root.mkdir()
+    settings, _catalog, sources = make_catalog(tmp_path, [("Photos", root)])
+    source = sources[0]
+    store = ScanCheckpointStore(settings, time_provider=lambda: 100.0)
+    overall = store.prepare(sources, ScanStats(started_at="2026-08-16 12:00:00"))
+    assert overall.metadata_reads == 0
+
+    stats = ScanStats(
+        sources_total=1,
+        pictures_seen=12,
+        pictures_unchanged=8,
+        metadata_reads=4,
+        directory_list_seconds=1.25,
+        file_stat_seconds=2.5,
+        metadata_read_seconds=3.75,
+        started_at="2026-08-16 12:00:00",
+    )
+    pending = [(str(root), "", source.label)]
+    store.begin_source(source, stats.started_at, pending, stats, True)
+
+    restored_store = ScanCheckpointStore(settings, time_provider=lambda: 101.0)
+    restored_store.prepare(sources, ScanStats(started_at="later"))
+    restored = restored_store.restore_source(source)
+    assert restored is not None
+    restored_stats = restored[2]
+    assert restored_stats.metadata_reads == 4
+    assert restored_stats.directory_list_seconds == 1.25
+    assert restored_stats.file_stat_seconds == 2.5
+    assert restored_stats.metadata_read_seconds == 3.75

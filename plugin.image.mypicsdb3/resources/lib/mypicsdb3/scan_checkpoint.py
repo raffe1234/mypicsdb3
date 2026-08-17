@@ -28,8 +28,15 @@ _STATS_FIELDS = (
     "pictures_added",
     "pictures_updated",
     "pictures_unchanged",
+    "metadata_reads",
     "missing_marked",
     "errors",
+)
+
+_STATS_FLOAT_FIELDS = (
+    "directory_list_seconds",
+    "file_stat_seconds",
+    "metadata_read_seconds",
 )
 
 
@@ -37,6 +44,9 @@ def _stats_to_dict(stats: ScanStats) -> Dict[str, Any]:
     value: Dict[str, Any] = {
         name: max(0, int(getattr(stats, name, 0) or 0)) for name in _STATS_FIELDS
     }
+    value.update(
+        {name: max(0.0, float(getattr(stats, name, 0.0) or 0.0)) for name in _STATS_FLOAT_FIELDS}
+    )
     value.update(
         {
             "started_at": stats.started_at,
@@ -54,6 +64,11 @@ def _stats_from_dict(value: Any, default_started_at: Optional[str] = None) -> Sc
             setattr(stats, name, max(0, int(data.get(name, 0) or 0)))
         except (TypeError, ValueError):
             setattr(stats, name, 0)
+    for name in _STATS_FLOAT_FIELDS:
+        try:
+            setattr(stats, name, max(0.0, float(data.get(name, 0.0) or 0.0)))
+        except (TypeError, ValueError):
+            setattr(stats, name, 0.0)
     messages = data.get("error_messages")
     if isinstance(messages, list):
         stats.error_messages = [str(message) for message in messages[-20:]]

@@ -120,12 +120,28 @@ class FakeKodi:
             "pictures_seen": 0,
         }
 
-    def update_scan_status(self, token, source, path, pictures_seen):
+    def update_scan_status(
+        self,
+        token,
+        source,
+        path,
+        pictures_seen,
+        pictures_unchanged=0,
+        metadata_reads=0,
+        pictures_added=0,
+        pictures_updated=0,
+        errors=0,
+    ):
         if self.scan_state.get("token") == token:
             self.scan_state.update(
                 source=source,
                 path=path,
                 pictures_seen=pictures_seen,
+                pictures_unchanged=pictures_unchanged,
+                metadata_reads=metadata_reads,
+                pictures_added=pictures_added,
+                pictures_updated=pictures_updated,
+                errors=errors,
             )
 
     def scan_cancel_requested(self, token):
