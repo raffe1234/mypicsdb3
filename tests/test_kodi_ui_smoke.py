@@ -199,7 +199,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.27",
+            "version": "0.8.28",
         }[key]
 
     def getSetting(self, key):
@@ -226,6 +226,8 @@ class FakeKodi:
             random_home_refresh_hours=2,
             debug_logging=False,
             store_gps=False,
+            reverse_geocoding_enabled=False,
+            reverse_geocoding_endpoint="https://nominatim.openstreetmap.org",
             read_xmp=True,
             read_iptc=True,
             metadata_prefix_mb=2,
@@ -364,6 +366,9 @@ class FakeCatalog:
         self.source_scan_policies = {}
         self.metadata_mapping_overrides = []
         self.facet_requests = []
+        self.meta = {}
+        self.location_updates = []
+        self.location_lock_available = True
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -476,6 +481,30 @@ class FakeCatalog:
 
     def picture_ids_in_folder(self, folder_id):
         return [1] if int(folder_id) == 2 else []
+
+    def meta_value(self, key):
+        return self.meta.get(str(key))
+
+    def set_meta_value(self, key, value):
+        self.meta[str(key)] = str(value)
+
+    def recover_stale_local_lock(self, name, owner):
+        return None
+
+    def acquire_lock(self, name, owner, ttl):
+        return bool(self.location_lock_available)
+
+    def release_lock(self, name, owner):
+        return None
+
+    def update_picture_named_location(self, picture_id, location, fill_only=True):
+        assert int(picture_id) == 1
+        self.location_updates.append((int(picture_id), dict(location), bool(fill_only)))
+        row = self.picture_by_id(1)
+        for key, value in location.items():
+            if value and (not fill_only or not row.get(key)):
+                row[key] = value
+        return row
 
 
     def on_this_day(self, month, day, current_year, limit, offset=0):
@@ -767,6 +796,7 @@ def test_picture_location_context_is_local_and_reuses_metadata_browsing(monkeypa
     assert "Location details" in labels
     assert "Browse this city" in labels
     assert "Browse this country" in labels
+    assert "Resolve location online" in labels
     commands = dict(item.context)
     assert commands["Location details"] == (
         "RunPlugin(plugin://plugin.image.mypicsdb3/action/location-details?id=1)"
@@ -775,6 +805,9 @@ def test_picture_location_context_is_local_and_reuses_metadata_browsing(monkeypa
     assert "value=Stockholm" in commands["Browse this city"]
     assert "field=country" in commands["Browse this country"]
     assert "value=Sweden" in commands["Browse this country"]
+    assert commands["Resolve location online"] == (
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/resolve-location-online?id=1)"
+    )
     assert "59.3293" not in str(item.context)
     assert "18.0686" not in str(item.context)
 
@@ -854,6 +887,117 @@ def test_metadata_diagnostics_compares_indexed_and_fresh_values(monkeypatch) -> 
     assert "EXIF tags found: 48" in message
     assert "Raw EXIF Make: Samsung" in message
     assert "EXIF GPS latitude/longitude tags: yes/yes" in message
+
+
+def test_online_location_lookup_is_opt_in_and_makes_no_request_when_disabled(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.store_gps = True
+    runtime.kodi.settings.reverse_geocoding_enabled = False
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.ok_calls = []
+
+    monkeypatch.setattr(
+        ui,
+        "_reverse_geocoder",
+        lambda: (_ for _ in ()).throw(AssertionError("network geocoder must not be created")),
+    )
+
+    ui.action("action/resolve-location-online", {"id": "1"})
+
+    heading, message = views.xbmcgui.Dialog.ok_calls[-1]
+    assert heading == "Online location lookup is disabled"
+    assert "No network request was made" in message
+    assert runtime.catalog.location_updates == []
+
+
+def test_online_location_lookup_is_single_picture_confirmed_cached_and_indexed(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.store_gps = True
+    runtime.kodi.settings.reverse_geocoding_enabled = True
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.responses = [True]
+    views.xbmcgui.Dialog.textviewer_calls = []
+
+    original_picture = runtime.catalog.picture_by_id
+
+    def picture_without_names(picture_id):
+        row = original_picture(picture_id)
+        if row:
+            row.update({"city": None, "state": None, "country": None, "sublocation": None})
+        return row
+
+    runtime.catalog.picture_by_id = picture_without_names
+    resolved = types.SimpleNamespace(
+        country="Spain",
+        state="Comunitat Valenciana",
+        city="Benidorm",
+        sublocation="Levante",
+        label="Benidorm, Alicante, Comunitat Valenciana, Spain",
+        attribution="Data © OpenStreetMap contributors, ODbL 1.0",
+        provider="Nominatim / OpenStreetMap",
+        from_cache=False,
+        has_named_location=True,
+        as_location_dict=lambda: {
+            "country": "Spain",
+            "state": "Comunitat Valenciana",
+            "city": "Benidorm",
+            "sublocation": "Levante",
+        },
+    )
+    calls = []
+
+    class FakeGeocoder:
+        def resolve(self, latitude, longitude):
+            calls.append((latitude, longitude))
+            return resolved
+
+    monkeypatch.setattr(ui, "_reverse_geocoder", lambda: FakeGeocoder())
+
+    ui.action("action/resolve-location-online", {"id": "1"})
+
+    assert calls == [(59.3293, 18.0686)]
+    assert runtime.catalog.location_updates == [
+        (
+            1,
+            {
+                "country": "Spain",
+                "state": "Comunitat Valenciana",
+                "city": "Benidorm",
+                "sublocation": "Levante",
+            },
+            True,
+        )
+    ]
+    assert any(key.startswith("location_enrichment:v1:") for key in runtime.catalog.meta)
+    heading, message = views.xbmcgui.Dialog.textviewer_calls[-1]
+    assert heading == "Resolve location online"
+    assert "City: Benidorm" in message
+    assert "Attribution: Data © OpenStreetMap contributors" in message
+    assert "image and filename were not sent" in message
+
+
+def test_online_location_lookup_does_not_call_network_while_scan_lock_conflicts(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.store_gps = True
+    runtime.kodi.settings.reverse_geocoding_enabled = True
+    runtime.catalog.location_lock_available = False
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.responses = [True]
+    views.xbmcgui.Dialog.ok_calls = []
+    monkeypatch.setattr(
+        ui,
+        "_reverse_geocoder",
+        lambda: (_ for _ in ()).throw(AssertionError("network lookup must not start while scan lock conflicts")),
+    )
+
+    ui.action("action/resolve-location-online", {"id": "1"})
+
+    heading, message = views.xbmcgui.Dialog.ok_calls[-1]
+    assert heading == "Online location lookup unavailable"
+    assert "No network request was made" in message
 
 
 def test_picture_metadata_refresh_requires_confirmation_and_refreshes_container(monkeypatch) -> None:
@@ -961,7 +1105,7 @@ def test_video_items_do_not_offer_location_actions(monkeypatch) -> None:
     _url, item, _folder = ui._media_item(row)
 
     assert all(
-        label not in {"Location details", "Browse this city", "Browse this country"}
+        label not in {"Location details", "Browse this city", "Browse this country", "Resolve location online"}
         for label, _command in item.context
     )
 
@@ -1163,7 +1307,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.27" in labels
+    assert "MyPicsDB 3 version: 0.8.28" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3191,7 +3335,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.27"
+    assert captured["init"][2] == "0.8.28"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

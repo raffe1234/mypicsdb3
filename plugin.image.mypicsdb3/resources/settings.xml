@@ -921,6 +921,21 @@
           <default>false</default>
           <control type="toggle" />
         </setting>
+        <setting id="reverse_geocoding_enabled" type="boolean" label="32036" help="32136">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle" />
+        </setting>
+        <setting id="reverse_geocoding_endpoint" type="string" label="32037" help="32137">
+          <level>2</level>
+          <default>https://nominatim.openstreetmap.org</default>
+          <constraints>
+            <allowempty>false</allowempty>
+          </constraints>
+          <control type="edit" format="string">
+            <heading>32037</heading>
+          </control>
+        </setting>
         <setting id="metadata_prefix_mb" type="integer" label="32034" help="32134">
           <level>2</level>
           <default>4</default>

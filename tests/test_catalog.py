@@ -668,3 +668,38 @@ def test_catalog_meta_value_roundtrip(tmp_path: Path) -> None:
     assert catalog.meta_value("last_complete_scan_at") == "2026-08-17 10:00:00.000000"
     catalog.set_meta_value("last_complete_scan_at", "2026-08-17 11:00:00.000000")
     assert catalog.meta_value("last_complete_scan_at") == "2026-08-17 11:00:00.000000"
+
+def test_update_picture_named_location_fills_only_missing_fields_and_refreshes_search(tmp_path: Path) -> None:
+    catalog = make_catalog(tmp_path)
+    picture_id = add_picture(catalog, tmp_path / "photos")
+
+    # Existing embedded city/country keep precedence; missing region/sublocation
+    # can be filled by explicit online enrichment.
+    updated = catalog.update_picture_named_location(
+        picture_id,
+        {
+            "city": "Benidorm",
+            "country": "Spain",
+            "state": "Stockholm County",
+            "sublocation": "Gamla stan",
+        },
+        fill_only=True,
+    )
+
+    assert updated is not None
+    assert updated["city"] == "Stockholm"
+    assert updated["country"] == "Sweden"
+    assert updated["state"] == "Stockholm County"
+    assert updated["sublocation"] == "Gamla stan"
+    row = catalog.picture_by_id(picture_id)
+    assert row["city"] == "Stockholm"
+    assert row["country"] == "Sweden"
+    assert row["state"] == "Stockholm County"
+    assert row["sublocation"] == "Gamla stan"
+
+    # The new canonical fields participate in global search immediately.
+    from mypicsdb3.search import build_global_search_request
+
+    request = build_global_search_request("Gamla stan")
+    rows = catalog.query_pictures(request.query, 10)
+    assert [item["id"] for item in rows] == [picture_id]

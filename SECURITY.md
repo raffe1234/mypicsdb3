@@ -30,4 +30,15 @@ XMP GPS/location compatibility is offline and read-only at extraction time. The
 diagnostics view may display matched location/GPS property names and values only in
 the local Kodi text viewer after the user explicitly opens diagnostics; those values
 must not be copied to normal logs, support-bundle summaries or network requests.
-Reverse geocoding remains out of scope.
+Version 0.8.28 adds reverse geocoding only as an explicit opt-in single-picture
+action. It must remain disabled by default, must never send image bytes, filenames or
+source paths, and must block before network I/O while a scan/migration/metadata refresh
+owns the catalogue. Provider results are cached locally and attribution is retained.
+Do not add background, folder or periodic public-Nominatim geocoding: the public
+service policy limits applications to one request per second, requires identifying
+User-Agent/attribution/caching, and discourages bulk use. MyPicsDB persists a
+per-endpoint request timestamp and spaces cache misses by at least 1.1 seconds. The
+endpoint remains configurable so a provider can be switched without a software
+release. Remember that the configured server necessarily sees normal HTTP connection
+metadata such as the client's public IP address even though image bytes/path/name are
+not sent.

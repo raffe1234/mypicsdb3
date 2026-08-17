@@ -3,6 +3,7 @@ from __future__ import annotations
 import calendar
 import hashlib
 import os
+import socket
 import sys
 import time
 import uuid
@@ -16,7 +17,14 @@ import xbmcplugin  # type: ignore
 from .album_view import save_current_album_view
 from .attention import ATTENTION_PRESETS, attention_preset
 from .diagnostics import collect_diagnostics, write_support_bundle
+from .db.locks import LOCATION_ENRICHMENT_LOCK_NAME
 from .exporter import ExportError, SafeExporter, normalize_export_name
+from .geocoding import (
+    NominatimReverseGeocoder,
+    ReverseGeocodingError,
+    load_location_enrichment,
+    save_location_enrichment,
+)
 from .home_layout_editor import (
     SmartHomeEditorText,
     show_smart_home_layout_editor,
@@ -1387,6 +1395,14 @@ class PluginUI:
                     ),
                 )
             )
+        if format_coordinates(details):
+            context.append(
+                (
+                    self.text(33026, "Resolve location online"),
+                    "RunPlugin(%s)"
+                    % self.url("action/resolve-location-online", id=row.get("id")),
+                )
+            )
         return context
 
     def _show_location_details(self, picture_id: int) -> None:
@@ -1424,10 +1440,173 @@ class PluginUI:
         if not details.has_named_location and not coordinates:
             lines.insert(0, self.text(32986, "No location metadata is stored for this picture."))
 
+        enrichment = load_location_enrichment(self.catalog, str(row.get("uri") or ""))
+        if enrichment and any(
+            str(row.get(field) or "").strip()
+            and str(row.get(field) or "").strip() == str(value or "").strip()
+            for field, value in enrichment.as_location_dict().items()
+        ):
+            lines.append("")
+            lines.append(
+                "%s: %s"
+                % (self.text(33035, "Location source"), enrichment.provider)
+            )
+            if enrichment.attribution:
+                lines.append(
+                    "%s: %s"
+                    % (self.text(33036, "Attribution"), enrichment.attribution)
+                )
+
         xbmcgui.Dialog().ok(
             self.text(32982, "Location"),
             "\n".join(lines),
         )
+
+    def _reverse_geocoder(self):
+        endpoint = str(
+            getattr(
+                self.kodi.settings,
+                "reverse_geocoding_endpoint",
+                "https://nominatim.openstreetmap.org",
+            )
+            or "https://nominatim.openstreetmap.org"
+        ).strip()
+        return NominatimReverseGeocoder(
+            self.catalog,
+            endpoint=endpoint,
+            user_agent=(
+                "MyPicsDB3/%s (Kodi image add-on; "
+                "https://github.com/raffe1234/mypicsdb3)"
+                % str(self.kodi.addon.getAddonInfo("version") or "unknown")
+            ),
+        )
+
+    def _show_resolved_location(self, result) -> None:
+        lines: List[str] = []
+        for label, value in (
+            (self.text(32876, "Country"), result.country),
+            (self.text(32877, "State or region"), result.state),
+            (self.text(32878, "City"), result.city),
+            (self.text(32879, "Sublocation"), result.sublocation),
+        ):
+            if value:
+                lines.append("%s: %s" % (label, value))
+        if result.label:
+            lines.extend(["", "%s: %s" % (self.text(33037, "Resolved address"), result.label)])
+        lines.extend(
+            [
+                "",
+                "%s: %s" % (self.text(33035, "Location source"), result.provider),
+                "%s: %s"
+                % (
+                    self.text(33038, "Result cache"),
+                    self.text(33039, "local cache")
+                    if result.from_cache
+                    else self.text(33040, "online lookup"),
+                ),
+            ]
+        )
+        if result.attribution:
+            lines.append("%s: %s" % (self.text(33036, "Attribution"), result.attribution))
+        lines.extend(
+            [
+                "",
+                self.text(
+                    33041,
+                    "Only the GPS coordinates were used for the lookup; the image and filename were not sent.",
+                ),
+            ]
+        )
+        dialog = xbmcgui.Dialog()
+        textviewer = getattr(dialog, "textviewer", None)
+        if callable(textviewer):
+            textviewer(self.text(33026, "Resolve location online"), "\n".join(lines))
+        else:
+            dialog.ok(self.text(33026, "Resolve location online"), "\n".join(lines))
+
+    def _resolve_location_online(self, picture_id: int) -> None:
+        row = self.catalog.picture_by_id(picture_id)
+        if not row or str(row.get("media_type") or "picture") != "picture":
+            self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
+            return
+        if not bool(getattr(self.kodi.settings, "store_gps", False)):
+            xbmcgui.Dialog().ok(
+                self.text(33026, "Resolve location online"),
+                self.text(33027, "GPS storage is disabled, so no coordinates are available for an online lookup."),
+            )
+            return
+        details = location_details_from_row(row, include_coordinates=True)
+        if details.latitude is None or details.longitude is None:
+            xbmcgui.Dialog().ok(
+                self.text(33026, "Resolve location online"),
+                self.text(33028, "This picture has no stored GPS coordinates to resolve."),
+            )
+            return
+        if not bool(getattr(self.kodi.settings, "reverse_geocoding_enabled", False)):
+            xbmcgui.Dialog().ok(
+                self.text(33029, "Online location lookup is disabled"),
+                self.text(
+                    33030,
+                    "Enable Metadata > Online reverse geocoding first. No network request was made.",
+                ),
+            )
+            return
+
+        coordinates = format_coordinates(details) or "%s, %s" % (details.latitude, details.longitude)
+        if not xbmcgui.Dialog().yesno(
+            self.text(33026, "Resolve location online"),
+            self.text(
+                33031,
+                "Send GPS coordinates %s to the configured Nominatim server to resolve city/region/country? The image and filename are not sent.",
+            )
+            % coordinates,
+        ):
+            return
+
+        owner = "%s:%s:%s" % (socket.gethostname(), os.getpid(), uuid.uuid4().hex[:12])
+        recovered = self.catalog.recover_stale_local_lock(LOCATION_ENRICHMENT_LOCK_NAME, owner)
+        if recovered:
+            self.kodi.log.warning(
+                "Recovered stale SQLite location-enrichment lock left by previous Kodi process: %s",
+                recovered,
+            )
+        if not self.catalog.acquire_lock(LOCATION_ENRICHMENT_LOCK_NAME, owner, 60):
+            xbmcgui.Dialog().ok(
+                self.text(33033, "Online location lookup unavailable"),
+                self.text(
+                    33034,
+                    "A catalogue scan, schema migration or metadata refresh is active. Wait for it to finish and try again. No network request was made.",
+                ),
+            )
+            return
+        try:
+            result = self._reverse_geocoder().resolve(details.latitude, details.longitude)
+            if not result.has_named_location:
+                raise ReverseGeocodingError("The reverse geocoder returned no named location")
+            uri = str(row.get("uri") or "")
+            save_location_enrichment(self.catalog, uri, result)
+            updated = self.catalog.update_picture_named_location(
+                picture_id, result.as_location_dict(), fill_only=True
+            )
+            if updated is None:
+                raise ReverseGeocodingError("Picture was not found while saving location")
+        except ReverseGeocodingError as exc:
+            xbmcgui.Dialog().ok(
+                self.text(33032, "Could not resolve location"),
+                str(exc),
+            )
+            return
+        except Exception as exc:
+            xbmcgui.Dialog().ok(
+                self.text(33032, "Could not resolve location"),
+                "%s: %s" % (exc.__class__.__name__, exc),
+            )
+            return
+        finally:
+            self.catalog.release_lock(LOCATION_ENRICHMENT_LOCK_NAME, owner)
+
+        self._invalidate_home_widgets("location resolved online")
+        self._show_resolved_location(result)
 
     def _metadata_refresh_context(self, row: Dict[str, Any]) -> List[Tuple[str, str]]:
         if str(row.get("media_type") or "picture") != "picture" or not row.get("id"):
@@ -3543,6 +3722,16 @@ class PluginUI:
                 self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
                 return
             self._show_location_details(picture_id)
+            return
+        if route == "action/resolve-location-online":
+            try:
+                picture_id = int(params.get("id") or 0)
+            except (TypeError, ValueError):
+                picture_id = 0
+            if picture_id <= 0:
+                self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
+                return
+            self._resolve_location_online(picture_id)
             return
         if route in {"action/refresh-metadata-picture", "action/metadata-diagnostics"}:
             try:

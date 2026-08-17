@@ -1015,13 +1015,8 @@ class Catalog:
                 (1 if available else 0, utc_now(), status, error, utc_now(), source_id),
             ).close()
 
-    def meta_value(self, key: str) -> Optional[str]:
-        """Return one non-schema catalogue meta value.
-
-        The ``meta`` table is intentionally a key/value store in both backends.
-        Runtime state that does not require a structural migration can therefore
-        be persisted here without changing schema version 9.
-        """
+    def meta_value_in_connection(self, connection, key: str) -> Optional[str]:
+        """Return one non-schema meta value using an existing transaction."""
         clean_key = str(key or "").strip()
         if not clean_key:
             return None
@@ -1030,11 +1025,20 @@ class Catalog:
             if self.engine.backend == "mysql"
             else "SELECT value FROM meta WHERE key=?"
         )
-        with self.engine.transaction() as connection:
-            row = self.engine.fetchone(connection, sql, (clean_key,))
+        row = self.engine.fetchone(connection, sql, (clean_key,))
         if not row or row.get("value") is None:
             return None
         return str(row.get("value"))
+
+    def meta_value(self, key: str) -> Optional[str]:
+        """Return one non-schema catalogue meta value.
+
+        The ``meta`` table is intentionally a key/value store in both backends.
+        Runtime state that does not require a structural migration can therefore
+        be persisted here without changing schema version 9.
+        """
+        with self.engine.transaction() as connection:
+            return self.meta_value_in_connection(connection, key)
 
     def set_meta_value(self, key: str, value: str) -> None:
         clean_key = str(key or "").strip()
@@ -1155,7 +1159,13 @@ class Catalog:
             cursor.close()
 
     def find_picture(self, connection, uri: str) -> Optional[Dict[str, Any]]:
-        return self.engine.fetchone(connection, "SELECT id, file_size, file_mtime, media_type, metadata_hash, metadata_index_hash, favorite, discovered_at FROM pictures WHERE uri_hash=?", (sha256_text(uri),))
+        return self.engine.fetchone(
+            connection,
+            "SELECT id, file_size, file_mtime, media_type, metadata_hash, "
+            "metadata_index_hash, favorite, discovered_at, city, state, country, sublocation "
+            "FROM pictures WHERE uri_hash=?",
+            (sha256_text(uri),),
+        )
 
     def touch_picture(self, connection, picture_id: int, folder_id: int, source_id: int, seen_at: str) -> None:
         self.engine.execute(connection, "UPDATE pictures SET folder_id=?, source_id=?, last_seen_at=?, is_missing=0, missing_since=NULL WHERE id=?", (folder_id, source_id, seen_at, picture_id)).close()
@@ -1368,6 +1378,71 @@ class Catalog:
                 return False
             self.update_picture(connection, picture_id, record, keywords)
         return True
+
+    def update_picture_named_location(
+        self,
+        picture_id: int,
+        location: Dict[str, Any],
+        *,
+        fill_only: bool = True,
+    ) -> Optional[Dict[str, Any]]:
+        """Update canonical named location fields and refresh global-search text.
+
+        Online enrichment is intentionally separate from embedded metadata hashes.
+        By default it fills only currently-empty canonical fields so EXIF/XMP/IPTC
+        values keep precedence.
+        """
+
+        if type(picture_id) is not int or picture_id <= 0:
+            return None
+        fields = ("country", "state", "city", "sublocation")
+        clean = {
+            field: (str(location.get(field)).strip() if location.get(field) is not None else None)
+            for field in fields
+        }
+        clean = {field: (value or None) for field, value in clean.items()}
+        query = (
+            "SELECT %s FROM pictures p "
+            "JOIN folders f ON f.id=p.folder_id "
+            "JOIN sources s ON s.id=p.source_id "
+            "WHERE p.id=? AND p.is_missing=0 AND p.media_type='picture'" % PICTURE_COLUMNS
+        )
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(connection, query, (picture_id,))
+            if row is None:
+                return None
+            merged = dict(row)
+            changed = False
+            for field in fields:
+                incoming = clean.get(field)
+                current = str(merged.get(field) or "").strip() or None
+                if fill_only and current:
+                    continue
+                if current != incoming and incoming:
+                    merged[field] = incoming
+                    changed = True
+            if not changed:
+                return merged
+            self.engine.execute(
+                connection,
+                "UPDATE pictures SET country=?, state=?, city=?, sublocation=? WHERE id=?",
+                (
+                    merged.get("country"),
+                    merged.get("state"),
+                    merged.get("city"),
+                    merged.get("sublocation"),
+                    picture_id,
+                ),
+            ).close()
+            keyword_rows = self.engine.fetchall(
+                connection,
+                "SELECT t.name FROM tags t JOIN picture_tags pt ON pt.tag_id=t.id "
+                "WHERE pt.picture_id=? ORDER BY t.id",
+                (picture_id,),
+            )
+            keywords = [str(item.get("name") or "") for item in keyword_rows]
+            self.replace_search_document(connection, picture_id, merged, keywords)
+            return merged
 
     def query_pictures(self, query_model: Any, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         """Run a validated versioned query model without exposing raw SQL."""

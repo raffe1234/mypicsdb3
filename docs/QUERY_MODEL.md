@@ -266,3 +266,10 @@ metadata read, but it does not add a Query Model field or operator and does not 
 a whole-library reindex. Once an explicit refresh stores a newly recognized canonical
 location value, existing Query Model v1 facets/searches consume it exactly like any
 other stored location metadata.
+
+### 0.8.28 online enrichment and Query Model v1
+
+Explicit reverse geocoding does not add query syntax. It fills the existing canonical
+`country`, `state`, `city` and `sublocation` fields only when they are empty, then
+rebuilds the normal global-search document. Existing Query Model v1 metadata facets
+therefore see resolved locations without a version or schema change.

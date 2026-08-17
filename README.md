@@ -60,7 +60,9 @@ For the component boundaries and long-lived safety rules, see
 - Open **Location details** from a picture context menu to inspect stored canonical
   location fields locally. When GPS storage is enabled, the dialog also shows the
   stored coordinate pair; **Browse this city/country** reuses the existing metadata
-  browser without contacting a map service.
+  browser. Version 0.8.28 optionally adds explicit **Resolve location online** for one
+  GPS-tagged picture at a time; the feature is disabled by default and never runs
+  during scan/background work.
 - Use **Refresh metadata** on one still picture, or **Refresh metadata in this folder**
   on one indexed album, to re-read current EXIF/XMP/IPTC metadata without rebuilding
   the catalogue or modifying source files. **Metadata diagnostics** compares the
@@ -630,8 +632,23 @@ when it is disabled the action does not expose a stale coordinate pair that may
 still be waiting for the next metadata reindex. **Browse this city** and **Browse
 this country** are local catalogue queries. GPS coordinates do not imply that
 city/country names exist: most cameras and phones store a coordinate pair but no
-reverse-geocoded place names. Version 0.8.23 still does not include an **Open map**
-action or reverse geocoding and never sends coordinates to a network provider.
+reverse-geocoded place names. Version 0.8.28 adds an optional explicit **Resolve
+location online** action for a single picture. It is disabled by default; after it is
+enabled, Kodi asks for confirmation before sending only that picture's stored
+latitude/longitude to the configured Nominatim-compatible server. The image, filename
+and source path are not sent. The provider result is cached locally and fills only
+canonical location fields that were empty, so embedded metadata keeps precedence.
+There is still no automatic/background/folder reverse-geocoding job and no **Open
+map** action.
+
+The default endpoint is the public OpenStreetMap Nominatim service. Its usage policy
+requires an identifying User-Agent, attribution, caching and at most one request per
+second, and discourages bulk/periodic geocoding. MyPicsDB 3 therefore exposes only
+user-triggered single-picture lookups, persistently spaces cache misses by at least
+1.1 seconds, displays returned attribution and allows the Nominatim base URL to be
+changed in **Settings > Metadata** without an add-on update. As with any web request,
+the configured service also receives ordinary connection metadata such as the
+client's public IP address.
 
 If Kodi's built-in picture information (`i`) shows camera metadata that is blank in
 MyPicsDB 3, use **Metadata diagnostics** on that picture. It compares the existing

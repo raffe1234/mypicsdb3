@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.28 - 2026-08-17
+
+- Add explicit opt-in **Resolve location online** for still pictures that already have stored GPS coordinates. The action sends only latitude/longitude to a configurable Nominatim-compatible reverse-geocoding endpoint; image bytes, filenames and source paths are never included in the request. Online reverse geocoding is disabled by default and requires a per-picture confirmation.
+- Use Nominatim `geocodejson` address details to fill only missing canonical country/state/city/sublocation fields, leaving embedded EXIF/XMP/IPTC values in precedence. Results are cached locally by provider+coordinate and the resolved location is added to the picture search document immediately.
+- Keep lookup writes serial with scans, schema migrations and metadata refreshes through a dedicated `location-enrichment` catalogue lock. If one of those writers is active, the lookup is blocked before any network request. Repeated explicit refreshes reuse locally cached provider results.
+- Make the Nominatim base URL configurable so the service can be switched without an add-on update, send an identifying MyPicsDB 3 User-Agent, retain provider attribution in the local enrichment record and display it in Kodi. Cache misses are persistently throttled to no faster than one request every 1.1 seconds, including across service restarts. The implementation intentionally provides no folder/bulk/background reverse geocoding and does not change metadata-index signatures.
+- Preserve a saved online enrichment across later changed-file/forced scanner metadata reads when the source file still has no named location; newly embedded EXIF/XMP/IPTC location values continue to win.
+- Keep database schema 9, Query Model version 1, serial scanner semantics, repository version 0.2.26 and Estuary revisions unchanged.
+
 ## 0.8.27 - 2026-08-17
 
 - Add XMP location compatibility for still-picture metadata: common EXIF-XMP GPS latitude/longitude properties are normalized when EXIF GPS is absent, and common IPTC Extension `LocationShown*` / `LocationCreated*` city, region, country and sublocation aliases can fill otherwise-empty canonical location fields. EXIF remains first choice for coordinates and custom metadata mapping precedence is preserved.

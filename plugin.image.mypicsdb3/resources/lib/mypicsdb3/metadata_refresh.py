@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence
 
 from .db.locks import METADATA_REFRESH_LOCK_NAME
+from .geocoding import load_location_enrichment, merge_location
 from .metadata import extract_metadata
 from .metadata_mapping import MetadataMappingRule, metadata_index_signature
 from .models import MetadataResult
@@ -152,7 +153,10 @@ class MetadataRefresher:
         if not metadata.taken_at:
             metadata.taken_at = local_datetime_from_timestamp(file_stat.mtime)
             metadata.taken_source = "File mtime fallback"
-        location = metadata.location or {}
+        location = merge_location(
+            metadata.location or {},
+            load_location_enrichment(self.catalog, uri),
+        )
         record: Dict[str, Any] = {
             "source_id": int(row["source_id"]),
             "folder_id": int(row["folder_id"]),

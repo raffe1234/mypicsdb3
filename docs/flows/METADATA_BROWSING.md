@@ -120,3 +120,22 @@ header bytes buffered**, which may be far smaller than the source file while sti
 containing the metadata needed by this flow. Installing 0.8.27 does not force a
 whole-library rewrite: inspect one representative picture, then use explicit refresh
 for rows/folders that should store newly recognized values.
+
+### Explicit online location enrichment (0.8.28)
+
+When **Store GPS coordinates** has produced a valid pair, the picture context menu can
+show **Resolve location online**. The feature remains disabled until **Settings >
+Metadata > Online reverse geocoding** is enabled. Invocation then asks for explicit
+confirmation, acquires the `location-enrichment` writer lock and only afterwards sends
+latitude/longitude to the configured Nominatim-compatible `/reverse` endpoint. A busy
+scan/migration/metadata refresh blocks the action before network I/O.
+
+The provider response uses Nominatim `geocodejson` stable address categories. Country,
+state/region, city and sublocation fill only empty canonical columns; embedded metadata
+already present in those columns wins. Provider+coordinate responses are cached in the
+local `meta` table, and the attribution/source is retained with the URI-hash enrichment
+record. Cache misses are throttled with a persistent provider timestamp so requests
+are spaced by at least 1.1 seconds. Search text is rebuilt immediately after a
+successful save. There is no folder, recursive, scheduled or scanner-triggered online
+geocoding path. Later metadata refreshes or changed-file scans may reapply the already
+saved local enrichment, but they never contact the provider.

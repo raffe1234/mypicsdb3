@@ -528,3 +528,31 @@ Non-JPEG formats keep the generic bounded prefix path. XMP GPS is a fallback onl
 EXIF did not yield a coordinate; common IPTC Extension location aliases fill only
 canonical fields left empty by the normal/custom mapping path. This preserves mapping
 precedence and does not introduce a network geocoder.
+
+### Explicit reverse-geocoding boundary (0.8.28)
+
+`geocoding.py` is the only network-aware metadata-location boundary. The browser
+passes it a validated stored latitude/longitude pair only after the feature is enabled
+and the user confirms **Resolve location online**. The Nominatim request contains no
+media URI, filename, image bytes or catalogue identifiers and uses `geocodejson`
+address details plus an identifying MyPicsDB 3 User-Agent. The base endpoint is a
+setting rather than a compile-time constant so the service can be switched without an
+add-on update.
+
+Results are cached in the existing schema-9 `meta` key/value store by provider and
+rounded coordinate; a separate URI-hash enrichment record retains the named location
+and attribution. `Catalog.update_picture_named_location()` fills only empty canonical
+location columns and rebuilds the picture search document in the same transaction.
+Embedded EXIF/XMP/IPTC values therefore remain authoritative. Explicit metadata
+refresh reapplies a saved enrichment only when fresh embedded location fields are
+missing. Changed-file/forced scanner reads apply the same rule through the existing
+scan transaction, so a later source metadata read cannot silently erase explicit
+online enrichment; newly embedded source fields still win.
+
+A short `location-enrichment` catalogue lock conflicts with scan, migration and
+metadata-refresh locks. It is acquired before network I/O, so a lookup attempted while
+another catalogue writer is active makes no request. Provider cache misses also share
+a persistent per-endpoint last-request timestamp and wait until at least 1.1 seconds
+have elapsed, keeping the normal public Nominatim path below one request per second
+even across add-on/service restarts. No automatic, recursive or bulk reverse-geocoding
+path exists.

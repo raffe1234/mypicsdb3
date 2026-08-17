@@ -299,3 +299,14 @@ For XMP GPS/location aliases and the low-I/O JPEG metadata-header walk, start in
 refresh dialog are in `views.py`; refresh locking remains in `metadata_refresh.py` and
 `db/locks.py`. Regression coverage lives in `tests/test_metadata.py` and
 `tests/test_kodi_ui_smoke.py`. No schema, Query Model or Estuary change is involved.
+
+## 0.8.28 online location-enrichment touchpoints
+
+Start in `resources/lib/mypicsdb3/geocoding.py` for the configurable Nominatim client,
+response normalization, cache and enrichment records. The explicit context action,
+privacy confirmation, attribution display and short writer lock are in `views.py`;
+`db/catalog.py` owns the fill-only location/search-document write and `db/locks.py`
+owns scan/migration/refresh conflicts. Settings are in `config.py`, `kodi.py` and
+`resources/settings.xml`. Regression coverage lives in `tests/test_geocoding.py`,
+`tests/test_kodi_ui_smoke.py`, `tests/test_catalog.py` and
+`tests/test_metadata_refresh.py`. No schema, Query Model or Estuary change is involved.

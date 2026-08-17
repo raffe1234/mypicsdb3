@@ -68,6 +68,7 @@ BOOLEAN_SETTING_IDS = frozenset(
         "read_xmp",
         "read_iptc",
         "store_gps",
+        "reverse_geocoding_enabled",
         "mysql_auto_create",
         "debug_logging",
         "home_widget_limit_migrated_v2",

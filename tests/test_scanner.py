@@ -11,6 +11,7 @@ from mypicsdb3.config import Settings
 from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
 from mypicsdb3.filesystem import LocalFilesystem
+from mypicsdb3.geocoding import ResolvedLocation, save_location_enrichment
 from mypicsdb3.models import MetadataResult
 from mypicsdb3.db.locks import SCAN_LOCK_NAME
 from mypicsdb3.scanner import ScanAlreadyRunning, Scanner
@@ -104,6 +105,64 @@ def test_sqlite_scan_does_not_break_same_process_scan_lock(tmp_path: Path) -> No
         )
     assert lock["owner"] == live_owner
     catalog.release_lock(SCAN_LOCK_NAME, live_owner)
+
+
+def test_changed_file_scan_preserves_explicit_online_location_enrichment(tmp_path: Path) -> None:
+    root = tmp_path / "photos"
+    root.mkdir()
+    image = root / "image.jpg"
+    image.write_bytes(b"first")
+    settings = Settings(
+        profile_path=str(tmp_path / "profile"),
+        database_backend="sqlite",
+        extensions=("jpg",),
+        batch_size=10,
+        store_gps=True,
+    )
+    catalog = Catalog(DatabaseEngine(settings))
+    catalog.initialize()
+    source = catalog.sync_sources([{"label": "Photos", "uri": str(root)}])[0]
+    catalog.set_source_enabled(source.id, True)
+
+    def metadata_without_named_location(path, filesystem, scan_settings, file_size):
+        return MetadataResult(
+            mime_type="image/jpeg",
+            camera_make="Test",
+            camera_model="Camera",
+            gps_latitude=38.536747,
+            gps_longitude=-0.133435,
+            location={},
+            metadata_hash="metadata-%s" % file_size,
+        )
+
+    scanner = Scanner(
+        catalog, LocalFilesystem(), settings, metadata_reader=metadata_without_named_location
+    )
+    first = scanner.scan_sources()
+    assert first.pictures_added == 1
+    picture = catalog.recent_added(10)[0]
+    enrichment = ResolvedLocation(
+        country="Spain",
+        state="Comunitat Valenciana",
+        city="Benidorm",
+        sublocation="Levante",
+        attribution="© OpenStreetMap contributors",
+    )
+    save_location_enrichment(catalog, picture["uri"], enrichment)
+    catalog.update_picture_named_location(int(picture["id"]), enrichment.as_location_dict())
+
+    image.write_bytes(b"second and changed")
+    os.utime(image, None)
+    second = scanner.scan_sources()
+
+    assert second.pictures_updated == 1
+    with catalog.engine.transaction() as connection:
+        refreshed = catalog.find_picture(connection, picture["uri"])
+    assert refreshed["country"] == "Spain"
+    assert refreshed["state"] == "Comunitat Valenciana"
+    assert refreshed["city"] == "Benidorm"
+    assert refreshed["sublocation"] == "Levante"
+
 
 def test_incremental_scan_missing_files_and_unavailable_source(tmp_path: Path) -> None:
     root = tmp_path / "photos"

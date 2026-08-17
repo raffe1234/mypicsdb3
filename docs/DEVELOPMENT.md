@@ -136,3 +136,15 @@ cannot be loaded and its internal `Repository` object is left without an
 `addons` attribute. `tools/run_kodi_addon_checker.py` handles only that known
 upstream failure by treating the unavailable repository as empty. All local
 validation errors and other checker failures still fail the workflow.
+
+### Reverse-geocoding development guardrails (0.8.28)
+
+Keep network geocoding in `geocoding.py` and inject/mock the opener in tests; unit and
+release tests must never contact a public geocoder. Public Nominatim use must remain
+user-triggered one picture at a time, cached, attributed and switchable by endpoint.
+The persistent per-endpoint throttle must keep cache misses below one request per
+second; unit tests inject clock/sleep functions rather than waiting in real time. Do
+not add a folder/bulk worker or scanner-triggered network hook without selecting a
+service designed for that workload. The `location-enrichment` lock must continue to
+conflict with scan, migration and metadata-refresh writers. Scanner code may only
+reapply already-saved local enrichment and must never call the provider.

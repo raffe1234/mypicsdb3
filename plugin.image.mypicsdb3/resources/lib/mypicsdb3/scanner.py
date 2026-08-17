@@ -11,6 +11,7 @@ from .config import Settings
 from .db.catalog import Catalog
 from .db.locks import METADATA_REFRESH_LOCK_NAME, SCAN_LOCK_NAME
 from .filesystem import CancellationAwareFilesystem, Filesystem
+from .geocoding import load_location_enrichment, merge_location
 from .metadata import extract_metadata
 from .metadata_mapping import metadata_index_signature
 from .models import MetadataResult, ScanStats, Source
@@ -421,6 +422,22 @@ class Scanner:
                                 metadata.taken_at = local_datetime_from_timestamp(file_stat.mtime)
                                 metadata.taken_source = "File mtime fallback"
                             location = metadata.location or {}
+                            # Explicit online location enrichment is local catalogue
+                            # state, not source-file metadata. Preserve it across a
+                            # later forced/changed-file metadata read, while still
+                            # allowing newly embedded fields to take precedence.
+                            if existing and any(
+                                existing.get(field)
+                                for field in ("country", "state", "city", "sublocation")
+                            ) and any(
+                                not location.get(field)
+                                for field in ("country", "state", "city", "sublocation")
+                            ):
+                                enrichment = load_location_enrichment(
+                                    self.catalog, picture_uri, connection=connection
+                                )
+                                if enrichment is not None:
+                                    location = merge_location(location, enrichment)
                             record: Dict[str, object] = {
                                 "source_id": source.id,
                                 "folder_id": folder_id,

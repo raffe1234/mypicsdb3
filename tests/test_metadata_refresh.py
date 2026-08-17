@@ -24,6 +24,7 @@ class FakeCatalog:
         self.recovered = []
         self.refreshed = []
         self.folder_summaries = []
+        self.meta = {}
         self.rows = {
             1: {
                 "id": 1,
@@ -98,6 +99,12 @@ class FakeCatalog:
 
     def refresh_folder_summary(self, folder_id):
         self.folder_summaries.append(int(folder_id))
+
+    def meta_value(self, key):
+        return self.meta.get(str(key))
+
+    def set_meta_value(self, key, value):
+        self.meta[str(key)] = str(value)
 
 
 def settings():
@@ -210,3 +217,33 @@ def test_refresh_refuses_to_run_when_catalogue_writer_lock_is_busy() -> None:
 
     with pytest.raises(MetadataRefreshBusy):
         refresher.refresh_picture(1)
+
+def test_refresh_preserves_online_enrichment_when_embedded_location_is_missing(monkeypatch) -> None:
+    from mypicsdb3.geocoding import ResolvedLocation, save_location_enrichment
+
+    catalog = FakeCatalog()
+    save_location_enrichment(
+        catalog,
+        "smb://server/photos/one.jpg",
+        ResolvedLocation(
+            country="Spain",
+            state="Comunitat Valenciana",
+            city="Benidorm",
+            sublocation="Levante",
+            attribution="Data © OpenStreetMap contributors",
+        ),
+    )
+
+    def fake_extract(path, filesystem, cfg, file_size, mapping_rules=(), diagnostics=None):
+        result = fresh_result()
+        result.location = {}
+        return result
+
+    monkeypatch.setattr(metadata_refresh, "extract_metadata", fake_extract)
+    MetadataRefresher(catalog, FakeFilesystem(), settings()).refresh_picture(1)
+
+    _picture_id, record, _keywords = catalog.refreshed[-1]
+    assert record["country"] == "Spain"
+    assert record["state"] == "Comunitat Valenciana"
+    assert record["city"] == "Benidorm"
+    assert record["sublocation"] == "Levante"

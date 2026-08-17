@@ -56,6 +56,8 @@ class Settings:
     read_xmp: bool = True
     read_iptc: bool = True
     store_gps: bool = False
+    reverse_geocoding_enabled: bool = False
+    reverse_geocoding_endpoint: str = "https://nominatim.openstreetmap.org"
     metadata_prefix_mb: int = 4
     deep_metadata_max_mb: int = 64
     mysql_host: str = "127.0.0.1"
@@ -128,6 +130,10 @@ def from_getter(getter: Callable[[str], Any], profile_path: str) -> Settings:
         read_xmp=parse_bool(getter("read_xmp"), True),
         read_iptc=parse_bool(getter("read_iptc"), True),
         store_gps=parse_bool(getter("store_gps"), False),
+        reverse_geocoding_enabled=parse_bool(getter("reverse_geocoding_enabled"), False),
+        reverse_geocoding_endpoint=str(
+            getter("reverse_geocoding_endpoint") or "https://nominatim.openstreetmap.org"
+        ).strip(),
         metadata_prefix_mb=parse_int(getter("metadata_prefix_mb"), 4, 1, 32),
         deep_metadata_max_mb=parse_int(getter("deep_metadata_max_mb"), 64, 1, 1024),
         mysql_host=str(getter("mysql_host") or "127.0.0.1").strip(),

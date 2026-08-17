@@ -359,6 +359,14 @@ msgctxt "#32035"
 msgid "Maximum file size for deep metadata (MiB)"
 msgstr "Maximum file size for deep metadata (MiB)"
 
+msgctxt "#32036"
+msgid "Online reverse geocoding"
+msgstr "Online reverse geocoding"
+
+msgctxt "#32037"
+msgid "Nominatim server URL"
+msgstr "Nominatim server URL"
+
 msgctxt "#32040"
 msgid "Database"
 msgstr "Database"
@@ -494,6 +502,14 @@ msgstr "Maximum prefix read for basic XMP and image header detection."
 msgctxt "#32135"
 msgid "IPTC deep reading is skipped for larger files."
 msgstr "IPTC deep reading is skipped for larger files."
+
+msgctxt "#32136"
+msgid "Disabled by default. When you explicitly choose Resolve location online, only the stored GPS coordinates are sent to the configured Nominatim-compatible service. No image or filename is sent. Results are cached locally."
+msgstr "Disabled by default. When you explicitly choose Resolve location online, only the stored GPS coordinates are sent to the configured Nominatim-compatible service. No image or filename is sent. Results are cached locally."
+
+msgctxt "#32137"
+msgid "Base URL for the Nominatim-compatible reverse-geocoding service. The default public OpenStreetMap service has a strict usage policy; this setting allows the service to be changed without an add-on update."
+msgstr "Base URL for the Nominatim-compatible reverse-geocoding service. The default public OpenStreetMap service has a strict usage policy; this setting allows the service to be changed without an add-on update."
 
 msgctxt "#32140"
 msgid "SQLite requires no setup. MySQL/MariaDB allows several Kodi devices to share the catalogue."
@@ -2111,3 +2127,67 @@ msgstr "Metadata refresh unavailable"
 msgctxt "#33025"
 msgid "A catalogue scan, schema migration or another metadata refresh is active. Wait for it to finish and try again."
 msgstr "A catalogue scan, schema migration or another metadata refresh is active. Wait for it to finish and try again."
+
+msgctxt "#33026"
+msgid "Resolve location online"
+msgstr "Resolve location online"
+
+msgctxt "#33027"
+msgid "GPS storage is disabled, so no coordinates are available for an online lookup."
+msgstr "GPS storage is disabled, so no coordinates are available for an online lookup."
+
+msgctxt "#33028"
+msgid "This picture has no stored GPS coordinates to resolve."
+msgstr "This picture has no stored GPS coordinates to resolve."
+
+msgctxt "#33029"
+msgid "Online location lookup is disabled"
+msgstr "Online location lookup is disabled"
+
+msgctxt "#33030"
+msgid "Enable Metadata > Online reverse geocoding first. No network request was made."
+msgstr "Enable Metadata > Online reverse geocoding first. No network request was made."
+
+msgctxt "#33031"
+msgid "Send GPS coordinates %s to the configured Nominatim server to resolve city/region/country? The image and filename are not sent."
+msgstr "Send GPS coordinates %s to the configured Nominatim server to resolve city/region/country? The image and filename are not sent."
+
+msgctxt "#33032"
+msgid "Could not resolve location"
+msgstr "Could not resolve location"
+
+msgctxt "#33033"
+msgid "Online location lookup unavailable"
+msgstr "Online location lookup unavailable"
+
+msgctxt "#33034"
+msgid "A catalogue scan, schema migration or metadata refresh is active. Wait for it to finish and try again. No network request was made."
+msgstr "A catalogue scan, schema migration or metadata refresh is active. Wait for it to finish and try again. No network request was made."
+
+msgctxt "#33035"
+msgid "Location source"
+msgstr "Location source"
+
+msgctxt "#33036"
+msgid "Attribution"
+msgstr "Attribution"
+
+msgctxt "#33037"
+msgid "Resolved address"
+msgstr "Resolved address"
+
+msgctxt "#33038"
+msgid "Result cache"
+msgstr "Result cache"
+
+msgctxt "#33039"
+msgid "local cache"
+msgstr "local cache"
+
+msgctxt "#33040"
+msgid "online lookup"
+msgstr "online lookup"
+
+msgctxt "#33041"
+msgid "Only the GPS coordinates were used for the lookup; the image and filename were not sent."
+msgstr "Only the GPS coordinates were used for the lookup; the image and filename were not sent."

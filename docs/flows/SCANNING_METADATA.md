@@ -206,9 +206,12 @@ effective mapping plus metadata extraction settings. An unchanged item with a
 matching hash is touched as seen without repeating expensive metadata work. If the
 mapping or extraction inputs change, the next scan re-reads metadata even when
 size/mtime are unchanged and then stores the new hash. Schema-9 upgrades leave old
-rows without this hash deliberately, causing one safe metadata reindex. Changes to
-this rule can have large performance and correctness effects on NAS libraries and
-require regression tests.
+rows without this hash deliberately, causing one safe metadata reindex. If a picture
+has an explicit 0.8.28 online location-enrichment record, a changed-file/forced
+metadata read fills only source-location fields that remain empty from that saved
+local record; embedded EXIF/XMP/IPTC values remain authoritative. The scanner never
+performs reverse-geocoding network I/O. Changes to these rules can have large
+performance and correctness effects on NAS libraries and require regression tests.
 
 ## Explicit metadata refresh (0.8.23)
 
@@ -339,3 +342,11 @@ JPEG prefix acquisition no longer transfers the configured multi-megabyte prefix
 blindly. A bounded marker walk reads APP1/SOF payloads and seeks over unrelated data
 through Start Of Scan. Scanner ordering, checkpointing, cancellation and database
 writes remain serial and unchanged.
+
+### Reverse geocoding remains outside scanning (0.8.28)
+
+The scanner never calls a network geocoder. Online location enrichment is an explicit
+single-picture UI action in `geocoding.py`/`views.py`, disabled by default. Its short
+`location-enrichment` lock conflicts with catalogue scans, so if a scan is active the
+lookup is rejected before any network request. Installing 0.8.28 does not change the
+metadata-index signature or force an automatic metadata reread.

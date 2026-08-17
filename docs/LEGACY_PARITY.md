@@ -122,9 +122,15 @@ MyPicsDB 3 version 0.8.22 adds provider-neutral **Location details** plus local
 coordinates are shown only when the privacy-sensitive storage setting is enabled;
 no provider URL, API key or network request is involved.
 
-An explicit **Open map** action remains a later gap. It must be opt-in at the
-point of use, provider-neutral and must not silently send a user's photo
-coordinates to a network provider or embed private API keys.
+Version 0.8.28 closes the named-location part of that gap with an explicit,
+disabled-by-default **Resolve location online** action. It resolves one stored GPS pair
+at a time through a configurable Nominatim-compatible service, caches the result,
+retains attribution and fills only missing canonical location fields. No image/path
+metadata is sent and no scan/background/bulk geocoding exists.
+
+An explicit **Open map** action remains a later gap. It must stay opt-in at the point
+of use, provider-neutral and must not silently send a user's photo coordinates to a
+network provider or embed private API keys.
 
 Version 0.8.23 adds explicit metadata refresh/diagnostics around this foundation.
 A selected picture can be freshly inspected to determine whether MyPicsDB's current
@@ -156,7 +162,7 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.27
+## Recommended roadmap after 0.8.28
 
 1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
 2. 0.8.16 — completed: collection snapshots from validated query-backed results.
@@ -168,8 +174,9 @@ reviving CommonCache-era behavior.
 8. 0.8.25 — completed: harden EXIF recovery when the normal metadata prefix path fails and preserve automatic-scan cadence across Kodi/add-on service restarts while still resuming an interrupted checkpoint promptly.
 9. 0.8.26 — completed: correct Kodi VFS metadata reads to use the binary `readBytes()` API so normal JPEG/EXIF bytes are not UTF-8 decoded before ExifRead/fallback processing.
 10. 0.8.27 — completed: broaden offline XMP location/GPS compatibility, expose matched XMP location properties in local diagnostics, reduce JPEG metadata-prefix I/O and make scan-blocked refresh explicit.
-11. Later — light video metadata, optional explicit map/reverse-geocoding provider action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
-12. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
+11. 0.8.28 — completed: explicit privacy-gated single-picture Nominatim-compatible reverse geocoding with local caching, attribution, provider switching and no bulk/background path.
+12. Later — light video metadata, optional explicit Open map action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
+13. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can
 change it, but new work should preserve the scanner, Query Model, migration,
