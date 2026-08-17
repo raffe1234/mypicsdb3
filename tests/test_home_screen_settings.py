@@ -164,6 +164,10 @@ def test_home_fragment_materializes_nine_generic_slots_without_service_state() -
     assert home.count('<param name="widget_limit" value="40"/>') == 9
     assert home.count("widget=1&amp;home=1") == 9
     assert "Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)" in home
+    # Home control ids must stay unique: stock Estuary owns group id 5000 for Movies.
+    assert '<param name="list_id" value="5000"/>' not in home
+    assert '<param name="list_id" value="4950"/>' in home
+    assert '<include content="WidgetScrollbar" condition="Skin.HasSetting(touchmode)">' in home
     assert '<param name="visible">true</param>' in widget
     assert '<param name="visible" value="$PARAM[visible]"/>' in widget
     assert '<visible>$PARAM[visible]</visible><visible>Integer.IsGreater' in widget

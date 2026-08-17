@@ -170,7 +170,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.20",
+            "version": "0.8.21",
         }[key]
 
     def getSetting(self, key):
@@ -903,7 +903,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.20" in labels
+    assert "MyPicsDB 3 version: 0.8.21" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -2931,7 +2931,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.20"
+    assert captured["init"][2] == "0.8.21"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

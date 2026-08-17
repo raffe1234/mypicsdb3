@@ -47,6 +47,8 @@ runtime row visibility and row-type variables read the matching
 service. This keeps the 0.8.8 cold-start guarantee while avoiding repeated
 `Addon.SettingStr(...,home_row_N)` resolution in the Pictures Home render path.
 
+Version 0.8.21 keeps Home control IDs unique by assigning slot 9 panel id `4950` instead of stock Estuary's Movies group id `5000`, and makes the Pictures widget scrollbar touch-mode-only like upstream Estuary.
+
 The 0.4.4 patch uses Omega patch revision 12 and Piers patch revision 10.
 The plugin-only 0.4.5 stability follow-up keeps those skin revisions unchanged.
 Version 0.4.11 advances Omega to revision 15 and Piers to revision 13 because

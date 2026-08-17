@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.21 - 2026-08-17
+
+- Fix a generated Estuary Home control-id collision: MyPicsDB slot 9 no longer uses panel id `5000`, which stock Estuary already reserves for the Movies Home group. Slot 9 now uses unused Pictures-range id `4950`; all other provider URLs and row semantics are unchanged.
+- Match stock Estuary widget-scrollbar behavior by showing the Pictures vertical scrollbar only when touch mode is enabled, instead of materializing it visibly for every input mode. Keep the page-control wiring required by multi-row Pictures Home layouts.
+- Keep scanner, database schema 9, Query Model version 1, widget limits and Home provider queries unchanged. Bump generated Estuary patch revisions to Omega 23 and Piers 21 and add regression coverage for the control-id and scrollbar invariants.
+
 ## 0.8.20 - 2026-08-17
 
 - Reduce Pictures Home render-path work in the generated Estuary skin: all nine MyPicsDB row controls remain materialized for cold-start safety, but runtime row visibility, labels and random browse-mode decisions now consume the already-published `Window(Home).Property(MyPicsDB3.HomeRowN)` state instead of repeatedly resolving `Addon.SettingStr(...,home_row_N)`.
