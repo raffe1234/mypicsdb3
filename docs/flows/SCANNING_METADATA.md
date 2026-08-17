@@ -248,6 +248,27 @@ a writer lock and does not update the catalogue. It is intended to answer whethe
 blank indexed field is stale or whether the current extractor also fails to see the
 metadata Kodi's native picture info may display.
 
+### Whole-library metadata refresh (0.8.29)
+
+**Browse metadata > Refresh all picture metadata** reuses the same `MetadataRefresher`
+but iterates existing still-picture IDs in bounded batches. It does not walk source
+folders, discover media, mark missing rows or touch videos. A run freezes the maximum
+picture ID when it starts, so a resumed run has a stable horizon even if normal scans
+add new rows later.
+
+Cancellation writes `metadata-refresh-all-v1.json` in the local add-on profile after
+all changes from the current partial batch have had their folder summaries refreshed.
+The checkpoint stores catalogue identity, metadata-index signature, frozen maximum ID
+and cumulative progress. A later invocation can resume or explicitly restart from the
+beginning. If the database target or metadata-index signature changes, stale progress
+is not reused.
+
+The operation remains under the existing `metadata-refresh` writer lock for its entire
+run and refreshes the lock lease while files are processed. No online reverse geocoding
+is invoked. If a provider+coordinate result already exists in the 0.8.28 local cache,
+that cached named location may be reused offline for another refreshed picture at the
+same rounded coordinates.
+
 ## Missing records and cleanup
 
 Missing marking is soft. Rows are retained for the configured period. A

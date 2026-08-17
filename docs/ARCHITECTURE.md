@@ -556,3 +556,19 @@ a persistent per-endpoint last-request timestamp and wait until at least 1.1 sec
 have elapsed, keeping the normal public Nominatim path below one request per second
 even across add-on/service restarts. No automatic, recursive or bulk reverse-geocoding
 path exists.
+
+
+### Whole-library metadata reindex boundary (0.8.29)
+
+`MetadataRefresher.refresh_all()` is a catalogue-maintenance writer, not a source
+scanner. It freezes a maximum existing still-picture ID, obtains subsequent IDs in
+bounded batches, and reuses the same single-picture extraction/write path. The
+`metadata-refresh` lock is held for the run and refreshed periodically, so scanner,
+migration and online-location writers remain mutually exclusive.
+
+Resume state is intentionally local to the Kodi profile rather than shared in the
+catalogue: `metadata-refresh-all-v1.json` contains only catalogue identity, metadata
+index signature, ID horizon and counters. It contains no media paths, credentials or
+metadata values. A crash may repeat the incomplete current batch, which is safe because
+refresh writes are idempotent; checkpoints advance only after affected folder summaries
+have been refreshed. No online reverse-geocoding call is reachable from this path.

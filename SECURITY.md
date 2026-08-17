@@ -42,3 +42,12 @@ endpoint remains configurable so a provider can be switched without a software
 release. Remember that the configured server necessarily sees normal HTTP connection
 metadata such as the client's public IP address even though image bytes/path/name are
 not sent.
+
+### Whole-library refresh checkpoint privacy (0.8.29)
+
+The resumable whole-library metadata refresh keeps its checkpoint in the local Kodi
+add-on profile. The checkpoint may contain only catalogue identity, metadata-index
+signature, frozen picture-ID horizon and progress counters; it must not contain media
+URIs, filenames, credentials, EXIF/XMP/IPTC values or GPS coordinates. The full refresh
+must not invoke online reverse geocoding. It may reuse an already-existing local
+provider+coordinate cache entry, but that reuse performs no network request.

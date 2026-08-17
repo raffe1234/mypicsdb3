@@ -162,7 +162,7 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.28
+## Recommended roadmap after 0.8.29
 
 1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
 2. 0.8.16 — completed: collection snapshots from validated query-backed results.
@@ -175,8 +175,9 @@ reviving CommonCache-era behavior.
 9. 0.8.26 — completed: correct Kodi VFS metadata reads to use the binary `readBytes()` API so normal JPEG/EXIF bytes are not UTF-8 decoded before ExifRead/fallback processing.
 10. 0.8.27 — completed: broaden offline XMP location/GPS compatibility, expose matched XMP location properties in local diagnostics, reduce JPEG metadata-prefix I/O and make scan-blocked refresh explicit.
 11. 0.8.28 — completed: explicit privacy-gated single-picture Nominatim-compatible reverse geocoding with local caching, attribution, provider switching and no bulk/background path.
-12. Later — light video metadata, optional explicit Open map action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
-13. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
+12. 0.8.29 — completed: explicit serial/cancellable/resumable whole-library metadata reindex over existing still-picture rows, with bounded ID batches and offline reuse of existing location cache entries only.
+13. Later — light video metadata, optional explicit Open map action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
+14. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can
 change it, but new work should preserve the scanner, Query Model, migration,

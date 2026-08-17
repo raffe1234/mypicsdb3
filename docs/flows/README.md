@@ -50,7 +50,7 @@ Main files: `addon.py`, `entrypoints.py`, `router.py`, `runtime.py`, `views.py`,
 ### [Scanning, filesystems, metadata and catalogue writes](SCANNING_METADATA.md)
 
 Read this for manual or scheduled scans, source safety, scan/refresh locks, cancellation,
-folder checkpoints, EXIF/XMP/IPTC extraction, explicit 0.8.23 metadata refresh/diagnostics and missing-record handling.
+folder checkpoints, EXIF/XMP/IPTC extraction, explicit single/folder refresh plus the 0.8.29 resumable whole-library metadata reindex, diagnostics and missing-record handling.
 
 Main files: `scanner.py`, `filesystem.py`, `metadata.py`, `metadata_mapping.py`, `metadata_refresh.py`, `scan_checkpoint.py`,
 `db/catalog.py`, `db/locks.py`, `service_loop.py`.

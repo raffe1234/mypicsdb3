@@ -1358,6 +1358,50 @@ class Catalog:
             )
         return [int(row["id"]) for row in rows]
 
+    def metadata_refresh_picture_horizon(self, max_picture_id: Optional[int] = None) -> Tuple[int, int]:
+        """Return (count, max_id) for available still pictures in one stable horizon."""
+
+        where = "is_missing=0 AND media_type='picture'"
+        params: Tuple[Any, ...] = ()
+        if max_picture_id is not None:
+            if type(max_picture_id) is not int or max_picture_id <= 0:
+                return (0, 0)
+            where += " AND id<=?"
+            params = (max_picture_id,)
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(
+                connection,
+                "SELECT COUNT(*) AS picture_count, COALESCE(MAX(id), 0) AS max_id "
+                "FROM pictures WHERE " + where,
+                params,
+            )
+        if row is None:
+            return (0, 0)
+        return (int(row.get("picture_count") or 0), int(row.get("max_id") or 0))
+
+    def picture_ids_for_metadata_refresh(
+        self,
+        after_id: int,
+        max_picture_id: int,
+        limit: int = 200,
+    ) -> List[int]:
+        """Return the next bounded ID batch for a whole-catalogue metadata refresh."""
+
+        after_id = max(0, int(after_id))
+        max_picture_id = max(0, int(max_picture_id))
+        limit = max(1, min(5000, int(limit)))
+        if max_picture_id <= 0:
+            return []
+        with self.engine.transaction() as connection:
+            rows = self.engine.fetchall(
+                connection,
+                "SELECT id FROM pictures "
+                "WHERE is_missing=0 AND media_type='picture' AND id>? AND id<=? "
+                "ORDER BY id LIMIT ?",
+                (after_id, max_picture_id, limit),
+            )
+        return [int(row["id"]) for row in rows]
+
     def refresh_picture_record(
         self,
         picture_id: int,

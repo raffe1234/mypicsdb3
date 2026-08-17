@@ -148,3 +148,13 @@ not add a folder/bulk worker or scanner-triggered network hook without selecting
 service designed for that workload. The `location-enrichment` lock must continue to
 conflict with scan, migration and metadata-refresh writers. Scanner code may only
 reapply already-saved local enrichment and must never call the provider.
+
+
+### Whole-library metadata refresh guardrails (0.8.29)
+
+- Keep the job serial; do not add worker pools or concurrent SMB metadata reads.
+- Iterate existing catalogue IDs in bounded batches; do not preload the whole library.
+- Preserve the frozen maximum-ID horizon across resume.
+- Advance the local checkpoint only after writes in the completed batch have had folder summaries refreshed.
+- Never call an online reverse-geocoding provider from full/folder metadata refresh. Local provider cache reuse is allowed.
+- Keep source files read-only and preserve scan-only semantics such as `last_seen_at`.

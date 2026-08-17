@@ -157,7 +157,7 @@ Prefer this page, `ARCHITECTURE.md` and the current source code when they differ
 | Change global or saved search | `search.py`, `query_model.py` | `saved_searches.py`, search tests |
 | Change the smart-filter editor or Needs attention presets | `smart_filter_editor.py`, `attention.py` | `query_model.py`, editor/UI tests |
 | Change Browse metadata categories/facets | `metadata_browser.py`, `views.py` | `db/catalog.py`, `query_model.py`, facet/UI tests |
-| Change Metadata diagnostics / Refresh metadata | `metadata_refresh.py`, `views.py` | `metadata.py`, `db/locks.py`, `db/catalog.py`, refresh/UI tests |
+| Change Metadata diagnostics / one-folder/full-library Refresh metadata | `metadata_refresh.py`, `views.py` | `metadata.py`, `db/locks.py`, `db/catalog.py`, checkpoint/refresh/UI tests |
 | Change safe media export | `exporter.py`, `views.py` | `filesystem.py`, `db/catalog.py`, `tests/test_exporter.py` |
 | Change a slideshow | `views.py`, `slideshow.py` | `service_loop.py`, slideshow tests |
 | Change the screensaver | `screensaver.mypicsdb3/default.py`, `screensaver.py` | `tests/test_screensaver.py`, screensaver flow guide |
@@ -310,3 +310,13 @@ owns scan/migration/refresh conflicts. Settings are in `config.py`, `kodi.py` an
 `resources/settings.xml`. Regression coverage lives in `tests/test_geocoding.py`,
 `tests/test_kodi_ui_smoke.py`, `tests/test_catalog.py` and
 `tests/test_metadata_refresh.py`. No schema, Query Model or Estuary change is involved.
+
+
+## 0.8.29 whole-library metadata refresh touchpoints
+
+- UI entry: `views.py` > Browse metadata > `action/refresh-metadata-all`.
+- Serial engine and local checkpoint: `metadata_refresh.py`.
+- Bounded ID horizon/batches: `db/catalog.py`.
+- Same writer lock as single/folder refresh: `db/locks.py`; no new lock type.
+- No network geocoding during the full refresh; `geocoding.py` is used only for local cache reuse.
+- Regression coverage: `tests/test_metadata_refresh.py`, `tests/test_kodi_ui_smoke.py`, catalogue/backend tests.

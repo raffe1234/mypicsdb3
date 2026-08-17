@@ -174,6 +174,25 @@ def _result_from_json(value: str) -> Optional[ResolvedLocation]:
     return result
 
 
+
+def load_cached_reverse_geocoding(
+    catalog,
+    endpoint: str,
+    latitude: float,
+    longitude: float,
+) -> Optional[ResolvedLocation]:
+    """Return an existing provider+coordinate cache entry without network I/O."""
+
+    try:
+        key = _cache_key(endpoint, float(latitude), float(longitude))
+    except (TypeError, ValueError, ReverseGeocodingError):
+        return None
+    raw = catalog.meta_value(key)
+    if not raw:
+        return None
+    return _result_from_json(raw)
+
+
 def load_location_enrichment(
     catalog,
     uri: str,

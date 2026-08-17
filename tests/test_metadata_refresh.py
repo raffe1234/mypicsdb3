@@ -91,6 +91,25 @@ class FakeCatalog:
         assert int(folder_id) == 2
         return [1, 2]
 
+    def metadata_refresh_picture_horizon(self, max_picture_id=None):
+        ids = [
+            picture_id
+            for picture_id, row in self.rows.items()
+            if row.get("media_type") == "picture"
+            and (max_picture_id is None or picture_id <= int(max_picture_id))
+        ]
+        return (len(ids), max(ids) if ids else 0)
+
+    def picture_ids_for_metadata_refresh(self, after_id, max_picture_id, limit=200):
+        ids = [
+            picture_id
+            for picture_id, row in sorted(self.rows.items())
+            if row.get("media_type") == "picture"
+            and picture_id > int(after_id)
+            and picture_id <= int(max_picture_id)
+        ]
+        return ids[: int(limit)]
+
     def refresh_picture_record(self, picture_id, record, keywords):
         if int(picture_id) not in self.rows:
             return False
@@ -107,11 +126,15 @@ class FakeCatalog:
         self.meta[str(key)] = str(value)
 
 
-def settings():
+def settings(profile_path=""):
     return SimpleNamespace(
+        profile_path=str(profile_path),
+        database_backend="sqlite",
+        batch_size=100,
         read_xmp=True,
         read_iptc=True,
         store_gps=True,
+        reverse_geocoding_endpoint="https://nominatim.openstreetmap.org",
         metadata_prefix_mb=2,
         deep_metadata_max_mb=64,
     )
@@ -247,3 +270,102 @@ def test_refresh_preserves_online_enrichment_when_embedded_location_is_missing(m
     assert record["state"] == "Comunitat Valenciana"
     assert record["city"] == "Benidorm"
     assert record["sublocation"] == "Levante"
+
+
+def test_refresh_all_is_serial_cancellable_and_resumes_from_local_checkpoint(monkeypatch, tmp_path) -> None:
+    catalog = FakeCatalog()
+
+    def fake_extract(path, filesystem, cfg, file_size, mapping_rules=(), diagnostics=None):
+        return fresh_result()
+
+    monkeypatch.setattr(metadata_refresh, "extract_metadata", fake_extract)
+    progress_calls = []
+    refresher = MetadataRefresher(catalog, FakeFilesystem(), settings(tmp_path))
+
+    first = refresher.refresh_all(
+        cancelled=lambda: len(progress_calls) >= 1,
+        progress=lambda done, total, filename: progress_calls.append((done, total, filename)),
+    )
+
+    assert first.completed is False
+    assert first.processed == 1
+    assert first.refreshed == 1
+    assert progress_calls == [(1, 2, "one.jpg")]
+    checkpoint = refresher.all_refresh_checkpoint()
+    assert checkpoint is not None
+    assert checkpoint["last_picture_id"] == 1
+    assert checkpoint["processed"] == 1
+
+    resumed_calls = []
+    second = MetadataRefresher(
+        catalog, FakeFilesystem(), settings(tmp_path)
+    ).refresh_all(
+        cancelled=lambda: False,
+        progress=lambda done, total, filename: resumed_calls.append((done, total, filename)),
+    )
+
+    assert second.completed is True
+    assert second.resumed is True
+    assert second.processed == 2
+    assert second.refreshed == 2
+    assert resumed_calls == [(2, 2, "two.jpg")]
+    assert refresher.all_refresh_checkpoint() is None
+    assert [item[0] for item in catalog.refreshed] == [1, 2]
+
+
+def test_refresh_all_restart_discards_saved_checkpoint(monkeypatch, tmp_path) -> None:
+    catalog = FakeCatalog()
+    monkeypatch.setattr(
+        metadata_refresh,
+        "extract_metadata",
+        lambda path, filesystem, cfg, file_size, mapping_rules=(), diagnostics=None: fresh_result(),
+    )
+    refresher = MetadataRefresher(catalog, FakeFilesystem(), settings(tmp_path))
+    calls = []
+    refresher.refresh_all(
+        cancelled=lambda: len(calls) >= 1,
+        progress=lambda done, total, filename: calls.append(done),
+    )
+    assert refresher.all_refresh_checkpoint() is not None
+
+    catalog.refreshed.clear()
+    stats = refresher.refresh_all(cancelled=lambda: False, restart=True)
+    assert stats.completed is True
+    assert stats.resumed is False
+    assert [item[0] for item in catalog.refreshed] == [1, 2]
+
+
+def test_refresh_reuses_existing_coordinate_cache_without_online_lookup(monkeypatch) -> None:
+    from mypicsdb3.geocoding import ResolvedLocation, load_location_enrichment
+
+    catalog = FakeCatalog()
+    cached = ResolvedLocation(
+        country="Spain",
+        state="Comunitat Valenciana",
+        city="Benidorm",
+        sublocation="Levante",
+        provider="Nominatim / OpenStreetMap",
+        from_cache=True,
+    )
+
+    def fake_extract(path, filesystem, cfg, file_size, mapping_rules=(), diagnostics=None):
+        result = fresh_result()
+        result.location = {}
+        return result
+
+    monkeypatch.setattr(metadata_refresh, "extract_metadata", fake_extract)
+    monkeypatch.setattr(
+        metadata_refresh,
+        "load_cached_reverse_geocoding",
+        lambda *args, **kwargs: cached,
+    )
+
+    MetadataRefresher(catalog, FakeFilesystem(), settings()).refresh_picture(1)
+
+    _picture_id, record, _keywords = catalog.refreshed[-1]
+    assert record["country"] == "Spain"
+    assert record["state"] == "Comunitat Valenciana"
+    assert record["city"] == "Benidorm"
+    stored = load_location_enrichment(catalog, "smb://server/photos/one.jpg")
+    assert stored is not None
+    assert stored.city == "Benidorm"

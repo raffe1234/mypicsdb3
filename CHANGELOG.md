@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.29 - 2026-08-17
+
+- Add **Refresh all picture metadata** at the top of Browse metadata so existing still-picture rows can be re-read with the current EXIF/XMP/IPTC extractor without traversing source trees, rebuilding the catalogue or modifying source files. The operation is serial and intentionally performs no online reverse geocoding.
+- Make whole-library metadata refresh cancellable and locally resumable. A profile-local checkpoint stores a stable picture-ID horizon and progress after completed batches; restarting the action resumes that horizon, while an explicit restart option discards the saved checkpoint. New pictures added after a paused run are left to normal scanning or the next full refresh.
+- Keep whole-library refresh under the existing `metadata-refresh` catalogue lock so scans, schema migrations and online location enrichment cannot write concurrently. Folder summaries, tags and global-search text are updated as refreshed rows are committed.
+- Reuse already-cached 0.8.28 provider+coordinate reverse-geocoding results locally when a refreshed picture has the same GPS pair, without making a network request. Existing per-picture enrichment and embedded EXIF/XMP/IPTC location values retain precedence.
+- Add bounded catalogue ID iteration for the refresh path instead of loading all picture IDs into memory. Keep database schema 9, Query Model version 1, serial scanner semantics, repository version 0.2.26 and Estuary revisions unchanged.
+
 ## 0.8.28 - 2026-08-17
 
 - Add explicit opt-in **Resolve location online** for still pictures that already have stored GPS coordinates. The action sends only latitude/longitude to a configurable Nominatim-compatible reverse-geocoding endpoint; image bytes, filenames and source paths are never included in the request. Online reverse geocoding is disabled by default and requires a per-picture confirmation.

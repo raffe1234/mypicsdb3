@@ -2191,3 +2191,39 @@ msgstr "online lookup"
 msgctxt "#33041"
 msgid "Only the GPS coordinates were used for the lookup; the image and filename were not sent."
 msgstr "Only the GPS coordinates were used for the lookup; the image and filename were not sent."
+
+msgctxt "#33042"
+msgid "Refresh all picture metadata"
+msgstr "Refresh all picture metadata"
+
+msgctxt "#33043"
+msgid "Re-read metadata for all %d indexed pictures? Source files will not be modified. This is serial and resumable. Online reverse geocoding will not run."
+msgstr "Re-read metadata for all %d indexed pictures? Source files will not be modified. This is serial and resumable. Online reverse geocoding will not run."
+
+msgctxt "#33044"
+msgid "Resume saved metadata refresh"
+msgstr "Resume saved metadata refresh"
+
+msgctxt "#33045"
+msgid "Restart from beginning"
+msgstr "Restart from beginning"
+
+msgctxt "#33046"
+msgid "Cancel"
+msgstr "Cancel"
+
+msgctxt "#33048"
+msgid "Metadata refresh paused at %d / %d. Run it again to resume."
+msgstr "Metadata refresh paused at %d / %d. Run it again to resume."
+
+msgctxt "#33049"
+msgid "All metadata refresh complete: %d refreshed, %d failed"
+msgstr "All metadata refresh complete: %d refreshed, %d failed"
+
+msgctxt "#33050"
+msgid "No indexed pictures to refresh"
+msgstr "No indexed pictures to refresh"
+
+msgctxt "#33051"
+msgid "Reading indexed picture metadata"
+msgstr "Reading indexed picture metadata"

@@ -476,6 +476,12 @@ class PluginUI:
         params = params or {}
         rating_params = self._rating_route_params(params)
         items = [
+            self.add_action(
+                self.text(33042, "Refresh all picture metadata"),
+                "action/refresh-metadata-all",
+            )
+        ]
+        items.extend(
             self.add_folder(
                 self.text(category.string_id, category.fallback),
                 "metadata-category",
@@ -483,7 +489,7 @@ class PluginUI:
                 **rating_params,
             )
             for category in METADATA_BROWSER_CATEGORIES
-        ]
+        )
         self.finish(
             items,
             content="files",
@@ -1869,6 +1875,103 @@ class PluginUI:
             error=stats.failed > 0,
             milliseconds=6000,
         )
+        xbmc.executebuiltin("Container.Refresh")
+
+    def _refresh_all_picture_metadata(self) -> None:
+        refresher = self._metadata_refresher()
+        checkpoint = refresher.all_refresh_checkpoint()
+        restart = False
+        dialog_ui = xbmcgui.Dialog()
+
+        if checkpoint:
+            processed = int(checkpoint.get("processed") or 0)
+            total = int(checkpoint.get("total") or 0)
+            if total <= 0:
+                total, _max_id = self.catalog.metadata_refresh_picture_horizon(
+                    int(checkpoint.get("max_picture_id") or 0)
+                )
+            choice = dialog_ui.select(
+                self.text(33042, "Refresh all picture metadata"),
+                [
+                    self.text(33044, "Resume saved metadata refresh")
+                    + " (%d / %d)" % (processed, total),
+                    self.text(33045, "Restart from beginning"),
+                    self.text(33046, "Cancel"),
+                ],
+            )
+            if choice < 0 or choice == 2:
+                return
+            restart = choice == 1
+        else:
+            total, _max_id = self.catalog.metadata_refresh_picture_horizon()
+            if total <= 0:
+                self.kodi.notify(self.text(33050, "No indexed pictures to refresh"))
+                return
+            if not dialog_ui.yesno(
+                self.text(33042, "Refresh all picture metadata"),
+                self.text(
+                    33043,
+                    "Re-read metadata for all %d indexed pictures? Source files will not be modified. This is serial and resumable. Online reverse geocoding will not run.",
+                )
+                % int(total),
+            ):
+                return
+
+        progress_dialog = xbmcgui.DialogProgress()
+        try:
+            progress_dialog.create(
+                self.text(33042, "Refresh all picture metadata"),
+                self.text(33051, "Reading indexed picture metadata"),
+            )
+
+            def cancelled() -> bool:
+                checker = getattr(progress_dialog, "iscanceled", None)
+                return bool(callable(checker) and checker())
+
+            def progress(done: int, total: int, filename: str) -> None:
+                percent = min(100, int((int(done) * 100) / max(1, int(total))))
+                progress_dialog.update(
+                    percent,
+                    "%d / %d" % (int(done), int(total)),
+                    filename or "",
+                )
+
+            stats = refresher.refresh_all(
+                cancelled=cancelled,
+                progress=progress,
+                restart=restart,
+            )
+        except MetadataRefreshBusy:
+            self._show_metadata_refresh_busy()
+            return
+        except Exception as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32996, "Metadata refresh failed"), exc),
+                error=True,
+                milliseconds=7000,
+            )
+            return
+        finally:
+            try:
+                progress_dialog.close()
+            except Exception:
+                pass
+
+        if stats.refreshed:
+            self._invalidate_home_widgets("whole-library metadata refreshed")
+        if stats.completed:
+            self.kodi.notify(
+                self.text(33049, "All metadata refresh complete: %d refreshed, %d failed")
+                % (stats.refreshed, stats.failed),
+                error=stats.failed > 0,
+                milliseconds=7000,
+            )
+        else:
+            self.kodi.notify(
+                self.text(33048, "Metadata refresh paused at %d / %d. Run it again to resume.")
+                % (stats.processed, stats.requested),
+                milliseconds=7000,
+            )
         xbmc.executebuiltin("Container.Refresh")
 
     def _media_item(
@@ -3755,6 +3858,9 @@ class PluginUI:
                 self.kodi.notify(self.text(32997, "Folder was not found"), error=True)
                 return
             self._refresh_folder_metadata(folder_id)
+            return
+        if route == "action/refresh-metadata-all":
+            self._refresh_all_picture_metadata()
             return
         if route == "action/settings":
             previous_limit = int(getattr(self.kodi.settings, "home_widget_limit", 10))

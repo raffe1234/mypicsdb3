@@ -121,6 +121,19 @@ containing the metadata needed by this flow. Installing 0.8.27 does not force a
 whole-library rewrite: inspect one representative picture, then use explicit refresh
 for rows/folders that should store newly recognized values.
 
+### Whole-library metadata reindex (0.8.29)
+
+Browse metadata now begins with **Refresh all picture metadata**. It is an explicit
+maintenance action, not a facet or Query Model query. It re-reads only existing
+still-picture catalogue rows using the current extractor/mapping rules, updates their
+canonical metadata/tags/search text and leaves source files unchanged. Progress is
+cancellable and resumable from a profile-local checkpoint.
+
+The action intentionally does **not** bulk reverse-geocode GPS coordinates. Existing
+embedded city/state/country values are indexed normally, and already-cached 0.8.28
+provider results may be reused locally without network I/O. New city/country lookup
+from GPS remains the explicit one-picture **Resolve location online** flow.
+
 ### Explicit online location enrichment (0.8.28)
 
 When **Store GPS coordinates** has produced a valid pair, the picture context menu can

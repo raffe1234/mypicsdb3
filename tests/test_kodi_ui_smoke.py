@@ -419,6 +419,9 @@ class FakeCatalog:
     def list_metadata_mapping_overrides(self):
         return list(self.metadata_mapping_overrides)
 
+    def metadata_refresh_picture_horizon(self, max_picture_id=None):
+        return (2, min(2, int(max_picture_id)) if max_picture_id is not None else 2)
+
     def set_metadata_mapping_rule(self, rule):
         self.metadata_mapping_overrides = [
             existing for existing in self.metadata_mapping_overrides
@@ -1073,6 +1076,63 @@ def test_folder_metadata_refresh_is_confirmed_and_reports_progress(monkeypatch) 
     assert "Container.Refresh" in calls.builtins
 
 
+def test_whole_library_metadata_refresh_is_confirmed_and_reports_progress(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.responses = [True]
+    views.xbmcgui.DialogProgress.create_calls = []
+    views.xbmcgui.DialogProgress.update_calls = []
+    views.xbmcgui.DialogProgress.cancelled = False
+
+    class FakeRefresher:
+        def all_refresh_checkpoint(self):
+            return None
+
+        def refresh_all(self, cancelled=None, progress=None, restart=False):
+            assert restart is False
+            assert cancelled() is False
+            progress(1, 2, "one.jpg")
+            progress(2, 2, "two.jpg")
+            return types.SimpleNamespace(
+                refreshed=2, failed=0, processed=2, requested=2, completed=True
+            )
+
+    monkeypatch.setattr(ui, "_metadata_refresher", lambda: FakeRefresher())
+    ui.action("action/refresh-metadata-all", {})
+
+    assert views.xbmcgui.DialogProgress.create_calls[-1][0] == "Refresh all picture metadata"
+    assert views.xbmcgui.DialogProgress.update_calls[-1] == (100, "2 / 2", "two.jpg")
+    assert any(
+        message == "All metadata refresh complete: 2 refreshed, 0 failed"
+        for message, _error in runtime.kodi.notifications
+    )
+    assert "Container.Refresh" in calls.builtins
+
+
+def test_whole_library_metadata_refresh_can_resume_saved_checkpoint(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.select_responses = [0]
+    captured = {}
+
+    class FakeRefresher:
+        def all_refresh_checkpoint(self):
+            return {"processed": 1, "total": 2, "max_picture_id": 2}
+
+        def refresh_all(self, cancelled=None, progress=None, restart=False):
+            captured["restart"] = restart
+            return types.SimpleNamespace(
+                refreshed=2, failed=0, processed=2, requested=2, completed=True
+            )
+
+    monkeypatch.setattr(ui, "_metadata_refresher", lambda: FakeRefresher())
+    ui.action("action/refresh-metadata-all", {})
+
+    assert captured["restart"] is False
+
+
 def test_location_details_show_coordinates_only_when_enabled(monkeypatch) -> None:
     views, _calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -1148,8 +1208,10 @@ def test_metadata_browser_uses_curated_facets_and_query_model_results(monkeypatc
     ui.dispatch(views.Request("metadata-browser", {}))
     assert calls.category == "Browse metadata"
     assert [item.label for _url, item, _folder in calls.items] == [
+        "Refresh all picture metadata",
         "Camera", "Location", "Capture", "Image", "Keywords"
     ]
+    assert calls.items[0][0].endswith("/action/refresh-metadata-all")
 
     calls.items.clear()
     ui.dispatch(views.Request("metadata-category", {"category": "location"}))
@@ -1307,7 +1369,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.28" in labels
+    assert "MyPicsDB 3 version: 0.8.29" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3335,7 +3397,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.28"
+    assert captured["init"][2] == "0.8.29"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

@@ -63,10 +63,12 @@ For the component boundaries and long-lived safety rules, see
   browser. Version 0.8.28 optionally adds explicit **Resolve location online** for one
   GPS-tagged picture at a time; the feature is disabled by default and never runs
   during scan/background work.
-- Use **Refresh metadata** on one still picture, or **Refresh metadata in this folder**
-  on one indexed album, to re-read current EXIF/XMP/IPTC metadata without rebuilding
-  the catalogue or modifying source files. **Metadata diagnostics** compares the
-  indexed row with a fresh local extraction before you decide to refresh.
+- Use **Refresh metadata** on one still picture, **Refresh metadata in this folder**
+  on one indexed album, or **Browse metadata > Refresh all picture metadata** to
+  re-read current EXIF/XMP/IPTC metadata without rebuilding the catalogue or modifying
+  source files. The whole-library path is serial, cancellable and resumable from a
+  local checkpoint. **Metadata diagnostics** compares one indexed row with a fresh
+  local extraction before you decide to refresh.
 - Search Unicode-normalized filename, caption, keywords, paths, camera and
   location fields with AND matching.
 - Apply an optional global minimum-picture-rating policy with a temporary
@@ -664,11 +666,15 @@ For JPEGs, 0.8.27 also walks metadata marker headers and buffers only relevant A
 data just to build the metadata prefix. **Refresh metadata** then re-reads and stores
 the current normalized values for that one picture. Album context menus provide
 **Refresh metadata in this folder** for still pictures directly in that folder only;
-subfolders are not included. Both refresh actions are serial, leave original media
-untouched and coordinate with catalogue scans so they cannot write concurrently. If
-a scan or migration owns the catalogue, Kodi shows an explicit "Metadata refresh
-unavailable" dialog; the request is not queued for later. Existing catalogue rows
-are not automatically rewritten merely by installing 0.8.27.
+subfolders are not included. Version 0.8.29 also adds **Browse metadata > Refresh all
+picture metadata** for an explicit serial reindex of every already-indexed still
+picture. The full refresh is cancellable and saves a profile-local checkpoint after
+completed batches so the next invocation can resume. These refresh paths leave
+original media untouched and coordinate with catalogue scans so they cannot write
+concurrently. If a scan or migration owns the catalogue, Kodi shows an explicit
+"Metadata refresh unavailable" dialog; the request is not queued for later. Installing
+0.8.29 does not start the full refresh automatically and the full refresh never makes
+online reverse-geocoding requests.
 
 The default picture-extension list includes Nikon NEF RAW files as well as HEIC,
 HEIF and AVIF. Existing installations that still use the unchanged pre-0.2.44

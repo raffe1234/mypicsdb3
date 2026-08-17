@@ -273,3 +273,11 @@ Explicit reverse geocoding does not add query syntax. It fills the existing cano
 `country`, `state`, `city` and `sublocation` fields only when they are empty, then
 rebuilds the normal global-search document. Existing Query Model v1 metadata facets
 therefore see resolved locations without a version or schema change.
+
+
+### 0.8.29 full metadata refresh and Query Model v1
+
+The whole-library metadata refresh is a maintenance action and does not add a Query
+Model field/operator or bypass Query Model validation. It rewrites canonical picture
+metadata/search documents through catalogue APIs; existing Browse metadata facets and
+queries see the updated values afterwards. Query Model version remains 1.
