@@ -16,3 +16,10 @@ a boolean without exposing the coordinate pair.
 Explicit metadata refresh is a catalogue write, not a source-file write. It must
 continue to use the `metadata-refresh` lock so scans and schema migrations cannot
 rewrite the same catalogue state concurrently. Source media remain read-only.
+
+### Metadata fallback privacy (0.8.24)
+
+The core EXIF resilience fallback is local and read-only. It operates only on the
+already-read metadata prefix, ignores MakerNote/UserComment payloads, makes no
+network requests, and does not log recovered camera/GPS values. Diagnostics shows
+those values only in the local Kodi UI when explicitly requested.

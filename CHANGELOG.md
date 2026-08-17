@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.24 - 2026-08-17
+
+- Make EXIF extraction resilient when the bundled ExifRead parser aborts on an incorrectly encoded text tag such as a Unicode `UserComment`: a bounded internal TIFF/EXIF fallback recovers only stable core fields (camera make/model, capture date, orientation/dimensions and GPS) from the already-read metadata prefix without touching source files.
+- Keep the normal ExifRead/XMP/IPTC mapping path as the primary extractor. The fallback activates only when ExifRead fails (or is unavailable), deliberately ignores MakerNote/UserComment/free-form tags, and exposes its use and recovered tag count in privacy-local diagnostics.
+- Show **Metadata diagnostics** in Kodi's scrollable text viewer instead of the small OK dialog, with a compatibility fallback to the OK dialog for runtimes that do not expose `textviewer`.
+- Do not force a whole-library metadata reindex on upgrade: already indexed rows stay unchanged until explicit **Refresh metadata**, folder refresh or a later source metadata read. Database schema 9 and Query Model v1 are unchanged.
+- Update troubleshooting, metadata-flow, architecture and roadmap documentation for resilient EXIF fallback and the indexed-vs-fresh refresh workflow.
+
 ## 0.8.23 - 2026-08-17
 
 - Added explicit, serial **Refresh metadata** for one indexed still picture and **Refresh metadata in this folder** for pictures directly in one indexed folder; source files are never modified and subfolders are not traversed.

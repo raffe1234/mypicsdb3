@@ -178,3 +178,90 @@ def test_extract_metadata_can_report_privacy_local_extractor_diagnostics(monkeyp
     assert diagnostics["gps_longitude_present"] is True
     assert diagnostics["xmp_present"] is False
     assert diagnostics["iptc_loaded"] is False
+
+
+def _jpeg_with_core_exif() -> bytes:
+    make = b"Samsung\x00"
+    model = b"SM-S921B\x00"
+    ifd0_offset = 8
+    ifd0_size = 2 + (3 * 12) + 4
+    make_offset = ifd0_offset + ifd0_size
+    model_offset = make_offset + len(make)
+    gps_offset = model_offset + len(model)
+    gps_size = 2 + (4 * 12) + 4
+    latitude_offset = gps_offset + gps_size
+    longitude_offset = latitude_offset + 24
+
+    tiff = bytearray(b"II*\x00" + struct.pack("<I", ifd0_offset))
+    tiff += struct.pack("<H", 3)
+    tiff += struct.pack("<HHI", 0x010F, 2, len(make)) + struct.pack("<I", make_offset)
+    tiff += struct.pack("<HHI", 0x0110, 2, len(model)) + struct.pack("<I", model_offset)
+    tiff += struct.pack("<HHI", 0x8825, 4, 1) + struct.pack("<I", gps_offset)
+    tiff += struct.pack("<I", 0)
+    tiff += make + model
+
+    tiff += struct.pack("<H", 4)
+    tiff += struct.pack("<HHI", 0x0001, 2, 2) + b"N\x00\x00\x00"
+    tiff += struct.pack("<HHI", 0x0002, 5, 3) + struct.pack("<I", latitude_offset)
+    tiff += struct.pack("<HHI", 0x0003, 2, 2) + b"E\x00\x00\x00"
+    tiff += struct.pack("<HHI", 0x0004, 5, 3) + struct.pack("<I", longitude_offset)
+    tiff += struct.pack("<I", 0)
+    for numerator, denominator in ((59, 1), (19, 1), (4548, 100)):
+        tiff += struct.pack("<II", numerator, denominator)
+    for numerator, denominator in ((18, 1), (4, 1), (696, 100)):
+        tiff += struct.pack("<II", numerator, denominator)
+
+    payload = b"Exif\x00\x00" + bytes(tiff)
+    return b"\xff\xd8\xff\xe1" + struct.pack(">H", len(payload) + 2) + payload + b"\xff\xd9"
+
+
+class _BrokenUnicodeExifReader:
+    @staticmethod
+    def process_file(_stream, details=False, strict=False):
+        assert details is False
+        assert strict is False
+        raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte")
+
+
+class _FallbackExifFilesystem:
+    def __init__(self):
+        self.data = _jpeg_with_core_exif()
+
+    def read_prefix(self, _path, _max_bytes):
+        return self.data
+
+    def open_binary(self, _path):
+        return io.BytesIO(self.data)
+
+    @contextlib.contextmanager
+    def materialized(self, _path, _max_bytes):
+        yield None
+
+
+def test_extract_metadata_recovers_core_exif_when_exifread_unicode_decode_fails(monkeypatch) -> None:
+    filesystem = _FallbackExifFilesystem()
+    settings = SimpleNamespace(
+        metadata_prefix_mb=1,
+        deep_metadata_max_mb=64,
+        store_gps=True,
+        read_xmp=False,
+        read_iptc=False,
+    )
+    monkeypatch.setattr(metadata, "exifread", _BrokenUnicodeExifReader())
+    diagnostics = {}
+
+    result = extract_metadata(
+        "picture.jpg", filesystem, settings, file_size=len(filesystem.data), diagnostics=diagnostics
+    )
+
+    assert result.camera_make == "Samsung"
+    assert result.camera_model == "SM-S921B"
+    assert round(result.gps_latitude, 4) == 59.3293
+    assert round(result.gps_longitude, 4) == 18.0686
+    assert diagnostics["exif_fallback_used"] is True
+    assert diagnostics["exif_fallback_tag_count"] == 6
+    assert diagnostics["exif_make"] == "Samsung"
+    assert diagnostics["exif_model"] == "SM-S921B"
+    assert diagnostics["gps_latitude_present"] is True
+    assert diagnostics["gps_longitude_present"] is True
+    assert diagnostics["exif_error"].startswith("UnicodeDecodeError:")

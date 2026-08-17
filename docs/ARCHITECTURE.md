@@ -485,3 +485,15 @@ Before opening a pull request, ask:
    migration or release-note update?
 6. Which regression test proves the intended behaviour?
 7. Which real-Kodi checks remain after automated tests pass?
+
+### Resilient core EXIF fallback (0.8.24)
+
+`metadata.extract_metadata()` still uses the Kodi-provided ExifRead module as its
+primary EXIF parser. A single malformed or incorrectly encoded free-form EXIF tag
+can make that parser raise before returning its tag dictionary. When that happens,
+MyPicsDB 3 now performs a small bounded TIFF/EXIF fallback against the metadata
+prefix that was already read for the picture. The fallback recovers only stable
+fields needed by catalogue browsing: Make, Model, orientation, capture timestamps,
+EXIF dimensions and latitude/longitude. It deliberately does not decode MakerNote
+or UserComment and never writes to the source file. XMP/IPTC and normal mapping
+precedence continue unchanged.

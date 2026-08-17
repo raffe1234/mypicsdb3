@@ -156,7 +156,7 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.23
+## Recommended roadmap after 0.8.24
 
 1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
 2. 0.8.16 — completed: collection snapshots from validated query-backed results.
@@ -164,8 +164,9 @@ reviving CommonCache-era behavior.
 4. 0.8.19 — completed: scanner observability without parallel I/O or write concurrency.
 5. 0.8.22 — completed: offline/provider-neutral location details and local city/country browsing; explicit map opening remains deferred.
 6. 0.8.23 — completed: explicit serial metadata refresh for one picture/exact folder plus privacy-local indexed-vs-fresh extractor diagnostics; no source-file mutation or catalogue rebuild.
-7. Later — light video metadata, optional explicit map/reverse-geocoding provider action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
-8. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
+7. 0.8.24 — completed: resilient bounded core TIFF/EXIF fallback when ExifRead aborts on a malformed/incorrectly encoded text tag, plus scrollable metadata diagnostics; no automatic whole-library reindex.
+8. Later — light video metadata, optional explicit map/reverse-geocoding provider action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
+9. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can
 change it, but new work should preserve the scanner, Query Model, migration,

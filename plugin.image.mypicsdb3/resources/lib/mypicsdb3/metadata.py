@@ -35,6 +35,161 @@ _DATE_PATTERNS = (
 )
 
 
+_TIFF_TYPE_SIZES = {1: 1, 2: 1, 3: 2, 4: 4, 5: 8, 7: 1, 9: 4, 10: 8}
+
+
+def _embedded_exif_tiff(data: bytes) -> bytes:
+    """Return the TIFF payload from JPEG EXIF data or a TIFF prefix.
+
+    This intentionally parses only the container boundary. It is used as a
+    resilience fallback when ExifRead aborts on an unrelated malformed or
+    incorrectly encoded tag.
+    """
+    if len(data) >= 8 and data[:4] in {b"II*\x00", b"MM\x00*"}:
+        return data
+    if not data.startswith(b"\xff\xd8"):
+        return b""
+    index = 2
+    while index + 4 <= len(data):
+        if data[index] != 0xFF:
+            index += 1
+            continue
+        marker = data[index + 1]
+        index += 2
+        if marker in {0xD8, 0xD9}:
+            continue
+        if marker == 0xDA:  # Start of scan; metadata segments are before this.
+            break
+        if index + 2 > len(data):
+            break
+        segment_length = struct.unpack(">H", data[index:index + 2])[0]
+        if segment_length < 2 or index + segment_length > len(data):
+            break
+        payload = data[index + 2:index + segment_length]
+        if marker == 0xE1 and payload.startswith(b"Exif\x00\x00"):
+            return payload[6:]
+        index += segment_length
+    return b""
+
+
+def _tiff_scalar_or_list(values: List[Any]) -> Any:
+    if not values:
+        return None
+    return values[0] if len(values) == 1 else values
+
+
+def _tiff_value(tiff: bytes, endian: str, entry: bytes) -> Any:
+    if len(entry) != 12:
+        return None
+    value_type = struct.unpack(endian + "H", entry[2:4])[0]
+    count = struct.unpack(endian + "I", entry[4:8])[0]
+    item_size = _TIFF_TYPE_SIZES.get(value_type)
+    if not item_size or count > 1000000:
+        return None
+    byte_count = item_size * count
+    if byte_count <= 4:
+        raw = entry[8:8 + byte_count]
+    else:
+        offset = struct.unpack(endian + "I", entry[8:12])[0]
+        if offset < 0 or offset + byte_count > len(tiff):
+            return None
+        raw = tiff[offset:offset + byte_count]
+    if value_type == 2:  # ASCII. EXIF ASCII is byte-oriented, not guaranteed UTF-8.
+        return raw.split(b"\x00", 1)[0].decode("latin-1", "replace").strip()
+    if value_type in {1, 7}:
+        return raw if value_type == 7 else _tiff_scalar_or_list(list(raw))
+    if value_type == 3:
+        return _tiff_scalar_or_list(list(struct.unpack(endian + ("H" * count), raw)))
+    if value_type == 4:
+        return _tiff_scalar_or_list(list(struct.unpack(endian + ("I" * count), raw)))
+    if value_type == 9:
+        return _tiff_scalar_or_list(list(struct.unpack(endian + ("i" * count), raw)))
+    if value_type in {5, 10}:
+        fmt = "I" if value_type == 5 else "i"
+        values = []
+        for index in range(count):
+            start = index * 8
+            numerator, denominator = struct.unpack(endian + fmt + fmt, raw[start:start + 8])
+            values.append(float(numerator) / float(denominator) if denominator else 0.0)
+        return _tiff_scalar_or_list(values)
+    return None
+
+
+def _tiff_ifd(tiff: bytes, endian: str, offset: Any) -> Dict[int, Any]:
+    try:
+        offset = int(offset)
+    except (TypeError, ValueError):
+        return {}
+    if offset < 0 or offset + 2 > len(tiff):
+        return {}
+    count = struct.unpack(endian + "H", tiff[offset:offset + 2])[0]
+    if count > 4096:
+        return {}
+    result: Dict[int, Any] = {}
+    cursor = offset + 2
+    for _index in range(count):
+        entry = tiff[cursor:cursor + 12]
+        if len(entry) < 12:
+            break
+        tag_id = struct.unpack(endian + "H", entry[:2])[0]
+        value = _tiff_value(tiff, endian, entry)
+        if value is not None:
+            result[tag_id] = value
+        cursor += 12
+    return result
+
+
+def _fallback_exif_tags(data: bytes) -> Dict[str, Any]:
+    """Recover critical EXIF fields without decoding free-form text tags.
+
+    ExifRead 2.x and newer can abort the complete file when a malformed Unicode
+    UserComment is encountered. This tiny TIFF reader deliberately ignores
+    UserComment/MakerNote and recovers only the stable fields MyPicsDB needs for
+    catalogue browsing and GPS.
+    """
+    tiff = _embedded_exif_tiff(data)
+    if len(tiff) < 8 or tiff[:2] not in {b"II", b"MM"}:
+        return {}
+    endian = "<" if tiff[:2] == b"II" else ">"
+    expected_magic = struct.unpack(endian + "H", tiff[2:4])[0]
+    if expected_magic != 42:
+        return {}
+    ifd0_offset = struct.unpack(endian + "I", tiff[4:8])[0]
+    ifd0 = _tiff_ifd(tiff, endian, ifd0_offset)
+    tags: Dict[str, Any] = {}
+    for tag_id, name in (
+        (0x010F, "Image Make"),
+        (0x0110, "Image Model"),
+        (0x0112, "Image Orientation"),
+        (0x0132, "Image DateTime"),
+        (0x4746, "Image Rating"),
+        (0x9C9E, "Image XPKeywords"),
+    ):
+        if tag_id in ifd0:
+            tags[name] = ifd0[tag_id]
+
+    exif_ifd = _tiff_ifd(tiff, endian, ifd0.get(0x8769))
+    for tag_id, name in (
+        (0x9003, "EXIF DateTimeOriginal"),
+        (0x9004, "EXIF DateTimeDigitized"),
+        (0xA002, "EXIF ExifImageWidth"),
+        (0xA003, "EXIF ExifImageLength"),
+    ):
+        if tag_id in exif_ifd:
+            tags[name] = exif_ifd[tag_id]
+
+    gps_ifd = _tiff_ifd(tiff, endian, ifd0.get(0x8825))
+    for tag_id, name in (
+        (0x0001, "GPS GPSLatitudeRef"),
+        (0x0002, "GPS GPSLatitude"),
+        (0x0003, "GPS GPSLongitudeRef"),
+        (0x0004, "GPS GPSLongitude"),
+    ):
+        if tag_id in gps_ifd:
+            tags[name] = gps_ifd[tag_id]
+    return tags
+
+
 def _as_number(value: Any) -> Optional[float]:
     if value is None:
         return None
@@ -437,19 +592,29 @@ def extract_metadata(
 
     tags: Dict[str, Any] = {}
     exif_error = ""
+    exif_fallback_used = False
+    exif_fallback_tag_count = 0
     if exifread is not None:
         try:
             with filesystem.open_binary(path) as stream:
                 tags = exifread.process_file(stream, details=False, strict=False)
         except Exception as exc:
-            tags = {}
             exif_error = "%s: %s" % (exc.__class__.__name__, str(exc))
+            tags = _fallback_exif_tags(prefix)
+            exif_fallback_used = bool(tags)
+            exif_fallback_tag_count = len(tags)
+    elif prefix:
+        tags = _fallback_exif_tags(prefix)
+        exif_fallback_used = bool(tags)
+        exif_fallback_tag_count = len(tags)
 
     if diagnostics is not None:
         diagnostics.clear()
         diagnostics.update({
             "exifread_available": exifread is not None,
             "exif_error": exif_error,
+            "exif_fallback_used": exif_fallback_used,
+            "exif_fallback_tag_count": exif_fallback_tag_count,
             "exif_tag_count": len(tags),
             "exif_make": _tag_text(tags, "Image Make"),
             "exif_model": _tag_text(tags, "Image Model"),

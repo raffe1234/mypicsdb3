@@ -269,3 +269,9 @@ which data flow is affected, what compatibility you expect to preserve, and
 which automated and manual checks you plan to run. That gives maintainers a
 small, concrete review surface instead of requiring them to reconstruct the
 whole design from the patch.
+
+## 0.8.24 metadata-resilience touchpoints
+
+For EXIF decode/fallback behaviour start in `resources/lib/mypicsdb3/metadata.py`;
+for the large scrollable diagnostics UI start in `views.py`. Regression coverage is
+in `tests/test_metadata.py` and `tests/test_kodi_ui_smoke.py`.

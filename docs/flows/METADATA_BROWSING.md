@@ -78,3 +78,12 @@ counts and Query Model results.
 GPS coordinates and named locations are also separate metadata concepts. A camera may
 store EXIF latitude/longitude without embedding city, state or country text; 0.8.23
 does not reverse-geocode coordinates.
+
+### Diagnostics display and parser fallback (0.8.24)
+
+Metadata diagnostics is displayed in Kodi's scrollable text viewer so long
+extractor reports are readable on normal TV layouts. The report includes whether
+the bounded core EXIF fallback was used and how many core tags it recovered. A
+reported ExifRead error can therefore coexist with successful Fresh extraction of
+Camera Make/Model or GPS; the error describes the primary parser, not necessarily
+the final normalized result.

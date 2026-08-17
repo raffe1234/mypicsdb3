@@ -1525,16 +1525,33 @@ class PluginUI:
             "%s: %s" % (self.text(33008, "Embedded XMP found"), yes if source.get("xmp_present") else no),
             "%s: %s" % (self.text(33009, "IPTC loaded"), yes if source.get("iptc_loaded") else no),
             "%s: %s" % (self.text(33010, "Store GPS coordinates"), yes if store_gps else no),
+            "%s: %s"
+            % (
+                self.text(33014, "Core EXIF fallback used"),
+                yes if source.get("exif_fallback_used") else no,
+            ),
         ]
+        if source.get("exif_fallback_used"):
+            lines.append(
+                "%s: %s"
+                % (
+                    self.text(33015, "Fallback EXIF tags found"),
+                    int(source.get("exif_fallback_tag_count") or 0),
+                )
+            )
         if source.get("exif_error"):
             lines.append(
                 "%s: %s"
                 % (self.text(33011, "EXIF reader error"), source.get("exif_error"))
             )
-        xbmcgui.Dialog().ok(
-            self.text(32989, "Metadata diagnostics"),
-            "\n".join(lines),
-        )
+        dialog = xbmcgui.Dialog()
+        heading = self.text(32989, "Metadata diagnostics")
+        message = "\n".join(lines)
+        textviewer = getattr(dialog, "textviewer", None)
+        if callable(textviewer):
+            textviewer(heading, message)
+        else:
+            dialog.ok(heading, message)
 
     def _refresh_picture_metadata(self, picture_id: int) -> None:
         row = self.catalog.picture_by_id(picture_id)

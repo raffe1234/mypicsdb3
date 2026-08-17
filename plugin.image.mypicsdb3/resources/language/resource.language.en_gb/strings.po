@@ -2062,3 +2062,11 @@ msgstr "No pictures in this folder"
 msgctxt "#33013"
 msgid "Metadata refresh complete: %d refreshed, %d failed"
 msgstr "Metadata refresh complete: %d refreshed, %d failed"
+
+msgctxt "#33014"
+msgid "Core EXIF fallback used"
+msgstr "Core EXIF fallback used"
+
+msgctxt "#33015"
+msgid "Fallback EXIF tags found"
+msgstr "Fallback EXIF tags found"

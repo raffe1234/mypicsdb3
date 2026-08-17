@@ -278,3 +278,17 @@ local files, Kodi VFS/SMB, SQLite and shared MariaDB before it can become a defa
 - Avoid copying complete remote files when a bounded read is sufficient.
 - Keep explicit metadata refresh serial, source-read-only and mutually exclusive with scanner/migration writers.
 - Add a real-Kodi or NAS validation note for behaviour that stubs cannot prove.
+
+## EXIF parser resilience (0.8.24)
+
+The Kodi dependency `script.module.exifread` remains the primary EXIF reader. If it
+raises while decoding an unrelated text tag, MyPicsDB does not discard every core
+field. A bounded fallback reads only the TIFF/EXIF structures already present in
+the configured metadata prefix and can recover Camera Make/Model, capture dates,
+orientation/dimensions and GPS coordinates. MakerNote, UserComment and arbitrary
+free-form EXIF are intentionally excluded from the fallback.
+
+This does **not** automatically rewrite rows that were indexed before 0.8.24. Use
+**Metadata diagnostics** on one representative picture first; if Fresh extraction
+now finds the expected values, use **Refresh metadata** for that picture or
+**Refresh metadata in this folder** for a bounded batch.
