@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.22. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.23. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -61,6 +61,10 @@ For the component boundaries and long-lived safety rules, see
   location fields locally. When GPS storage is enabled, the dialog also shows the
   stored coordinate pair; **Browse this city/country** reuses the existing metadata
   browser without contacting a map service.
+- Use **Refresh metadata** on one still picture, or **Refresh metadata in this folder**
+  on one indexed album, to re-read current EXIF/XMP/IPTC metadata without rebuilding
+  the catalogue or modifying source files. **Metadata diagnostics** compares the
+  indexed row with a fresh local extraction before you decide to refresh.
 - Search Unicode-normalized filename, caption, keywords, paths, camera and
   location fields with AND matching.
 - Apply an optional global minimum-picture-rating policy with a temporary
@@ -624,8 +628,19 @@ state/region, city and sublocation come from the normalized catalogue metadata.
 Coordinates are shown only when **Store GPS coordinates** is currently enabled;
 when it is disabled the action does not expose a stale coordinate pair that may
 still be waiting for the next metadata reindex. **Browse this city** and **Browse
-this country** are local catalogue queries. Version 0.8.22 does not include an
-**Open map** action and never sends coordinates to a network provider.
+this country** are local catalogue queries. GPS coordinates do not imply that
+city/country names exist: most cameras and phones store a coordinate pair but no
+reverse-geocoded place names. Version 0.8.23 still does not include an **Open map**
+action or reverse geocoding and never sends coordinates to a network provider.
+
+If Kodi's built-in picture information (`i`) shows camera metadata that is blank in
+MyPicsDB 3, use **Metadata diagnostics** on that picture. It compares the existing
+index with a fresh MyPicsDB extraction and reports whether EXIF Make/Model and GPS
+tags were actually detected. **Refresh metadata** then re-reads and stores the
+current normalized values for that one picture. Album context menus provide
+**Refresh metadata in this folder** for still pictures directly in that folder only;
+subfolders are not included. Both refresh actions are serial, leave original media
+untouched and coordinate with catalogue scans so they cannot write concurrently.
 
 The default picture-extension list includes Nikon NEF RAW files as well as HEIC,
 HEIF and AVIF. Existing installations that still use the unchanged pre-0.2.44

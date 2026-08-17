@@ -54,7 +54,8 @@ Scanner.scan_sources(optional source ids)
 | --- | --- |
 | `scanner.py` | Traversal, locks, cancellation, changed-file decisions and writes |
 | `filesystem.py` | Kodi VFS/local I/O abstraction and cancellation-aware wrapper |
-| `metadata.py` | Bounded EXIF, XMP and optional IPTC extraction |
+| `metadata.py` | Bounded EXIF, XMP and optional IPTC extraction plus bounded local diagnostic summaries |
+| `metadata_refresh.py` | Explicit serial re-read of already indexed still pictures/folders |
 | `metadata_mapping.py` | Canonical fields, built-in/custom mapping rules, priority/merge semantics and metadata-index fingerprint |
 | `models.py` | Source, file stat, metadata and scan-stat structures |
 | `source_scan_policy.py` | Strict per-source policy normalization, inheritance values and checkpoint payload |
@@ -193,6 +194,41 @@ rows without this hash deliberately, causing one safe metadata reindex. Changes 
 this rule can have large performance and correctness effects on NAS libraries and
 require regression tests.
 
+## Explicit metadata refresh (0.8.23)
+
+Normal incremental scanning deliberately avoids opening an unchanged picture when
+size, mtime and `metadata_index_hash` still match. Version 0.8.23 adds a separate
+user-requested path when the catalogue needs a metadata re-read without a full source
+traversal:
+
+```text
+indexed picture id
+→ MetadataRefresher
+→ acquire metadata-refresh catalogue lock
+→ Filesystem.stat(existing URI)
+→ metadata.extract_metadata(current settings + mappings)
+→ Catalog.refresh_picture_record()
+→ normalized tags + search document
+→ refresh affected folder summary
+→ release lock
+```
+
+The exact-folder action first freezes the IDs of available still pictures directly
+in that folder and processes them serially. It is cancellable between files, does not
+include child folders, does not discover new media and never performs missing marking.
+`last_seen_at` is preserved because a metadata refresh is not proof of a complete
+source traversal.
+
+`metadata-refresh`, `catalogue-scan` and `schema-migration` are mutually conflicting
+writers. A scan also recovers a stale process-owned SQLite metadata-refresh lock left
+by a crashed local Kodi process; shared MariaDB does not break remote ownership and
+continues to rely on normal TTL/lock semantics.
+
+**Metadata diagnostics** uses the same extractor for one picture but does not acquire
+a writer lock and does not update the catalogue. It is intended to answer whether a
+blank indexed field is stale or whether the current extractor also fails to see the
+metadata Kodi's native picture info may display.
+
 ## Missing records and cleanup
 
 Missing marking is soft. Rows are retained for the configured period. A
@@ -207,6 +243,7 @@ with immediate irreversible deletion.
 - `tests/test_service_scan_progress.py`;
 - service cancellation and shutdown tests;
 - `tests/test_metadata.py`;
+- `tests/test_metadata_refresh.py`;
 - `tests/test_metadata_mapping.py`;
 - `tests/test_catalog.py`;
 - `tests/test_database_busy_handling.py`;
@@ -239,4 +276,5 @@ local files, Kodi VFS/SMB, SQLite and shared MariaDB before it can become a defa
 - Commit checkpoints only after a folder is fully processed.
 - Force a fresh traversal when settings change what can be discovered.
 - Avoid copying complete remote files when a bounded read is sufficient.
+- Keep explicit metadata refresh serial, source-read-only and mutually exclusive with scanner/migration writers.
 - Add a real-Kodi or NAS validation note for behaviour that stubs cannot prove.

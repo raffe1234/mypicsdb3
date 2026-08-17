@@ -1221,32 +1221,45 @@ class Catalog:
         self.engine.execute(connection, "UPDATE folders SET is_missing=1, missing_since=COALESCE(missing_since, ?) WHERE source_id=? AND last_seen_at<? AND is_missing=0", (now, source_id, scan_started_at)).close()
         return changed
 
+    def _update_folder_summary(self, connection, folder_id: int) -> None:
+        latest = self.engine.fetchone(
+            connection,
+            "SELECT id, taken_at, discovered_at FROM pictures "
+            "WHERE folder_id=? AND is_missing=0 "
+            "ORDER BY COALESCE(taken_at, discovered_at) DESC, id DESC LIMIT 1",
+            (folder_id,),
+        )
+        if latest:
+            representative = self.engine.fetchone(
+                connection,
+                "SELECT id FROM pictures WHERE folder_id=? AND is_missing=0 "
+                "ORDER BY CASE WHEN media_type='picture' THEN 0 ELSE 1 END, "
+                "COALESCE(taken_at, discovered_at) DESC, id DESC LIMIT 1",
+                (folder_id,),
+            )
+            representative_id = representative["id"] if representative else latest["id"]
+            self.engine.execute(
+                connection,
+                "UPDATE folders SET representative_picture_id=?, latest_taken_at=?, latest_discovered_at=? WHERE id=?",
+                (representative_id, latest.get("taken_at"), latest.get("discovered_at"), folder_id),
+            ).close()
+        else:
+            self.engine.execute(
+                connection,
+                "UPDATE folders SET representative_picture_id=NULL, latest_taken_at=NULL, latest_discovered_at=NULL WHERE id=?",
+                (folder_id,),
+            ).close()
+
     def update_folder_summaries(self, connection, source_id: int) -> None:
         folders = self.engine.fetchall(connection, "SELECT id FROM folders WHERE source_id=? AND is_missing=0", (source_id,))
         for folder in folders:
-            latest = self.engine.fetchone(
-                connection,
-                "SELECT id, taken_at, discovered_at FROM pictures "
-                "WHERE folder_id=? AND is_missing=0 "
-                "ORDER BY COALESCE(taken_at, discovered_at) DESC, id DESC LIMIT 1",
-                (folder["id"],),
-            )
-            if latest:
-                representative = self.engine.fetchone(
-                    connection,
-                    "SELECT id FROM pictures WHERE folder_id=? AND is_missing=0 "
-                    "ORDER BY CASE WHEN media_type='picture' THEN 0 ELSE 1 END, "
-                    "COALESCE(taken_at, discovered_at) DESC, id DESC LIMIT 1",
-                    (folder["id"],),
-                )
-                representative_id = representative["id"] if representative else latest["id"]
-                self.engine.execute(
-                    connection,
-                    "UPDATE folders SET representative_picture_id=?, latest_taken_at=?, latest_discovered_at=? WHERE id=?",
-                    (representative_id, latest.get("taken_at"), latest.get("discovered_at"), folder["id"]),
-                ).close()
-            else:
-                self.engine.execute(connection, "UPDATE folders SET representative_picture_id=NULL, latest_taken_at=NULL, latest_discovered_at=NULL WHERE id=?", (folder["id"],)).close()
+            self._update_folder_summary(connection, int(folder["id"]))
+
+    def refresh_folder_summary(self, folder_id: int) -> None:
+        if type(folder_id) is not int or folder_id <= 0:
+            return
+        with self.engine.transaction() as connection:
+            self._update_folder_summary(connection, folder_id)
 
     # Browser and widget queries --------------------------------------------
 
@@ -1272,6 +1285,42 @@ class Catalog:
         )
         with self.engine.transaction() as connection:
             return self.engine.fetchone(connection, query, (picture_id,))
+
+    def picture_ids_in_folder(self, folder_id: int) -> List[int]:
+        """Return available still-picture ids directly in one indexed folder."""
+
+        if type(folder_id) is not int or folder_id <= 0:
+            return []
+        with self.engine.transaction() as connection:
+            rows = self.engine.fetchall(
+                connection,
+                "SELECT id FROM pictures "
+                "WHERE folder_id=? AND is_missing=0 AND media_type='picture' "
+                "ORDER BY id",
+                (folder_id,),
+            )
+        return [int(row["id"]) for row in rows]
+
+    def refresh_picture_record(
+        self,
+        picture_id: int,
+        record: Dict[str, Any],
+        keywords: Iterable[str],
+    ) -> bool:
+        """Replace normalized metadata for one existing picture transactionally."""
+
+        if type(picture_id) is not int or picture_id <= 0:
+            return False
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(
+                connection,
+                "SELECT id FROM pictures WHERE id=? AND is_missing=0 AND media_type='picture'",
+                (picture_id,),
+            )
+            if row is None:
+                return False
+            self.update_picture(connection, picture_id, record, keywords)
+        return True
 
     def query_pictures(self, query_model: Any, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         """Run a validated versioned query model without exposing raw SQL."""

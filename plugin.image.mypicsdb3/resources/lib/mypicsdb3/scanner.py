@@ -9,7 +9,7 @@ from typing import Callable, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from .config import Settings
 from .db.catalog import Catalog
-from .db.locks import SCAN_LOCK_NAME
+from .db.locks import METADATA_REFRESH_LOCK_NAME, SCAN_LOCK_NAME
 from .filesystem import CancellationAwareFilesystem, Filesystem
 from .metadata import extract_metadata
 from .metadata_mapping import metadata_index_signature
@@ -141,6 +141,14 @@ class Scanner:
             self.logger.warning(
                 "Recovered stale SQLite scan lock left by previous Kodi process: %s",
                 recovered_owner,
+            )
+        recovered_refresh_owner = self.catalog.recover_stale_local_lock(
+            METADATA_REFRESH_LOCK_NAME, self.owner
+        )
+        if recovered_refresh_owner and self.logger:
+            self.logger.warning(
+                "Recovered stale SQLite metadata refresh lock left by previous Kodi process: %s",
+                recovered_refresh_owner,
             )
         if not self.catalog.acquire_lock(SCAN_LOCK_NAME, self.owner, SCAN_LOCK_TTL_SECONDS):
             raise ScanAlreadyRunning("Another scan is already running")

@@ -126,6 +126,13 @@ An explicit **Open map** action remains a later gap. It must be opt-in at the
 point of use, provider-neutral and must not silently send a user's photo
 coordinates to a network provider or embed private API keys.
 
+Version 0.8.23 adds explicit metadata refresh/diagnostics around this foundation.
+A selected picture can be freshly inspected to determine whether MyPicsDB's current
+EXIF/XMP/IPTC extractor sees camera/GPS/location data that is absent from the stored
+index, then refreshed without a catalogue rebuild. Folder refresh is exact-folder and
+serial. This does not add reverse geocoding: coordinates still do not become named
+locations unless such text metadata exists in the source.
+
 ### 8. Legacy database / Picasa import
 
 Old code included Picasa import paths; existing MyPicsDB/MyPicsDB2 users may also
@@ -149,15 +156,16 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.22
+## Recommended roadmap after 0.8.23
 
 1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
 2. 0.8.16 — completed: collection snapshots from validated query-backed results.
 3. 0.8.17 — completed: safe COPY-only export + credential-sanitized manifest.
 4. 0.8.19 — completed: scanner observability without parallel I/O or write concurrency.
 5. 0.8.22 — completed: offline/provider-neutral location details and local city/country browsing; explicit map opening remains deferred.
-6. Later — light video metadata, optional explicit map provider action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
-7. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
+6. 0.8.23 — completed: explicit serial metadata refresh for one picture/exact folder plus privacy-local indexed-vs-fresh extractor diagnostics; no source-file mutation or catalogue rebuild.
+7. Later — light video metadata, optional explicit map/reverse-geocoding provider action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
+8. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can
 change it, but new work should preserve the scanner, Query Model, migration,

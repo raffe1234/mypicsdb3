@@ -1944,8 +1944,8 @@ msgid "Coordinates"
 msgstr "Coordinates"
 
 msgctxt "#32984"
-msgid "GPS coordinates are not stored because GPS storage is disabled. Enable Metadata > Store GPS coordinates and run a scan to index them."
-msgstr "GPS coordinates are not stored because GPS storage is disabled. Enable Metadata > Store GPS coordinates and run a scan to index them."
+msgid "GPS coordinates are not stored because GPS storage is disabled. Enable Metadata > Store GPS coordinates, then refresh metadata or run a scan to index them."
+msgstr "GPS coordinates are not stored because GPS storage is disabled. Enable Metadata > Store GPS coordinates, then refresh metadata or run a scan to index them."
 
 msgctxt "#32985"
 msgid "No GPS coordinates are stored for this picture."
@@ -1958,3 +1958,107 @@ msgstr "No location metadata is stored for this picture."
 msgctxt "#32987"
 msgid "Picture was not found"
 msgstr "Picture was not found"
+
+msgctxt "#32988"
+msgid "Refresh metadata"
+msgstr "Refresh metadata"
+
+msgctxt "#32989"
+msgid "Metadata diagnostics"
+msgstr "Metadata diagnostics"
+
+msgctxt "#32990"
+msgid "Refresh metadata in this folder"
+msgstr "Refresh metadata in this folder"
+
+msgctxt "#32991"
+msgid "Re-read metadata for '%s'? The source file will not be modified."
+msgstr "Re-read metadata for '%s'? The source file will not be modified."
+
+msgctxt "#32992"
+msgid "Metadata refreshed"
+msgstr "Metadata refreshed"
+
+msgctxt "#32993"
+msgid "Re-read metadata for %d pictures directly in '%s'? Source files will not be modified and subfolders are not included."
+msgstr "Re-read metadata for %d pictures directly in '%s'? Source files will not be modified and subfolders are not included."
+
+msgctxt "#32994"
+msgid "yes"
+msgstr "yes"
+
+msgctxt "#32995"
+msgid "no"
+msgstr "no"
+
+msgctxt "#32996"
+msgid "Metadata refresh failed"
+msgstr "Metadata refresh failed"
+
+msgctxt "#32997"
+msgid "Folder was not found"
+msgstr "Folder was not found"
+
+msgctxt "#32998"
+msgid "Could not inspect metadata"
+msgstr "Could not inspect metadata"
+
+msgctxt "#32999"
+msgid "File"
+msgstr "File"
+
+msgctxt "#33000"
+msgid "Indexed values"
+msgstr "Indexed values"
+
+msgctxt "#33001"
+msgid "Fresh extraction"
+msgstr "Fresh extraction"
+
+msgctxt "#33002"
+msgid "Extractor details"
+msgstr "Extractor details"
+
+msgctxt "#33003"
+msgid "EXIF reader available"
+msgstr "EXIF reader available"
+
+msgctxt "#33004"
+msgid "EXIF tags found"
+msgstr "EXIF tags found"
+
+msgctxt "#33005"
+msgid "Raw EXIF Make"
+msgstr "Raw EXIF Make"
+
+msgctxt "#33006"
+msgid "Raw EXIF Model"
+msgstr "Raw EXIF Model"
+
+msgctxt "#33007"
+msgid "EXIF GPS latitude/longitude tags"
+msgstr "EXIF GPS latitude/longitude tags"
+
+msgctxt "#33008"
+msgid "Embedded XMP found"
+msgstr "Embedded XMP found"
+
+msgctxt "#33009"
+msgid "IPTC loaded"
+msgstr "IPTC loaded"
+
+msgctxt "#33010"
+msgid "Store GPS coordinates"
+msgstr "Store GPS coordinates"
+
+msgctxt "#33011"
+msgid "EXIF reader error"
+msgstr "EXIF reader error"
+
+msgctxt "#33012"
+msgid "No pictures in this folder"
+msgstr "No pictures in this folder"
+
+msgctxt "#33013"
+msgid "Metadata refresh complete: %d refreshed, %d failed"
+msgstr "Metadata refresh complete: %d refreshed, %d failed"

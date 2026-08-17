@@ -9,7 +9,13 @@ import pytest
 from mypicsdb3.config import Settings
 from mypicsdb3.db.catalog import Catalog
 from mypicsdb3.db.engine import DatabaseEngine
-from mypicsdb3.db.locks import MIGRATION_LOCK_NAME, SCAN_LOCK_NAME, acquire_lock, release_lock
+from mypicsdb3.db.locks import (
+    METADATA_REFRESH_LOCK_NAME,
+    MIGRATION_LOCK_NAME,
+    SCAN_LOCK_NAME,
+    acquire_lock,
+    release_lock,
+)
 from mypicsdb3.db.migration_steps.v0002_date_browsing import (
     MIGRATION as DATE_BROWSING_MIGRATION,
 )
@@ -532,6 +538,19 @@ def test_scan_and_migration_locks_block_each_other(tmp_path: Path) -> None:
     finally:
         catalog.release_lock(SCAN_LOCK_NAME, "scan")
     assert not (tmp_path / "backups").exists()
+
+
+def test_metadata_refresh_lock_blocks_scans_and_migrations(tmp_path: Path) -> None:
+    engine = make_engine(tmp_path)
+    catalog = Catalog(engine)
+    catalog.initialize()
+
+    assert catalog.acquire_lock(METADATA_REFRESH_LOCK_NAME, "refresh", 60)
+    try:
+        assert not catalog.acquire_lock(SCAN_LOCK_NAME, "scan", 60)
+        assert not acquire_lock(engine, MIGRATION_LOCK_NAME, "migration", 60)
+    finally:
+        catalog.release_lock(METADATA_REFRESH_LOCK_NAME, "refresh")
 
 
 def test_existing_schema_six_adds_collection_music_playlists(tmp_path: Path) -> None:

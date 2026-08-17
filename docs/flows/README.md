@@ -26,6 +26,8 @@ browse     search    slideshow  scan  refresh    monitor    bounded picture quer
   │          │           │      │                                │
   └──────────┴─────┬─────┴──────┘                                │
                    │                                              │
+          metadata refresh/inspect                               │
+                   │                                              │
               Catalog API                                 SQLite/MySQL SELECT
                    │
        ┌───────────┼──────────────┐
@@ -47,10 +49,10 @@ Main files: `addon.py`, `entrypoints.py`, `router.py`, `runtime.py`, `views.py`,
 
 ### [Scanning, filesystems, metadata and catalogue writes](SCANNING_METADATA.md)
 
-Read this for manual or scheduled scans, source safety, scan locks, cancellation,
-folder checkpoints, EXIF/XMP/IPTC extraction and missing-record handling.
+Read this for manual or scheduled scans, source safety, scan/refresh locks, cancellation,
+folder checkpoints, EXIF/XMP/IPTC extraction, explicit 0.8.23 metadata refresh/diagnostics and missing-record handling.
 
-Main files: `scanner.py`, `filesystem.py`, `metadata.py`, `metadata_mapping.py`, `scan_checkpoint.py`,
+Main files: `scanner.py`, `filesystem.py`, `metadata.py`, `metadata_mapping.py`, `metadata_refresh.py`, `scan_checkpoint.py`,
 `db/catalog.py`, `db/locks.py`, `service_loop.py`.
 
 ### [Search, Query Model and saved smart collections](SEARCH_COLLECTIONS.md)

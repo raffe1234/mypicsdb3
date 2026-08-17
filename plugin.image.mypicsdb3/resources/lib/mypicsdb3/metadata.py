@@ -425,6 +425,7 @@ def extract_metadata(
     settings: Settings,
     file_size: int = 0,
     mapping_rules: Optional[Iterable[MetadataMappingRule]] = None,
+    diagnostics: Optional[Dict[str, Any]] = None,
 ) -> MetadataResult:
     result = MetadataResult(mime_type=mimetypes.guess_type(path)[0] or "image/unknown")
     prefix = b""
@@ -435,12 +436,28 @@ def extract_metadata(
         prefix = b""
 
     tags: Dict[str, Any] = {}
+    exif_error = ""
     if exifread is not None:
         try:
             with filesystem.open_binary(path) as stream:
                 tags = exifread.process_file(stream, details=False, strict=False)
-        except Exception:
+        except Exception as exc:
             tags = {}
+            exif_error = "%s: %s" % (exc.__class__.__name__, str(exc))
+
+    if diagnostics is not None:
+        diagnostics.clear()
+        diagnostics.update({
+            "exifread_available": exifread is not None,
+            "exif_error": exif_error,
+            "exif_tag_count": len(tags),
+            "exif_make": _tag_text(tags, "Image Make"),
+            "exif_model": _tag_text(tags, "Image Model"),
+            "gps_latitude_present": _tag_value(tags, "GPS GPSLatitude") is not None,
+            "gps_longitude_present": _tag_value(tags, "GPS GPSLongitude") is not None,
+            "gps_latitude_ref": _tag_text(tags, "GPS GPSLatitudeRef"),
+            "gps_longitude_ref": _tag_text(tags, "GPS GPSLongitudeRef"),
+        })
 
     orientation_value = _tag_value(tags, "Image Orientation")
     if isinstance(orientation_value, (list, tuple)) and orientation_value:
@@ -473,6 +490,13 @@ def extract_metadata(
     effective_rules = effective_mapping_rules(mapping_rules or ())
     grouped_rules = mapping_rules_by_source(effective_rules)
     xmp_xml = _xmp_fragment(prefix) if settings.read_xmp and prefix else ""
+    if diagnostics is not None:
+        diagnostics.update({
+            "xmp_enabled": bool(settings.read_xmp),
+            "xmp_present": bool(xmp_xml),
+            "iptc_enabled": bool(settings.read_iptc),
+            "iptc_available": IPTCInfo is not None,
+        })
 
     iptc_info = None
     if (
@@ -489,6 +513,9 @@ def extract_metadata(
                 except Exception:
                     iptc_info = None
 
+    if diagnostics is not None:
+        diagnostics["iptc_loaded"] = iptc_info is not None
+
     usable_rules = tuple(grouped_rules.get("exif", ()))
     if settings.read_xmp:
         usable_rules += tuple(grouped_rules.get("xmp", ()))
@@ -496,6 +523,9 @@ def extract_metadata(
         usable_rules += tuple(grouped_rules.get("iptc", ()))
     usable_rules = tuple(sorted(usable_rules, key=lambda rule: (rule.priority, rule.source_type, rule.source_tag.casefold())))
     _apply_mapping_rules(result, usable_rules, tags, xmp_xml, iptc_info)
+
+    if diagnostics is not None:
+        diagnostics["store_gps"] = bool(settings.store_gps)
 
     if not settings.store_gps:
         result.gps_latitude = None

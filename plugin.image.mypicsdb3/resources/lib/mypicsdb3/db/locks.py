@@ -9,13 +9,15 @@ from typing import Iterable, Optional
 
 SCAN_LOCK_NAME = "catalogue-scan"
 MIGRATION_LOCK_NAME = "schema-migration"
+METADATA_REFRESH_LOCK_NAME = "metadata-refresh"
 
 # A scan and a schema migration are both catalogue-wide writers. Keeping the
 # conflict policy in one module makes future long-running jobs opt into the
 # same coordination model instead of inventing incompatible locks.
 LOCK_CONFLICTS = {
-    SCAN_LOCK_NAME: (MIGRATION_LOCK_NAME,),
-    MIGRATION_LOCK_NAME: (SCAN_LOCK_NAME, MIGRATION_LOCK_NAME),
+    SCAN_LOCK_NAME: (MIGRATION_LOCK_NAME, METADATA_REFRESH_LOCK_NAME),
+    METADATA_REFRESH_LOCK_NAME: (SCAN_LOCK_NAME, MIGRATION_LOCK_NAME),
+    MIGRATION_LOCK_NAME: (SCAN_LOCK_NAME, MIGRATION_LOCK_NAME, METADATA_REFRESH_LOCK_NAME),
 }
 
 

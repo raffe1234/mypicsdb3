@@ -107,7 +107,7 @@ Kodi-facing orchestration
 Application and domain logic
   scanner.py, search.py, query_model.py, saved_searches.py, screensaver.py,
   static_collections.py, slideshow.py, preferences.py, home_layout_editor.py,
-  location.py
+  location.py, metadata_refresh.py
         ↓
 Infrastructure adapters
   filesystem.py, metadata.py, db/engine.py, db/catalog.py,
@@ -162,6 +162,20 @@ metadata browser for city/country navigation. A future map integration must rema
 explicit opt-in and consume this neutral coordinate representation rather than
 embedding provider URLs or private API keys in catalogue data.
 
+### `metadata_refresh.py`: explicit reindex boundary
+
+Version 0.8.23 separates user-requested metadata re-reads from source traversal.
+`MetadataRefresher` resolves an already indexed still picture, reads only that media
+file through the current metadata pipeline, applies the current mapping/index
+signature and asks `Catalog` to replace normalized metadata transactionally. Folder
+refresh is an exact-folder list of picture IDs processed serially; it never discovers
+new files, marks media missing or recursively traverses subfolders.
+
+Refresh holds the dedicated `metadata-refresh` catalogue lock, which conflicts with
+scanner and migration writers. Diagnostics use the same extractor but remain
+read-only and return bounded source details to the local Kodi dialog. No raw EXIF
+payload is persisted as a diagnostic store.
+
 ### `db/engine.py`: backend abstraction
 
 `DatabaseEngine` owns SQLite and MySQL/MariaDB connection details, placeholder
@@ -215,12 +229,14 @@ deletes the configured source media.
 ### `metadata.py` and `metadata_mapping.py`: bounded extraction and canonicalization
 
 `metadata.py` reads EXIF, embedded XMP and optional IPTC information through the
-filesystem interface and respects configured read limits. `metadata_mapping.py`
-owns the allowlisted canonical fields, built-in compatibility mappings, custom-rule
-validation, deterministic priority/keyword merge behavior and metadata-index
-fingerprint. Database overrides are applied on top of built-ins; they never create
-SQL identifiers. Video rows use lightweight filename and modification information
-rather than a separate video scraper.
+filesystem interface and respects configured read limits. For an explicit 0.8.23
+diagnostic it can additionally report a bounded local summary (reader availability,
+tag count, raw Make/Model and GPS-tag presence) without creating a raw-metadata
+store or logging the values. `metadata_mapping.py` owns the allowlisted canonical
+fields, built-in compatibility mappings, custom-rule validation, deterministic
+priority/keyword merge behavior and metadata-index fingerprint. Database overrides
+are applied on top of built-ins; they never create SQL identifiers. Video rows use
+lightweight filename and modification information rather than a separate video scraper.
 
 ### `query_model.py`: validated query boundary
 

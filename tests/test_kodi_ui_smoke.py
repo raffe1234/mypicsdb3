@@ -64,6 +64,25 @@ class FakeDialog:
         return self.__class__.browse_responses.pop(0)
 
 
+class FakeDialogProgress:
+    create_calls = []
+    update_calls = []
+    cancelled = False
+    closed = False
+
+    def create(self, heading, message=""):
+        self.__class__.create_calls.append((heading, message))
+
+    def update(self, percent, line1="", line2=""):
+        self.__class__.update_calls.append((percent, line1, line2))
+
+    def iscanceled(self):
+        return bool(self.__class__.cancelled)
+
+    def close(self):
+        self.__class__.closed = True
+
+
 @dataclass
 class Calls:
     category: str | None = None
@@ -147,7 +166,7 @@ def load_views(monkeypatch):
     xbmcgui = types.ModuleType("xbmcgui")
     xbmcgui.ListItem = FakeListItem
     xbmcgui.Dialog = FakeDialog
-    xbmcgui.DialogProgress = object
+    xbmcgui.DialogProgress = FakeDialogProgress
     xbmcgui.getCurrentWindowId = lambda: 10002
     xbmcgui.Window = lambda window_id: types.SimpleNamespace(
         getFocusId=lambda: calls.focus_id
@@ -175,7 +194,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.22",
+            "version": "0.8.23",
         }[key]
 
     def getSetting(self, key):
@@ -202,6 +221,10 @@ class FakeKodi:
             random_home_refresh_hours=2,
             debug_logging=False,
             store_gps=False,
+            read_xmp=True,
+            read_iptc=True,
+            metadata_prefix_mb=2,
+            deep_metadata_max_mb=64,
         )
         self.debug_messages = []
         self.info_messages = []
@@ -445,6 +468,9 @@ class FakeCatalog:
         if int(picture_id) != 1:
             return None
         return dict(self.recent_taken(1, 0)[0])
+
+    def picture_ids_in_folder(self, folder_id):
+        return [1] if int(folder_id) == 2 else []
 
 
     def on_this_day(self, month, day, current_year, limit, offset=0):
@@ -748,6 +774,154 @@ def test_picture_location_context_is_local_and_reuses_metadata_browsing(monkeypa
     assert "18.0686" not in str(item.context)
 
 
+def test_picture_context_offers_explicit_metadata_refresh_and_diagnostics(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("recent-taken", {"limit": "15"}))
+
+    _url, item, _is_folder = calls.items[0]
+    commands = dict(item.context)
+    assert commands["Refresh metadata"] == (
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/refresh-metadata-picture?id=1)"
+    )
+    assert commands["Metadata diagnostics"] == (
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/metadata-diagnostics?id=1)"
+    )
+
+
+def test_metadata_diagnostics_compares_indexed_and_fresh_values(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.ok_calls = []
+
+    class FakeRefresher:
+        settings = runtime.kodi.settings
+
+        def inspect_picture(self, picture_id):
+            assert picture_id == 1
+            return types.SimpleNamespace(
+                row={
+                    **runtime.catalog.picture_by_id(1),
+                    "camera_make": None,
+                    "camera_model": None,
+                    "gps_latitude": None,
+                    "gps_longitude": None,
+                    "city": None,
+                    "country": None,
+                },
+                fresh=types.SimpleNamespace(
+                    camera_make="Samsung",
+                    camera_model="SM-S921B",
+                    gps_latitude=59.3293,
+                    gps_longitude=18.0686,
+                    location={"city": "Stockholm", "country": "Sweden"},
+                ),
+                source_details={
+                    "exifread_available": True,
+                    "exif_tag_count": 48,
+                    "exif_make": "Samsung",
+                    "exif_model": "SM-S921B",
+                    "gps_latitude_present": True,
+                    "gps_longitude_present": True,
+                    "xmp_present": False,
+                    "iptc_loaded": False,
+                },
+            )
+
+    monkeypatch.setattr(ui, "_metadata_refresher", lambda: FakeRefresher())
+    runtime.kodi.settings.store_gps = True
+
+    ui.action("action/metadata-diagnostics", {"id": "1"})
+
+    heading, message = views.xbmcgui.Dialog.ok_calls[-1]
+    assert heading == "Metadata diagnostics"
+    assert "Indexed values" in message
+    assert "Camera make: -" in message
+    assert "Fresh extraction" in message
+    assert "Camera make: Samsung" in message
+    assert "Camera model: SM-S921B" in message
+    assert "Coordinates: 59.329300, 18.068600" in message
+    assert "EXIF tags found: 48" in message
+    assert "Raw EXIF Make: Samsung" in message
+    assert "EXIF GPS latitude/longitude tags: yes/yes" in message
+
+
+def test_picture_metadata_refresh_requires_confirmation_and_refreshes_container(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.responses = [True]
+    refreshed = []
+
+    class FakeRefresher:
+        def refresh_picture(self, picture_id):
+            refreshed.append(picture_id)
+
+    monkeypatch.setattr(ui, "_metadata_refresher", lambda: FakeRefresher())
+
+    ui.action("action/refresh-metadata-picture", {"id": "1"})
+
+    assert refreshed == [1]
+    assert any(message == "Metadata refreshed" for message, _error in runtime.kodi.notifications)
+    assert "Container.Refresh" in calls.builtins
+
+
+def test_folder_context_offers_exact_folder_metadata_refresh(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    row = {
+        "id": 2,
+        "source_id": 7,
+        "name": "Summer",
+        "picture_count": 12,
+        "representative_uri": "smb://server/photos/image.jpg",
+        "representative_thumb": "smb://server/photos/image.jpg",
+        "representative_media_type": "picture",
+    }
+
+    _url, item, _is_folder = ui._folder_item(row)
+
+    commands = dict(item.context)
+    assert commands["Refresh metadata in this folder"] == (
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/refresh-metadata-folder?id=2)"
+    )
+
+
+def test_folder_metadata_refresh_is_confirmed_and_reports_progress(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.responses = [True]
+    views.xbmcgui.DialogProgress.create_calls = []
+    views.xbmcgui.DialogProgress.update_calls = []
+    views.xbmcgui.DialogProgress.cancelled = False
+    refreshed = []
+
+    class FakeRefresher:
+        def refresh_folder(self, folder_id, cancelled=None, progress=None):
+            refreshed.append(folder_id)
+            assert cancelled() is False
+            progress(1, 1, "image.jpg")
+            return types.SimpleNamespace(refreshed=1, failed=0)
+
+    monkeypatch.setattr(ui, "_metadata_refresher", lambda: FakeRefresher())
+
+    ui.action("action/refresh-metadata-folder", {"id": "2"})
+
+    assert refreshed == [2]
+    assert views.xbmcgui.DialogProgress.create_calls[-1][0] == "Refresh metadata in this folder"
+    assert views.xbmcgui.DialogProgress.update_calls[-1] == (100, "1 / 1", "image.jpg")
+    assert any(
+        message == "Metadata refresh complete: 1 refreshed, 0 failed"
+        for message, _error in runtime.kodi.notifications
+    )
+    assert "Container.Refresh" in calls.builtins
+
+
 def test_location_details_show_coordinates_only_when_enabled(monkeypatch) -> None:
     views, _calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -982,7 +1156,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.22" in labels
+    assert "MyPicsDB 3 version: 0.8.23" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3010,7 +3184,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.22"
+    assert captured["init"][2] == "0.8.23"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

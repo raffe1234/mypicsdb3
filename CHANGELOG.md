@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.23 - 2026-08-17
+
+- Added explicit, serial **Refresh metadata** for one indexed still picture and **Refresh metadata in this folder** for pictures directly in one indexed folder; source files are never modified and subfolders are not traversed.
+- Added privacy-local **Metadata diagnostics** that compares indexed values with a fresh EXIF/XMP/IPTC extraction and reports raw EXIF Make/Model plus GPS-tag presence without logging private metadata.
+- Added a dedicated metadata-refresh catalogue lock that conflicts with scans and schema migrations, including stale local SQLite process-lock recovery, while preserving existing MariaDB ownership/TTL safety.
+- Refresh now rewrites normalized tags/search documents with the current metadata-index signature, preserves scan `last_seen_at`, and refreshes the affected folder summary.
+- Documentation now distinguishes indexed metadata from Kodi's direct picture-info reader and documents GPS coordinates versus named location metadata.
+
 ## 0.8.22 - 2026-08-17
 
 - Add an offline-first **Location details** picture context action backed only by already-indexed catalogue fields. It shows normalized country/state/city/sublocation and, when the privacy-sensitive **Store GPS coordinates** setting is enabled, a locally formatted latitude/longitude pair. No map provider, API key, HTTP request or coordinate-bearing plugin URL is introduced.

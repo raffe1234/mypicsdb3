@@ -152,11 +152,12 @@ Prefer this page, `ARCHITECTURE.md` and the current source code when they differ
 | Change a database query | `db/catalog.py` | `query_model.py`, catalogue tests |
 | Change database schema | `db/schema.py` | `db/migrations.py`, migration tests and an ADR |
 | Change scanning | `scanner.py` | `filesystem.py`, `metadata.py`, `metadata_mapping.py`, checkpoint tests |
-| Change metadata extraction/mapping | `metadata.py`, `metadata_mapping.py` | `db/catalog.py`, `scanner.py`, metadata/migration tests |
+| Change metadata extraction/mapping or explicit refresh | `metadata.py`, `metadata_mapping.py`, `metadata_refresh.py` | `db/catalog.py`, `scanner.py`, metadata/refresh/migration tests |
 | Add a setting | `resources/settings.xml` | `config.py`, `kodi.py`, typed-setting tests |
 | Change global or saved search | `search.py`, `query_model.py` | `saved_searches.py`, search tests |
 | Change the smart-filter editor or Needs attention presets | `smart_filter_editor.py`, `attention.py` | `query_model.py`, editor/UI tests |
 | Change Browse metadata categories/facets | `metadata_browser.py`, `views.py` | `db/catalog.py`, `query_model.py`, facet/UI tests |
+| Change Metadata diagnostics / Refresh metadata | `metadata_refresh.py`, `views.py` | `metadata.py`, `db/locks.py`, `db/catalog.py`, refresh/UI tests |
 | Change safe media export | `exporter.py`, `views.py` | `filesystem.py`, `db/catalog.py`, `tests/test_exporter.py` |
 | Change a slideshow | `views.py`, `slideshow.py` | `service_loop.py`, slideshow tests |
 | Change the screensaver | `screensaver.mypicsdb3/default.py`, `screensaver.py` | `tests/test_screensaver.py`, screensaver flow guide |

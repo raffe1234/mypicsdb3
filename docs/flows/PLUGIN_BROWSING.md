@@ -34,6 +34,7 @@ plugin://plugin.image.mypicsdb3/<route>?<params>
 | `db/catalog.py` | Performs read models, pagination and state changes |
 | `kodi.py` | Wraps settings, localization, notifications and shared Kodi state |
 | `view_mode.py`, `album_view.py` | Guard and remember Kodi picture view choices |
+| `metadata_refresh.py` | Explicit serial metadata re-read and fresh one-picture inspection |
 
 ## Example: Recently taken
 
@@ -89,6 +90,20 @@ does. Generated video frames continue to use Kodi's `image://video@...` loader.
 This distinction avoids some older JPEGs reusing a tiny embedded EXIF preview as
 Home artwork or full-screen picture content.
 
+## Metadata context actions
+
+Still-picture rows expose **Refresh metadata** and **Metadata diagnostics**. Both routes
+carry only the indexed picture ID. `views.py` resolves the row locally and delegates
+filesystem/extractor work to `MetadataRefresher`; raw paths, GPS coordinates and EXIF
+values are not embedded in plug-in URLs. Diagnostics are read-only. Refresh confirms
+the write, coordinates with scan/migration locks, updates only the catalogue and then
+refreshes the current container.
+
+Indexed album rows expose **Refresh metadata in this folder**. The action confirms the
+number of direct still pictures, uses a cancellable progress dialog and deliberately
+omits subfolders. This is not a scan route: it does not traverse source trees, add new
+files or mark anything missing.
+
 ## Rating display policy
 
 The configured minimum rating is a display policy, not a destructive filter on
@@ -139,6 +154,7 @@ Useful tests include:
   requests where required.
 - Temporary migration-lock contention must not become a raw Kodi plug-in error.
 - Widget calls are read-only with respect to media sources.
+- Metadata diagnostic routes remain read-only; refresh routes are explicit catalogue-only writes and never modify source media.
 - Pagination must preserve the route's filter parameters.
 - Kodi view changes must target the active stable Pictures container only.
 - New Kodi API calls should remain in the Kodi-facing layer or an adapter.

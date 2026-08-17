@@ -112,3 +112,69 @@ def test_extract_metadata_skips_iptc_for_non_jpeg(monkeypatch) -> None:
 
     assert result.mime_type == "image/png"
     assert filesystem.materialized_calls == 0
+
+
+class _Tag:
+    def __init__(self, text, values=None):
+        self.text = text
+        self.values = values if values is not None else [text]
+
+    def __str__(self):
+        return str(self.text)
+
+
+class _ExifReader:
+    @staticmethod
+    def process_file(_stream, details=False, strict=False):
+        assert details is False
+        assert strict is False
+        return {
+            "Image Make": _Tag("Samsung"),
+            "Image Model": _Tag("SM-S921B"),
+            "GPS GPSLatitude": _Tag("59 deg", [59, 19, 45.48]),
+            "GPS GPSLatitudeRef": _Tag("N"),
+            "GPS GPSLongitude": _Tag("18 deg", [18, 4, 6.96]),
+            "GPS GPSLongitudeRef": _Tag("E"),
+        }
+
+
+class _ExifFilesystem:
+    def read_prefix(self, _path, _max_bytes):
+        return b"\xff\xd8\xff" + b"\x00" * 64
+
+    def open_binary(self, _path):
+        return io.BytesIO(b"test")
+
+    @contextlib.contextmanager
+    def materialized(self, _path, _max_bytes):
+        yield None
+
+
+def test_extract_metadata_can_report_privacy_local_extractor_diagnostics(monkeypatch) -> None:
+    filesystem = _ExifFilesystem()
+    settings = SimpleNamespace(
+        metadata_prefix_mb=1,
+        deep_metadata_max_mb=64,
+        store_gps=True,
+        read_xmp=False,
+        read_iptc=False,
+    )
+    monkeypatch.setattr(metadata, "exifread", _ExifReader())
+    diagnostics = {}
+
+    result = extract_metadata(
+        "picture.jpg", filesystem, settings, file_size=100, diagnostics=diagnostics
+    )
+
+    assert result.camera_make == "Samsung"
+    assert result.camera_model == "SM-S921B"
+    assert round(result.gps_latitude, 4) == 59.3293
+    assert round(result.gps_longitude, 4) == 18.0686
+    assert diagnostics["exifread_available"] is True
+    assert diagnostics["exif_tag_count"] == 6
+    assert diagnostics["exif_make"] == "Samsung"
+    assert diagnostics["exif_model"] == "SM-S921B"
+    assert diagnostics["gps_latitude_present"] is True
+    assert diagnostics["gps_longitude_present"] is True
+    assert diagnostics["xmp_present"] is False
+    assert diagnostics["iptc_loaded"] is False

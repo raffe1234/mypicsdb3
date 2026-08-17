@@ -1,8 +1,11 @@
 # Metadata browsing and facet counts
 
 Version 0.8.14 modernizes legacy MyPicsDB **Browse by Tags** without exposing
-uncontrolled raw metadata names. The feature is read-only and uses the indexed
-catalogue; it never opens source media and never starts a scan.
+uncontrolled raw metadata names. Browse/facet enumeration remains read-only and uses
+the indexed catalogue; it never opens source media and never starts a scan. Version
+0.8.23 adds separate explicit per-picture/per-folder **Refresh metadata** context
+actions and a one-picture **Metadata diagnostics** action; those are not part of the
+facet query path.
 
 ## Request flow
 
@@ -61,3 +64,17 @@ Invariants:
 - SQLite and MariaDB aggregate SQL must be covered together;
 - adding a new facet requires an explicit catalogue allowlist entry and a validated
   Query Model translation before it becomes user-visible.
+
+## Indexed values versus fresh extraction
+
+Browse metadata always enumerates canonical values already stored in the catalogue.
+Kodi's native `i` picture-information dialog may independently read the source file,
+so a Make/Model shown by Kodi can still be blank in a stale MyPicsDB index. Version
+0.8.23 **Metadata diagnostics** performs a fresh MyPicsDB extractor read for one
+selected picture and compares it with the indexed row. **Refresh metadata** is the
+explicit write step that makes newly extracted canonical values available to facet
+counts and Query Model results.
+
+GPS coordinates and named locations are also separate metadata concepts. A camera may
+store EXIF latitude/longitude without embedding city, state or country text; 0.8.23
+does not reverse-geocode coordinates.

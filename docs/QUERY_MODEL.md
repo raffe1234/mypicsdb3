@@ -247,3 +247,16 @@ The exporter receives IDs, not SQL or raw Query Model JSON. The export manifest
 does not persist Query Model JSON. This keeps export selection semantics aligned
 with normal browsing, including the current minimum-rating display policy,
 without changing the stored-query contract.
+
+## Metadata refresh does not change Query Model v1
+
+Version 0.8.23 can explicitly re-read one indexed picture or the still pictures
+directly in one indexed folder. Refresh updates the same canonical columns, tags and
+normalized search document already consumed by Query Model v1; it does not add a
+query field, operator or persisted query shape. A refreshed camera/location value is
+therefore immediately visible to existing Browse metadata, Needs attention, saved
+smart collections and global search rules without a Query Model version bump.
+
+The diagnostics action is not a query source. Fresh extractor values are displayed
+locally for one selected picture and are not queryable until the user explicitly
+refreshes the catalogue row.

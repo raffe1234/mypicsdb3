@@ -99,6 +99,24 @@ def test_catalog_queries_and_favorites(tmp_path: Path) -> None:
     assert location_row["gps_longitude"] == 18.0686
     assert location_row["city"] == "Stockholm"
     assert catalog.picture_by_id(0) is None
+    assert catalog.picture_ids_in_folder(int(location_row["folder_id"])) == [picture_id]
+
+    refreshed = dict(location_row)
+    refreshed.update({
+        "camera_make": "Samsung",
+        "camera_model": "SM-S921B",
+        "gps_latitude": 59.3,
+        "gps_longitude": 18.0,
+        "city": "Stockholm",
+        "country": "Sweden",
+        "metadata_hash": "refreshed",
+        "metadata_index_hash": "index-signature",
+    })
+    assert catalog.refresh_picture_record(picture_id, refreshed, ["Refreshed"]) is True
+    refreshed_row = catalog.picture_by_id(picture_id)
+    assert refreshed_row["camera_make"] == "Samsung"
+    assert refreshed_row["camera_model"] == "SM-S921B"
+    assert {row["name"] for row in catalog.tags()} == {"Refreshed"}
 
 
 def test_album_art_prefers_a_picture_over_a_newer_video(tmp_path: Path) -> None:

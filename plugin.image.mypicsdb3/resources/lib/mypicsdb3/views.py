@@ -39,6 +39,11 @@ from .preferences import (
     serialize_persisted_home_layout,
 )
 from .metadata_mapping import MetadataMappingRule, SOURCE_TYPES, TARGET_FIELDS
+from .metadata_refresh import (
+    MetadataRefreshBusy,
+    MetadataRefreshNotFound,
+    MetadataRefresher,
+)
 from .metadata_browser import (
     CATEGORIES as METADATA_BROWSER_CATEGORIES,
     category_by_key as metadata_category_by_key,
@@ -1424,6 +1429,201 @@ class PluginUI:
             "\n".join(lines),
         )
 
+    def _metadata_refresh_context(self, row: Dict[str, Any]) -> List[Tuple[str, str]]:
+        if str(row.get("media_type") or "picture") != "picture" or not row.get("id"):
+            return []
+        return [
+            (
+                self.text(32988, "Refresh metadata"),
+                "RunPlugin(%s)"
+                % self.url("action/refresh-metadata-picture", id=row.get("id")),
+            ),
+            (
+                self.text(32989, "Metadata diagnostics"),
+                "RunPlugin(%s)"
+                % self.url("action/metadata-diagnostics", id=row.get("id")),
+            ),
+        ]
+
+    @staticmethod
+    def _diagnostic_value(value: Any) -> str:
+        text = str(value or "").strip()
+        return text if text else "-"
+
+    def _metadata_refresher(self):
+        settings = self.kodi.refresh_settings()
+        return MetadataRefresher(
+            self.catalog,
+            self.runtime.filesystem,
+            settings,
+            self.kodi.log,
+        )
+
+    def _show_metadata_diagnostics(self, picture_id: int) -> None:
+        try:
+            refresher = self._metadata_refresher()
+            inspection = refresher.inspect_picture(picture_id)
+        except MetadataRefreshNotFound:
+            self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
+            return
+        except Exception as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32998, "Could not inspect metadata"), exc),
+                error=True,
+                milliseconds=7000,
+            )
+            return
+
+        row = inspection.row
+        fresh = inspection.fresh
+        source = inspection.source_details
+        store_gps = bool(getattr(refresher.settings, "store_gps", False))
+        indexed_location = location_details_from_row(row, include_coordinates=store_gps)
+        fresh_location = location_details_from_row(
+            {
+                "country": (fresh.location or {}).get("country"),
+                "state": (fresh.location or {}).get("state"),
+                "city": (fresh.location or {}).get("city"),
+                "sublocation": (fresh.location or {}).get("sublocation"),
+                "gps_latitude": fresh.gps_latitude,
+                "gps_longitude": fresh.gps_longitude,
+            },
+            include_coordinates=store_gps,
+        )
+        indexed_coordinates = format_coordinates(indexed_location)
+        fresh_coordinates = format_coordinates(fresh_location)
+
+        yes = self.text(32994, "yes")
+        no = self.text(32995, "no")
+        lines = [
+            "%s: %s" % (self.text(32999, "File"), self._diagnostic_value(row.get("filename"))),
+            "",
+            self.text(33000, "Indexed values"),
+            "%s: %s" % (self.text(32922, "Camera make"), self._diagnostic_value(row.get("camera_make"))),
+            "%s: %s" % (self.text(32923, "Camera model"), self._diagnostic_value(row.get("camera_model"))),
+            "%s: %s" % (self.text(32983, "Coordinates"), self._diagnostic_value(indexed_coordinates)),
+            "%s: %s" % (self.text(32878, "City"), self._diagnostic_value(row.get("city"))),
+            "%s: %s" % (self.text(32876, "Country"), self._diagnostic_value(row.get("country"))),
+            "",
+            self.text(33001, "Fresh extraction"),
+            "%s: %s" % (self.text(32922, "Camera make"), self._diagnostic_value(fresh.camera_make)),
+            "%s: %s" % (self.text(32923, "Camera model"), self._diagnostic_value(fresh.camera_model)),
+            "%s: %s" % (self.text(32983, "Coordinates"), self._diagnostic_value(fresh_coordinates)),
+            "%s: %s" % (self.text(32878, "City"), self._diagnostic_value((fresh.location or {}).get("city"))),
+            "%s: %s" % (self.text(32876, "Country"), self._diagnostic_value((fresh.location or {}).get("country"))),
+            "",
+            self.text(33002, "Extractor details"),
+            "%s: %s" % (self.text(33003, "EXIF reader available"), yes if source.get("exifread_available") else no),
+            "%s: %s" % (self.text(33004, "EXIF tags found"), int(source.get("exif_tag_count") or 0)),
+            "%s: %s" % (self.text(33005, "Raw EXIF Make"), self._diagnostic_value(source.get("exif_make"))),
+            "%s: %s" % (self.text(33006, "Raw EXIF Model"), self._diagnostic_value(source.get("exif_model"))),
+            "%s: %s/%s" % (
+                self.text(33007, "EXIF GPS latitude/longitude tags"),
+                yes if source.get("gps_latitude_present") else no,
+                yes if source.get("gps_longitude_present") else no,
+            ),
+            "%s: %s" % (self.text(33008, "Embedded XMP found"), yes if source.get("xmp_present") else no),
+            "%s: %s" % (self.text(33009, "IPTC loaded"), yes if source.get("iptc_loaded") else no),
+            "%s: %s" % (self.text(33010, "Store GPS coordinates"), yes if store_gps else no),
+        ]
+        if source.get("exif_error"):
+            lines.append(
+                "%s: %s"
+                % (self.text(33011, "EXIF reader error"), source.get("exif_error"))
+            )
+        xbmcgui.Dialog().ok(
+            self.text(32989, "Metadata diagnostics"),
+            "\n".join(lines),
+        )
+
+    def _refresh_picture_metadata(self, picture_id: int) -> None:
+        row = self.catalog.picture_by_id(picture_id)
+        if not row or str(row.get("media_type") or "picture") != "picture":
+            self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
+            return
+        if not xbmcgui.Dialog().yesno(
+            self.text(32988, "Refresh metadata"),
+            self.text(32991, "Re-read metadata for '%s'? The source file will not be modified.")
+            % str(row.get("filename") or self.text(30031, "Picture")),
+        ):
+            return
+        try:
+            self._metadata_refresher().refresh_picture(picture_id)
+        except MetadataRefreshBusy as exc:
+            self.kodi.notify(str(exc), error=True, milliseconds=7000)
+            return
+        except Exception as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32996, "Metadata refresh failed"), exc),
+                error=True,
+                milliseconds=7000,
+            )
+            return
+        self._invalidate_home_widgets("picture metadata refreshed")
+        self.kodi.notify(self.text(32992, "Metadata refreshed"))
+        xbmc.executebuiltin("Container.Refresh")
+
+    def _refresh_folder_metadata(self, folder_id: int) -> None:
+        folder = self.catalog.get_folder(folder_id)
+        if not folder:
+            self.kodi.notify(self.text(32997, "Folder was not found"), error=True)
+            return
+        picture_ids = self.catalog.picture_ids_in_folder(folder_id)
+        if not picture_ids:
+            self.kodi.notify(self.text(33012, "No pictures in this folder"))
+            return
+        if not xbmcgui.Dialog().yesno(
+            self.text(32990, "Refresh metadata in this folder"),
+            self.text(32993, "Re-read metadata for %d pictures directly in '%s'? Source files will not be modified and subfolders are not included.")
+            % (len(picture_ids), str(folder.get("name") or self.text(30032, "Album"))),
+        ):
+            return
+
+        dialog = xbmcgui.DialogProgress()
+        try:
+            dialog.create(
+                self.text(32990, "Refresh metadata in this folder"),
+                str(folder.get("name") or self.text(30032, "Album")),
+            )
+
+            def cancelled() -> bool:
+                checker = getattr(dialog, "iscanceled", None)
+                return bool(callable(checker) and checker())
+
+            def progress(index: int, total: int, filename: str) -> None:
+                percent = int((index * 100) / max(1, total))
+                dialog.update(percent, "%d / %d" % (index, total), filename or "")
+
+            refresher = self._metadata_refresher()
+            stats = refresher.refresh_folder(
+                folder_id, cancelled=cancelled, progress=progress
+            )
+        except MetadataRefreshBusy as exc:
+            self.kodi.notify(str(exc), error=True, milliseconds=7000)
+            return
+        except Exception as exc:
+            self.kodi.notify(
+                "%s: %s" % (self.text(32996, "Metadata refresh failed"), exc),
+                error=True,
+                milliseconds=7000,
+            )
+            return
+        finally:
+            try:
+                dialog.close()
+            except Exception:
+                pass
+
+        if stats.refreshed:
+            self._invalidate_home_widgets("folder metadata refreshed")
+        self.kodi.notify(
+            self.text(33013, "Metadata refresh complete: %d refreshed, %d failed")
+            % (stats.refreshed, stats.failed),
+            error=stats.failed > 0,
+            milliseconds=6000,
+        )
+        xbmc.executebuiltin("Container.Refresh")
+
     def _media_item(
         self,
         row: Dict[str, Any],
@@ -1485,6 +1685,7 @@ class PluginUI:
             (self.text(30022, "Toggle favorite"), toggle),
             (self.text(32812, "Add to collection"), add_to_collection),
         ]
+        context.extend(self._metadata_refresh_context(row))
         context.extend(self._location_context(row, browse_params))
         if self._is_home_widget(browse_params):
             context.append(
@@ -1534,6 +1735,13 @@ class PluginUI:
         ) or self.icon
         context = [(self.text(30021, "Scan selected source"), "RunPlugin(%s)" % self.url("action/scan", source=row.get("source_id")))]
         if row.get("id"):
+            context.append(
+                (
+                    self.text(32990, "Refresh metadata in this folder"),
+                    "RunPlugin(%s)"
+                    % self.url("action/refresh-metadata-folder", id=row["id"]),
+                )
+            )
             context.append(
                 (
                     self.text(32602, "Play mixed slideshow"),
@@ -3267,6 +3475,29 @@ class PluginUI:
                 self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
                 return
             self._show_location_details(picture_id)
+            return
+        if route in {"action/refresh-metadata-picture", "action/metadata-diagnostics"}:
+            try:
+                picture_id = int(params.get("id") or 0)
+            except (TypeError, ValueError):
+                picture_id = 0
+            if picture_id <= 0:
+                self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
+                return
+            if route == "action/metadata-diagnostics":
+                self._show_metadata_diagnostics(picture_id)
+            else:
+                self._refresh_picture_metadata(picture_id)
+            return
+        if route == "action/refresh-metadata-folder":
+            try:
+                folder_id = int(params.get("id") or 0)
+            except (TypeError, ValueError):
+                folder_id = 0
+            if folder_id <= 0:
+                self.kodi.notify(self.text(32997, "Folder was not found"), error=True)
+                return
+            self._refresh_folder_metadata(folder_id)
             return
         if route == "action/settings":
             previous_limit = int(getattr(self.kodi.settings, "home_widget_limit", 10))
