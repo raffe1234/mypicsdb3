@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.31 - 2026-08-17
+
+- Run **Refresh all picture metadata** with Kodi's non-modal `DialogProgressBG` instead of a foreground `DialogProgress`, so Kodi remains usable while the serial, resumable refresh is running. Folder-level metadata refresh remains foreground and unchanged.
+- Publish whole-library metadata-refresh progress through Home-window properties, mirroring the existing cross-interpreter scan-state pattern. Browse metadata now shows the current `processed / total` count and exposes **Stop metadata refresh** while the job is active.
+- Make stop requests soft and checkpoint-safe: another plug-in invocation can request cancellation, the refresh stops at the existing per-picture cancellation boundary, and the established 0.8.29 checkpoint/resume path remains responsible for continuing later.
+- Respect **Pause scanning during playback** for the whole-library metadata refresh. The background progress indicator is hidden during playback, the serial refresh waits without discarding its in-memory/checkpoint state, and resumes automatically when playback ends. Kodi/add-on shutdown is also treated as a resumable interruption.
+- Keep the metadata-refresh catalogue lock, serial writer model, source-file read-only guarantees, offline-only bulk refresh policy, database schema 9, Query Model version 1, repository version 0.2.26 and Estuary revisions unchanged.
+
 ## 0.8.30 - 2026-08-17
 
 - Fix Kodi 19+ foreground progress-dialog compatibility for **Refresh metadata in this folder** and **Refresh all picture metadata**. `xbmcgui.DialogProgress.update()` now receives the supported `(percent, message)` signature instead of the removed legacy multi-line positional arguments.

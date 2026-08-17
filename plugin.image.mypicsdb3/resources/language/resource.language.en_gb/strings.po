@@ -2227,3 +2227,27 @@ msgstr "No indexed pictures to refresh"
 msgctxt "#33051"
 msgid "Reading indexed picture metadata"
 msgstr "Reading indexed picture metadata"
+
+msgctxt "#33052"
+msgid "Metadata refresh in progress"
+msgstr "Metadata refresh in progress"
+
+msgctxt "#33053"
+msgid "Stop metadata refresh"
+msgstr "Stop metadata refresh"
+
+msgctxt "#33054"
+msgid "Stopping metadata refresh"
+msgstr "Stopping metadata refresh"
+
+msgctxt "#33055"
+msgid "Stop metadata refresh?"
+msgstr "Stop metadata refresh?"
+
+msgctxt "#33056"
+msgid "The current progress will be saved so the refresh can be resumed later. Stop now?"
+msgstr "The current progress will be saved so the refresh can be resumed later. Stop now?"
+
+msgctxt "#33058"
+msgid "No metadata refresh is running"
+msgstr "No metadata refresh is running"

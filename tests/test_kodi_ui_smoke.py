@@ -88,6 +88,21 @@ class FakeDialogProgress:
         self.__class__.closed = True
 
 
+class FakeDialogProgressBG:
+    create_calls = []
+    update_calls = []
+    closed = False
+
+    def create(self, heading, message=""):
+        self.__class__.create_calls.append((heading, message))
+
+    def update(self, percent=0, heading="", message=""):
+        self.__class__.update_calls.append((percent, heading, message))
+
+    def close(self):
+        self.__class__.closed = True
+
+
 @dataclass
 class Calls:
     category: str | None = None
@@ -172,6 +187,7 @@ def load_views(monkeypatch):
     xbmcgui.ListItem = FakeListItem
     xbmcgui.Dialog = FakeDialog
     xbmcgui.DialogProgress = FakeDialogProgress
+    xbmcgui.DialogProgressBG = FakeDialogProgressBG
     xbmcgui.getCurrentWindowId = lambda: 10002
     xbmcgui.Window = lambda window_id: types.SimpleNamespace(
         getFocusId=lambda: calls.focus_id
@@ -1076,14 +1092,14 @@ def test_folder_metadata_refresh_is_confirmed_and_reports_progress(monkeypatch) 
     assert "Container.Refresh" in calls.builtins
 
 
-def test_whole_library_metadata_refresh_is_confirmed_and_reports_progress(monkeypatch) -> None:
+def test_whole_library_metadata_refresh_is_confirmed_and_reports_background_progress(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
     views.xbmcgui.Dialog.responses = [True]
-    views.xbmcgui.DialogProgress.create_calls = []
-    views.xbmcgui.DialogProgress.update_calls = []
-    views.xbmcgui.DialogProgress.cancelled = False
+    views.xbmcgui.DialogProgressBG.create_calls = []
+    views.xbmcgui.DialogProgressBG.update_calls = []
+    views.xbmcgui.DialogProgressBG.closed = False
 
     class FakeRefresher:
         def all_refresh_checkpoint(self):
@@ -1101,8 +1117,16 @@ def test_whole_library_metadata_refresh_is_confirmed_and_reports_progress(monkey
     monkeypatch.setattr(ui, "_metadata_refresher", lambda: FakeRefresher())
     ui.action("action/refresh-metadata-all", {})
 
-    assert views.xbmcgui.DialogProgress.create_calls[-1][0] == "Refresh all picture metadata"
-    assert views.xbmcgui.DialogProgress.update_calls[-1] == (100, "2 / 2\ntwo.jpg")
+    assert views.xbmcgui.DialogProgressBG.create_calls[-1] == (
+        "MyPicsDB 3",
+        "Reading indexed picture metadata",
+    )
+    assert views.xbmcgui.DialogProgressBG.update_calls[-1] == (
+        100,
+        "MyPicsDB 3",
+        "2 / 2\ntwo.jpg",
+    )
+    assert views.xbmcgui.DialogProgressBG.closed is True
     assert any(
         message == "All metadata refresh complete: 2 refreshed, 0 failed"
         for message, _error in runtime.kodi.notifications
@@ -1369,7 +1393,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.30" in labels
+    assert "MyPicsDB 3 version: 0.8.31" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3397,7 +3421,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.30"
+    assert captured["init"][2] == "0.8.31"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False
@@ -3711,3 +3735,49 @@ def test_picture_metadata_refresh_busy_uses_explicit_modal_dialog(monkeypatch) -
     assert heading == "Metadata refresh unavailable"
     assert "catalogue scan" in message
     assert not any(message == "Metadata refreshed" for message, _error in runtime.kodi.notifications)
+
+
+def test_metadata_browser_shows_background_refresh_status_and_stop_action(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.metadata_refresh_status = lambda: {
+        "token": "refresh-1",
+        "state": "running",
+        "processed": 42,
+        "total": 100,
+    }
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("metadata-browser", {}))
+
+    assert [item.label for _url, item, _folder in calls.items[:2]] == [
+        "Metadata refresh in progress - 42 / 100",
+        "Stop metadata refresh",
+    ]
+    assert calls.items[0][0] == ""
+    assert calls.items[1][0].endswith("/action/stop-metadata-refresh")
+    assert all(
+        not url.endswith("/action/refresh-metadata-all")
+        for url, _item, _folder in calls.items
+    )
+
+
+def test_stop_metadata_refresh_requests_soft_cancel(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.metadata_refresh_status = lambda: {
+        "token": "refresh-1",
+        "state": "running",
+        "processed": 42,
+        "total": 100,
+    }
+    requested = []
+    runtime.kodi.request_metadata_refresh_cancel = lambda: requested.append(True) or True
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.responses = [True]
+
+    ui.action("action/stop-metadata-refresh", {})
+
+    assert requested == [True]
+    assert runtime.kodi.notifications[-1][0] == "Stopping metadata refresh"
+    assert "Container.Refresh" in calls.builtins

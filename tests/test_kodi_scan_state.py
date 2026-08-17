@@ -89,3 +89,48 @@ def test_stale_progress_does_not_replace_newer_scan(monkeypatch) -> None:
     status = context.scan_status()
     assert status["token"] == "scan-new"
     assert status["pictures_seen"] == 0
+
+
+def test_metadata_refresh_state_is_shared_and_cancelled_by_matching_token(monkeypatch) -> None:
+    context, window = make_context(monkeypatch)
+
+    context.begin_metadata_refresh_status("refresh-1", 12, 100)
+    context.update_metadata_refresh_status(
+        "refresh-1",
+        25,
+        100,
+        "image.jpg",
+        refreshed=24,
+        failed=1,
+    )
+
+    status = context.metadata_refresh_status()
+    assert status["token"] == "refresh-1"
+    assert status["state"] == "running"
+    assert status["processed"] == 25
+    assert status["total"] == 100
+    assert status["filename"] == "image.jpg"
+    assert status["refreshed"] == 24
+    assert status["failed"] == 1
+
+    assert context.request_metadata_refresh_cancel() is True
+    assert context.metadata_refresh_cancel_requested("refresh-1") is True
+    assert context.metadata_refresh_status()["state"] == "cancelling"
+
+    context.finish_metadata_refresh_status("other-refresh")
+    assert context.metadata_refresh_status()["token"] == "refresh-1"
+
+    context.finish_metadata_refresh_status("refresh-1")
+    assert context.metadata_refresh_status() == {}
+    assert window.getProperty(kodi_module.METADATA_REFRESH_CANCEL_PROPERTY) == ""
+
+
+def test_stale_metadata_refresh_progress_does_not_replace_newer_operation(monkeypatch) -> None:
+    context, _window = make_context(monkeypatch)
+
+    context.begin_metadata_refresh_status("refresh-new", 0, 50)
+    context.update_metadata_refresh_status("refresh-old", 50, 50, "old.jpg")
+
+    status = context.metadata_refresh_status()
+    assert status["token"] == "refresh-new"
+    assert status["processed"] == 0

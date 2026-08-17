@@ -155,6 +155,17 @@ class PluginUI:
             return {}
         return value if isinstance(value, dict) else {}
 
+    def _metadata_refresh_status(self) -> Dict[str, Any]:
+        getter = getattr(self.kodi, "metadata_refresh_status", None)
+        if not callable(getter):
+            return {}
+        try:
+            value = getter()
+        except Exception as exc:
+            self.kodi.log.warning("Could not read metadata refresh status: %s", exc)
+            return {}
+        return value if isinstance(value, dict) else {}
+
     def url(self, route: str, **params: Any) -> str:
         return plugin_url(self.base_url, route, **params)
 
@@ -475,12 +486,29 @@ class PluginUI:
     def metadata_browser(self, params: Optional[Dict[str, str]] = None):
         params = params or {}
         rating_params = self._rating_route_params(params)
-        items = [
-            self.add_action(
-                self.text(33042, "Refresh all picture metadata"),
-                "action/refresh-metadata-all",
+        refresh_status = self._metadata_refresh_status()
+        if refresh_status:
+            processed = max(0, int(refresh_status.get("processed") or 0))
+            total = max(processed, int(refresh_status.get("total") or 0))
+            state_label = (
+                self.text(33054, "Stopping metadata refresh")
+                if refresh_status.get("state") == "cancelling"
+                else self.text(33052, "Metadata refresh in progress")
             )
-        ]
+            items = [
+                self.add_info("%s - %d / %d" % (state_label, processed, total)),
+                self.add_action(
+                    self.text(33053, "Stop metadata refresh"),
+                    "action/stop-metadata-refresh",
+                ),
+            ]
+        else:
+            items = [
+                self.add_action(
+                    self.text(33042, "Refresh all picture metadata"),
+                    "action/refresh-metadata-all",
+                )
+            ]
         items.extend(
             self.add_folder(
                 self.text(category.string_id, category.fallback),
@@ -1885,6 +1913,8 @@ class PluginUI:
         checkpoint = refresher.all_refresh_checkpoint()
         restart = False
         dialog_ui = xbmcgui.Dialog()
+        initial_processed = 0
+        initial_total = 0
 
         if checkpoint:
             processed = int(checkpoint.get("processed") or 0)
@@ -1905,6 +1935,10 @@ class PluginUI:
             if choice < 0 or choice == 2:
                 return
             restart = choice == 1
+            initial_processed = 0 if restart else max(0, processed)
+            initial_total = max(initial_processed, int(total))
+            if restart:
+                initial_total, _max_id = self.catalog.metadata_refresh_picture_horizon()
         else:
             total, _max_id = self.catalog.metadata_refresh_picture_horizon()
             if total <= 0:
@@ -1919,25 +1953,135 @@ class PluginUI:
                 % int(total),
             ):
                 return
+            initial_total = int(total)
 
-        progress_dialog = xbmcgui.DialogProgress()
+        settings_getter = getattr(self.kodi, "refresh_settings", None)
+        settings = settings_getter() if callable(settings_getter) else self.kodi.settings
+        pause_during_playback = bool(
+            getattr(settings, "pause_during_playback", True)
+        )
+        monitor_getter = getattr(self.kodi, "abort_monitor", None)
+        monitor = monitor_getter() if callable(monitor_getter) else None
+        refresh_token = uuid.uuid4().hex
+        heading = self.text(30056, "MyPicsDB 3")
+        reading_message = self.text(33051, "Reading indexed picture metadata")
+        progress_dialog = None
+        status_started = False
+        playback_paused = False
+
+        def abort_requested() -> bool:
+            checker = getattr(monitor, "abortRequested", None)
+            return bool(callable(checker) and checker())
+
+        def close_progress_dialog() -> None:
+            nonlocal progress_dialog
+            if progress_dialog is None:
+                return
+            try:
+                progress_dialog.close()
+            except Exception as exc:
+                if not abort_requested():
+                    self.kodi.log.warning(
+                        "Could not close metadata refresh progress dialog: %s", exc
+                    )
+            progress_dialog = None
+
+        def ensure_progress_dialog(message: str = reading_message):
+            nonlocal progress_dialog
+            if abort_requested() or self._playback_active():
+                close_progress_dialog()
+                return None
+            if progress_dialog is not None:
+                return progress_dialog
+            creator = getattr(self.kodi, "create_background_progress", None)
+            try:
+                if callable(creator):
+                    progress_dialog = creator(heading, message)
+                else:
+                    progress_dialog = xbmcgui.DialogProgressBG()
+                    progress_dialog.create(heading, message)
+            except Exception as exc:
+                progress_dialog = None
+                if not abort_requested():
+                    self.kodi.log.warning(
+                        "Could not create metadata refresh progress dialog: %s", exc
+                    )
+            return progress_dialog
+
+        def update_dialog(done: int, total: int, filename: str) -> None:
+            percent = min(100, int((int(done) * 100) / max(1, int(total))))
+            message = "%d / %d" % (int(done), int(total))
+            if filename:
+                message += "\n" + filename
+            current = ensure_progress_dialog(message)
+            if current is None:
+                return
+            try:
+                current.update(percent, heading, message)
+            except Exception as exc:
+                if not abort_requested():
+                    self.kodi.log.warning(
+                        "Metadata refresh progress update failed: %s", exc
+                    )
+                close_progress_dialog()
+
+        def soft_cancelled() -> bool:
+            checker = getattr(self.kodi, "metadata_refresh_cancel_requested", None)
+            return bool(callable(checker) and checker(refresh_token))
+
+        def cancelled() -> bool:
+            nonlocal playback_paused
+            if abort_requested() or soft_cancelled():
+                close_progress_dialog()
+                return True
+
+            while (
+                pause_during_playback
+                and self._playback_active()
+                and not abort_requested()
+                and not soft_cancelled()
+            ):
+                close_progress_dialog()
+                if not playback_paused:
+                    playback_paused = True
+                    self.kodi.log.info(
+                        "Whole-library metadata refresh paused during playback"
+                    )
+                waiter = getattr(monitor, "waitForAbort", None)
+                if callable(waiter):
+                    if waiter(1):
+                        return True
+                else:
+                    xbmc.sleep(1000)
+
+            if abort_requested() or soft_cancelled():
+                close_progress_dialog()
+                return True
+
+            if playback_paused:
+                playback_paused = False
+                self.kodi.log.info(
+                    "Whole-library metadata refresh resumed after playback"
+                )
+
+            if self._playback_active():
+                close_progress_dialog()
+            elif status_started:
+                ensure_progress_dialog()
+            return False
+
+        def progress(done: int, total: int, filename: str) -> None:
+            publisher = getattr(self.kodi, "update_metadata_refresh_status", None)
+            if callable(publisher):
+                publisher(refresh_token, done, total, filename)
+            update_dialog(done, total, filename)
+
         try:
-            progress_dialog.create(
-                self.text(33042, "Refresh all picture metadata"),
-                self.text(33051, "Reading indexed picture metadata"),
-            )
-
-            def cancelled() -> bool:
-                checker = getattr(progress_dialog, "iscanceled", None)
-                return bool(callable(checker) and checker())
-
-            def progress(done: int, total: int, filename: str) -> None:
-                percent = min(100, int((int(done) * 100) / max(1, int(total))))
-                message = "%d / %d" % (int(done), int(total))
-                if filename:
-                    message += "\n" + filename
-                progress_dialog.update(percent, message)
-
+            publisher = getattr(self.kodi, "begin_metadata_refresh_status", None)
+            if callable(publisher):
+                publisher(refresh_token, initial_processed, initial_total)
+                status_started = True
+            ensure_progress_dialog()
             stats = refresher.refresh_all(
                 cancelled=cancelled,
                 progress=progress,
@@ -1954,26 +2098,39 @@ class PluginUI:
             )
             return
         finally:
-            try:
-                progress_dialog.close()
-            except Exception:
-                pass
+            close_progress_dialog()
+            if status_started:
+                finisher = getattr(self.kodi, "finish_metadata_refresh_status", None)
+                if callable(finisher):
+                    try:
+                        finisher(refresh_token)
+                    except Exception as exc:
+                        self.kodi.log.warning(
+                            "Could not clear metadata refresh status: %s", exc
+                        )
 
         if stats.refreshed:
             self._invalidate_home_widgets("whole-library metadata refreshed")
+        if abort_requested():
+            self.kodi.log.info(
+                "Whole-library metadata refresh interrupted because Kodi or the add-on stopped"
+            )
+            return
         if stats.completed:
-            self.kodi.notify(
-                self.text(33049, "All metadata refresh complete: %d refreshed, %d failed")
-                % (stats.refreshed, stats.failed),
-                error=stats.failed > 0,
-                milliseconds=7000,
-            )
+            if not self._playback_active():
+                self.kodi.notify(
+                    self.text(33049, "All metadata refresh complete: %d refreshed, %d failed")
+                    % (stats.refreshed, stats.failed),
+                    error=stats.failed > 0,
+                    milliseconds=7000,
+                )
         else:
-            self.kodi.notify(
-                self.text(33048, "Metadata refresh paused at %d / %d. Run it again to resume.")
-                % (stats.processed, stats.requested),
-                milliseconds=7000,
-            )
+            if not self._playback_active():
+                self.kodi.notify(
+                    self.text(33048, "Metadata refresh paused at %d / %d. Run it again to resume.")
+                    % (stats.processed, stats.requested),
+                    milliseconds=7000,
+                )
         xbmc.executebuiltin("Container.Refresh")
 
     def _media_item(
@@ -3860,6 +4017,29 @@ class PluginUI:
                 self.kodi.notify(self.text(32997, "Folder was not found"), error=True)
                 return
             self._refresh_folder_metadata(folder_id)
+            return
+        if route == "action/stop-metadata-refresh":
+            active = self._metadata_refresh_status()
+            if not active:
+                self.kodi.notify(self.text(33058, "No metadata refresh is running"))
+                return
+            if not xbmcgui.Dialog().yesno(
+                self.text(33055, "Stop metadata refresh?"),
+                self.text(
+                    33056,
+                    "The current progress will be saved so the refresh can be resumed later. Stop now?",
+                ),
+            ):
+                return
+            requester = getattr(self.kodi, "request_metadata_refresh_cancel", None)
+            requested = bool(callable(requester) and requester())
+            if not self._playback_active():
+                self.kodi.notify(
+                    self.text(33054, "Stopping metadata refresh")
+                    if requested
+                    else self.text(33058, "No metadata refresh is running")
+                )
+            xbmc.executebuiltin("Container.Refresh")
             return
         if route == "action/refresh-metadata-all":
             self._refresh_all_picture_metadata()

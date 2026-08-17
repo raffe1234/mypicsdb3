@@ -29,6 +29,8 @@ SLIDESHOW_START_PROPERTY = "MyPicsDB3.SlideshowStart"
 SLIDESHOW_START_TTL_SECONDS = 180.0
 SCAN_STATUS_PROPERTY = "MyPicsDB3.ScanStatusV1"
 SCAN_CANCEL_PROPERTY = "MyPicsDB3.ScanCancelV1"
+METADATA_REFRESH_STATUS_PROPERTY = "MyPicsDB3.MetadataRefreshStatusV1"
+METADATA_REFRESH_CANCEL_PROPERTY = "MyPicsDB3.MetadataRefreshCancelV1"
 HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.HomeWidgetGeneration"
 RANDOM_HOME_WIDGET_GENERATION_PROPERTY = "MyPicsDB3.RandomWidgetGeneration"
 RANDOM_HOME_WIDGET_SESSION_PROPERTY = "MyPicsDB3.RandomWidgetSessionV1"
@@ -433,6 +435,126 @@ class KodiContext:
                 window.clearProperty(SCAN_CANCEL_PROPERTY)
         except Exception as exc:
             self.log.warning("Could not clear scan status: %s", exc)
+
+    def metadata_refresh_status(self) -> Dict[str, Any]:
+        """Return the current whole-library metadata-refresh state."""
+
+        window = self._home_window()
+        if window is None:
+            return {}
+        try:
+            raw = str(window.getProperty(METADATA_REFRESH_STATUS_PROPERTY) or "")
+            value = json.loads(raw) if raw else {}
+        except Exception:
+            return {}
+        if not isinstance(value, dict) or not str(value.get("token") or ""):
+            return {}
+        return value
+
+    def begin_metadata_refresh_status(
+        self, token: str, processed: int, total: int
+    ) -> None:
+        window = self._home_window()
+        if window is None:
+            return
+        value = {
+            "token": str(token),
+            "state": "running",
+            "processed": max(0, int(processed or 0)),
+            "total": max(0, int(total or 0)),
+            "refreshed": 0,
+            "failed": 0,
+            "filename": "",
+            "started_at": time.time(),
+        }
+        try:
+            window.clearProperty(METADATA_REFRESH_CANCEL_PROPERTY)
+            window.setProperty(
+                METADATA_REFRESH_STATUS_PROPERTY,
+                json.dumps(value, ensure_ascii=False, separators=(",", ":")),
+            )
+        except Exception as exc:
+            self.log.warning("Could not publish metadata refresh start: %s", exc)
+
+    def update_metadata_refresh_status(
+        self,
+        token: str,
+        processed: int,
+        total: int,
+        filename: str = "",
+        refreshed: int = 0,
+        failed: int = 0,
+    ) -> None:
+        window = self._home_window()
+        if window is None:
+            return
+        current = self.metadata_refresh_status()
+        if str(current.get("token") or "") != str(token):
+            return
+        current.update(
+            {
+                "processed": max(0, int(processed or 0)),
+                "total": max(0, int(total or 0)),
+                "filename": str(filename or ""),
+                "refreshed": max(0, int(refreshed or 0)),
+                "failed": max(0, int(failed or 0)),
+            }
+        )
+        try:
+            window.setProperty(
+                METADATA_REFRESH_STATUS_PROPERTY,
+                json.dumps(current, ensure_ascii=False, separators=(",", ":")),
+            )
+        except Exception as exc:
+            self.log.warning("Could not publish metadata refresh progress: %s", exc)
+
+    def metadata_refresh_cancel_requested(self, token: str) -> bool:
+        window = self._home_window()
+        if window is None:
+            return False
+        try:
+            return (
+                str(window.getProperty(METADATA_REFRESH_CANCEL_PROPERTY) or "")
+                == str(token)
+            )
+        except Exception:
+            return False
+
+    def request_metadata_refresh_cancel(self) -> bool:
+        window = self._home_window()
+        if window is None:
+            return False
+        current = self.metadata_refresh_status()
+        token = str(current.get("token") or "")
+        if not token:
+            return False
+        current["state"] = "cancelling"
+        try:
+            window.setProperty(METADATA_REFRESH_CANCEL_PROPERTY, token)
+            window.setProperty(
+                METADATA_REFRESH_STATUS_PROPERTY,
+                json.dumps(current, ensure_ascii=False, separators=(",", ":")),
+            )
+            return True
+        except Exception as exc:
+            self.log.warning("Could not request metadata refresh cancellation: %s", exc)
+            return False
+
+    def finish_metadata_refresh_status(self, token: str) -> None:
+        window = self._home_window()
+        if window is None:
+            return
+        try:
+            current = self.metadata_refresh_status()
+            if str(current.get("token") or "") == str(token):
+                window.clearProperty(METADATA_REFRESH_STATUS_PROPERTY)
+            if (
+                str(window.getProperty(METADATA_REFRESH_CANCEL_PROPERTY) or "")
+                == str(token)
+            ):
+                window.clearProperty(METADATA_REFRESH_CANCEL_PROPERTY)
+        except Exception as exc:
+            self.log.warning("Could not clear metadata refresh status: %s", exc)
 
     def publish_home_widget_limit(self) -> int:
         settings = getattr(self, "settings", None)
