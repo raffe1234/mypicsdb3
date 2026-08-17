@@ -1259,6 +1259,20 @@ class Catalog:
         with self.engine.transaction() as connection:
             return self.engine.fetchall(connection, query, (*params, limit, offset))
 
+    def picture_by_id(self, picture_id: int) -> Optional[Dict[str, Any]]:
+        """Return one available catalogue row for reference-only UI actions."""
+
+        if type(picture_id) is not int or picture_id <= 0:
+            return None
+        query = (
+            "SELECT %s FROM pictures p "
+            "JOIN folders f ON f.id=p.folder_id "
+            "JOIN sources s ON s.id=p.source_id "
+            "WHERE p.id=? AND p.is_missing=0" % PICTURE_COLUMNS
+        )
+        with self.engine.transaction() as connection:
+            return self.engine.fetchone(connection, query, (picture_id,))
+
     def query_pictures(self, query_model: Any, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         """Run a validated versioned query model without exposing raw SQL."""
         if type(limit) is not int:

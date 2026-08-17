@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.21. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.22. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -57,6 +57,10 @@ For the component boundaries and long-lived safety rules, see
   geotagged media, recent items and optional videos. Use **Browse metadata** for
   curated Camera, Location, Capture, Image and Keywords facets with bounded
   value counts and normal paginated Query Model result pages.
+- Open **Location details** from a picture context menu to inspect stored canonical
+  location fields locally. When GPS storage is enabled, the dialog also shows the
+  stored coordinate pair; **Browse this city/country** reuses the existing metadata
+  browser without contacting a map service.
 - Search Unicode-normalized filename, caption, keywords, paths, camera and
   location fields with AND matching.
 - Apply an optional global minimum-picture-rating policy with a temporary
@@ -614,6 +618,14 @@ context menus can also start a recursive Kodi slideshow.
 The Keywords and Rated pictures views depend on metadata embedded in the source
 files. Geotagged pictures requires **Store GPS coordinates** to be enabled
 before the relevant pictures are scanned again.
+
+For still pictures, the context menu also offers **Location details**. Country,
+state/region, city and sublocation come from the normalized catalogue metadata.
+Coordinates are shown only when **Store GPS coordinates** is currently enabled;
+when it is disabled the action does not expose a stale coordinate pair that may
+still be waiting for the next metadata reindex. **Browse this city** and **Browse
+this country** are local catalogue queries. Version 0.8.22 does not include an
+**Open map** action and never sends coordinates to a network provider.
 
 The default picture-extension list includes Nikon NEF RAW files as well as HEIC,
 HEIF and AVIF. Existing installations that still use the unchanged pre-0.2.44

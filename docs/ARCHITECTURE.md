@@ -106,7 +106,8 @@ Kodi-facing orchestration
         ↓
 Application and domain logic
   scanner.py, search.py, query_model.py, saved_searches.py, screensaver.py,
-  static_collections.py, slideshow.py, preferences.py, home_layout_editor.py
+  static_collections.py, slideshow.py, preferences.py, home_layout_editor.py,
+  location.py
         ↓
 Infrastructure adapters
   filesystem.py, metadata.py, db/engine.py, db/catalog.py,
@@ -149,6 +150,17 @@ objects, applies pagination and view modes, and starts scans or slideshows. It
 is deliberately Kodi-specific. Business rules that can be expressed without
 Kodi should be moved into a smaller module rather than added indefinitely to
 `views.py`.
+
+### `location.py`: provider-neutral local location boundary
+
+Version 0.8.22 keeps location display logic separate from Kodi dialogs and from
+any future map provider. `location.py` normalizes the already-indexed canonical
+location fields, validates latitude/longitude as a complete finite pair and
+formats coordinates for local display. It performs no filesystem or network I/O.
+`views.py` passes only picture IDs into the details action and reuses the curated
+metadata browser for city/country navigation. A future map integration must remain
+explicit opt-in and consume this neutral coordinate representation rather than
+embedding provider URLs or private API keys in catalogue data.
 
 ### `db/engine.py`: backend abstraction
 

@@ -114,12 +114,17 @@ The legacy ZIP/archive path is intentionally **not** copied yet. If archive
 creation is useful later, it should reuse the same frozen selection, collision,
 source-safety and manifest boundaries. Move/delete semantics remain out of scope.
 
-### 7. GPS/map view
+### 7. GPS/map view — local foundation implemented in 0.8.22
 
 Legacy MyPicsDB had a GoogleMap dialog/context action for GPS-tagged pictures.
-Modern plan: provider-neutral location details and an explicit opt-in map action.
-Do not embed an API key or silently send a user's photo coordinates to a network
-provider.
+MyPicsDB 3 version 0.8.22 adds provider-neutral **Location details** plus local
+**Browse this city/country** actions over already-indexed catalogue metadata. GPS
+coordinates are shown only when the privacy-sensitive storage setting is enabled;
+no provider URL, API key or network request is involved.
+
+An explicit **Open map** action remains a later gap. It must be opt-in at the
+point of use, provider-neutral and must not silently send a user's photo
+coordinates to a network provider or embed private API keys.
 
 ### 8. Legacy database / Picasa import
 
@@ -144,17 +149,15 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.19
+## Recommended roadmap after 0.8.22
 
 1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
 2. 0.8.16 — completed: collection snapshots from validated query-backed results.
 3. 0.8.17 — completed: safe COPY-only export + credential-sanitized manifest.
 4. 0.8.19 — completed: scanner observability without parallel I/O or write concurrency.
-5. Later — light video metadata, map/location UX, optional generic provider API,
-   rebuild catalogue while preserving sources; optional archive creation may reuse
-   the 0.8.17 export engine if there is a real user need.
-6. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh,
-   mixed picture/video/music state machine.
+5. 0.8.22 — completed: offline/provider-neutral location details and local city/country browsing; explicit map opening remains deferred.
+6. Later — light video metadata, optional explicit map provider action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
+7. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
 
 This order is a recommendation, not a release contract. User priorities can
 change it, but new work should preserve the scanner, Query Model, migration,

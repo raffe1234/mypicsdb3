@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.22 - 2026-08-17
+
+- Add an offline-first **Location details** picture context action backed only by already-indexed catalogue fields. It shows normalized country/state/city/sublocation and, when the privacy-sensitive **Store GPS coordinates** setting is enabled, a locally formatted latitude/longitude pair. No map provider, API key, HTTP request or coordinate-bearing plugin URL is introduced.
+- Add **Browse this city** and **Browse this country** picture context actions that reuse the existing curated Location metadata browser and validated Query Model v1 routes. The actions pass only normalized location text plus picture IDs where needed; videos remain excluded from location actions.
+- Add a small provider-neutral `location.py` boundary for validating/formatting stored coordinates so a future explicit **Open map** action can be implemented without coupling catalogue data to a provider. Keep database schema 9, Query Model version 1, serial scanning and Estuary runtime revisions unchanged.
+
 ## 0.8.21 - 2026-08-17
 
 - Fix a generated Estuary Home control-id collision: MyPicsDB slot 9 no longer uses panel id `5000`, which stock Estuary already reserves for the Movies Home group. Slot 9 now uses unused Pictures-range id `4950`; all other provider URLs and row semantics are unchanged.

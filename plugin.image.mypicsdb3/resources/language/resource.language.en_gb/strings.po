@@ -1922,3 +1922,39 @@ msgstr "Current scan rate"
 msgctxt "#32978"
 msgid "Metadata reads"
 msgstr "Metadata reads"
+
+msgctxt "#32979"
+msgid "Location details"
+msgstr "Location details"
+
+msgctxt "#32980"
+msgid "Browse this city"
+msgstr "Browse this city"
+
+msgctxt "#32981"
+msgid "Browse this country"
+msgstr "Browse this country"
+
+msgctxt "#32982"
+msgid "Location"
+msgstr "Location"
+
+msgctxt "#32983"
+msgid "Coordinates"
+msgstr "Coordinates"
+
+msgctxt "#32984"
+msgid "GPS coordinates are not stored because GPS storage is disabled. Enable Metadata > Store GPS coordinates and run a scan to index them."
+msgstr "GPS coordinates are not stored because GPS storage is disabled. Enable Metadata > Store GPS coordinates and run a scan to index them."
+
+msgctxt "#32985"
+msgid "No GPS coordinates are stored for this picture."
+msgstr "No GPS coordinates are stored for this picture."
+
+msgctxt "#32986"
+msgid "No location metadata is stored for this picture."
+msgstr "No location metadata is stored for this picture."
+
+msgctxt "#32987"
+msgid "Picture was not found"
+msgstr "Picture was not found"

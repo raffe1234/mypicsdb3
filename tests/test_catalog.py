@@ -93,6 +93,12 @@ def test_catalog_queries_and_favorites(tmp_path: Path) -> None:
     assert catalog.favorites(10)[0]["id"] == picture_id
     assert catalog.rated(10)[0]["rating"] == 5
     assert catalog.geotagged(10)[0]["city"] == "Stockholm"
+    location_row = catalog.picture_by_id(picture_id)
+    assert location_row is not None
+    assert location_row["gps_latitude"] == 59.3293
+    assert location_row["gps_longitude"] == 18.0686
+    assert location_row["city"] == "Stockholm"
+    assert catalog.picture_by_id(0) is None
 
 
 def test_album_art_prefers_a_picture_over_a_newer_video(tmp_path: Path) -> None:

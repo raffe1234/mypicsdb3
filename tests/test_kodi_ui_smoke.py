@@ -36,9 +36,14 @@ class FakeDialog:
     input_responses = []
     browse_responses = []
     browse_calls = []
+    ok_calls = []
 
     def yesno(self, heading, message):
         return self.__class__.responses.pop(0)
+
+    def ok(self, heading, message):
+        self.__class__.ok_calls.append((heading, message))
+        return True
 
     def select(self, heading, options, preselect=-1):
         return self.__class__.select_responses.pop(0)
@@ -170,7 +175,7 @@ class FakeAddon:
         return {
             "icon": "icon.png",
             "fanart": "fanart.jpg",
-            "version": "0.8.21",
+            "version": "0.8.22",
         }[key]
 
     def getSetting(self, key):
@@ -196,6 +201,7 @@ class FakeKodi:
             exclude_hidden=True,
             random_home_refresh_hours=2,
             debug_logging=False,
+            store_gps=False,
         )
         self.debug_messages = []
         self.info_messages = []
@@ -427,7 +433,18 @@ class FakeCatalog:
             "source_label": "Photos",
             "rating": 5,
             "media_type": "picture",
+            "gps_latitude": 59.3293,
+            "gps_longitude": 18.0686,
+            "city": "Stockholm",
+            "state": "Stockholm County",
+            "country": "Sweden",
+            "sublocation": "Gamla stan",
         }]
+
+    def picture_by_id(self, picture_id):
+        if int(picture_id) != 1:
+            return None
+        return dict(self.recent_taken(1, 0)[0])
 
 
     def on_this_day(self, month, day, current_year, limit, offset=0):
@@ -706,6 +723,68 @@ def test_root_and_picture_widget_return_valid_directory_items(monkeypatch) -> No
     assert is_folder is False
 
 
+def test_picture_location_context_is_local_and_reuses_metadata_browsing(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.store_gps = True
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    ui.dispatch(views.Request("recent-taken", {"limit": "15"}))
+
+    _url, item, _is_folder = calls.items[0]
+    labels = [label for label, _command in item.context]
+    assert "Location details" in labels
+    assert "Browse this city" in labels
+    assert "Browse this country" in labels
+    commands = dict(item.context)
+    assert commands["Location details"] == (
+        "RunPlugin(plugin://plugin.image.mypicsdb3/action/location-details?id=1)"
+    )
+    assert "field=city" in commands["Browse this city"]
+    assert "value=Stockholm" in commands["Browse this city"]
+    assert "field=country" in commands["Browse this country"]
+    assert "value=Sweden" in commands["Browse this country"]
+    assert "59.3293" not in str(item.context)
+    assert "18.0686" not in str(item.context)
+
+
+def test_location_details_show_coordinates_only_when_enabled(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.store_gps = True
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.ok_calls = []
+
+    ui.action("action/location-details", {"id": "1"})
+
+    heading, message = views.xbmcgui.Dialog.ok_calls[-1]
+    assert heading == "Location"
+    assert "Country: Sweden" in message
+    assert "City: Stockholm" in message
+    assert "Coordinates: 59.329300, 18.068600" in message
+
+    runtime.kodi.settings.store_gps = False
+    ui.action("action/location-details", {"id": "1"})
+    _heading, message = views.xbmcgui.Dialog.ok_calls[-1]
+    assert "59.329300" not in message
+    assert "GPS storage is disabled" in message
+
+
+def test_video_items_do_not_offer_location_actions(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    row = dict(runtime.catalog.recent_taken(1)[0])
+    row["media_type"] = "video"
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+
+    _url, item, _folder = ui._media_item(row)
+
+    assert all(
+        label not in {"Location details", "Browse this city", "Browse this country"}
+        for label, _command in item.context
+    )
+
+
 def test_root_hides_only_configured_browsing_nodes(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -903,7 +982,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.21" in labels
+    assert "MyPicsDB 3 version: 0.8.22" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -2931,7 +3010,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.21"
+    assert captured["init"][2] == "0.8.22"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

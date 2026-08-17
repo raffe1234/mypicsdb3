@@ -21,6 +21,7 @@ from .home_layout_editor import (
     SmartHomeEditorText,
     show_smart_home_layout_editor,
 )
+from .location import format_coordinates, location_details_from_row
 from .preferences import (
     DEFAULT_HOME_ROWS,
     HOME_VIEW_BY_KEY,
@@ -1335,6 +1336,94 @@ class PluginUI:
             return
         item.setInfo("pictures", info)
 
+    def _location_context(
+        self,
+        row: Dict[str, Any],
+        browse_params: Optional[Dict[str, str]] = None,
+    ) -> List[Tuple[str, str]]:
+        if str(row.get("media_type") or "picture") != "picture":
+            return []
+
+        details = location_details_from_row(
+            row,
+            include_coordinates=bool(getattr(self.kodi.settings, "store_gps", False)),
+        )
+        context: List[Tuple[str, str]] = [
+            (
+                self.text(32979, "Location details"),
+                "RunPlugin(%s)"
+                % self.url("action/location-details", id=row.get("id")),
+            )
+        ]
+        rating_params = self._rating_route_params(browse_params)
+        if details.city:
+            context.append(
+                (
+                    self.text(32980, "Browse this city"),
+                    "ActivateWindow(Pictures,%s,return)"
+                    % self.url(
+                        "metadata-result",
+                        field="city",
+                        value=details.city,
+                        **rating_params,
+                    ),
+                )
+            )
+        if details.country:
+            context.append(
+                (
+                    self.text(32981, "Browse this country"),
+                    "ActivateWindow(Pictures,%s,return)"
+                    % self.url(
+                        "metadata-result",
+                        field="country",
+                        value=details.country,
+                        **rating_params,
+                    ),
+                )
+            )
+        return context
+
+    def _show_location_details(self, picture_id: int) -> None:
+        row = self.catalog.picture_by_id(picture_id)
+        if not row or str(row.get("media_type") or "picture") != "picture":
+            self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
+            return
+
+        store_gps = bool(getattr(self.kodi.settings, "store_gps", False))
+        details = location_details_from_row(row, include_coordinates=store_gps)
+        lines: List[str] = []
+        for label, value in (
+            (self.text(32876, "Country"), details.country),
+            (self.text(32877, "State or region"), details.state),
+            (self.text(32878, "City"), details.city),
+            (self.text(32879, "Sublocation"), details.sublocation),
+        ):
+            if value:
+                lines.append("%s: %s" % (label, value))
+
+        coordinates = format_coordinates(details)
+        if coordinates:
+            lines.append("%s: %s" % (self.text(32983, "Coordinates"), coordinates))
+        elif not store_gps:
+            lines.append(
+                self.text(
+                    32984,
+                    "GPS coordinates are not stored because GPS storage is disabled. "
+                    "Enable Metadata > Store GPS coordinates and run a scan to index them.",
+                )
+            )
+        else:
+            lines.append(self.text(32985, "No GPS coordinates are stored for this picture."))
+
+        if not details.has_named_location and not coordinates:
+            lines.insert(0, self.text(32986, "No location metadata is stored for this picture."))
+
+        xbmcgui.Dialog().ok(
+            self.text(32982, "Location"),
+            "\n".join(lines),
+        )
+
     def _media_item(
         self,
         row: Dict[str, Any],
@@ -1396,6 +1485,7 @@ class PluginUI:
             (self.text(30022, "Toggle favorite"), toggle),
             (self.text(32812, "Add to collection"), add_to_collection),
         ]
+        context.extend(self._location_context(row, browse_params))
         if self._is_home_widget(browse_params):
             context.append(
                 (
@@ -3167,6 +3257,16 @@ class PluginUI:
                 ),
                 milliseconds=8000,
             )
+            return
+        if route == "action/location-details":
+            try:
+                picture_id = int(params.get("id") or 0)
+            except (TypeError, ValueError):
+                picture_id = 0
+            if picture_id <= 0:
+                self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
+                return
+            self._show_location_details(picture_id)
             return
         if route == "action/settings":
             previous_limit = int(getattr(self.kodi.settings, "home_widget_limit", 10))
