@@ -147,10 +147,12 @@ def test_home_fragment_materializes_nine_generic_slots_without_service_state() -
 
     assert "Addon.SettingBool(plugin.image.mypicsdb3,show_media_sources)" in home
     assert home.count('content="WidgetListPosterMyPicsDB"') == 9
-    assert 'condition="System.HasAddon(plugin.image.mypicsdb3) + String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow' not in home
+    assert "Addon.SettingStr(plugin.image.mypicsdb3,home_row_" not in home
+    assert "Addon.SettingStr(plugin.image.mypicsdb3,home_row_" not in widget
     for position in range(1, 10):
         assert f"home-slot?slot={position}&amp;widget=1&amp;home=1" in home
-        assert f"Addon.SettingStr(plugin.image.mypicsdb3,home_row_{position})" in home
+        assert f"Window(Home).Property(MyPicsDB3.HomeRow{position})" in home
+        assert f"Window(Home).Property(MyPicsDB3.HomeRow{position})" in widget
         assert f"$VAR[MyPicsDBHomeRowLabel{position}]" in home
         assert f"$VAR[MyPicsDBHomeRowRandomGeneration{position}]" in home
         assert f"$VAR[MyPicsDBHomeRowBrowseMode{position}]" in home
@@ -162,7 +164,6 @@ def test_home_fragment_materializes_nine_generic_slots_without_service_state() -
     assert home.count('<param name="widget_limit" value="40"/>') == 9
     assert home.count("widget=1&amp;home=1") == 9
     assert "Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)" in home
-    assert "Window(Home).Property(MyPicsDB3.HomeRow1)" not in home
     assert '<param name="visible">true</param>' in widget
     assert '<param name="visible" value="$PARAM[visible]"/>' in widget
     assert '<visible>$PARAM[visible]</visible><visible>Integer.IsGreater' in widget

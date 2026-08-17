@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.8.19" provider-name="MyPicsDB 3 contributors">
+<addon id="plugin.image.mypicsdb3" name="MyPicsDB 3" version="0.8.20" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
     <import addon="script.module.exifread" version="2.1.2+matrix.0" />
@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Align release verification with the 0.8.8 home-slot architecture so generated Estuary skins pass the full build without changing runtime Home behavior.</news>
+    <news>Reduce Pictures Home render overhead by consuming the already-published MyPicsDB Home-window row state instead of repeatedly resolving add-on settings in skin conditions.</news>
   </extension>
 </addon>

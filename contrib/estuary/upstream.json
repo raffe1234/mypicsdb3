@@ -14,7 +14,7 @@
       "minversion": "21.0.0",
       "maxversion": "21.89.999",
       "xbmc_gui_version": "5.17.0",
-      "patch_revision": 21,
+      "patch_revision": 22,
       "releases": [
         {
           "ref": "21.3-Omega",
@@ -46,7 +46,7 @@
       "minversion": "21.90.0",
       "maxversion": "22.99.99",
       "xbmc_gui_version": "5.17.0",
-      "patch_revision": 19,
+      "patch_revision": 20,
       "releases": [
         {
           "ref": "22.0b1-Piers",

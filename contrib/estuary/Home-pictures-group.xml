@@ -14,7 +14,7 @@
 						<param name="icon_height" value="110"/>
 					</include>
 					<include content="WidgetListPosterMyPicsDB">
-						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_1),none)"/>
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow1),none)"/>
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=1&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration1]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode1]"/>
@@ -23,7 +23,7 @@
 						<param name="list_id" value="4200"/>
 					</include>
 					<include content="WidgetListPosterMyPicsDB">
-						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_2),none)"/>
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow2),none)"/>
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=2&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration2]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode2]"/>
@@ -32,7 +32,7 @@
 						<param name="list_id" value="4300"/>
 					</include>
 					<include content="WidgetListPosterMyPicsDB">
-						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_3),none)"/>
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow3),none)"/>
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=3&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration3]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode3]"/>
@@ -41,7 +41,7 @@
 						<param name="list_id" value="4400"/>
 					</include>
 					<include content="WidgetListPosterMyPicsDB">
-						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_4),none)"/>
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow4),none)"/>
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=4&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration4]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode4]"/>
@@ -50,7 +50,7 @@
 						<param name="list_id" value="4500"/>
 					</include>
 					<include content="WidgetListPosterMyPicsDB">
-						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_5),none)"/>
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow5),none)"/>
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=5&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration5]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode5]"/>
@@ -59,7 +59,7 @@
 						<param name="list_id" value="4600"/>
 					</include>
 					<include content="WidgetListPosterMyPicsDB">
-						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_6),none)"/>
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow6),none)"/>
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=6&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration6]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode6]"/>
@@ -68,7 +68,7 @@
 						<param name="list_id" value="4700"/>
 					</include>
 					<include content="WidgetListPosterMyPicsDB">
-						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_7),none)"/>
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow7),none)"/>
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=7&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration7]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode7]"/>
@@ -77,7 +77,7 @@
 						<param name="list_id" value="4800"/>
 					</include>
 					<include content="WidgetListPosterMyPicsDB">
-						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_8),none)"/>
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow8),none)"/>
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=8&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration8]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode8]"/>
@@ -86,7 +86,7 @@
 						<param name="list_id" value="4900"/>
 					</include>
 					<include content="WidgetListPosterMyPicsDB">
-						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Addon.SettingStr(plugin.image.mypicsdb3,home_row_9),none)"/>
+						<param name="visible" value="System.HasAddon(plugin.image.mypicsdb3) + !String.IsEqual(Window(Home).Property(MyPicsDB3.HomeRow9),none)"/>
 						<param name="content_path" value="plugin://plugin.image.mypicsdb3/home-slot?slot=9&amp;widget=1&amp;home=1&amp;generation=$INFO[Window(Home).Property(MyPicsDB3.HomeWidgetGeneration)]&amp;random_generation=$VAR[MyPicsDBHomeRowRandomGeneration9]"/>
 						<param name="widget_limit" value="40"/>
 						<param name="browse_mode" value="$VAR[MyPicsDBHomeRowBrowseMode9]"/>

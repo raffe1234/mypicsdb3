@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.8.20 - 2026-08-17
+
+- Reduce Pictures Home render-path work in the generated Estuary skin: all nine MyPicsDB row controls remain materialized for cold-start safety, but runtime row visibility, labels and random browse-mode decisions now consume the already-published `Window(Home).Property(MyPicsDB3.HomeRowN)` state instead of repeatedly resolving `Addon.SettingStr(...,home_row_N)`.
+- Preserve the 0.8.8 startup architecture: no MyPicsDB control is gated by an include-time Home property, so the five-second delayed service publication can still make rows visible without `ReloadSkin()`. Provider URLs, widget generation invalidation, random-session diversity and configured 4–40 row limits are unchanged.
+- Bump generated Estuary patch revisions to Omega 22 and Piers 20. Keep database schema 9, Query Model version 1 and repository version 0.2.26 unchanged. Add regression coverage that prevents per-row `Addon.SettingStr` lookups from returning to the Pictures Home render path.
+
 ## 0.8.19 - 2026-08-16
 
 - Add low-risk scanner observability before any parallelization work: live Scan status now shows an approximate wall-clock files/second rate plus metadata-read, unchanged, updated and error counters while a scan is running.

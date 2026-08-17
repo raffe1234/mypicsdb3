@@ -41,6 +41,12 @@ can re-query an unchanged provider without changing its visible selection. The
 combined editor remains in the picture add-on; the skin only consumes the nine
 slots.
 
+Since 0.8.20 the nine slots still materialize unconditionally at skin-load time, but
+runtime row visibility and row-type variables read the matching
+`Window(Home).Property(MyPicsDB3.HomeRowN)` value published by the background
+service. This keeps the 0.8.8 cold-start guarantee while avoiding repeated
+`Addon.SettingStr(...,home_row_N)` resolution in the Pictures Home render path.
+
 The 0.4.4 patch uses Omega patch revision 12 and Piers patch revision 10.
 The plugin-only 0.4.5 stability follow-up keeps those skin revisions unchanged.
 Version 0.4.11 advances Omega to revision 15 and Piers to revision 13 because
