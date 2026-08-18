@@ -180,3 +180,23 @@ def test_uri_enrichment_is_local_and_only_fills_missing_embedded_fields() -> Non
     assert merged["country"] == "Spain"
     assert merged["state"] == "Comunitat Valenciana"
     assert merged["sublocation"] == "Levante"
+
+
+def test_bulk_reverse_geocode_cache_reuses_four_decimal_coordinate_cell() -> None:
+    from mypicsdb3.geocoding import (
+        ResolvedLocation,
+        load_bulk_cached_reverse_geocoding,
+        save_bulk_cached_reverse_geocoding,
+    )
+
+    catalog = FakeCatalog()
+    result = ResolvedLocation(country="Sweden", city="Stockholm")
+    endpoint = "https://nominatim.openstreetmap.org"
+    save_bulk_cached_reverse_geocoding(catalog, endpoint, 59.32931, 18.06861, result)
+
+    cached = load_bulk_cached_reverse_geocoding(
+        catalog, endpoint, 59.32934, 18.06864
+    )
+    assert cached is not None
+    assert cached.city == "Stockholm"
+    assert cached.from_cache is True

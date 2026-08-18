@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.8.32 - 2026-08-18
+
+- Add local-only **Browse metadata > Location > Analyze GPS coverage** before bulk reverse geocoding. It reports total pictures, GPS coverage, already-complete named locations, candidates needing one or more named fields, unique exact coordinates, the current roughly-10-metre bulk cells, comparison 25/50/100 metre grids, existing cache reuse, expected same-run bulk reuse, estimated online lookups and (for the public Nominatim endpoint) estimated throttle time. The analysis performs no network requests and writes no picture/catalog metadata.
+- Add explicit **Browse metadata > Location > Resolve missing locations from GPS** for existing still pictures that already have stored GPS but are missing one or more canonical country/state/city/sublocation fields. The job is user-triggered, serial, stoppable and resumable; source files are never opened or modified and only latitude/longitude are sent to the configured Nominatim-compatible endpoint.
+- Reuse existing per-picture enrichment and provider caches before network I/O, plus a bulk-only four-decimal coordinate cache (roughly a 10 metre cell) so bursts of pictures taken at the same place normally share one reverse-geocoding lookup. Embedded EXIF/XMP/IPTC location continues to win because catalogue writes fill only empty canonical fields.
+- Keep bulk enrichment under the existing `location-enrichment` writer lock and publish cross-interpreter progress/stop state on the Kodi Home window. A stable picture-ID horizon and checkpoint are stored in schema-9 `meta`, so stop/restart can resume without a database migration.
+- Preserve the public OpenStreetMap Nominatim courtesy boundary: one thread, persistent caching and at least 1.1 seconds between cache misses; when a public-service run has remained active for 24 hours, new misses slow to about four requests per minute. The UI warns that very large libraries should use a separately configured Nominatim-compatible service.
+- Keep database schema 9, Query Model version 1, repository version 0.2.26, screensaver version 0.7.0, scanner semantics and Estuary revisions unchanged.
+
 ## 0.8.31 - 2026-08-17
 
 - Run **Refresh all picture metadata** with Kodi's non-modal `DialogProgressBG` instead of a foreground `DialogProgress`, so Kodi remains usable while the serial, resumable refresh is running. Folder-level metadata refresh remains foreground and unchanged.

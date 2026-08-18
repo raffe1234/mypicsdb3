@@ -1040,6 +1040,25 @@ class Catalog:
         with self.engine.transaction() as connection:
             return self.meta_value_in_connection(connection, key)
 
+    def meta_keys_with_prefix(self, prefix: str) -> List[str]:
+        """Return non-schema meta keys beginning with ``prefix``.
+
+        This is used by read-only catalogue analysis to inspect existing caches in
+        one query instead of opening one transaction per candidate picture.
+        """
+
+        clean_prefix = str(prefix or "")
+        if not clean_prefix:
+            return []
+        key_sql = "`key`" if self.engine.backend == "mysql" else "key"
+        with self.engine.transaction() as connection:
+            rows = self.engine.fetchall(
+                connection,
+                "SELECT %s AS meta_key FROM meta WHERE %s LIKE ?" % (key_sql, key_sql),
+                (clean_prefix + "%",),
+            )
+        return [str(row.get("meta_key") or "") for row in rows if row.get("meta_key")]
+
     def set_meta_value(self, key: str, value: str) -> None:
         clean_key = str(key or "").strip()
         if not clean_key:
@@ -1401,6 +1420,147 @@ class Catalog:
                 (after_id, max_picture_id, limit),
             )
         return [int(row["id"]) for row in rows]
+
+    def location_coverage_summary(
+        self, max_picture_id: Optional[int] = None
+    ) -> Dict[str, int]:
+        """Return a local-only GPS/named-location coverage snapshot.
+
+        The optional ID horizon lets callers keep the count and subsequent batched
+        coordinate scan on the same stable set of already-indexed picture IDs.
+        """
+
+        where = "is_missing=0 AND media_type='picture'"
+        params: Tuple[Any, ...] = ()
+        if max_picture_id is not None:
+            if type(max_picture_id) is not int or max_picture_id <= 0:
+                return {
+                    "total_pictures": 0,
+                    "gps_pictures": 0,
+                    "gps_complete": 0,
+                    "needs_lookup": 0,
+                    "max_picture_id": 0,
+                }
+            where += " AND id<=?"
+            params = (max_picture_id,)
+        gps_expr = "gps_latitude IS NOT NULL AND gps_longitude IS NOT NULL"
+        missing_expr = (
+            "TRIM(COALESCE(country, ''))='' OR TRIM(COALESCE(state, ''))='' "
+            "OR TRIM(COALESCE(city, ''))='' OR TRIM(COALESCE(sublocation, ''))=''"
+        )
+        query = (
+            "SELECT COUNT(*) AS total_pictures, "
+            "COALESCE(SUM(CASE WHEN %s THEN 1 ELSE 0 END), 0) AS gps_pictures, "
+            "COALESCE(SUM(CASE WHEN %s AND NOT (%s) THEN 1 ELSE 0 END), 0) AS gps_complete, "
+            "COALESCE(SUM(CASE WHEN %s AND (%s) THEN 1 ELSE 0 END), 0) AS needs_lookup, "
+            "COALESCE(MAX(id), 0) AS max_picture_id "
+            "FROM pictures WHERE %s"
+            % (gps_expr, gps_expr, missing_expr, gps_expr, missing_expr, where)
+        )
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(connection, query, params)
+        if row is None:
+            return {
+                "total_pictures": 0,
+                "gps_pictures": 0,
+                "gps_complete": 0,
+                "needs_lookup": 0,
+                "max_picture_id": 0,
+            }
+        return {
+            "total_pictures": int(row.get("total_pictures") or 0),
+            "gps_pictures": int(row.get("gps_pictures") or 0),
+            "gps_complete": int(row.get("gps_complete") or 0),
+            "needs_lookup": int(row.get("needs_lookup") or 0),
+            "max_picture_id": int(row.get("max_picture_id") or 0),
+        }
+
+    def location_analysis_coordinate_rows(
+        self,
+        after_id: int,
+        max_picture_id: int,
+        limit: int = 5000,
+    ) -> List[Dict[str, Any]]:
+        """Return a minimal candidate batch for local GPS coverage analysis."""
+
+        after_id = max(0, int(after_id))
+        max_picture_id = max(0, int(max_picture_id))
+        limit = max(1, min(10000, int(limit)))
+        if max_picture_id <= 0:
+            return []
+        where = (
+            "is_missing=0 AND media_type='picture' "
+            "AND gps_latitude IS NOT NULL AND gps_longitude IS NOT NULL "
+            "AND (TRIM(COALESCE(country, ''))='' OR TRIM(COALESCE(state, ''))='' "
+            "OR TRIM(COALESCE(city, ''))='' OR TRIM(COALESCE(sublocation, ''))='') "
+            "AND id>? AND id<=?"
+        )
+        with self.engine.transaction() as connection:
+            return self.engine.fetchall(
+                connection,
+                "SELECT id, uri, gps_latitude, gps_longitude FROM pictures "
+                "WHERE %s ORDER BY id LIMIT ?" % where,
+                (after_id, max_picture_id, limit),
+            )
+
+    def location_enrichment_picture_horizon(
+        self, max_picture_id: Optional[int] = None
+    ) -> Tuple[int, int]:
+        """Return (count, max_id) for GPS pictures missing named location fields."""
+
+        where = (
+            "is_missing=0 AND media_type='picture' "
+            "AND gps_latitude IS NOT NULL AND gps_longitude IS NOT NULL "
+            "AND (TRIM(COALESCE(country, ''))='' OR TRIM(COALESCE(state, ''))='' "
+            "OR TRIM(COALESCE(city, ''))='' OR TRIM(COALESCE(sublocation, ''))='')"
+        )
+        params: Tuple[Any, ...] = ()
+        if max_picture_id is not None:
+            if type(max_picture_id) is not int or max_picture_id <= 0:
+                return (0, 0)
+            where += " AND id<=?"
+            params = (max_picture_id,)
+        with self.engine.transaction() as connection:
+            row = self.engine.fetchone(
+                connection,
+                "SELECT COUNT(*) AS picture_count, COALESCE(MAX(id), 0) AS max_id "
+                "FROM pictures WHERE " + where,
+                params,
+            )
+        if row is None:
+            return (0, 0)
+        return (int(row.get("picture_count") or 0), int(row.get("max_id") or 0))
+
+    def pictures_for_location_enrichment(
+        self,
+        after_id: int,
+        max_picture_id: int,
+        limit: int = 200,
+    ) -> List[Dict[str, Any]]:
+        """Return the next bounded GPS-picture batch for bulk location enrichment."""
+
+        after_id = max(0, int(after_id))
+        max_picture_id = max(0, int(max_picture_id))
+        limit = max(1, min(5000, int(limit)))
+        if max_picture_id <= 0:
+            return []
+        where = (
+            "p.is_missing=0 AND p.media_type='picture' "
+            "AND p.gps_latitude IS NOT NULL AND p.gps_longitude IS NOT NULL "
+            "AND (TRIM(COALESCE(p.country, ''))='' OR TRIM(COALESCE(p.state, ''))='' "
+            "OR TRIM(COALESCE(p.city, ''))='' OR TRIM(COALESCE(p.sublocation, ''))='') "
+            "AND p.id>? AND p.id<=?"
+        )
+        query = (
+            "SELECT %s FROM pictures p "
+            "JOIN folders f ON f.id=p.folder_id "
+            "JOIN sources s ON s.id=p.source_id "
+            "WHERE %s ORDER BY p.id LIMIT ?" % (PICTURE_COLUMNS, where)
+        )
+        with self.engine.transaction() as connection:
+            return self.engine.fetchall(
+                connection, query, (after_id, max_picture_id, limit)
+            )
 
     def refresh_picture_record(
         self,

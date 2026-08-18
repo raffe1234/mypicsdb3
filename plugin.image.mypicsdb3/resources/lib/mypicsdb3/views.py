@@ -30,6 +30,7 @@ from .home_layout_editor import (
     show_smart_home_layout_editor,
 )
 from .location import format_coordinates, location_details_from_row
+from .location_enrichment import BulkLocationEnricher, analyse_location_coverage
 from .preferences import (
     DEFAULT_HOME_ROWS,
     HOME_VIEW_BY_KEY,
@@ -163,6 +164,17 @@ class PluginUI:
             value = getter()
         except Exception as exc:
             self.kodi.log.warning("Could not read metadata refresh status: %s", exc)
+            return {}
+        return value if isinstance(value, dict) else {}
+
+    def _location_enrichment_status(self) -> Dict[str, Any]:
+        getter = getattr(self.kodi, "location_enrichment_status", None)
+        if not callable(getter):
+            return {}
+        try:
+            value = getter()
+        except Exception as exc:
+            self.kodi.log.warning("Could not read location enrichment status: %s", exc)
             return {}
         return value if isinstance(value, dict) else {}
 
@@ -538,6 +550,38 @@ class PluginUI:
             )
         rating_params = self._rating_route_params(params)
         items = []
+        if category.key == "location":
+            enrichment_status = self._location_enrichment_status()
+            if enrichment_status:
+                processed = max(0, int(enrichment_status.get("processed") or 0))
+                total = max(processed, int(enrichment_status.get("total") or 0))
+                state_label = (
+                    self.text(33064, "Stopping location lookup")
+                    if enrichment_status.get("state") == "cancelling"
+                    else self.text(33063, "Location lookup in progress")
+                )
+                items.extend(
+                    [
+                        self.add_info("%s - %d / %d" % (state_label, processed, total)),
+                        self.add_action(
+                            self.text(33065, "Stop location lookup"),
+                            "action/stop-location-enrichment",
+                        ),
+                    ]
+                )
+            else:
+                items.extend(
+                    [
+                        self.add_action(
+                            self.text(33078, "Analyze GPS coverage"),
+                            "action/analyse-gps-location-coverage",
+                        ),
+                        self.add_action(
+                            self.text(33059, "Resolve missing locations from GPS"),
+                            "action/resolve-missing-locations",
+                        ),
+                    ]
+                )
         for facet_key in category.facet_keys:
             facet = metadata_facet_by_key(facet_key)
             items.append(
@@ -1514,6 +1558,319 @@ class PluginUI:
                 % str(self.kodi.addon.getAddonInfo("version") or "unknown")
             ),
         )
+
+    @staticmethod
+    def _format_location_analysis_duration(seconds: float) -> str:
+        total_minutes = max(0, int(round(float(seconds) / 60.0)))
+        if total_minutes <= 0:
+            return "< 1 min"
+        days, remainder = divmod(total_minutes, 24 * 60)
+        hours, minutes = divmod(remainder, 60)
+        parts = []
+        if days:
+            parts.append("%d d" % days)
+        if hours:
+            parts.append("%d h" % hours)
+        if minutes or not parts:
+            parts.append("%d min" % minutes)
+        return " ".join(parts)
+
+    def _analyse_gps_location_coverage(self) -> None:
+        endpoint = str(
+            getattr(
+                self.kodi.settings,
+                "reverse_geocoding_endpoint",
+                "https://nominatim.openstreetmap.org",
+            )
+            or "https://nominatim.openstreetmap.org"
+        ).strip()
+        try:
+            analysis = analyse_location_coverage(self.catalog, endpoint)
+        except Exception as exc:
+            xbmcgui.Dialog().ok(
+                self.text(33078, "Analyze GPS coverage"),
+                "%s: %s" % (exc.__class__.__name__, exc),
+            )
+            return
+
+        lines = [
+            "%s: %d" % (self.text(33079, "Pictures in catalog"), analysis.total_pictures),
+            "%s: %d" % (self.text(33080, "Pictures with GPS"), analysis.gps_pictures),
+            "%s: %d"
+            % (
+                self.text(33081, "GPS pictures with complete named location"),
+                analysis.gps_complete,
+            ),
+            "%s: %d"
+            % (
+                self.text(33082, "GPS pictures needing one or more location fields"),
+                analysis.needs_lookup,
+            ),
+            "",
+            self.text(33083, "Unique positions among pictures needing lookup"),
+            "  %s: %d" % (self.text(33084, "Exact GPS pairs"), analysis.unique_exact),
+            "  %s: %d" % (self.text(33085, "Current ~10 m bulk cells"), analysis.bulk_cells_10m),
+            "  ~25 m: %d" % analysis.grid_cells_25m,
+            "  ~50 m: %d" % analysis.grid_cells_50m,
+            "  ~100 m: %d" % analysis.grid_cells_100m,
+            "",
+            self.text(33086, "Existing local cache reuse"),
+            "  %s: %d" % (self.text(33087, "Saved per-picture results"), analysis.cached_picture_rows),
+            "  %s: %d" % (self.text(33088, "Bulk-cache hits"), analysis.cached_bulk_rows),
+            "  %s: %d" % (self.text(33089, "Exact-coordinate cache hits"), analysis.cached_exact_rows),
+            "",
+            "%s: %d"
+            % (self.text(33094, "Estimated ~10 m reuse during the run"), analysis.estimated_bulk_reuse_rows),
+            "%s: %d"
+            % (self.text(33090, "Estimated online lookups with current ~10 m cache"), analysis.estimated_online_lookups),
+        ]
+        if analysis.estimated_public_seconds > 0 or "nominatim.openstreetmap.org" in endpoint.casefold():
+            lines.append(
+                "%s: %s"
+                % (
+                    self.text(33091, "Estimated public Nominatim time"),
+                    self._format_location_analysis_duration(analysis.estimated_public_seconds),
+                )
+            )
+        lines.extend(
+            [
+                "",
+                self.text(
+                    33092,
+                    "Analysis only: no network requests were made and no picture or catalog metadata was changed.",
+                ),
+                self.text(
+                    33093,
+                    "The 25/50/100 m figures are comparison grids only. The bulk lookup itself currently uses the ~10 m cache.",
+                ),
+            ]
+        )
+        dialog = xbmcgui.Dialog()
+        textviewer = getattr(dialog, "textviewer", None)
+        message = "\n".join(lines)
+        if callable(textviewer):
+            textviewer(self.text(33078, "Analyze GPS coverage"), message)
+        else:
+            dialog.ok(self.text(33078, "Analyze GPS coverage"), message)
+
+    def _bulk_location_enricher(self, owner: str):
+        endpoint = str(
+            getattr(
+                self.kodi.settings,
+                "reverse_geocoding_endpoint",
+                "https://nominatim.openstreetmap.org",
+            )
+            or "https://nominatim.openstreetmap.org"
+        ).strip()
+        return BulkLocationEnricher(
+            self.catalog,
+            self._reverse_geocoder(),
+            endpoint,
+            owner,
+            logger=self.kodi.log,
+        )
+
+    def _resolve_missing_locations_online(self) -> None:
+        if not bool(getattr(self.kodi.settings, "store_gps", False)):
+            xbmcgui.Dialog().ok(
+                self.text(33059, "Resolve missing locations from GPS"),
+                self.text(33060, "GPS storage is disabled. Enable Metadata > Store GPS coordinates and refresh/scan metadata first."),
+            )
+            return
+        if not bool(getattr(self.kodi.settings, "reverse_geocoding_enabled", False)):
+            xbmcgui.Dialog().ok(
+                self.text(33029, "Online location lookup is disabled"),
+                self.text(33030, "Enable Metadata > Online reverse geocoding first. No network request was made."),
+            )
+            return
+
+        owner = "%s:%s:%s" % (socket.gethostname(), os.getpid(), uuid.uuid4().hex[:12])
+        enricher = self._bulk_location_enricher(owner)
+        checkpoint = enricher.checkpoint()
+        restart = False
+        initial_processed = 0
+        initial_total = 0
+        dialog_ui = xbmcgui.Dialog()
+
+        if checkpoint:
+            processed = max(0, int(checkpoint.get("processed") or 0))
+            total = max(processed, int(checkpoint.get("total") or 0))
+            choice = dialog_ui.select(
+                self.text(33059, "Resolve missing locations from GPS"),
+                [
+                    self.text(33068, "Resume saved location lookup") + " (%d / %d)" % (processed, total),
+                    self.text(33045, "Restart from beginning"),
+                    self.text(33046, "Cancel"),
+                ],
+            )
+            if choice < 0 or choice == 2:
+                return
+            restart = choice == 1
+            initial_processed = 0 if restart else processed
+            initial_total = total
+        else:
+            total, _max_picture_id = self.catalog.location_enrichment_picture_horizon()
+            if total <= 0:
+                self.kodi.notify(self.text(33062, "No GPS pictures need location lookup"))
+                return
+            endpoint = str(getattr(self.kodi.settings, "reverse_geocoding_endpoint", "") or "")
+            message = self.text(
+                33070,
+                "Resolve missing country/region/city/sublocation for up to %d GPS pictures? Only coordinates are sent. Results are cached locally, and pictures within roughly 10 metres reuse the same bulk lookup. Source files are not changed.",
+            ) % int(total)
+            if "nominatim.openstreetmap.org" in endpoint.casefold():
+                message += "\n\n" + self.text(
+                    33071,
+                    "The public OpenStreetMap Nominatim service is intentionally throttled. Large collections can take a long time; for very large libraries, configure your own Nominatim-compatible server.",
+                )
+            if not dialog_ui.yesno(
+                self.text(33059, "Resolve missing locations from GPS"), message
+            ):
+                return
+            initial_total = int(total)
+
+        recovered = self.catalog.recover_stale_local_lock(LOCATION_ENRICHMENT_LOCK_NAME, owner)
+        if recovered:
+            self.kodi.log.warning(
+                "Recovered stale SQLite location-enrichment lock left by previous Kodi process: %s",
+                recovered,
+            )
+        if not self.catalog.acquire_lock(LOCATION_ENRICHMENT_LOCK_NAME, owner, 1800):
+            xbmcgui.Dialog().ok(
+                self.text(33073, "Location lookup unavailable"),
+                self.text(
+                    33034,
+                    "A catalogue scan, schema migration or metadata refresh is active. Wait for it to finish and try again. No network request was made.",
+                ),
+            )
+            return
+
+        token = uuid.uuid4().hex
+        heading = self.text(30056, "MyPicsDB 3")
+        progress_dialog = None
+        status_started = False
+        monitor_getter = getattr(self.kodi, "abort_monitor", None)
+        monitor = monitor_getter() if callable(monitor_getter) else None
+
+        def abort_requested() -> bool:
+            checker = getattr(monitor, "abortRequested", None)
+            return bool(callable(checker) and checker())
+
+        def close_progress() -> None:
+            nonlocal progress_dialog
+            if progress_dialog is None:
+                return
+            try:
+                progress_dialog.close()
+            except Exception:
+                pass
+            progress_dialog = None
+
+        def ensure_progress():
+            nonlocal progress_dialog
+            if abort_requested():
+                close_progress()
+                return None
+            if progress_dialog is not None:
+                return progress_dialog
+            try:
+                creator = getattr(self.kodi, "create_background_progress", None)
+                if callable(creator):
+                    progress_dialog = creator(
+                        heading, self.text(33076, "Resolving GPS locations")
+                    )
+                else:
+                    progress_dialog = xbmcgui.DialogProgressBG()
+                    progress_dialog.create(
+                        heading, self.text(33076, "Resolving GPS locations")
+                    )
+            except Exception as exc:
+                progress_dialog = None
+                if not abort_requested():
+                    self.kodi.log.warning("Could not create location lookup progress dialog: %s", exc)
+            return progress_dialog
+
+        def cancelled() -> bool:
+            if abort_requested():
+                close_progress()
+                return True
+            checker = getattr(self.kodi, "location_enrichment_cancel_requested", None)
+            if callable(checker) and checker(token):
+                close_progress()
+                return True
+            return False
+
+        def progress(stats, filename: str) -> None:
+            publisher = getattr(self.kodi, "update_location_enrichment_status", None)
+            if callable(publisher):
+                publisher(
+                    token,
+                    stats.processed,
+                    stats.requested,
+                    filename,
+                    updated=stats.updated,
+                    cache_hits=stats.cache_hits,
+                    network_lookups=stats.network_lookups,
+                    failed=stats.failed,
+                )
+            current = ensure_progress()
+            if current is None:
+                return
+            percent = min(100, int((stats.processed * 100) / max(1, stats.requested)))
+            message = "%d / %d" % (stats.processed, stats.requested)
+            if filename:
+                message += "\n" + filename
+            try:
+                current.update(percent, heading, message)
+            except Exception as exc:
+                if not abort_requested():
+                    self.kodi.log.warning("Location lookup progress update failed: %s", exc)
+                close_progress()
+
+        try:
+            publisher = getattr(self.kodi, "begin_location_enrichment_status", None)
+            if callable(publisher):
+                publisher(token, initial_processed, initial_total)
+                status_started = True
+            ensure_progress()
+            stats = enricher.run(
+                cancelled=cancelled, progress=progress, restart=restart
+            )
+        except Exception as exc:
+            xbmcgui.Dialog().ok(
+                self.text(33074, "Location lookup failed"),
+                "%s: %s" % (exc.__class__.__name__, exc),
+            )
+            return
+        finally:
+            close_progress()
+            if status_started:
+                finisher = getattr(self.kodi, "finish_location_enrichment_status", None)
+                if callable(finisher):
+                    try:
+                        finisher(token)
+                    except Exception as exc:
+                        self.kodi.log.warning("Could not clear location lookup status: %s", exc)
+            self.catalog.release_lock(LOCATION_ENRICHMENT_LOCK_NAME, owner)
+
+        if stats.updated:
+            self._invalidate_home_widgets("bulk location enrichment")
+        if abort_requested():
+            return
+        if stats.completed:
+            self.kodi.notify(
+                self.text(33072, "Location lookup complete: %d updated, %d online lookups, %d cache hits, %d failed")
+                % (stats.updated, stats.network_lookups, stats.cache_hits, stats.failed),
+                error=stats.failed > 0,
+                milliseconds=8000,
+            )
+        else:
+            self.kodi.notify(
+                self.text(33075, "Location lookup paused at %d / %d. Run it again to resume.")
+                % (stats.processed, stats.requested),
+                milliseconds=7000,
+            )
+        xbmc.executebuiltin("Container.Refresh")
 
     def _show_resolved_location(self, result) -> None:
         lines: List[str] = []
@@ -3994,6 +4351,34 @@ class PluginUI:
                 self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
                 return
             self._resolve_location_online(picture_id)
+            return
+        if route == "action/analyse-gps-location-coverage":
+            self._analyse_gps_location_coverage()
+            return
+        if route == "action/resolve-missing-locations":
+            self._resolve_missing_locations_online()
+            return
+        if route == "action/stop-location-enrichment":
+            active = self._location_enrichment_status()
+            if not active:
+                self.kodi.notify(self.text(33077, "No location lookup is running"))
+                return
+            if not xbmcgui.Dialog().yesno(
+                self.text(33066, "Stop location lookup?"),
+                self.text(
+                    33067,
+                    "Current progress is saved so the lookup can be resumed later. Stop now?",
+                ),
+            ):
+                return
+            requester = getattr(self.kodi, "request_location_enrichment_cancel", None)
+            requested = bool(callable(requester) and requester())
+            self.kodi.notify(
+                self.text(33064, "Stopping location lookup")
+                if requested
+                else self.text(33077, "No location lookup is running")
+            )
+            xbmc.executebuiltin("Container.Refresh")
             return
         if route in {"action/refresh-metadata-picture", "action/metadata-diagnostics"}:
             try:

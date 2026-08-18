@@ -98,6 +98,25 @@ def test_catalog_queries_and_favorites(tmp_path: Path) -> None:
     assert location_row["gps_latitude"] == 59.3293
     assert location_row["gps_longitude"] == 18.0686
     assert location_row["city"] == "Stockholm"
+    assert catalog.location_enrichment_picture_horizon() == (1, picture_id)
+    coverage = catalog.location_coverage_summary()
+    assert coverage == {
+        "total_pictures": 1,
+        "gps_pictures": 1,
+        "gps_complete": 0,
+        "needs_lookup": 1,
+        "max_picture_id": picture_id,
+    }
+    analysis_rows = catalog.location_analysis_coordinate_rows(0, picture_id, 10)
+    assert [row["id"] for row in analysis_rows] == [picture_id]
+    assert analysis_rows[0]["gps_latitude"] == 59.3293
+    catalog.set_meta_value("location_enrichment:v1:abc", "cached")
+    catalog.set_meta_value("other:key", "ignored")
+    assert catalog.meta_keys_with_prefix("location_enrichment:v1:") == [
+        "location_enrichment:v1:abc"
+    ]
+    candidates = catalog.pictures_for_location_enrichment(0, picture_id, 10)
+    assert [row["id"] for row in candidates] == [picture_id]
     assert catalog.picture_by_id(0) is None
     assert catalog.picture_ids_in_folder(int(location_row["folder_id"])) == [picture_id]
 

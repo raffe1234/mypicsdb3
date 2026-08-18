@@ -2251,3 +2251,140 @@ msgstr "The current progress will be saved so the refresh can be resumed later. 
 msgctxt "#33058"
 msgid "No metadata refresh is running"
 msgstr "No metadata refresh is running"
+
+msgctxt "#33059"
+msgid "Resolve missing locations from GPS"
+msgstr "Resolve missing locations from GPS"
+
+msgctxt "#33060"
+msgid "GPS storage is disabled. Enable Metadata > Store GPS coordinates and refresh/scan metadata first."
+msgstr "GPS storage is disabled. Enable Metadata > Store GPS coordinates and refresh/scan metadata first."
+
+msgctxt "#33062"
+msgid "No GPS pictures need location lookup"
+msgstr "No GPS pictures need location lookup"
+
+msgctxt "#33063"
+msgid "Location lookup in progress"
+msgstr "Location lookup in progress"
+
+msgctxt "#33064"
+msgid "Stopping location lookup"
+msgstr "Stopping location lookup"
+
+msgctxt "#33065"
+msgid "Stop location lookup"
+msgstr "Stop location lookup"
+
+msgctxt "#33066"
+msgid "Stop location lookup?"
+msgstr "Stop location lookup?"
+
+msgctxt "#33067"
+msgid "Current progress is saved so the lookup can be resumed later. Stop now?"
+msgstr "Current progress is saved so the lookup can be resumed later. Stop now?"
+
+msgctxt "#33068"
+msgid "Resume saved location lookup"
+msgstr "Resume saved location lookup"
+
+msgctxt "#33070"
+msgid "Resolve missing country/region/city/sublocation for up to %d GPS pictures? Only coordinates are sent. Results are cached locally, and pictures within roughly 10 metres reuse the same bulk lookup. Source files are not changed."
+msgstr "Resolve missing country/region/city/sublocation for up to %d GPS pictures? Only coordinates are sent. Results are cached locally, and pictures within roughly 10 metres reuse the same bulk lookup. Source files are not changed."
+
+msgctxt "#33071"
+msgid "The public OpenStreetMap Nominatim service is intentionally throttled. Large collections can take a long time; for very large libraries, configure your own Nominatim-compatible server."
+msgstr "The public OpenStreetMap Nominatim service is intentionally throttled. Large collections can take a long time; for very large libraries, configure your own Nominatim-compatible server."
+
+msgctxt "#33072"
+msgid "Location lookup complete: %d updated, %d online lookups, %d cache hits, %d failed"
+msgstr "Location lookup complete: %d updated, %d online lookups, %d cache hits, %d failed"
+
+msgctxt "#33073"
+msgid "Location lookup unavailable"
+msgstr "Location lookup unavailable"
+
+msgctxt "#33074"
+msgid "Location lookup failed"
+msgstr "Location lookup failed"
+
+msgctxt "#33075"
+msgid "Location lookup paused at %d / %d. Run it again to resume."
+msgstr "Location lookup paused at %d / %d. Run it again to resume."
+
+msgctxt "#33076"
+msgid "Resolving GPS locations"
+msgstr "Resolving GPS locations"
+
+msgctxt "#33077"
+msgid "No location lookup is running"
+msgstr "No location lookup is running"
+
+msgctxt "#33078"
+msgid "Analyze GPS coverage"
+msgstr "Analyze GPS coverage"
+
+msgctxt "#33079"
+msgid "Pictures in catalog"
+msgstr "Pictures in catalog"
+
+msgctxt "#33080"
+msgid "Pictures with GPS"
+msgstr "Pictures with GPS"
+
+msgctxt "#33081"
+msgid "GPS pictures with complete named location"
+msgstr "GPS pictures with complete named location"
+
+msgctxt "#33082"
+msgid "GPS pictures needing one or more location fields"
+msgstr "GPS pictures needing one or more location fields"
+
+msgctxt "#33083"
+msgid "Unique positions among pictures needing lookup"
+msgstr "Unique positions among pictures needing lookup"
+
+msgctxt "#33084"
+msgid "Exact GPS pairs"
+msgstr "Exact GPS pairs"
+
+msgctxt "#33085"
+msgid "Current ~10 m bulk cells"
+msgstr "Current ~10 m bulk cells"
+
+msgctxt "#33086"
+msgid "Existing local cache reuse"
+msgstr "Existing local cache reuse"
+
+msgctxt "#33087"
+msgid "Saved per-picture results"
+msgstr "Saved per-picture results"
+
+msgctxt "#33088"
+msgid "Bulk-cache hits"
+msgstr "Bulk-cache hits"
+
+msgctxt "#33089"
+msgid "Exact-coordinate cache hits"
+msgstr "Exact-coordinate cache hits"
+
+msgctxt "#33090"
+msgid "Estimated online lookups with current ~10 m cache"
+msgstr "Estimated online lookups with current ~10 m cache"
+
+msgctxt "#33091"
+msgid "Estimated public Nominatim time"
+msgstr "Estimated public Nominatim time"
+
+msgctxt "#33092"
+msgid "Analysis only: no network requests were made and no picture or catalog metadata was changed."
+msgstr "Analysis only: no network requests were made and no picture or catalog metadata was changed."
+
+msgctxt "#33093"
+msgid "The 25/50/100 m figures are comparison grids only. The bulk lookup itself currently uses the ~10 m cache."
+msgstr "The 25/50/100 m figures are comparison grids only. The bulk lookup itself currently uses the ~10 m cache."
+
+
+msgctxt "#33094"
+msgid "Estimated ~10 m reuse during the run"
+msgstr "Estimated ~10 m reuse during the run"

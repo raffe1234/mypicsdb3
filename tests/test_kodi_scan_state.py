@@ -134,3 +134,41 @@ def test_stale_metadata_refresh_progress_does_not_replace_newer_operation(monkey
     status = context.metadata_refresh_status()
     assert status["token"] == "refresh-new"
     assert status["processed"] == 0
+
+
+def test_location_enrichment_state_is_shared_and_cancelled_by_matching_token(monkeypatch) -> None:
+    context, window = make_context(monkeypatch)
+
+    context.begin_location_enrichment_status("location-1", 3, 40)
+    context.update_location_enrichment_status(
+        "location-1",
+        7,
+        40,
+        "photo.jpg",
+        updated=6,
+        cache_hits=4,
+        network_lookups=2,
+        failed=1,
+    )
+
+    status = context.location_enrichment_status()
+    assert status["token"] == "location-1"
+    assert status["state"] == "running"
+    assert status["processed"] == 7
+    assert status["total"] == 40
+    assert status["updated"] == 6
+    assert status["cache_hits"] == 4
+    assert status["network_lookups"] == 2
+    assert status["failed"] == 1
+    assert status["filename"] == "photo.jpg"
+
+    assert context.request_location_enrichment_cancel() is True
+    assert context.location_enrichment_cancel_requested("location-1") is True
+    assert context.location_enrichment_status()["state"] == "cancelling"
+
+    context.finish_location_enrichment_status("other-location")
+    assert context.location_enrichment_status()["token"] == "location-1"
+
+    context.finish_location_enrichment_status("location-1")
+    assert context.location_enrichment_status() == {}
+    assert window.getProperty(kodi_module.LOCATION_ENRICHMENT_CANCEL_PROPERTY) == ""

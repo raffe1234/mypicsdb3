@@ -14,7 +14,10 @@ DEFAULT_NOMINATIM_ENDPOINT = "https://nominatim.openstreetmap.org"
 DEFAULT_TIMEOUT_SECONDS = 10
 MAX_RESPONSE_BYTES = 262144
 CACHE_COORDINATE_DECIMALS = 5
+BULK_CACHE_COORDINATE_DECIMALS = 4
 MIN_REQUEST_INTERVAL_SECONDS = 1.1
+PUBLIC_NOMINATIM_LONG_RUN_INTERVAL_SECONDS = 15.1
+PUBLIC_NOMINATIM_LONG_RUN_AFTER_SECONDS = 24 * 60 * 60
 
 
 class ReverseGeocodingError(RuntimeError):
@@ -79,6 +82,42 @@ def _cache_key(endpoint: str, latitude: float, longitude: float) -> str:
         CACHE_COORDINATE_DECIMALS,
         float(longitude),
     )
+
+
+def _bulk_cache_key(endpoint: str, latitude: float, longitude: float) -> str:
+    return "reverse_geocode_bulk_cache:v1:%s:%.*f:%.*f" % (
+        _provider_token(endpoint),
+        BULK_CACHE_COORDINATE_DECIMALS,
+        float(latitude),
+        BULK_CACHE_COORDINATE_DECIMALS,
+        float(longitude),
+    )
+
+
+def reverse_geocoding_cache_key(endpoint: str, latitude: float, longitude: float) -> str:
+    """Return the persistent exact provider-cache key without performing I/O."""
+
+    return _cache_key(endpoint, latitude, longitude)
+
+
+def bulk_reverse_geocoding_cache_key(endpoint: str, latitude: float, longitude: float) -> str:
+    """Return the persistent coarse bulk-cache key without performing I/O."""
+
+    return _bulk_cache_key(endpoint, latitude, longitude)
+
+
+def reverse_geocoding_cache_prefix(endpoint: str, *, bulk: bool = False) -> str:
+    """Return the provider-specific meta-key prefix used by reverse-geocoding caches."""
+
+    token = _provider_token(endpoint)
+    if bulk:
+        return "reverse_geocode_bulk_cache:v1:%s:" % token
+    return "reverse_geocode_cache:v1:%s:" % token
+
+
+def is_public_nominatim_endpoint(endpoint: str) -> bool:
+    parts = urlsplit(normalize_nominatim_endpoint(endpoint))
+    return (parts.hostname or "").casefold() == "nominatim.openstreetmap.org"
 
 
 def enrichment_key(uri: str) -> str:
@@ -191,6 +230,39 @@ def load_cached_reverse_geocoding(
     if not raw:
         return None
     return _result_from_json(raw)
+
+
+def load_bulk_cached_reverse_geocoding(
+    catalog,
+    endpoint: str,
+    latitude: float,
+    longitude: float,
+) -> Optional[ResolvedLocation]:
+    """Return a coarse, bulk-only provider cache entry without network I/O."""
+
+    try:
+        key = _bulk_cache_key(endpoint, float(latitude), float(longitude))
+    except (TypeError, ValueError, ReverseGeocodingError):
+        return None
+    raw = catalog.meta_value(key)
+    if not raw:
+        return None
+    return _result_from_json(raw)
+
+
+def save_bulk_cached_reverse_geocoding(
+    catalog,
+    endpoint: str,
+    latitude: float,
+    longitude: float,
+    result: ResolvedLocation,
+) -> None:
+    """Persist a roughly 10 m coordinate cell for explicit bulk reuse only."""
+
+    catalog.set_meta_value(
+        _bulk_cache_key(endpoint, float(latitude), float(longitude)),
+        _result_to_json(result),
+    )
 
 
 def load_location_enrichment(

@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.31. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.32. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -60,9 +60,11 @@ For the component boundaries and long-lived safety rules, see
 - Open **Location details** from a picture context menu to inspect stored canonical
   location fields locally. When GPS storage is enabled, the dialog also shows the
   stored coordinate pair; **Browse this city/country** reuses the existing metadata
-  browser. Version 0.8.28 optionally adds explicit **Resolve location online** for one
-  GPS-tagged picture at a time; the feature is disabled by default and never runs
-  during scan/background work.
+  browser. **Resolve location online** handles one selected GPS-tagged picture. Under
+  **Browse metadata > Location**, **Analyze GPS coverage** first estimates the local
+  workload without network I/O; **Resolve missing locations from GPS** can then enrich
+  many already-indexed GPS pictures with stoppable/resumable serial lookups. Online
+  reverse geocoding remains disabled by default and is never started by scans.
 - Use **Refresh metadata** on one still picture, **Refresh metadata in this folder**
   on one indexed album, or **Browse metadata > Refresh all picture metadata** to
   re-read current EXIF/XMP/IPTC metadata without rebuilding the catalogue or modifying

@@ -507,6 +507,21 @@ class FakeCatalog:
     def set_meta_value(self, key, value):
         self.meta[str(key)] = str(value)
 
+    def meta_keys_with_prefix(self, prefix):
+        return sorted(key for key in self.meta if str(key).startswith(str(prefix)))
+
+    def location_coverage_summary(self, max_picture_id=None):
+        return {
+            "total_pictures": 1,
+            "gps_pictures": 1,
+            "gps_complete": 1,
+            "needs_lookup": 0,
+            "max_picture_id": 1,
+        }
+
+    def location_analysis_coordinate_rows(self, after_id, max_picture_id, limit):
+        return []
+
     def recover_stale_local_lock(self, name, owner):
         return None
 
@@ -908,6 +923,25 @@ def test_metadata_diagnostics_compares_indexed_and_fresh_values(monkeypatch) -> 
     assert "EXIF GPS latitude/longitude tags: yes/yes" in message
 
 
+def test_gps_coverage_analysis_is_local_and_available_before_online_lookup(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.store_gps = False
+    runtime.kodi.settings.reverse_geocoding_enabled = False
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.textviewer_calls = []
+
+    ui.action("action/analyse-gps-location-coverage", {})
+
+    heading, message = views.xbmcgui.Dialog.textviewer_calls[-1]
+    assert heading == "Analyze GPS coverage"
+    assert "Pictures in catalog: 1" in message
+    assert "Pictures with GPS: 1" in message
+    assert "GPS pictures needing one or more location fields: 0" in message
+    assert "Estimated online lookups with current ~10 m cache: 0" in message
+    assert "no network requests were made" in message
+
+
 def test_online_location_lookup_is_opt_in_and_makes_no_request_when_disabled(monkeypatch) -> None:
     views, _calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -1241,8 +1275,12 @@ def test_metadata_browser_uses_curated_facets_and_query_model_results(monkeypatc
     ui.dispatch(views.Request("metadata-category", {"category": "location"}))
     assert calls.category == "Location"
     assert [item.label for _url, item, _folder in calls.items] == [
+        "Analyze GPS coverage",
+        "Resolve missing locations from GPS",
         "Country", "State or region", "City", "Sublocation"
     ]
+    assert calls.items[0][0].endswith("/action/analyse-gps-location-coverage")
+    assert calls.items[1][0].endswith("/action/resolve-missing-locations")
 
     calls.items.clear()
     ui.dispatch(views.Request("metadata-values", {"field": "country"}))
@@ -1393,7 +1431,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.31" in labels
+    assert "MyPicsDB 3 version: 0.8.32" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3421,7 +3459,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.31"
+    assert captured["init"][2] == "0.8.32"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

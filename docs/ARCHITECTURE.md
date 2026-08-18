@@ -554,8 +554,38 @@ metadata-refresh locks. It is acquired before network I/O, so a lookup attempted
 another catalogue writer is active makes no request. Provider cache misses also share
 a persistent per-endpoint last-request timestamp and wait until at least 1.1 seconds
 have elapsed, keeping the normal public Nominatim path below one request per second
-even across add-on/service restarts. No automatic, recursive or bulk reverse-geocoding
-path exists.
+even across add-on/service restarts. Scanner, metadata refresh and widgets never start
+network reverse geocoding.
+
+### Explicit bulk location enrichment boundary (0.8.32)
+
+Before any network work, **Analyze GPS coverage** provides a read-only planning pass. It
+freezes the current maximum picture ID, scans only minimal candidate columns in bounded
+batches and simulates the same per-picture/bulk/exact-cache precedence used by the worker.
+It reports the current four-decimal bulk-cell count plus approximate 25/50/100 metre
+comparison grids and an online-lookup/time estimate. The analysis neither writes catalogue
+state nor contacts the configured provider.
+
+`location_enrichment.py` adds a separate user-triggered catalogue-maintenance path for
+already-indexed still pictures that have stored GPS but one or more empty canonical
+location fields. The operation freezes a picture-ID horizon, runs serially under the
+existing `location-enrichment` writer lock, publishes progress/stop state through Kodi
+Home-window properties and checkpoints counters in schema-9 `meta` for resume. It never
+opens source media.
+
+Before network I/O the worker reuses a saved URI enrichment, then a bulk-only provider
+cache rounded to four coordinate decimals (roughly a 10 metre cell), then the existing
+exact provider cache. A new online result is saved to both the URI enrichment and the
+bulk cache; canonical writes still use `fill_only=True`, so embedded EXIF/XMP/IPTC
+country/state/city/sublocation values keep precedence. The coarse cache is deliberately
+restricted to this explicit bulk path and does not change the accuracy semantics of the
+one-picture action.
+
+The public `nominatim.openstreetmap.org` endpoint remains single-threaded and persistently
+throttled. Cache misses are spaced by at least 1.1 seconds; once the same resumable run
+has aged past 24 hours, new public-service misses use about a 15.1 second interval. The
+endpoint remains configurable so very large libraries can use an operator-controlled
+Nominatim-compatible service instead.
 
 
 ### Whole-library metadata reindex boundary (0.8.29)

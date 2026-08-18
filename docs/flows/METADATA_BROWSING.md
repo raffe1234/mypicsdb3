@@ -129,10 +129,12 @@ still-picture catalogue rows using the current extractor/mapping rules, updates 
 canonical metadata/tags/search text and leaves source files unchanged. Progress is
 cancellable and resumable from a profile-local checkpoint.
 
-The action intentionally does **not** bulk reverse-geocode GPS coordinates. Existing
-embedded city/state/country values are indexed normally, and already-cached 0.8.28
-provider results may be reused locally without network I/O. New city/country lookup
-from GPS remains the explicit one-picture **Resolve location online** flow.
+The metadata-refresh action itself intentionally does **not** contact a reverse-geocoding
+provider. Existing embedded city/state/country values are indexed normally, and cached
+provider results may be reused locally without network I/O. Starting in 0.8.32, new
+GPS-to-name lookups for many pictures live in a separate explicit action under
+**Browse metadata > Location**, with its own lock, confirmation, stop/resume state and
+provider throttling.
 
 ### Explicit online location enrichment (0.8.28)
 
@@ -152,3 +154,31 @@ are spaced by at least 1.1 seconds. Search text is rebuilt immediately after a
 successful save. There is no folder, recursive, scheduled or scanner-triggered online
 geocoding path. Later metadata refreshes or changed-file scans may reapply the already
 saved local enrichment, but they never contact the provider.
+### Explicit bulk GPS location enrichment (0.8.32)
+
+**Browse metadata > Location > Analyze GPS coverage** is the safe planning step. It
+performs no network requests and no catalogue writes. The report shows how many indexed
+still pictures have GPS, how many already have all four named location fields, how many
+need enrichment, unique coordinate/bucket counts, existing local cache reuse, expected
+~10 m reuse during a run and the resulting estimated online requests. For the default
+public Nominatim endpoint it also estimates time using the same long-run throttle boundary
+as the worker.
+
+**Browse metadata > Location > Resolve missing locations from GPS** examines only
+available still-picture rows with a stored latitude/longitude pair and at least one
+empty country/state/city/sublocation field. It freezes an ID horizon, updates rows in ID
+order and saves a resumable checkpoint. Stop requests are soft: the current picture
+finishes, progress is persisted, and the next invocation can resume or restart.
+
+The worker first reuses per-picture enrichment and local caches. For explicit bulk use,
+coordinates are rounded to four decimals (roughly 10 metres) so a burst of pictures from
+the same place can share one provider response even when camera GPS jitter differs by a
+few metres. Only coordinates are sent to the configured Nominatim-compatible endpoint;
+filenames, URIs and image bytes stay local. Returned values fill only empty canonical
+fields, preserving embedded metadata precedence.
+
+The default public Nominatim endpoint stays single-threaded and cached. New cache misses
+wait at least 1.1 seconds; after a resumable run has aged past 24 hours they slow to about
+four requests per minute. Large libraries should therefore prefer an operator-controlled
+compatible endpoint. Neither normal scanning nor whole-library metadata refresh invokes
+this online path automatically.
