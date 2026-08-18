@@ -16,6 +16,7 @@ from estuary_skin import (  # noqa: E402
     extract_skin_from_archive,
     patch_skin,
 )
+from update_estuary_upstreams import parse_tag, skin_version_for_tag  # noqa: E402
 from verify import verify_generated_estuary_home  # noqa: E402
 
 
@@ -249,18 +250,20 @@ def test_upstream_config_has_versioned_channels_and_history():
     assert project.target_addon_id == "skin.estuary.mypicsdb3"
     assert project.retain_versions == 5
     assert set(project.channels) == {"omega", "piers"}
-    assert project.channels["omega"].releases[0].ref == "21.3-Omega"
-    assert project.channels["omega"].xbmc_gui_version == "5.17.0"
-    assert project.channels["omega"].patch_revision == 23
-    assert project.channels["omega"].releases[0].skin_version == "21.3.22"
-    assert project.channels["piers"].xbmc_gui_version == "5.17.0"
-    assert project.channels["piers"].patch_revision == 21
-    assert project.channels["piers"].releases[0].skin_version == "22.0.0~beta1.20"
-    assert project.channels["piers"].releases[0].ref == "22.0b1-Piers"
-    assert all(
-        len(channel.releases) <= project.retain_versions
-        for channel in project.channels.values()
-    )
+
+    for channel in project.channels.values():
+        assert channel.xbmc_gui_version == "5.17.0"
+        assert 0 < len(channel.releases) <= project.retain_versions
+        for release in channel.releases:
+            parsed = parse_tag(release.ref)
+            assert parsed is not None
+            assert parsed["major"] == channel.kodi_major
+            assert parsed["codename"].lower() == channel.codename.lower()
+            assert release.archive_url.endswith("/%s.zip" % release.ref)
+            assert release.skin_version == skin_version_for_tag(
+                release.ref,
+                channel.patch_revision,
+            )
 
 
 def test_upstream_config_is_valid_json():

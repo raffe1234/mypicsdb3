@@ -7,7 +7,8 @@
 - Reuse existing per-picture enrichment and provider caches before network I/O, plus a bulk-only four-decimal coordinate cache (roughly a 10 metre cell) so bursts of pictures taken at the same place normally share one reverse-geocoding lookup. Embedded EXIF/XMP/IPTC location continues to win because catalogue writes fill only empty canonical fields.
 - Keep bulk enrichment under the existing `location-enrichment` writer lock and publish cross-interpreter progress/stop state on the Kodi Home window. A stable picture-ID horizon and checkpoint are stored in schema-9 `meta`, so stop/restart can resume without a database migration.
 - Preserve the public OpenStreetMap Nominatim courtesy boundary: one thread, persistent caching and at least 1.1 seconds between cache misses; when a public-service run has remained active for 24 hours, new misses slow to about four requests per minute. The UI warns that very large libraries should use a separately configured Nominatim-compatible service.
-- Keep database schema 9, Query Model version 1, repository version 0.2.26, screensaver version 0.7.0, scanner semantics and Estuary revisions unchanged.
+- Make the Estuary upstream configuration regression test derive retained skin versions from each release tag and channel `patch_revision` instead of hard-coding the current newest tag/version. Normalize the checked-in release records to the already-configured Omega revision 23 and Piers revision 21, so the scheduled refresh can update legitimate release pins without failing on stale literal expectations.
+- Keep database schema 9, Query Model version 1, repository version 0.2.26, screensaver version 0.7.0 and scanner semantics unchanged. This maintenance fix does not increment the Estuary `patch_revision` values beyond the already-configured Omega 23 / Piers 21.
 
 ## 0.8.31 - 2026-08-17
 

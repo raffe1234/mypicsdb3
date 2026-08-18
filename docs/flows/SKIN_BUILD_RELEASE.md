@@ -127,6 +127,13 @@ GitHub Actions applies the maintained patch, verifies, tests, builds and runs
 the add-on checker before committing the pin. On failure it leaves the existing
 published repository in place and reports the problem for manual review.
 
+Release-pin regression tests validate invariants instead of yesterday's literal
+tag/version pair. Every retained release must match its channel's Kodi major and
+codename, and its stored `skin_version` must equal the value derived from
+`ref` + `patch_revision` by `skin_version_for_tag()`. The conversion function
+itself has separate fixed examples in `tests/test_estuary_updater.py`, so making
+the configuration test dynamic does not make the version scheme untested.
+
 Do not manually accept a new upstream pin merely because it downloads. The
 patched home screen and both supported Kodi channels must still build and test.
 

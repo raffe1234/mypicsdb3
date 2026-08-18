@@ -78,6 +78,15 @@ Only official release tags are followed. Development commits between Kodi
 alpha, beta, release-candidate and final releases are not published
 unattended.
 
+The checked-in `skin_version` values are derived data: for every retained
+release, `tests/test_estuary_skin.py` recalculates the expected value from that
+release's `ref` and the channel's current `patch_revision` via
+`skin_version_for_tag()`. The test also validates that each retained tag belongs
+to the configured Kodi major/codename. It deliberately does not hard-code the
+current newest tag or generated skin version, because both are legitimate
+outputs of this scheduled refresh. Exact stable/alpha/beta/rc version formatting
+remains independently pinned by `tests/test_estuary_updater.py`.
+
 ## Retained patched versions
 
 The Pages workflow stores the generated site in the `repo-data` branch. Before
@@ -118,8 +127,9 @@ Preview packages use Kodi's supported pre-release ordering:
 Increase `patch_revision` in a channel when the MyPicsDB 3 patch itself changes
 without a new Kodi release. Versions 0.4.9 and 0.4.10 use Omega revision 14 and
 Piers revision 12. Version 0.4.11 uses revisions 15/13 because the Home fragment
-changes. Then run the updater
-so all generated versions are recalculated.
+changes. Then run the updater so all retained `skin_version` values are
+recalculated. A mismatch between a stored version and the value derived from
+`ref` + `patch_revision` is a configuration error and is rejected by tests.
 
 ## Build commands
 

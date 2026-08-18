@@ -133,7 +133,9 @@ For the component boundaries and long-lived safety rules, see
 ### Development and delivery
 
 - Build and verify the add-on, repository index and optional Estuary fork with
-  automated tests and repository tools.
+  automated tests and repository tools. Estuary release-pin tests derive each
+  stored skin version from its release tag and channel `patch_revision`, so the
+  scheduled upstream refresh is not coupled to yesterday's literal version.
 - Publish installable Kodi repository packages through GitHub Actions and
   GitHub Pages.
 
