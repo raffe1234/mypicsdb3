@@ -2329,8 +2329,8 @@ msgid "Pictures in catalog"
 msgstr "Pictures in catalog"
 
 msgctxt "#33080"
-msgid "Pictures with GPS"
-msgstr "Pictures with GPS"
+msgid "Pictures with stored GPS coordinates"
+msgstr "Pictures with stored GPS coordinates"
 
 msgctxt "#33081"
 msgid "GPS pictures with complete named location"
@@ -2388,3 +2388,39 @@ msgstr "The 25/50/100 m figures are comparison grids only. The bulk lookup itsel
 msgctxt "#33094"
 msgid "Estimated ~10 m reuse during the run"
 msgstr "Estimated ~10 m reuse during the run"
+
+msgctxt "#33095"
+msgid "Store GPS coordinates"
+msgstr "Store GPS coordinates"
+
+msgctxt "#33096"
+msgid "enabled"
+msgstr "enabled"
+
+msgctxt "#33097"
+msgid "disabled"
+msgstr "disabled"
+
+msgctxt "#33098"
+msgid "Pictures indexed with current metadata settings"
+msgstr "Pictures indexed with current metadata settings"
+
+msgctxt "#33099"
+msgid "Pictures still needing metadata refresh"
+msgstr "Pictures still needing metadata refresh"
+
+msgctxt "#33100"
+msgid "The GPS count above is based only on coordinates already stored in the catalog; this analysis does not scan original image files."
+msgstr "The GPS count above is based only on coordinates already stored in the catalog; this analysis does not scan original image files."
+
+msgctxt "#33101"
+msgid "GPS storage is disabled, so this estimate is incomplete. Enable Metadata > Store GPS coordinates and run Refresh all picture metadata before using the online lookup estimate."
+msgstr "GPS storage is disabled, so this estimate is incomplete. Enable Metadata > Store GPS coordinates and run Refresh all picture metadata before using the online lookup estimate."
+
+msgctxt "#33102"
+msgid "Not all pictures were indexed with the current metadata settings, so this estimate is incomplete. Run Refresh all picture metadata before deciding how many online lookups are needed."
+msgstr "Not all pictures were indexed with the current metadata settings, so this estimate is incomplete. Run Refresh all picture metadata before deciding how many online lookups are needed."
+
+msgctxt "#33103"
+msgid "All catalog pictures were indexed with the current metadata settings, so the stored-GPS coverage is current."
+msgstr "All catalog pictures were indexed with the current metadata settings, so the stored-GPS coverage is current."

@@ -105,8 +105,12 @@ def test_catalog_queries_and_favorites(tmp_path: Path) -> None:
         "gps_pictures": 1,
         "gps_complete": 0,
         "needs_lookup": 1,
+        "metadata_current_pictures": 1,
         "max_picture_id": picture_id,
     }
+    stale_coverage = catalog.location_coverage_summary(metadata_index_hash="current-index")
+    assert stale_coverage["metadata_current_pictures"] == 0
+    assert stale_coverage["gps_pictures"] == 1
     analysis_rows = catalog.location_analysis_coordinate_rows(0, picture_id, 10)
     assert [row["id"] for row in analysis_rows] == [picture_id]
     assert analysis_rows[0]["gps_latitude"] == 59.3293
@@ -135,6 +139,8 @@ def test_catalog_queries_and_favorites(tmp_path: Path) -> None:
     refreshed_row = catalog.picture_by_id(picture_id)
     assert refreshed_row["camera_make"] == "Samsung"
     assert refreshed_row["camera_model"] == "SM-S921B"
+    current_coverage = catalog.location_coverage_summary(metadata_index_hash="index-signature")
+    assert current_coverage["metadata_current_pictures"] == 1
     assert {row["name"] for row in catalog.tags()} == {"Refreshed"}
 
 

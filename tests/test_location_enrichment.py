@@ -50,7 +50,7 @@ class FakeCatalog:
     def meta_keys_with_prefix(self, prefix):
         return sorted(key for key in self.meta if str(key).startswith(str(prefix)))
 
-    def location_coverage_summary(self, max_picture_id=None):
+    def location_coverage_summary(self, max_picture_id=None, metadata_index_hash=None):
         rows = [
             row for row in self.rows
             if max_picture_id is None or row["id"] <= max_picture_id
@@ -65,6 +65,7 @@ class FakeCatalog:
             "gps_pictures": len(gps_rows),
             "gps_complete": len(gps_rows) - len(needs),
             "needs_lookup": len(needs),
+            "metadata_current_pictures": len(rows),
             "max_picture_id": max((row["id"] for row in rows), default=0),
         }
 

@@ -1422,16 +1422,24 @@ class Catalog:
         return [int(row["id"]) for row in rows]
 
     def location_coverage_summary(
-        self, max_picture_id: Optional[int] = None
+        self,
+        max_picture_id: Optional[int] = None,
+        metadata_index_hash: Optional[str] = None,
     ) -> Dict[str, int]:
-        """Return a local-only GPS/named-location coverage snapshot.
+        """Return a local-only stored-GPS/named-location coverage snapshot.
+
+        ``gps_pictures`` counts coordinate pairs already stored in the catalogue; it
+        does not inspect source files. When ``metadata_index_hash`` is supplied, the
+        summary also reports how many rows were indexed with the caller's current
+        metadata settings. This lets GPS planning detect a stale catalogue after the
+        privacy-sensitive ``store_gps`` setting changes.
 
         The optional ID horizon lets callers keep the count and subsequent batched
         coordinate scan on the same stable set of already-indexed picture IDs.
         """
 
         where = "is_missing=0 AND media_type='picture'"
-        params: Tuple[Any, ...] = ()
+        where_params = []
         if max_picture_id is not None:
             if type(max_picture_id) is not int or max_picture_id <= 0:
                 return {
@@ -1439,23 +1447,44 @@ class Catalog:
                     "gps_pictures": 0,
                     "gps_complete": 0,
                     "needs_lookup": 0,
+                    "metadata_current_pictures": 0,
                     "max_picture_id": 0,
                 }
             where += " AND id<=?"
-            params = (max_picture_id,)
+            where_params.append(max_picture_id)
         gps_expr = "gps_latitude IS NOT NULL AND gps_longitude IS NOT NULL"
         missing_expr = (
             "TRIM(COALESCE(country, ''))='' OR TRIM(COALESCE(state, ''))='' "
             "OR TRIM(COALESCE(city, ''))='' OR TRIM(COALESCE(sublocation, ''))=''"
         )
+        clean_index_hash = str(metadata_index_hash or "").strip()
+        if clean_index_hash:
+            current_expr = (
+                "COALESCE(SUM(CASE WHEN metadata_index_hash=? THEN 1 ELSE 0 END), 0)"
+            )
+            params: Tuple[Any, ...] = (clean_index_hash, *where_params)
+        else:
+            # Backwards-compatible callers that do not supply a fingerprint cannot
+            # assess staleness; treat the current catalogue set as the comparison set.
+            current_expr = "COUNT(*)"
+            params = tuple(where_params)
         query = (
             "SELECT COUNT(*) AS total_pictures, "
             "COALESCE(SUM(CASE WHEN %s THEN 1 ELSE 0 END), 0) AS gps_pictures, "
             "COALESCE(SUM(CASE WHEN %s AND NOT (%s) THEN 1 ELSE 0 END), 0) AS gps_complete, "
             "COALESCE(SUM(CASE WHEN %s AND (%s) THEN 1 ELSE 0 END), 0) AS needs_lookup, "
+            "%s AS metadata_current_pictures, "
             "COALESCE(MAX(id), 0) AS max_picture_id "
             "FROM pictures WHERE %s"
-            % (gps_expr, gps_expr, missing_expr, gps_expr, missing_expr, where)
+            % (
+                gps_expr,
+                gps_expr,
+                missing_expr,
+                gps_expr,
+                missing_expr,
+                current_expr,
+                where,
+            )
         )
         with self.engine.transaction() as connection:
             row = self.engine.fetchone(connection, query, params)
@@ -1465,6 +1494,7 @@ class Catalog:
                 "gps_pictures": 0,
                 "gps_complete": 0,
                 "needs_lookup": 0,
+                "metadata_current_pictures": 0,
                 "max_picture_id": 0,
             }
         return {
@@ -1472,6 +1502,7 @@ class Catalog:
             "gps_pictures": int(row.get("gps_pictures") or 0),
             "gps_complete": int(row.get("gps_complete") or 0),
             "needs_lookup": int(row.get("needs_lookup") or 0),
+            "metadata_current_pictures": int(row.get("metadata_current_pictures") or 0),
             "max_picture_id": int(row.get("max_picture_id") or 0),
         }
 

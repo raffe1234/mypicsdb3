@@ -47,7 +47,12 @@ from .preferences import (
     serialize_home_layout_v2,
     serialize_persisted_home_layout,
 )
-from .metadata_mapping import MetadataMappingRule, SOURCE_TYPES, TARGET_FIELDS
+from .metadata_mapping import (
+    MetadataMappingRule,
+    SOURCE_TYPES,
+    TARGET_FIELDS,
+    metadata_index_signature,
+)
 from .metadata_refresh import (
     MetadataRefreshBusy,
     MetadataRefreshNotFound,
@@ -1585,7 +1590,12 @@ class PluginUI:
             or "https://nominatim.openstreetmap.org"
         ).strip()
         try:
-            analysis = analyse_location_coverage(self.catalog, endpoint)
+            current_index_hash = metadata_index_signature(
+                self.kodi.settings, self.catalog.list_metadata_mapping_overrides()
+            )
+            analysis = analyse_location_coverage(
+                self.catalog, endpoint, metadata_index_hash=current_index_hash
+            )
         except Exception as exc:
             xbmcgui.Dialog().ok(
                 self.text(33078, "Analyze GPS coverage"),
@@ -1593,9 +1603,27 @@ class PluginUI:
             )
             return
 
+        store_gps = bool(getattr(self.kodi.settings, "store_gps", False))
         lines = [
             "%s: %d" % (self.text(33079, "Pictures in catalog"), analysis.total_pictures),
-            "%s: %d" % (self.text(33080, "Pictures with GPS"), analysis.gps_pictures),
+            "%s: %s"
+            % (
+                self.text(33095, "Store GPS coordinates"),
+                self.text(33096, "enabled") if store_gps else self.text(33097, "disabled"),
+            ),
+            "%s: %d / %d"
+            % (
+                self.text(33098, "Pictures indexed with current metadata settings"),
+                analysis.metadata_current_pictures,
+                analysis.total_pictures,
+            ),
+            "%s: %d"
+            % (
+                self.text(33099, "Pictures still needing metadata refresh"),
+                analysis.metadata_refresh_needed,
+            ),
+            "%s: %d"
+            % (self.text(33080, "Pictures with stored GPS coordinates"), analysis.gps_pictures),
             "%s: %d"
             % (
                 self.text(33081, "GPS pictures with complete named location"),
@@ -1632,9 +1660,36 @@ class PluginUI:
                     self._format_location_analysis_duration(analysis.estimated_public_seconds),
                 )
             )
+        lines.append("")
+        lines.append(
+            self.text(
+                33100,
+                "The GPS count above is based only on coordinates already stored in the catalog; this analysis does not scan original image files.",
+            )
+        )
+        if not store_gps:
+            lines.append(
+                self.text(
+                    33101,
+                    "GPS storage is disabled, so this estimate is incomplete. Enable Metadata > Store GPS coordinates and run Refresh all picture metadata before using the online lookup estimate.",
+                )
+            )
+        elif analysis.metadata_refresh_needed > 0:
+            lines.append(
+                self.text(
+                    33102,
+                    "Not all pictures were indexed with the current metadata settings, so this estimate is incomplete. Run Refresh all picture metadata before deciding how many online lookups are needed.",
+                )
+            )
+        else:
+            lines.append(
+                self.text(
+                    33103,
+                    "All catalog pictures were indexed with the current metadata settings, so the stored-GPS coverage is current.",
+                )
+            )
         lines.extend(
             [
-                "",
                 self.text(
                     33092,
                     "Analysis only: no network requests were made and no picture or catalog metadata was changed.",

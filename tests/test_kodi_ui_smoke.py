@@ -385,6 +385,7 @@ class FakeCatalog:
         self.meta = {}
         self.location_updates = []
         self.location_lock_available = True
+        self.metadata_current_pictures = 0
 
     def set_rating_policy(self, rating_policy):
         self.rating_policy = rating_policy
@@ -510,12 +511,13 @@ class FakeCatalog:
     def meta_keys_with_prefix(self, prefix):
         return sorted(key for key in self.meta if str(key).startswith(str(prefix)))
 
-    def location_coverage_summary(self, max_picture_id=None):
+    def location_coverage_summary(self, max_picture_id=None, metadata_index_hash=None):
         return {
             "total_pictures": 1,
             "gps_pictures": 1,
             "gps_complete": 1,
             "needs_lookup": 0,
+            "metadata_current_pictures": self.metadata_current_pictures,
             "max_picture_id": 1,
         }
 
@@ -936,10 +938,32 @@ def test_gps_coverage_analysis_is_local_and_available_before_online_lookup(monke
     heading, message = views.xbmcgui.Dialog.textviewer_calls[-1]
     assert heading == "Analyze GPS coverage"
     assert "Pictures in catalog: 1" in message
-    assert "Pictures with GPS: 1" in message
+    assert "Store GPS coordinates: disabled" in message
+    assert "Pictures indexed with current metadata settings: 0 / 1" in message
+    assert "Pictures still needing metadata refresh: 1" in message
+    assert "Pictures with stored GPS coordinates: 1" in message
     assert "GPS pictures needing one or more location fields: 0" in message
+    assert "this analysis does not scan original image files" in message
+    assert "GPS storage is disabled, so this estimate is incomplete" in message
     assert "Estimated online lookups with current ~10 m cache: 0" in message
     assert "no network requests were made" in message
+
+
+def test_gps_coverage_analysis_marks_current_catalog_when_gps_storage_is_enabled(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.settings.store_gps = True
+    runtime.catalog.metadata_current_pictures = 1
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.textviewer_calls = []
+
+    ui.action("action/analyse-gps-location-coverage", {})
+
+    _heading, message = views.xbmcgui.Dialog.textviewer_calls[-1]
+    assert "Store GPS coordinates: enabled" in message
+    assert "Pictures indexed with current metadata settings: 1 / 1" in message
+    assert "Pictures still needing metadata refresh: 0" in message
+    assert "stored-GPS coverage is current" in message
 
 
 def test_online_location_lookup_is_opt_in_and_makes_no_request_when_disabled(monkeypatch) -> None:

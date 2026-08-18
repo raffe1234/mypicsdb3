@@ -157,12 +157,21 @@ saved local enrichment, but they never contact the provider.
 ### Explicit bulk GPS location enrichment (0.8.32)
 
 **Browse metadata > Location > Analyze GPS coverage** is the safe planning step. It
-performs no network requests and no catalogue writes. The report shows how many indexed
-still pictures have GPS, how many already have all four named location fields, how many
-need enrichment, unique coordinate/bucket counts, existing local cache reuse, expected
-~10 m reuse during a run and the resulting estimated online requests. For the default
-public Nominatim endpoint it also estimates time using the same long-run throttle boundary
-as the worker.
+performs no network requests, does not open source images and makes no catalogue writes.
+The GPS count therefore means **coordinate pairs already stored in the catalogue**, not
+GPS tags discovered by a fresh source-file scan. Because **Store GPS coordinates** is a
+privacy-sensitive setting and is disabled by default, the report also compares every
+still picture's `metadata_index_hash` with the fingerprint for the current metadata
+settings. It explicitly shows how many rows are current and how many still need metadata
+refresh before the stored-GPS count and reverse-geocoding estimate can be treated as
+complete. Enabling GPS storage requires a normal scan or **Refresh all picture metadata**
+to re-read older rows; changing the setting alone does not retroactively populate GPS.
+
+Once the catalogue is current, the report shows how many GPS rows already have all four
+named location fields, how many need enrichment, unique coordinate/bucket counts,
+existing local cache reuse, expected ~10 m reuse during a run and the resulting estimated
+online requests. For the default public Nominatim endpoint it also estimates time using
+the same long-run throttle boundary as the worker.
 
 **Browse metadata > Location > Resolve missing locations from GPS** examines only
 available still-picture rows with a stored latitude/longitude pair and at least one

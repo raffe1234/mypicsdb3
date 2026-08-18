@@ -50,6 +50,8 @@ class LocationCoverageAnalysis:
     gps_pictures: int = 0
     gps_complete: int = 0
     needs_lookup: int = 0
+    metadata_current_pictures: int = 0
+    metadata_refresh_needed: int = 0
     unique_exact: int = 0
     bulk_cells_10m: int = 0
     grid_cells_25m: int = 0
@@ -104,21 +106,36 @@ def estimate_public_nominatim_seconds(lookups: int) -> float:
     )
 
 
-def analyse_location_coverage(catalog, endpoint: str) -> LocationCoverageAnalysis:
-    """Inspect GPS coverage and simulate cache reuse without network I/O or writes."""
+def analyse_location_coverage(
+    catalog,
+    endpoint: str,
+    metadata_index_hash: Optional[str] = None,
+) -> LocationCoverageAnalysis:
+    """Inspect stored GPS coverage and simulate cache reuse without network I/O.
+
+    The analysis deliberately does not open source images. ``metadata_index_hash``
+    lets the caller prove whether the catalogue rows were indexed with the current
+    metadata settings before treating the stored-GPS count as complete.
+    """
 
     normalized_endpoint = normalize_nominatim_endpoint(endpoint)
-    first = catalog.location_coverage_summary()
+    first = catalog.location_coverage_summary(metadata_index_hash=metadata_index_hash)
     max_picture_id = int(first.get("max_picture_id") or 0)
     if max_picture_id <= 0:
+        total = int(first.get("total_pictures") or 0)
+        current = int(first.get("metadata_current_pictures") or 0)
         return LocationCoverageAnalysis(
-            total_pictures=int(first.get("total_pictures") or 0),
+            total_pictures=total,
             gps_pictures=int(first.get("gps_pictures") or 0),
             gps_complete=int(first.get("gps_complete") or 0),
             needs_lookup=int(first.get("needs_lookup") or 0),
+            metadata_current_pictures=current,
+            metadata_refresh_needed=max(0, total - current),
         )
 
-    summary = catalog.location_coverage_summary(max_picture_id)
+    summary = catalog.location_coverage_summary(
+        max_picture_id, metadata_index_hash=metadata_index_hash
+    )
     enrichment_keys: Set[str] = set(catalog.meta_keys_with_prefix("location_enrichment:v1:"))
     exact_cache_keys: Set[str] = set(
         catalog.meta_keys_with_prefix(reverse_geocoding_cache_prefix(normalized_endpoint))
@@ -184,11 +201,15 @@ def analyse_location_coverage(catalog, endpoint: str) -> LocationCoverageAnalysi
         if is_public_nominatim_endpoint(normalized_endpoint)
         else 0.0
     )
+    total_pictures = int(summary.get("total_pictures") or 0)
+    metadata_current_pictures = int(summary.get("metadata_current_pictures") or 0)
     return LocationCoverageAnalysis(
-        total_pictures=int(summary.get("total_pictures") or 0),
+        total_pictures=total_pictures,
         gps_pictures=int(summary.get("gps_pictures") or 0),
         gps_complete=int(summary.get("gps_complete") or 0),
         needs_lookup=int(summary.get("needs_lookup") or 0),
+        metadata_current_pictures=metadata_current_pictures,
+        metadata_refresh_needed=max(0, total_pictures - metadata_current_pictures),
         unique_exact=len(unique_exact),
         bulk_cells_10m=len(bulk_cells),
         grid_cells_25m=len(grids_25),
