@@ -414,9 +414,10 @@ misconfigured source paths.
 
 A scan checkpoint is reused only when the selected sources, database identity,
 each source's effective scan policy and the metadata-index fingerprint are
-compatible. The fingerprint covers extraction settings plus the effective
-database-global metadata mapping; the effective source policy and mapping snapshot
-are frozen when the scan starts. A source-policy or global-default
+compatible. The fingerprint covers extraction settings, the effective
+database-global metadata mapping and the code-level metadata extractor revision; the
+effective source policy and mapping snapshot are frozen when the scan starts. A
+source-policy or global-default
 change that could alter discovered media must force a fresh traversal.
 
 ### Query safety

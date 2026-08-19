@@ -4,7 +4,7 @@ import contextlib
 import io
 from types import SimpleNamespace
 
-from mypicsdb3 import metadata
+from mypicsdb3 import metadata, metadata_mapping
 from mypicsdb3.metadata import extract_metadata
 from mypicsdb3.metadata_mapping import (
     MetadataMappingRule,
@@ -118,6 +118,17 @@ def test_mapping_signature_is_deterministic_and_changes_with_override() -> None:
 def test_metadata_index_signature_includes_extraction_settings() -> None:
     first = metadata_index_signature(settings(read_xmp=True), ())
     second = metadata_index_signature(settings(read_xmp=False), ())
+    assert first != second
+
+
+def test_metadata_index_signature_includes_extractor_revision(monkeypatch) -> None:
+    first = metadata_index_signature(settings(), ())
+    monkeypatch.setattr(
+        metadata_mapping,
+        "METADATA_EXTRACTOR_REVISION",
+        metadata_mapping.METADATA_EXTRACTOR_REVISION + 1,
+    )
+    second = metadata_index_signature(settings(), ())
     assert first != second
 
 

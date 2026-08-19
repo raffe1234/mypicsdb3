@@ -537,11 +537,13 @@ deliberately starts a fresh traversal. With a shared MySQL/MariaDB catalogue,
 each Kodi device still keeps its own local traversal checkpoint.
 
 Unchanged files normally skip metadata extraction. Schema 9 adds a per-picture
-metadata-index fingerprint so that a mapping or metadata-extraction setting change
-forces the relevant unchanged pictures to be read again on the next scan. Existing
-rows have no fingerprint immediately after the schema-9 migration, therefore the
-first post-upgrade scan deliberately reindexes picture metadata once. Original
-files are never modified.
+metadata-index fingerprint so that a mapping, metadata-extraction setting or the
+code-level metadata extractor revision can force unchanged pictures to be read again
+on the next scan. The extractor revision is bumped deliberately when parser/I/O
+changes can alter normalized EXIF/XMP/IPTC/GPS results without any user setting
+changing. Existing rows have no fingerprint immediately after the schema-9 migration,
+therefore the first post-upgrade scan deliberately reindexes picture metadata once.
+Original files are never modified.
 
 If Kodi terminates unexpectedly during a local SQLite scan, the lock row and the
 per-source scan-run row cannot be finalized by normal `finally` handlers. From

@@ -211,12 +211,14 @@ automatically launch a scan and never changes the original media file.
 
 `pictures.metadata_index_hash` fingerprints the effective mapping together with
 metadata extraction settings that affect indexed values (`read_xmp`, `read_iptc`,
-GPS storage and bounded/deep read limits). Existing rows receive `NULL` during
-migration. Consequently, the first later scan re-reads picture metadata once even
-when size and mtime are unchanged, stores the new fingerprint and rebuilds derived
-search data. Subsequent unchanged scans skip that work again. The same fingerprint
-is part of scan-checkpoint compatibility, so a checkpoint created under different
-metadata-index inputs cannot skip the required reindex.
+GPS storage and bounded/deep read limits) plus a code-level metadata extractor
+revision. The revision is bumped when parser or file-I/O changes can alter normalized
+metadata even though neither mappings nor user settings changed. Existing rows receive
+`NULL` during migration. Consequently, the first later scan re-reads picture metadata
+once even when size and mtime are unchanged, stores the new fingerprint and rebuilds
+derived search data. Subsequent unchanged scans skip that work again. The same
+fingerprint is part of scan-checkpoint compatibility, so a checkpoint created under
+different metadata-index inputs cannot skip the required reindex.
 
 The migration creates the new table and column only. It does not scan sources,
 rewrite canonical metadata during startup, mark rows missing or touch source

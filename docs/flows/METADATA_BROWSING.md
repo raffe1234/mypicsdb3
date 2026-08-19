@@ -162,10 +162,12 @@ The GPS count therefore means **coordinate pairs already stored in the catalogue
 GPS tags discovered by a fresh source-file scan. Because **Store GPS coordinates** is a
 privacy-sensitive setting and is disabled by default, the report also compares every
 still picture's `metadata_index_hash` with the fingerprint for the current metadata
-settings. It explicitly shows how many rows are current and how many still need metadata
-refresh before the stored-GPS count and reverse-geocoding estimate can be treated as
-complete. Enabling GPS storage requires a normal scan or **Refresh all picture metadata**
-to re-read older rows; changing the setting alone does not retroactively populate GPS.
+settings **and code-level extractor revision**. It explicitly shows how many rows are
+current and how many still need metadata refresh before the stored-GPS count and
+reverse-geocoding estimate can be treated as complete. Enabling GPS storage or installing
+an extractor revision that invalidates older normalized metadata requires a normal scan
+or **Refresh all picture metadata** to re-read those rows; neither change retroactively
+populates GPS until that re-read occurs.
 
 Once the catalogue is current, the report shows how many GPS rows already have all four
 named location fields, how many need enrichment, unique coordinate/bucket counts,

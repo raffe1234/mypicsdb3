@@ -7,6 +7,10 @@ from .utils import stable_json_hash
 
 
 MAPPING_VERSION = 1
+# Bump whenever code-level extraction semantics change in a way that can alter
+# normalized picture metadata without any corresponding settings/mapping change.
+# This deliberately invalidates metadata_index_hash for unchanged source files.
+METADATA_EXTRACTOR_REVISION = 1
 SOURCE_TYPES = ("exif", "xmp", "iptc")
 TARGET_FIELDS = (
     "taken_at",
@@ -195,6 +199,7 @@ def metadata_index_signature(settings, overrides: Iterable[MetadataMappingRule] 
     """
     return stable_json_hash(
         {
+            "extractor_revision": METADATA_EXTRACTOR_REVISION,
             "mapping": metadata_mapping_signature(overrides),
             "settings": {
                 "read_xmp": bool(settings.read_xmp),

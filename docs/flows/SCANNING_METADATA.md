@@ -170,8 +170,9 @@ A checkpoint is reused only if relevant inputs are unchanged, including:
 - enabled source selection;
 - database identity;
 - each source's effective recursion, picture/video extensions, video inclusion, exclusions and hidden-file policy;
-- the metadata-index fingerprint, which covers effective metadata mappings and
-  metadata extraction settings that affect indexed values.
+- the metadata-index fingerprint, which covers effective metadata mappings,
+  metadata extraction settings that affect indexed values and the code-level
+  metadata extractor revision.
 
 When changing scanner inputs, update checkpoint compatibility tests so that a
 stale checkpoint cannot skip files that have become newly eligible.
@@ -202,11 +203,13 @@ time rather than a full video metadata scraper.
 
 The scanner compares stored size, modification information and
 `metadata_index_hash` before deciding to reuse a picture row. The hash covers the
-effective mapping plus metadata extraction settings. An unchanged item with a
-matching hash is touched as seen without repeating expensive metadata work. If the
-mapping or extraction inputs change, the next scan re-reads metadata even when
-size/mtime are unchanged and then stores the new hash. Schema-9 upgrades leave old
-rows without this hash deliberately, causing one safe metadata reindex. If a picture
+effective mapping, metadata extraction settings and a code-level extractor revision.
+An unchanged item with a matching hash is touched as seen without repeating expensive
+metadata work. If the mapping, extraction settings or extractor revision changes, the
+next scan re-reads metadata even when size/mtime are unchanged and then stores the new
+hash. The extractor revision is intentionally bumped when parser/VFS changes can alter
+normalized metadata without changing configuration. Schema-9 upgrades leave old rows
+without this hash deliberately, causing one safe metadata reindex. If a picture
 has an explicit 0.8.28 online location-enrichment record, a changed-file/forced
 metadata read fills only source-location fields that remain empty from that saved
 local record; embedded EXIF/XMP/IPTC values remain authoritative. The scanner never
