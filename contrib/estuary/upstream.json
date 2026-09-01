@@ -49,6 +49,11 @@
       "patch_revision": 21,
       "releases": [
         {
+          "ref": "22.0b2-Piers",
+          "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/22.0b2-Piers.zip",
+          "skin_version": "22.0.0~beta2.21"
+        },
+        {
           "ref": "22.0b1-Piers",
           "archive_url": "https://github.com/xbmc/xbmc/archive/refs/tags/22.0b1-Piers.zip",
           "skin_version": "22.0.0~beta1.21"
