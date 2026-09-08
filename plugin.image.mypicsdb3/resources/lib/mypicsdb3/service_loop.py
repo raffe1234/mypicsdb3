@@ -11,6 +11,7 @@ from .db.migrations import MigrationLockError
 from .filesystem import KodiFilesystem
 from .music_slideshow import stop_music_player
 from .scan_checkpoint import CHECKPOINT_FILENAME
+from .scan_progress import ScanProgressDisplay
 from .scanner import LAST_COMPLETE_SCAN_META_KEY, ScanAlreadyRunning, Scanner
 
 
@@ -436,6 +437,7 @@ class ServiceLoop:
                         user_cancelled = False
                         playback_paused = False
                         scan_busy = False
+                        progress_display = ScanProgressDisplay(self.monotonic_provider)
 
                         def close_progress_dialog() -> None:
                             nonlocal progress_dialog
@@ -468,6 +470,7 @@ class ServiceLoop:
 
                         def begin_status(_stats) -> None:
                             nonlocal scan_started
+                            progress_display.start(_stats)
                             scan_started = True
                             publisher = getattr(self.kodi, "begin_scan_status", None)
                             if callable(publisher):
@@ -502,6 +505,7 @@ class ServiceLoop:
                                 close_progress_dialog()
                                 if not playback_paused:
                                     playback_paused = True
+                                    progress_display.pause()
                                     self.kodi.log.info(
                                         "Automatic scan paused during playback"
                                     )
@@ -514,6 +518,7 @@ class ServiceLoop:
 
                             if playback_paused:
                                 playback_paused = False
+                                progress_display.resume()
                                 self.kodi.log.info(
                                     "Automatic scan resumed after playback"
                                 )
@@ -552,15 +557,12 @@ class ServiceLoop:
                                 )
                             dialog = ensure_progress_dialog()
                             if dialog is not None:
-                                message = "%s\n%s\n%s: %d" % (
-                                    source.label,
-                                    path,
-                                    self.kodi.localize(30047, "Pictures found"),
-                                    stats.pictures_seen,
+                                percent, message = progress_display.render(
+                                    source, path, stats, self.kodi.localize,
                                 )
                                 try:
                                     dialog.update(
-                                        0,
+                                        percent,
                                         self.kodi.localize(30056, "MyPicsDB 3"),
                                         message,
                                     )
@@ -585,6 +587,18 @@ class ServiceLoop:
                                 started=begin_status,
                             )
                             stats = scanner.scan_sources()
+                            if not stats.cancelled and not getattr(stats, "errors", 0):
+                                dialog = ensure_progress_dialog()
+                                if dialog is not None:
+                                    try:
+                                        dialog.update(
+                                            100, self.kodi.localize(30056, "MyPicsDB 3"),
+                                            self.kodi.localize(33110, "Scan complete — %d files checked") % stats.pictures_seen,
+                                        )
+                                    except Exception as exc:
+                                        self.kodi.log.warning(
+                                            "Could not display scan completion: %s", exc
+                                        )
                             if (
                                 int(getattr(stats, "pictures_added", 0) or 0)
                                 + int(getattr(stats, "pictures_updated", 0) or 0)

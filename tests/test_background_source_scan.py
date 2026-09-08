@@ -207,8 +207,10 @@ def test_selected_source_scan_runs_in_background_and_pauses(monkeypatch):
             captured["progress"](
                 types.SimpleNamespace(label="Photographs"),
                 "smb://nas/photos/image.jpg",
-                types.SimpleNamespace(pictures_seen=1),
+                types.SimpleNamespace(pictures_seen=1, pictures_added=1, estimated_total=2),
             )
+            assert FakeBackgroundDialog.instances[-1].updates[-1][0] == 50
+            assert all(update[0] != 100 for update in FakeBackgroundDialog.instances[-1].updates)
             return types.SimpleNamespace(
                 cancelled=False,
                 pictures_seen=1,
@@ -235,6 +237,9 @@ def test_selected_source_scan_runs_in_background_and_pauses(monkeypatch):
     assert "Manual scan paused during playback" in runtime.kodi.log_messages
     assert "Manual scan resumed after playback" in runtime.kodi.log_messages
     assert dialog.closed is True
+    assert any("Approx. 50%" in message for message in messages)
+    assert any("New files indexed: 1" in message for message in messages)
+    assert dialog.updates[-1][0] == 100
     assert executed == []
     assert runtime.kodi.notifications[-1][0] == "Pictures found: 1, Errors: 0"
 

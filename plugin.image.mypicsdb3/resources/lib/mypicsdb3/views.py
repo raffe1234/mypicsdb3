@@ -93,6 +93,7 @@ from .source_scan_policy import (
     SourceScanPolicy,
     source_scan_policy_from_settings,
 )
+from .scan_progress import ScanProgressDisplay
 from .scanner import Scanner
 from .slideshow import (
     SlideshowError,
@@ -5140,6 +5141,7 @@ class PluginUI:
     def _background_scan(self, source_ids: Optional[List[int]] = None):
         heading = self.text(30056, "MyPicsDB 3")
         scanning_message = self.text(30026, "Scanning started")
+        progress_display = ScanProgressDisplay()
         monitor = self.kodi.abort_monitor()
         scan_token = uuid.uuid4().hex
         scan_started = False
@@ -5199,12 +5201,12 @@ class PluginUI:
                     )
             return dialog
 
-        def update_dialog(message: str) -> None:
+        def update_dialog(message: str, percent: int = 0) -> None:
             current = ensure_progress_dialog(message)
             if current is None:
                 return
             try:
-                current.update(0, heading, message)
+                current.update(percent, heading, message)
             except Exception as exc:
                 if not abort_requested():
                     self.kodi.log.warning(
@@ -5218,6 +5220,7 @@ class PluginUI:
 
         def begin_status(_stats) -> None:
             nonlocal scan_started
+            progress_display.start(_stats)
             scan_started = True
             publisher = getattr(self.kodi, "begin_scan_status", None)
             if callable(publisher):
@@ -5239,6 +5242,7 @@ class PluginUI:
                 close_progress_dialog()
                 if not playback_paused:
                     playback_paused = True
+                    progress_display.pause()
                     self.kodi.log.info("Manual scan paused during playback")
                 if monitor and monitor.waitForAbort(1):
                     return True
@@ -5249,6 +5253,7 @@ class PluginUI:
 
             if playback_paused:
                 playback_paused = False
+                progress_display.resume()
                 self.kodi.log.info("Manual scan resumed after playback")
 
             if self._playback_active():
@@ -5263,12 +5268,7 @@ class PluginUI:
             if now - last_progress_at < 0.5 and int(stats.pictures_seen or 0) % 100:
                 return
             last_progress_at = now
-            message = "%s\n%s\n%s: %d" % (
-                source.label,
-                path,
-                self.text(30047, "Pictures found"),
-                stats.pictures_seen,
-            )
+            percent, message = progress_display.render(source, path, stats, self.text)
             publisher = getattr(self.kodi, "update_scan_status", None)
             if callable(publisher):
                 publisher(
@@ -5282,7 +5282,7 @@ class PluginUI:
                     getattr(stats, "pictures_updated", 0),
                     getattr(stats, "errors", 0),
                 )
-            update_dialog(message)
+            update_dialog(message, percent)
 
         try:
             scanner = Scanner(
@@ -5295,6 +5295,8 @@ class PluginUI:
                 started=begin_status,
             )
             stats = scanner.scan_sources(source_ids)
+            if not stats.cancelled and not stats.errors:
+                update_dialog(self.text(33110, "Scan complete — %d files checked") % stats.pictures_seen, 100)
             if (
                 int(getattr(stats, "pictures_added", 0) or 0)
                 + int(getattr(stats, "pictures_updated", 0) or 0)

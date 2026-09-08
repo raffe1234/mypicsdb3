@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime, timedelta, timezone
+from itertools import count
 from types import SimpleNamespace
 
 import mypicsdb3.service_loop as service_loop
@@ -270,6 +271,7 @@ def test_automatic_scan_publishes_progress_and_closes_dialog(monkeypatch) -> Non
                 "smb://nas/photos/image.nef",
                 SimpleNamespace(
                     pictures_seen=100,
+                    estimated_total=200,
                     pictures_unchanged=60,
                     metadata_reads=40,
                     pictures_added=25,
@@ -295,7 +297,9 @@ def test_automatic_scan_publishes_progress_and_closes_dialog(monkeypatch) -> Non
     )
     assert kodi.scan_events[-1][0] == "finish"
     assert kodi.dialog.closed is True
-    assert "Pictures found: 100" in kodi.dialog.updates[-1][2]
+    assert kodi.dialog.updates[-1][0] == 50
+    assert "checked 100 of about 200 files" in kodi.dialog.updates[-1][2]
+    assert "New files indexed: 25" in kodi.dialog.updates[-1][2]
     assert ("info", "Automatic scan finished: 100 pictures, 0 errors") in kodi.log.messages
 
 
@@ -536,7 +540,7 @@ def test_automatic_scan_restores_progress_after_playback_stops(monkeypatch) -> N
     kodi = FakeKodi(monitor)
     initial_catalog = FakeCatalog()
     scan_catalog = FakeCatalog()
-    clock = iter((100.0, 101.0, 102.0, 103.0, 104.0, 105.0))
+    clock = count(100.0)
     loop = ServiceLoop(
         kodi,
         date_provider=lambda: date(2026, 7, 29),
@@ -591,9 +595,9 @@ def test_automatic_scan_restores_progress_after_playback_stops(monkeypatch) -> N
     assert len(kodi.dialogs) == 2
     assert kodi.dialogs[0].closed is True
     assert kodi.dialogs[1].closed is True
-    assert "Pictures found: 100" in kodi.dialogs[0].updates[-1][2]
+    assert "100 files checked" in kodi.dialogs[0].updates[-1][2]
     assert all("Pictures found: 200" not in update[2] for update in kodi.dialogs[0].updates)
-    assert "Pictures found: 300" in kodi.dialogs[1].updates[-1][2]
+    assert "300 files checked" in kodi.dialogs[1].updates[-1][2]
     assert sum(1 for event in kodi.scan_events if event[0] == "dialog") == 2
 
 
@@ -615,7 +619,7 @@ def test_automatic_scan_pauses_silently_when_playback_starts(monkeypatch) -> Non
     kodi.settings.pause_during_playback = True
     initial_catalog = FakeCatalog()
     scan_catalog = FakeCatalog()
-    clock = iter((100.0, 101.0, 102.0, 103.0, 104.0, 105.0))
+    clock = count(100.0)
     loop = ServiceLoop(
         kodi,
         date_provider=lambda: date(2026, 7, 29),

@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.32. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.33. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -30,6 +30,30 @@ A suitable reading order is:
 
 For the component boundaries and long-lived safety rules, see
 [ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Scan progress estimates (0.8.33)
+
+Manual and automatic scans show an approximate percentage based on the last
+error-free complete scan of each selected source with the same path and effective
+scan policy. The first complete scan after this update establishes that reference;
+old scan-run totals without a matching policy are not guessed to be compatible.
+If any selected source lacks a reference, the dialog shows checked files and active
+time until a complete comparable scan is available.
+
+The checked counter includes unchanged, updated and newly indexed pictures/videos,
+as well as attempted files that report an error. New files successfully indexed
+have a separate counter. Counts cover the full selected set of sources and include
+completed checkpoint work when resuming. This is an estimate, not a fixed total:
+added/deleted files, directory work and metadata reads can change the time required.
+When the previous count is reached, the percentage and ETA are replaced by
+**Previous count reached — still scanning**. A successful scan displays 100% only
+after traversal and final catalogue work have completed.
+
+The time-left estimate uses the current session's average processing rate after
+at least ten checked files and ten active seconds. Playback pauses and time before
+a resumed session are excluded. Scans with errors or incomplete traversal do not
+replace that source's previous reference. Estimates never stop a scan, skip files
+or control missing-record detection. No preliminary NAS file-counting pass is added.
 
 ## Features
 

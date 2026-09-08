@@ -16,6 +16,7 @@ from .metadata import extract_metadata
 from .metadata_mapping import metadata_index_signature
 from .models import MetadataResult, ScanStats, Source
 from .scan_checkpoint import ScanCheckpointStore
+from .scan_progress import ScanCountHistory
 from .source_scan_policy import SourceScanPolicy, source_scan_policy_from_settings
 from .utils import basename_uri, extension_of, join_uri, local_datetime_from_timestamp, normalize_uri, utc_now
 
@@ -60,6 +61,9 @@ class Scanner:
         self._uses_default_metadata_reader = metadata_reader is extract_metadata
         self.cancelled = cancelled or (lambda: False)
         self.progress = progress
+        self._progress_overall = ScanStats()
+        self._estimated_total = None
+        self._count_history = ScanCountHistory(catalog, logger)
         self.started = started
         self.checkpoints = checkpoint_store or ScanCheckpointStore(settings, logger)
         self.owner = "%s:%s:%s" % (socket.gethostname(), os.getpid(), uuid.uuid4().hex[:12])
@@ -70,6 +74,22 @@ class Scanner:
         self._metadata_mapping_overrides = ()
         self._metadata_index_hash = metadata_index_signature(self.settings, ())
         self.filesystem = CancellationAwareFilesystem(filesystem, self._check_cancelled)
+
+    def _progress_stats(self, current=None):
+        snapshot = ScanStats(estimated_total=self._estimated_total)
+        # UI snapshots only need counters. Do not copy a potentially large
+        # accumulated error-message list on every file in a failing NAS scan.
+        for name in (
+            "pictures_seen", "pictures_added", "pictures_updated",
+            "pictures_unchanged", "metadata_reads", "errors",
+        ):
+            setattr(snapshot, name, getattr(self._progress_overall, name)
+                    + (getattr(current, name) if current is not None else 0))
+        return snapshot
+
+    def _report_progress(self, source, path, stats):
+        if self.progress:
+            self.progress(source, path, self._progress_stats(stats))
 
     def _effective_source_policy(self, source: Source) -> SourceScanPolicy:
         explicit = self.catalog.get_source_scan_policy(source.id)
@@ -179,8 +199,14 @@ class Scanner:
                 self._metadata_index_hash,
             )
             completed_sources = self.checkpoints.completed_source_ids()
+            counts = [self._count_history.load(source, self._source_policies[int(source.id)])
+                      for source in sources]
+            self._estimated_total = (
+                sum(counts) if all(count is not None for count in counts) else None
+            )
+            self._progress_overall = overall
             if self.started:
-                self.started(overall)
+                self.started(self._progress_stats(self.checkpoints.current_stats()))
             self._check_cancelled()
             for source in sources:
                 if int(source.id) in completed_sources:
@@ -207,6 +233,7 @@ class Scanner:
                 self._scan_lock_active = False
         overall.finished_at = utc_now()
         overall.duration_seconds = time.monotonic() - started_monotonic
+        overall.estimated_total = self._estimated_total
         if scan_completed and not overall.cancelled:
             setter = getattr(self.catalog, "set_meta_value", None)
             if callable(setter):
@@ -287,6 +314,7 @@ class Scanner:
         connection = self.catalog.open_scan_connection()
         self._scan_connection = connection
         changed_since_commit = 0
+        status = None
         try:
             if restored is None:
                 self.checkpoints.begin_source(
@@ -311,6 +339,7 @@ class Scanner:
                 )
 
             while stack:
+                self._report_progress(source, stack[-1][0], stats)
                 self._check_cancelled()
                 folder_uri, parent_uri, folder_name = stack.pop()
                 folder_uri = normalize_uri(folder_uri, directory=True)
@@ -335,6 +364,8 @@ class Scanner:
                             list_duration,
                             folder_uri,
                         )
+                except (ScanCancelled, ScanLockLost):
+                    raise
                 except Exception as exc:
                     stats.directory_list_seconds += time.monotonic() - list_started
                     traversal_complete = False
@@ -364,8 +395,6 @@ class Scanner:
                     else:
                         continue
                     stats.pictures_seen += 1
-                    if self.progress:
-                        self.progress(source, picture_uri, stats)
                     existing = self.catalog.find_picture(connection, picture_uri)
                     try:
                         stat_started = time.monotonic()
@@ -504,6 +533,10 @@ class Scanner:
                         if self.logger:
                             self.logger.warning("Media scan error for %s: %s", picture_uri, exc)
 
+                    # Report after processing, including unchanged files and errors,
+                    # so the new-file counter and current-session rate are current.
+                    self._report_progress(source, picture_uri, stats)
+
                 # A checkpoint is only advanced after every catalogue change
                 # for this folder has been committed. If Kodi stops during the
                 # next folder, the saved stack still contains that folder and
@@ -562,4 +595,6 @@ class Scanner:
             connection.close()
             stats.finished_at = utc_now()
             stats.duration_seconds = time.monotonic() - started_monotonic
+        if status == "completed":
+            self._count_history.save(source, policy, stats)
         return stats

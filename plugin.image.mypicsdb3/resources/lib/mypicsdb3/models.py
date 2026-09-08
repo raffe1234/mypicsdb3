@@ -61,6 +61,7 @@ class ScanStats:
     started_at: Optional[str] = None
     finished_at: Optional[str] = None
     duration_seconds: float = 0.0
+    estimated_total: Optional[int] = None  # Presentation only; not checkpointed.
     error_messages: List[str] = field(default_factory=list)
 
     def merge(self, other: "ScanStats") -> None:

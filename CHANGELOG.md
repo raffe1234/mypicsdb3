@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.8.33 - 2026-09-08
+
+- Show approximate manual/automatic scan progress from the last error-free complete scan of each selected source with a matching path and effective policy. Store one small reference record per source in the existing meta table; no schema migration or extra filesystem counting pass is needed.
+- Count checked files across all selected sources, including unchanged files, and display newly indexed files separately. Estimate remaining time from the current session rate while excluding playback pauses and work before resume. First scans and missing/incompatible references show counts and active time instead.
+- Replace percentage/ETA with an explicit still-scanning message once the previous count is reached; show 100% only after successful completion. Failed, unavailable, partial and cancelled source traversals preserve the previous good reference. History read/write failures do not stop indexing.
+- Preserve checkpoint cancellation during directory listing: propagate cancellation and lost-lock signals rather than treating them as ordinary listing errors. Progress callbacks report completed file processing and aggregate checkpoint counts without changing scan selection or missing-record rules.
+- Keep schema 9, metadata extractor revision, Query Model 1, repository/screensaver versions and Estuary patch revisions unchanged. Open map, additional video metadata, XMP sidecars, ZIP export and legacy import remain demand-driven.
+
 ## 0.8.32 - 2026-08-18
 
 - Maintenance: add Python 3.14 to the CI test matrix while retaining existing Python versions and Python 3.11 build/checker jobs.

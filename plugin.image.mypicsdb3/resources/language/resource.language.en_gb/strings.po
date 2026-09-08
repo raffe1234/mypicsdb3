@@ -2424,3 +2424,31 @@ msgstr "Not all pictures were indexed with the current metadata settings, so thi
 msgctxt "#33103"
 msgid "All catalog pictures were indexed with the current metadata settings, so the stored-GPS coverage is current."
 msgstr "All catalog pictures were indexed with the current metadata settings, so the stored-GPS coverage is current."
+
+msgctxt "#33104"
+msgid "Approx. %d%% — checked %d of about %d files"
+msgstr ""
+
+msgctxt "#33105"
+msgid "Previous count reached — still scanning (%d files checked)"
+msgstr ""
+
+msgctxt "#33106"
+msgid "Building scan estimate — %d files checked"
+msgstr ""
+
+msgctxt "#33107"
+msgid "Active time: %d min; time left unknown"
+msgstr ""
+
+msgctxt "#33108"
+msgid "Approx. %d min left"
+msgstr ""
+
+msgctxt "#33109"
+msgid "New files indexed: %d"
+msgstr ""
+
+msgctxt "#33110"
+msgid "Scan complete — %d files checked"
+msgstr ""

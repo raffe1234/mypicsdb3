@@ -191,10 +191,10 @@ verifiable maintenance changes:
 1. Keep documentation consistent with implemented behavior and include Python 3.14
    in CI alongside the existing Python versions. Stub-based tests complement real
    Kodi checks; they do not establish full Kodi 22 Beta 2 runtime compatibility.
-2. Improve scan-status presentation in a separate small change. When discovery has
-   no known total, show useful file counts and the current folder without implying
-   a measured completion percentage. Verify the presentation in the available Kodi
-   installation before release.
+2. 0.8.33 implements scan percentage/ETA as an explicitly approximate, separate
+   presentation layer based on compatible complete-scan counts, plus new-file counts
+   and current path. Real-Kodi presentation and pause/resume acceptance remain to be
+   checked before tagging; first scans show counts until a reference is established.
 3. Track outstanding metadata/GPS acceptance and backup/restore validation using
    current results. Historical handoff notes describe the state at their date;
    they are not evidence that a job is still running or a defect remains open.

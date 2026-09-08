@@ -60,6 +60,7 @@ Scanner.scan_sources(optional source ids)
 | `models.py` | Source, file stat, metadata and scan-stat structures |
 | `source_scan_policy.py` | Strict per-source policy normalization, inheritance values and checkpoint payload |
 | `scan_checkpoint.py` | Compatible resumable folder state in the local profile |
+| `scan_progress.py` | Optional per-source count history and presentation-only percentage/ETA |
 | `db/catalog.py` | Source, folder, media, tag, search-document and scan-run writes |
 | `db/locks.py` | Named lock constants and lock support |
 | `views.py` | Manual scan action and progress presentation |
@@ -374,3 +375,33 @@ single-picture UI action in `geocoding.py`/`views.py`, disabled by default. Its 
 `location-enrichment` lock conflicts with catalogue scans, so if a scan is active the
 lookup is rejected before any network request. Installing 0.8.28 does not change the
 metadata-index signature or force an automatic metadata reread.
+
+## Estimated progress (0.8.33)
+
+`ScanCountHistory` keeps one `scan-count-v1:<source id>` record in catalogue `meta`.
+Its signature covers the normalized source URI and complete effective source policy
+(recursion, picture/video extensions, video inclusion and exclusions). Only an
+error-free `completed` source traversal writes a new count. Missing, corrupt or
+incompatible records yield no estimate; history I/O failure only produces a warning.
+No file enumeration or catalogue-wide count query is added for estimation.
+
+Before scanning, `Scanner` freezes a total from the reference counts of all selected
+sources. If one reference is missing, the total remains unknown for this run.
+Progress snapshots aggregate already completed sources and the current source,
+including restored checkpoint counts. Callbacks run before popping a directory
+from the pending stack and after a file has been processed, so counters include
+unchanged files and completed insert/update/error handling. Cancellation during
+listing propagates instead of advancing a partial directory checkpoint.
+
+`ScanProgressDisplay` is shared by manual and automatic UI paths. It uses the
+current session's average checked-file rate after ten active seconds and ten files;
+playback pause time and pre-resume work are excluded. New files indexed are counted
+separately. Percentage and ETA disappear at or beyond the old count, rather than
+exceeding 100% or clamping indefinitely to 99%. Completion is indicated only after
+the scanner returns successfully. Unknown estimates use a reset background bar and
+explicit text with counts and active time because Kodi requires a numeric bar value.
+
+These values are presentation only: traversal, source selection, checkpoint
+compatibility and missing-record marking never consult them. The first complete
+scan after upgrading establishes reference counts. Existing historical scan rows
+lack the required policy signature and are not used to bootstrap an unsafe estimate.
