@@ -106,17 +106,22 @@ python3 -m pytest tests/test_mysql_integration.py
 
 ## Release checklist
 
+Set `VERSION` to the picture add-on version being released before running the
+commands below. Repository add-on versions are independent; pass
+`--repository-version` only when `repository.mypicsdb3` itself changed.
+
 ```bash
-python3 tools/set_version.py 0.2.0
-# Add --repository-version 0.2.0 only when repository.mypicsdb3 changed.
+VERSION=X.Y.Z  # replace with the target release version
+python3 tools/set_version.py "$VERSION"
+# Add --repository-version A.B.C only when repository.mypicsdb3 changed.
 python3 -m pytest
 python3 tools/verify.py
 python3 tools/build.py
 git add -A
-git commit -m "Release MyPicsDB 3 0.2.0"
+git commit -m "Release MyPicsDB 3 $VERSION"
 git push
-git tag -a v0.2.0 -m "MyPicsDB 3 0.2.0"
-git push origin v0.2.0
+git tag -a "v$VERSION" -m "MyPicsDB 3 $VERSION"
+git push origin "v$VERSION"
 ```
 
 The GitHub workflows repeat the tests, generate the pinned skin, run Kodi's
@@ -137,17 +142,24 @@ cannot be loaded and its internal `Repository` object is left without an
 upstream failure by treating the unavailable repository as empty. All local
 validation errors and other checker failures still fail the workflow.
 
-### Reverse-geocoding development guardrails (0.8.28)
+### Reverse-geocoding development guardrails (0.8.28, 0.8.32)
 
-Keep network geocoding in `geocoding.py` and inject/mock the opener in tests; unit and
-release tests must never contact a public geocoder. Public Nominatim use must remain
-user-triggered one picture at a time, cached, attributed and switchable by endpoint.
-The persistent per-endpoint throttle must keep cache misses below one request per
-second; unit tests inject clock/sleep functions rather than waiting in real time. Do
-not add a folder/bulk worker or scanner-triggered network hook without selecting a
-service designed for that workload. The `location-enrichment` lock must continue to
-conflict with scan, migration and metadata-refresh writers. Scanner code may only
-reapply already-saved local enrichment and must never call the provider.
+Keep network geocoding in `geocoding.py`/`location_enrichment.py` and inject/mock the
+network opener in tests; unit and release tests must never contact a public geocoder.
+Public Nominatim use must remain explicitly user-triggered, serial, cached, attributed
+and switchable by endpoint. Single-picture lookup stays an explicit action. The 0.8.32
+bulk action may process catalogue pictures with already-stored GPS coordinates, but it
+must remain explicit, stoppable/resumable, source-file read-only and separate from
+scanning and metadata refresh. Its coarse bulk cache is only a lookup-reuse mechanism,
+not permission for concurrent requests.
+
+The persistent per-endpoint throttle must keep ordinary cache misses below one request
+per second; the public-service long-run slowdown and unit-test clock/sleep injection
+must remain intact. Do not add scanner-triggered, periodic, startup-triggered or other
+automatic public-geocoder network work. Very large workloads should use a separately
+configured service designed for that workload. The `location-enrichment` lock must
+continue to conflict with scan, migration and metadata-refresh writers. Scanner code
+may only reapply already-saved local enrichment and must never call the provider.
 
 
 ### Whole-library metadata refresh guardrails (0.8.29)

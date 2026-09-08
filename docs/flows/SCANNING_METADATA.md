@@ -368,13 +368,21 @@ blindly. A bounded marker walk reads APP1/SOF payloads and seeks over unrelated 
 through Start Of Scan. Scanner ordering, checkpointing, cancellation and database
 writes remain serial and unchanged.
 
-### Reverse geocoding remains outside scanning (0.8.28)
+### Reverse geocoding remains outside scanning (0.8.28, 0.8.32)
 
-The scanner never calls a network geocoder. Online location enrichment is an explicit
-single-picture UI action in `geocoding.py`/`views.py`, disabled by default. Its short
-`location-enrichment` lock conflicts with catalogue scans, so if a scan is active the
-lookup is rejected before any network request. Installing 0.8.28 does not change the
-metadata-index signature or force an automatic metadata reread.
+The scanner never calls a network geocoder. Online location enrichment is disabled by
+default and lives outside the scanner: 0.8.28 provides the explicit single-picture
+action in `geocoding.py`/`views.py`, while 0.8.32 adds the explicitly started serial,
+stoppable/resumable bulk worker in `location_enrichment.py` for catalogue pictures
+that already have stored GPS coordinates. The bulk worker does not open or modify
+source files; only coordinates may be sent to the configured provider.
+
+Both paths use the `location-enrichment` writer lock, which conflicts with catalogue
+scans, migrations and metadata refresh. If one of those writers is active, online
+location enrichment is rejected before any network request. Scanner processing may
+reuse already-saved local enrichment but never calls the provider. Installing 0.8.28
+did not change the metadata-index signature or force an automatic metadata reread;
+the later 0.8.32 extractor-revision mechanism is independent of network geocoding.
 
 ## Estimated progress (0.8.33)
 

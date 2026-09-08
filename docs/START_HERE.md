@@ -320,3 +320,38 @@ owns scan/migration/refresh conflicts. Settings are in `config.py`, `kodi.py` an
 - Same writer lock as single/folder refresh: `db/locks.py`; no new lock type.
 - No network geocoding during the full refresh; `geocoding.py` is used only for local cache reuse.
 - Regression coverage: `tests/test_metadata_refresh.py`, `tests/test_kodi_ui_smoke.py`, catalogue/backend tests.
+
+## 0.8.30 Kodi progress-dialog compatibility touchpoints
+
+Foreground metadata-refresh progress is created and updated in `views.py`. Keep Kodi
+19+ `DialogProgress.update(percent, message)` compatibility when changing these paths.
+Regression coverage is primarily in `tests/test_kodi_ui_smoke.py`.
+
+## 0.8.31 background whole-library refresh touchpoints
+
+The serial, resumable refresh engine and checkpoint remain in `metadata_refresh.py`;
+`views.py` owns the non-modal `DialogProgressBG`, stop action and playback-pause UI.
+Cross-interpreter state is published through `kodi.py`. Start with
+`tests/test_metadata_refresh.py`, `tests/test_kodi_ui_smoke.py` and the service/state
+tests when changing pause, stop or resume behaviour.
+
+## 0.8.32 bulk GPS location-enrichment touchpoints
+
+Start in `location_enrichment.py` for coverage analysis, stable-ID horizon, checkpoint
+and the serial bulk worker. Provider requests and exact/coarse caches remain in
+`geocoding.py`; `views.py` owns the explicit Analyze/Resolve/Stop actions and privacy
+confirmation. `db/catalog.py` supplies bounded GPS-picture batches and `db/locks.py`
+keeps the existing `location-enrichment` writer conflict. Regression coverage lives
+in `tests/test_location_enrichment.py`, `tests/test_geocoding.py`,
+`tests/test_kodi_ui_smoke.py` and catalogue/lock tests. This workflow is never part of
+scanner traversal.
+
+## 0.8.33 estimated scan-progress touchpoints
+
+`scan_progress.py` owns per-source completed-scan count history and display
+calculation. `scanner.py` freezes the estimate and publishes progress snapshots while
+processing; `service_loop.py` and `views.py` render automatic and manual progress, and
+`kodi.py` carries cross-interpreter state. Start with `tests/test_scan_progress.py`,
+`tests/test_service_scan_progress.py`, `tests/test_kodi_scan_state.py` and scanner/UI
+tests when changing counting, ETA, cancellation or completion semantics. No extra
+filesystem counting pass should be introduced solely to improve the estimate.
