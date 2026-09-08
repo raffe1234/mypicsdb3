@@ -16,8 +16,11 @@ Recommended tools:
 - Kodi 21 Omega or Kodi 22 Piers for manual integration checks.
 
 CI also runs unit tests on the Python versions listed in
-`.github/workflows/ci.yml`. Do not assume that code tested only on one local
-Python version is sufficient.
+`.github/workflows/ci.yml`: Python 3.9, 3.11, 3.12 and 3.14. The 3.14 job extends
+compatibility coverage for newer Kodi runtimes; builds and the Kodi add-on checker
+remain on Python 3.11. These tests use Kodi stubs and do not replace real-device
+playback, VFS or UI checks. Do not assume that code tested only on one local Python
+version is sufficient.
 
 ## Clone and create a branch
 

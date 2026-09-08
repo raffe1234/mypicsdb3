@@ -126,9 +126,12 @@ Version 0.8.28 closes the named-location part of that gap with an explicit,
 disabled-by-default **Resolve location online** action. It resolves one stored GPS pair
 at a time through a configurable Nominatim-compatible service, caches the result,
 retains attribution and fills only missing canonical location fields. No image/path
-metadata is sent and no scan/background/bulk geocoding exists.
+metadata is sent. Version 0.8.32 adds local **Analyze GPS coverage** and explicitly
+started **Resolve missing locations from GPS** bulk enrichment. The background job
+is serial, stoppable and resumable, reuses cached results and fills only missing
+location fields. Scans and metadata refreshes never implicitly start online geocoding.
 
-An explicit **Open map** action remains a later gap. It must stay opt-in at the point
+An explicit **Open map** action is deferred until a user requests it. It must stay opt-in at the point
 of use, provider-neutral and must not silently send a user's photo coordinates to a
 network provider or embed private API keys.
 
@@ -136,8 +139,8 @@ Version 0.8.23 adds explicit metadata refresh/diagnostics around this foundation
 A selected picture can be freshly inspected to determine whether MyPicsDB's current
 EXIF/XMP/IPTC extractor sees camera/GPS/location data that is absent from the stored
 index, then refreshed without a catalogue rebuild. Folder refresh is exact-folder and
-serial. This does not add reverse geocoding: coordinates still do not become named
-locations unless such text metadata exists in the source.
+serial. Metadata refresh itself makes no online reverse-geocoding requests; it can
+reuse existing cached location results as well as embedded source metadata.
 
 ### 8. Legacy database / Picasa import
 
@@ -162,7 +165,7 @@ uses modern provider routes and Estuary Home integration. If other skins request
 a stable integration contract, expose a documented provider API v1 rather than
 reviving CommonCache-era behavior.
 
-## Recommended roadmap after 0.8.32
+## Completed modernization milestones
 
 1. 0.8.15 — completed: stale scan/crash recovery and short automatic busy retry.
 2. 0.8.16 — completed: collection snapshots from validated query-backed results.
@@ -174,11 +177,41 @@ reviving CommonCache-era behavior.
 8. 0.8.25 — completed: harden EXIF recovery when the normal metadata prefix path fails and preserve automatic-scan cadence across Kodi/add-on service restarts while still resuming an interrupted checkpoint promptly.
 9. 0.8.26 — completed: correct Kodi VFS metadata reads to use the binary `readBytes()` API so normal JPEG/EXIF bytes are not UTF-8 decoded before ExifRead/fallback processing.
 10. 0.8.27 — completed: broaden offline XMP location/GPS compatibility, expose matched XMP location properties in local diagnostics, reduce JPEG metadata-prefix I/O and make scan-blocked refresh explicit.
-11. 0.8.28 — completed: explicit privacy-gated single-picture Nominatim-compatible reverse geocoding with local caching, attribution, provider switching and no bulk/background path.
+11. 0.8.28 — completed: explicit privacy-gated single-picture Nominatim-compatible reverse geocoding with local caching, attribution, provider switching; bulk enrichment was added separately in 0.8.32.
 12. 0.8.29 — completed: explicit serial/cancellable/resumable whole-library metadata reindex over existing still-picture rows, with bounded ID batches and offline reuse of existing location cache entries only.
-13. Later — light video metadata, optional explicit Open map action, optional generic provider API, rebuild catalogue while preserving sources; optional archive creation may reuse the 0.8.17 export engine if there is a real user need.
-14. Later/high-risk — legacy import, duplicate reporting, sidecar-only refresh, mixed picture/video/music state machine.
+13. 0.8.30 — completed: correct the foreground metadata-refresh progress API for modern Kodi.
+14. 0.8.31 — completed: background whole-library metadata refresh with progress, stop requests and playback pause/resume.
+15. 0.8.32 — implemented: local GPS coverage/workload analysis, explicit resumable bulk location enrichment, metadata extractor revision in the index fingerprint and dynamic Estuary release-pin checks. Implementation status does not imply that every real-device acceptance check is complete.
 
-This order is a recommendation, not a release contract. User priorities can
-change it, but new work should preserve the scanner, Query Model, migration,
-source-file and playback safety boundaries already established in MyPicsDB 3.
+## Maintenance priorities and deferred features
+
+The current priority is to preserve the stable installation and make small,
+verifiable maintenance changes:
+
+1. Keep documentation consistent with implemented behavior and include Python 3.14
+   in CI alongside the existing Python versions. Stub-based tests complement real
+   Kodi checks; they do not establish full Kodi 22 Beta 2 runtime compatibility.
+2. Improve scan-status presentation in a separate small change. When discovery has
+   no known total, show useful file counts and the current folder without implying
+   a measured completion percentage. Verify the presentation in the available Kodi
+   installation before release.
+3. Track outstanding metadata/GPS acceptance and backup/restore validation using
+   current results. Historical handoff notes describe the state at their date;
+   they are not evidence that a job is still running or a defect remains open.
+
+**Open map, additional video metadata, XMP sidecars, ZIP/archive export and legacy
+MyPicsDB/MyPicsDB2/Picasa database import are deferred until a user needs them.**
+They have no assigned release target. Existing embedded XMP support, lightweight
+video catalogue entries and COPY-only export remain available. An import or sidecar
+proposal should start with real sample data and clear compatibility rules.
+
+Duplicate reporting is an optional future candidate when requested: begin with a
+report of possible duplicates from indexed data, with no deletion or movement of
+source files. Content hashing would need separate consideration of NAS I/O cost.
+Catalogue rebuilding while preserving configuration, a generic third-party skin
+API and a full mixed picture/video/music state machine also remain deferred. Larger
+scanner or playback rewrites need a demonstrated problem and targeted validation.
+
+These priorities are not a release contract. New work should preserve the scanner,
+Query Model, migration, source-file and playback safety boundaries already
+established in MyPicsDB 3.

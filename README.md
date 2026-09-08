@@ -646,15 +646,22 @@ enabled, Kodi asks for confirmation before sending only that picture's stored
 latitude/longitude to the configured Nominatim-compatible server. The image, filename
 and source path are not sent. The provider result is cached locally and fills only
 canonical location fields that were empty, so embedded metadata keeps precedence.
-There is still no automatic/background/folder reverse-geocoding job and no **Open
-map** action.
+Version 0.8.32 also provides **Browse metadata > Location > Analyze GPS coverage**
+for a local workload estimate and **Resolve missing locations from GPS** for an
+explicitly started background bulk job. The job is serial, stoppable and resumable;
+it uses stored GPS and caches to fill only missing location fields without opening
+source files. Scans and metadata refreshes never start online geocoding implicitly.
+An **Open map** action remains deferred until requested by a user.
 
 The default endpoint is the public OpenStreetMap Nominatim service. Its usage policy
 requires an identifying User-Agent, attribution, caching and at most one request per
-second, and discourages bulk/periodic geocoding. MyPicsDB 3 therefore exposes only
-user-triggered single-picture lookups, persistently spaces cache misses by at least
-1.1 seconds, displays returned attribution and allows the Nominatim base URL to be
-changed in **Settings > Metadata** without an add-on update. As with any web request,
+second, and discourages bulk/periodic geocoding. MyPicsDB 3 requires explicit user
+action for both single-picture lookups and bulk enrichment, persistently spaces
+cache misses by at least 1.1 seconds and slows long-running public-service bulk jobs
+to about four requests per minute after 24 hours. Analyze GPS coverage before a bulk
+run; very large libraries should use a separately configured Nominatim-compatible
+service. MyPicsDB 3 displays returned attribution and allows the Nominatim base URL
+to be changed in **Settings > Metadata** without an add-on update. As with any web request,
 the configured service also receives ordinary connection metadata such as the
 client's public IP address.
 
