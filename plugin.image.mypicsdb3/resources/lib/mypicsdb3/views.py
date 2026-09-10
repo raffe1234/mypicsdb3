@@ -22,7 +22,10 @@ from .exporter import ExportError, SafeExporter, normalize_export_name
 from .geocoding import (
     NominatimReverseGeocoder,
     ReverseGeocodingError,
+    load_country_display_name,
+    load_country_display_names,
     load_location_enrichment,
+    save_country_display_name,
     save_location_enrichment,
 )
 from .home_layout_editor import (
@@ -150,6 +153,16 @@ class PluginUI:
 
     def text(self, string_id: int, fallback: str) -> str:
         return self.kodi.localize(string_id, fallback)
+
+    def _gui_language_tag(self) -> str:
+        getter = getattr(self.kodi, "gui_language_tag", None)
+        if not callable(getter):
+            return ""
+        try:
+            return str(getter() or "").strip().replace("_", "-")
+        except Exception as exc:
+            self.kodi.log.warning("Could not read Kodi GUI language: %s", exc)
+            return ""
 
     def _scan_status(self) -> Dict[str, Any]:
         getter = getattr(self.kodi, "scan_status", None)
@@ -586,6 +599,10 @@ class PluginUI:
                             self.text(33059, "Resolve missing locations from GPS"),
                             "action/resolve-missing-locations",
                         ),
+                        self.add_action(
+                            self.text(33111, "Localize country names for GUI language"),
+                            "action/localize-country-names",
+                        ),
                     ]
                 )
         for facet_key in category.facet_keys:
@@ -619,6 +636,11 @@ class PluginUI:
             return labels.get(text.lower(), text)
         if facet_key == "rating":
             return self.text(32955, "Rating %s") % text
+        if facet_key == "country":
+            localized = load_country_display_name(
+                self.catalog, self._gui_language_tag(), text
+            )
+            return localized or text
         return text
 
     def metadata_values(self, field: str, params: Optional[Dict[str, str]] = None):
@@ -645,12 +667,22 @@ class PluginUI:
             query, facet.catalog_field, limit + 1, offset
         )
         page_rows = rows[:limit]
+        country_aliases = (
+            load_country_display_names(
+                self.catalog,
+                self._gui_language_tag(),
+                (str(row.get("value") or "") for row in page_rows),
+            )
+            if facet.key == "country"
+            else {}
+        )
         rating_params = self._rating_route_params(params)
         items = []
         for row in page_rows:
             raw_value = row.get("value")
+            display_value = country_aliases.get(str(raw_value or "").strip())
             label = "%s  [COLOR=grey](%d)[/COLOR]" % (
-                self._metadata_value_label(facet.key, raw_value),
+                display_value or self._metadata_value_label(facet.key, raw_value),
                 int(row.get("picture_count") or 0),
             )
             items.append(
@@ -1499,7 +1531,12 @@ class PluginUI:
         details = location_details_from_row(row, include_coordinates=store_gps)
         lines: List[str] = []
         for label, value in (
-            (self.text(32876, "Country"), details.country),
+            (
+                self.text(32876, "Country"),
+                self._metadata_value_label("country", details.country)
+                if details.country
+                else None,
+            ),
             (self.text(32877, "State or region"), details.state),
             (self.text(32878, "City"), details.city),
             (self.text(32879, "Sublocation"), details.sublocation),
@@ -1546,7 +1583,7 @@ class PluginUI:
             "\n".join(lines),
         )
 
-    def _reverse_geocoder(self):
+    def _reverse_geocoder(self, accept_language: str = ""):
         endpoint = str(
             getattr(
                 self.kodi.settings,
@@ -1558,12 +1595,163 @@ class PluginUI:
         return NominatimReverseGeocoder(
             self.catalog,
             endpoint=endpoint,
+            accept_language=accept_language,
             user_agent=(
                 "MyPicsDB3/%s (Kodi image add-on; "
                 "https://github.com/raffe1234/mypicsdb3)"
                 % str(self.kodi.addon.getAddonInfo("version") or "unknown")
             ),
         )
+
+    def _localize_country_names(self) -> None:
+        if not bool(getattr(self.kodi.settings, "reverse_geocoding_enabled", False)):
+            xbmcgui.Dialog().ok(
+                self.text(33029, "Online location lookup is disabled"),
+                self.text(
+                    33030,
+                    "Enable Metadata > Online reverse geocoding first. No network request was made.",
+                ),
+            )
+            return
+
+        language = self._gui_language_tag()
+        if not language:
+            xbmcgui.Dialog().ok(
+                self.text(33111, "Localize country names for GUI language"),
+                self.text(
+                    33112,
+                    "Kodi's current GUI language could not be determined. No network request was made.",
+                ),
+            )
+            return
+
+        candidates = self.catalog.country_localization_candidates(500)
+        existing_aliases = load_country_display_names(
+            self.catalog,
+            language,
+            (str(row.get("country") or "") for row in candidates),
+        )
+        pending = [
+            row
+            for row in candidates
+            if str(row.get("country") or "").strip()
+            and str(row.get("country") or "").strip() not in existing_aliases
+        ]
+        if not candidates:
+            self.kodi.notify(
+                self.text(
+                    33113,
+                    "No country values with stored GPS coordinates were found",
+                )
+            )
+            return
+        if not pending:
+            self.kodi.notify(
+                self.text(
+                    33114,
+                    "Country display names are already localized for %s",
+                )
+                % language
+            )
+            return
+
+        if not xbmcgui.Dialog().yesno(
+            self.text(33111, "Localize country names for GUI language"),
+            self.text(
+                33115,
+                "Resolve display names for %d country values in Kodi's current GUI language (%s)? Up to one representative stored GPS coordinate per country value may be sent to the configured Nominatim server. Pictures, filenames, paths and the stored country text are not sent or changed.",
+            )
+            % (len(pending), language),
+        ):
+            return
+
+        owner = "%s:%s:%s" % (socket.gethostname(), os.getpid(), uuid.uuid4().hex[:12])
+        recovered = self.catalog.recover_stale_local_lock(
+            LOCATION_ENRICHMENT_LOCK_NAME, owner
+        )
+        if recovered:
+            self.kodi.log.warning(
+                "Recovered stale SQLite location-enrichment lock left by previous Kodi process: %s",
+                recovered,
+            )
+        if not self.catalog.acquire_lock(LOCATION_ENRICHMENT_LOCK_NAME, owner, 1800):
+            xbmcgui.Dialog().ok(
+                self.text(33073, "Location lookup unavailable"),
+                self.text(
+                    33034,
+                    "A catalogue scan, schema migration or metadata refresh is active. Wait for it to finish and try again. No network request was made.",
+                ),
+            )
+            return
+
+        progress = xbmcgui.DialogProgress()
+        updated = 0
+        failed = 0
+        cancelled = False
+        try:
+            progress.create(
+                self.text(33111, "Localize country names for GUI language"),
+                self.text(33116, "Resolving country display names"),
+            )
+            geocoder = self._reverse_geocoder(accept_language=language)
+            total = len(pending)
+            for index, row in enumerate(pending, start=1):
+                checker = getattr(progress, "iscanceled", None)
+                if callable(checker) and checker():
+                    cancelled = True
+                    break
+                if index > 1 and index % 10 == 0:
+                    refresher = getattr(self.catalog, "refresh_lock", None)
+                    if callable(refresher) and not refresher(
+                        LOCATION_ENRICHMENT_LOCK_NAME, owner, 1800
+                    ):
+                        self.kodi.log.warning(
+                            "Country display-name lookup stopped after losing the catalogue lock"
+                        )
+                        cancelled = True
+                        break
+                raw_country = str(row.get("country") or "").strip()
+                progress.update(
+                    int(((index - 1) * 100) / max(1, total)),
+                    "%d / %d\n%s" % (index, total, raw_country),
+                )
+                try:
+                    result = geocoder.resolve(
+                        float(row.get("gps_latitude")),
+                        float(row.get("gps_longitude")),
+                    )
+                    if not result.country or not save_country_display_name(
+                        self.catalog, language, raw_country, result.country
+                    ):
+                        raise ReverseGeocodingError(
+                            "The reverse geocoder returned no country name"
+                        )
+                    updated += 1
+                except Exception as exc:
+                    failed += 1
+                    self.kodi.log.warning(
+                        "Country display-name lookup failed for %s: %s",
+                        raw_country,
+                        exc,
+                    )
+            if not cancelled:
+                progress.update(100, "%d / %d" % (len(pending), len(pending)))
+        finally:
+            progress.close()
+            self.catalog.release_lock(LOCATION_ENRICHMENT_LOCK_NAME, owner)
+
+        if cancelled:
+            message = self.text(
+                33117,
+                "Country localization stopped: %d saved, %d failed. Run it again to continue.",
+            ) % (updated, failed)
+        else:
+            message = self.text(
+                33118,
+                "Country localization complete: %d saved, %d failed",
+            ) % (updated, failed)
+        self.kodi.notify(message)
+        xbmc.executebuiltin("Container.Refresh")
 
     @staticmethod
     def _format_location_analysis_duration(seconds: float) -> str:
@@ -1595,7 +1783,9 @@ class PluginUI:
                 self.kodi.settings, self.catalog.list_metadata_mapping_overrides()
             )
             analysis = analyse_location_coverage(
-                self.catalog, endpoint, metadata_index_hash=current_index_hash
+                self.catalog,
+                endpoint,
+                metadata_index_hash=current_index_hash,
             )
         except Exception as exc:
             xbmcgui.Dialog().ok(
@@ -4410,6 +4600,9 @@ class PluginUI:
             return
         if route == "action/analyse-gps-location-coverage":
             self._analyse_gps_location_coverage()
+            return
+        if route == "action/localize-country-names":
+            self._localize_country_names()
             return
         if route == "action/resolve-missing-locations":
             self._resolve_missing_locations_online()

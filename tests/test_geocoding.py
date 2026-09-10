@@ -7,10 +7,12 @@ from mypicsdb3.geocoding import (
     NominatimReverseGeocoder,
     ResolvedLocation,
     ReverseGeocodingError,
+    load_country_display_name,
     load_location_enrichment,
     merge_location,
     normalize_nominatim_endpoint,
     parse_nominatim_geocodejson,
+    save_country_display_name,
     save_location_enrichment,
 )
 
@@ -88,6 +90,7 @@ def test_nominatim_lookup_sends_only_coordinate_query_and_caches_result() -> Non
         catalog,
         endpoint="https://nominatim.openstreetmap.org/",
         user_agent="MyPicsDB3/0.8.28 (test)",
+        accept_language="en-GB",
         opener=opener,
     )
     result = geocoder.resolve(38.536747, -0.133435)
@@ -102,6 +105,7 @@ def test_nominatim_lookup_sends_only_coordinate_query_and_caches_result() -> Non
     assert "lon=-0.1334350" in request.full_url
     assert "format=geocodejson" in request.full_url
     assert "layer=address" in request.full_url
+    assert "accept-language=en-GB" in request.full_url
     assert "filename" not in request.full_url.lower()
 
     cached = geocoder.resolve(38.536747, -0.133435)
@@ -109,6 +113,40 @@ def test_nominatim_lookup_sends_only_coordinate_query_and_caches_result() -> Non
     assert cached.from_cache is True
     assert len(calls) == 1
 
+
+def test_nominatim_cache_is_partitioned_by_requested_language() -> None:
+    catalog = FakeCatalog()
+    calls = []
+
+    def opener(request, timeout):
+        calls.append(request.full_url)
+        return FakeResponse(geocodejson_payload())
+
+    english = NominatimReverseGeocoder(
+        catalog,
+        accept_language="en-GB",
+        opener=opener,
+    )
+    swedish = NominatimReverseGeocoder(
+        catalog,
+        accept_language="sv-SE",
+        opener=opener,
+    )
+
+    english.resolve(38.536747, -0.133435)
+    swedish.resolve(38.536747, -0.133435)
+
+    assert len(calls) == 2
+    assert "accept-language=en-GB" in calls[0]
+    assert "accept-language=sv-SE" in calls[1]
+
+
+def test_country_display_alias_is_language_specific_and_local_only() -> None:
+    catalog = FakeCatalog()
+
+    assert save_country_display_name(catalog, "en-GB", "España", "Spain") is True
+    assert load_country_display_name(catalog, "en-GB", "España") == "Spain"
+    assert load_country_display_name(catalog, "sv-SE", "España") is None
 
 
 def test_nominatim_cache_misses_respect_persistent_request_interval() -> None:

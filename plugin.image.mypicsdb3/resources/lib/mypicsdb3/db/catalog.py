@@ -1040,6 +1040,36 @@ class Catalog:
         with self.engine.transaction() as connection:
             return self.meta_value_in_connection(connection, key)
 
+    def meta_values(self, keys: Iterable[str]) -> Dict[str, str]:
+        """Return several non-schema meta values in one bounded transaction."""
+
+        clean_keys = []
+        seen = set()
+        for key in keys:
+            clean_key = str(key or "").strip()
+            if not clean_key or clean_key in seen:
+                continue
+            seen.add(clean_key)
+            clean_keys.append(clean_key)
+            if len(clean_keys) >= 500:
+                break
+        if not clean_keys:
+            return {}
+        key_sql = "`key`" if self.engine.backend == "mysql" else "key"
+        placeholders = ",".join("?" for _key in clean_keys)
+        with self.engine.transaction() as connection:
+            rows = self.engine.fetchall(
+                connection,
+                "SELECT %s AS meta_key, value FROM meta WHERE %s IN (%s)"
+                % (key_sql, key_sql, placeholders),
+                tuple(clean_keys),
+            )
+        return {
+            str(row.get("meta_key")): str(row.get("value"))
+            for row in rows
+            if row.get("meta_key") and row.get("value") is not None
+        }
+
     def meta_keys_with_prefix(self, prefix: str) -> List[str]:
         """Return non-schema meta keys beginning with ``prefix``.
 
@@ -1533,6 +1563,26 @@ class Catalog:
                 "WHERE %s ORDER BY id LIMIT ?" % where,
                 (after_id, max_picture_id, limit),
             )
+
+    def country_localization_candidates(self, limit: int = 500) -> List[Dict[str, Any]]:
+        """Return one stored GPS coordinate for each distinct country value."""
+
+        if type(limit) is not int:
+            raise ValueError("Country-localization limit must be an integer")
+        if limit < 1 or limit > 500:
+            raise ValueError("Country-localization limit must be between 1 and 500")
+        where = (
+            "is_missing=0 AND media_type='picture' "
+            "AND TRIM(COALESCE(country, ''))<>'' "
+            "AND gps_latitude IS NOT NULL AND gps_longitude IS NOT NULL"
+        )
+        query = (
+            "SELECT p.country, p.gps_latitude, p.gps_longitude FROM pictures p "
+            "JOIN (SELECT MIN(id) AS id FROM pictures WHERE %s GROUP BY country) c "
+            "ON c.id=p.id ORDER BY LOWER(p.country), p.country LIMIT ?" % where
+        )
+        with self.engine.transaction() as connection:
+            return self.engine.fetchall(connection, query, (limit,))
 
     def location_enrichment_picture_horizon(
         self, max_picture_id: Optional[int] = None

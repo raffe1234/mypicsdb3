@@ -5,6 +5,9 @@ import json
 import sys
 import types
 from dataclasses import dataclass, field
+from urllib.parse import parse_qs, urlsplit
+
+from mypicsdb3.geocoding import load_country_display_name, save_country_display_name
 
 
 class FakeListItem:
@@ -273,9 +276,13 @@ class FakeKodi:
         self.random_home_session_token = "test-session-a"
         self.music_session = {}
         self.music_fingerprint = "test-music-fingerprint"
+        self.gui_language = "en-GB"
 
     def localize(self, string_id, fallback):
         return fallback
+
+    def gui_language_tag(self):
+        return self.gui_language
 
     def installed_addon_version(self, addon_id):
         return {
@@ -524,6 +531,15 @@ class FakeCatalog:
     def location_analysis_coordinate_rows(self, after_id, max_picture_id, limit):
         return []
 
+    def country_localization_candidates(self, limit=500):
+        return [
+            {
+                "country": "Sweden",
+                "gps_latitude": 59.3293,
+                "gps_longitude": 18.0686,
+            }
+        ][:limit]
+
     def recover_stale_local_lock(self, name, owner):
         return None
 
@@ -532,6 +548,9 @@ class FakeCatalog:
 
     def release_lock(self, name, owner):
         return None
+
+    def refresh_lock(self, name, owner, ttl):
+        return bool(self.location_lock_available)
 
     def update_picture_named_location(self, picture_id, location, fill_only=True):
         assert int(picture_id) == 1
@@ -1030,7 +1049,13 @@ def test_online_location_lookup_is_single_picture_confirmed_cached_and_indexed(m
             calls.append((latitude, longitude))
             return resolved
 
-    monkeypatch.setattr(ui, "_reverse_geocoder", lambda: FakeGeocoder())
+    requested_languages = []
+
+    def fake_reverse_geocoder(accept_language=""):
+        requested_languages.append(accept_language)
+        return FakeGeocoder()
+
+    monkeypatch.setattr(ui, "_reverse_geocoder", fake_reverse_geocoder)
 
     ui.action("action/resolve-location-online", {"id": "1"})
 
@@ -1301,10 +1326,12 @@ def test_metadata_browser_uses_curated_facets_and_query_model_results(monkeypatc
     assert [item.label for _url, item, _folder in calls.items] == [
         "Analyze GPS coverage",
         "Resolve missing locations from GPS",
+        "Localize country names for GUI language",
         "Country", "State or region", "City", "Sublocation"
     ]
     assert calls.items[0][0].endswith("/action/analyse-gps-location-coverage")
     assert calls.items[1][0].endswith("/action/resolve-missing-locations")
+    assert calls.items[2][0].endswith("/action/localize-country-names")
 
     calls.items.clear()
     ui.dispatch(views.Request("metadata-values", {"field": "country"}))
@@ -1332,6 +1359,81 @@ def test_metadata_browser_uses_curated_facets_and_query_model_results(monkeypatc
     assert (limit, offset) == (runtime.kodi.settings.browser_page_size, 0)
     assert query.root.children[1].field == "camera"
     assert query.root.children[1].value.make == "Canon"
+
+
+def test_country_facet_uses_gui_language_alias_but_keeps_raw_query_value(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.gui_language = "en-GB"
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    original_query_facet_counts = runtime.catalog.query_facet_counts
+
+    def query_facet_counts(query, field, limit=100, offset=0):
+        if field == "country":
+            return [
+                {"value": "Sverige", "picture_count": 10},
+                {"value": "España", "picture_count": 5},
+            ][offset:offset + limit]
+        return original_query_facet_counts(query, field, limit, offset)
+
+    runtime.catalog.query_facet_counts = query_facet_counts
+    save_country_display_name(runtime.catalog, "en-GB", "Sverige", "Sweden")
+    save_country_display_name(runtime.catalog, "en-GB", "España", "Spain")
+
+    ui.dispatch(views.Request("metadata-values", {"field": "country"}))
+
+    assert [item.label for _url, item, _folder in calls.items] == [
+        "Sweden  [COLOR=grey](10)[/COLOR]",
+        "Spain  [COLOR=grey](5)[/COLOR]",
+    ]
+    assert parse_qs(urlsplit(calls.items[0][0]).query)["value"] == ["Sverige"]
+    assert parse_qs(urlsplit(calls.items[1][0]).query)["value"] == ["España"]
+
+
+def test_country_display_aliases_can_be_populated_explicitly_from_representative_gps(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    runtime.kodi.gui_language = "en-GB"
+    runtime.kodi.settings.reverse_geocoding_enabled = True
+    runtime.catalog.country_localization_candidates = lambda limit=500: [
+        {"country": "Sverige", "gps_latitude": 59.3293, "gps_longitude": 18.0686},
+        {"country": "España", "gps_latitude": 38.5367, "gps_longitude": -0.1334},
+    ][:limit]
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.responses = [True]
+    views.xbmcgui.DialogProgress.create_calls = []
+    views.xbmcgui.DialogProgress.update_calls = []
+    views.xbmcgui.DialogProgress.cancelled = False
+    views.xbmcgui.DialogProgress.closed = False
+    lookup_calls = []
+
+    class FakeGeocoder:
+        def resolve(self, latitude, longitude):
+            lookup_calls.append((latitude, longitude))
+            country = "Sweden" if latitude > 50 else "Spain"
+            return types.SimpleNamespace(country=country)
+
+    requested_languages = []
+
+    def fake_reverse_geocoder(accept_language=""):
+        requested_languages.append(accept_language)
+        return FakeGeocoder()
+
+    monkeypatch.setattr(ui, "_reverse_geocoder", fake_reverse_geocoder)
+
+    ui.action("action/localize-country-names", {})
+
+    assert requested_languages == ["en-GB"]
+    assert lookup_calls == [(59.3293, 18.0686), (38.5367, -0.1334)]
+    assert load_country_display_name(runtime.catalog, "en-GB", "Sverige") == "Sweden"
+    assert load_country_display_name(runtime.catalog, "en-GB", "España") == "Spain"
+    assert runtime.catalog.location_updates == []
+    assert any(
+        message == "Country localization complete: 2 saved, 0 failed"
+        for message, _error in runtime.kodi.notifications
+    )
+    assert views.xbmcgui.DialogProgress.closed is True
+    assert "Container.Refresh" in calls.builtins
 
 
 def test_needs_attention_uses_query_model_presets_and_opens_results(monkeypatch) -> None:
@@ -1455,7 +1557,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.33" in labels
+    assert "MyPicsDB 3 version: 0.8.34" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3483,7 +3585,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.33"
+    assert captured["init"][2] == "0.8.34"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

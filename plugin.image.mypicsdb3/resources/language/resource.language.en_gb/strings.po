@@ -2452,3 +2452,35 @@ msgstr ""
 msgctxt "#33110"
 msgid "Scan complete — %d files checked"
 msgstr ""
+
+msgctxt "#33111"
+msgid "Localize country names for GUI language"
+msgstr "Localize country names for GUI language"
+
+msgctxt "#33112"
+msgid "Kodi's current GUI language could not be determined. No network request was made."
+msgstr "Kodi's current GUI language could not be determined. No network request was made."
+
+msgctxt "#33113"
+msgid "No country values with stored GPS coordinates were found"
+msgstr "No country values with stored GPS coordinates were found"
+
+msgctxt "#33114"
+msgid "Country display names are already localized for %s"
+msgstr "Country display names are already localized for %s"
+
+msgctxt "#33115"
+msgid "Resolve display names for %d country values in Kodi's current GUI language (%s)? Up to one representative stored GPS coordinate per country value may be sent to the configured Nominatim server. Pictures, filenames, paths and the stored country text are not sent or changed."
+msgstr "Resolve display names for %d country values in Kodi's current GUI language (%s)? Up to one representative stored GPS coordinate per country value may be sent to the configured Nominatim server. Pictures, filenames, paths and the stored country text are not sent or changed."
+
+msgctxt "#33116"
+msgid "Resolving country display names"
+msgstr "Resolving country display names"
+
+msgctxt "#33117"
+msgid "Country localization stopped: %d saved, %d failed. Run it again to continue."
+msgstr "Country localization stopped: %d saved, %d failed. Run it again to continue."
+
+msgctxt "#33118"
+msgid "Country localization complete: %d saved, %d failed"
+msgstr "Country localization complete: %d saved, %d failed"

@@ -7,6 +7,7 @@ bugs.
 Primary historical references used for the review:
 
 - https://github.com/Xycl/plugin.image.mypicsdb
+- https://github.com/Xycl/plugin.image.mypicsdb2
 - https://github.com/Xycl/repository.xycl.addons
 - https://forum.kodi.tv/showthread.php?tid=133905
 - https://forum.kodi.tv/showthread.php?tid=387901
@@ -193,8 +194,9 @@ verifiable maintenance changes:
    Kodi checks; they do not establish full Kodi 22 Beta 2 runtime compatibility.
 2. 0.8.33 implements scan percentage/ETA as an explicitly approximate, separate
    presentation layer based on compatible complete-scan counts, plus new-file counts
-   and current path. Real-Kodi presentation and pause/resume acceptance remain to be
-   checked before tagging; first scans show counts until a reference is established.
+   and current path. The release is tagged; real-Kodi presentation and pause/resume
+   checks remain useful as post-release acceptance. First scans show counts until a
+   compatible reference is established.
 3. Track outstanding metadata/GPS acceptance and backup/restore validation using
    current results. Historical handoff notes describe the state at their date;
    they are not evidence that a job is still running or a defect remains open.

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.34 - 2026-09-10
+
+- Display cached country aliases in Kodi's active GUI language while keeping the
+  indexed country value unchanged for filtering and search.
+- Add an explicit **Browse metadata > Location > Localize country names for GUI
+  language** action. It resolves at most one representative stored GPS coordinate
+  for each country value and never starts network I/O just by browsing metadata.
+- Request Kodi's GUI language for country-alias Nominatim lookups and keep those
+  exact coordinate-cache entries separate by requested language.
+- Make the README Unicode-search description language-neutral.
+
 ## 0.8.33 - 2026-09-08
 
 - Show approximate manual/automatic scan progress from the last error-free complete scan of each selected source with a matching path and effective policy. Store one small reference record per source in the existing meta table; no schema migration or extra filesystem counting pass is needed.

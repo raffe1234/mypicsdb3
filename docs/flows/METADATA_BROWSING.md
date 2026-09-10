@@ -193,3 +193,26 @@ wait at least 1.1 seconds; after a resumable run has aged past 24 hours they slo
 four requests per minute. Large libraries should therefore prefer an operator-controlled
 compatible endpoint. Neither normal scanning nor whole-library metadata refresh invokes
 this online path automatically.
+
+### GUI-language country display aliases (0.8.34)
+
+Country values in the catalogue remain canonical indexed metadata and may therefore
+come from different producers in different languages. The Country facet does not
+rewrite those values: filtering, saved Query Model rules and global search continue
+to use the raw indexed text.
+
+**Browse metadata > Location > Localize country names for GUI language** is an
+explicit maintenance action for the display layer. It reads one representative
+stored GPS coordinate for each distinct country value that does not already have an
+alias for Kodi's current GUI language, asks the configured Nominatim-compatible
+endpoint for that coordinate using Kodi's language preference, and stores only a
+language-specific country display alias in catalogue meta. Pictures, filenames,
+paths and the raw country text are not sent to the provider or changed in the
+catalogue. Values without a usable stored coordinate or a successful country result
+fall back to their indexed text.
+
+Opening or paging the Country facet remains local-only and never triggers the
+network. Exact Nominatim cache entries created by this localization path are keyed by
+requested language, so switching Kodi's GUI language does not reuse a country label
+resolved for another language. Existing language-unspecified reverse-geocoding cache
+entries remain unchanged for the established single-picture and bulk enrichment paths.

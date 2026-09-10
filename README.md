@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.33. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.34. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -87,8 +87,11 @@ or control missing-record detection. No preliminary NAS file-counting pass is ad
   browser. **Resolve location online** handles one selected GPS-tagged picture. Under
   **Browse metadata > Location**, **Analyze GPS coverage** first estimates the local
   workload without network I/O; **Resolve missing locations from GPS** can then enrich
-  many already-indexed GPS pictures with stoppable/resumable serial lookups. Online
-  reverse geocoding remains disabled by default and is never started by scans.
+  many already-indexed GPS pictures with stoppable/resumable serial lookups.
+  **Localize country names for GUI language** can explicitly build display-only aliases
+  from one representative stored coordinate per country value, so the Country browser
+  follows Kodi's current GUI language without rewriting indexed country metadata. Online
+  reverse geocoding remains disabled by default and is never started by scans or browsing.
 - Use **Refresh metadata** on one still picture, **Refresh metadata in this folder**
   on one indexed album, or **Browse metadata > Refresh all picture metadata** to
   re-read current EXIF/XMP/IPTC metadata without rebuilding the catalogue or modifying
@@ -675,6 +678,13 @@ for a local workload estimate and **Resolve missing locations from GPS** for an
 explicitly started background bulk job. The job is serial, stoppable and resumable;
 it uses stored GPS and caches to fill only missing location fields without opening
 source files. Scans and metadata refreshes never start online geocoding implicitly.
+Version 0.8.34 adds **Localize country names for GUI language**. The action asks
+Nominatim for country results in Kodi's current GUI language. It uses at most one
+representative stored GPS coordinate for each as-yet-unlocalized country value and
+stores only a display alias for the current GUI language. It does
+not rewrite the canonical country field used by search and filtering, and opening the
+Country browser itself never performs a network request. Country values without a
+usable stored coordinate or successful lookup keep their indexed text as the fallback.
 An **Open map** action remains deferred until requested by a user.
 
 The default endpoint is the public OpenStreetMap Nominatim service. Its usage policy
@@ -746,8 +756,8 @@ tags feed those canonical fields.
 Select **Search** at the top of the MyPicsDB 3 main menu and enter one or more
 words. Search covers indexed filename, caption, keywords, path parts, camera
 make/model, city, state, country and sublocation. Punctuation separates words.
-Unicode text is normalized and case-folded, so Swedish letters such as å, ä and
-ö are retained.
+Unicode text is normalized and case-folded without stripping non-ASCII letters or
+diacritics.
 
 Multiple words use AND semantics: every word must occur somewhere in the same
 picture's search document, but the words may come from different fields. For

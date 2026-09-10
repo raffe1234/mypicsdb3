@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import types
+
 from mypicsdb3 import kodi
 
 
@@ -54,3 +56,16 @@ def test_legacy_setting_reader_remains_supported():
 
     assert settings.home_widget_limit == 27
     assert settings.widget_limit == 27
+
+
+def test_gui_language_tag_prefers_iso_639_1_with_region(monkeypatch):
+    module = types.SimpleNamespace(
+        ISO_639_1=1,
+        ISO_639_2=2,
+        getLanguage=lambda language_format, region=False: (
+            "sv_SE" if language_format == 1 and region else "swe"
+        ),
+    )
+    monkeypatch.setattr(kodi, "xbmc", module)
+
+    assert context_for(LegacyAddon()).gui_language_tag() == "sv-SE"

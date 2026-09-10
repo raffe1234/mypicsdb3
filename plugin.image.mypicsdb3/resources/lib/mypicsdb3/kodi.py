@@ -260,6 +260,32 @@ class KodiContext:
         value = self.addon.getLocalizedString(string_id)
         return value or fallback
 
+    def gui_language_tag(self) -> str:
+        """Return Kodi's active GUI language as a compact language tag."""
+
+        if xbmc is None:
+            return ""
+        getter = getattr(xbmc, "getLanguage", None)
+        if not callable(getter):
+            return ""
+        for format_name, include_region in (("ISO_639_1", True), ("ISO_639_2", False)):
+            language_format = getattr(xbmc, format_name, None)
+            if language_format is None:
+                continue
+            try:
+                value = getter(language_format, include_region)
+            except TypeError:
+                try:
+                    value = getter(language_format)
+                except Exception:
+                    continue
+            except Exception:
+                continue
+            text = str(value or "").strip().replace("_", "-")
+            if text:
+                return text
+        return ""
+
     def installed_addon_version(self, addon_id: str) -> str:
         """Return an installed add-on version without raising for optional add-ons."""
 

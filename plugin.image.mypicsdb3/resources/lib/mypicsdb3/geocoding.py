@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import time
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, Mapping, Optional
+from typing import Any, Callable, Dict, Iterable, Mapping, Optional
 from urllib.parse import urlencode, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
@@ -53,6 +53,15 @@ def _clean_text(value: Any) -> Optional[str]:
     return text or None
 
 
+def normalize_accept_language(value: Any) -> str:
+    """Return a compact language tag suitable for Nominatim/cache partitioning."""
+
+    text = str(value or "").strip().replace("_", "-")
+    if not text:
+        return ""
+    return text[:64]
+
+
 def normalize_nominatim_endpoint(value: Any) -> str:
     raw = str(value or DEFAULT_NOMINATIM_ENDPOINT).strip().rstrip("/")
     parts = urlsplit(raw)
@@ -74,9 +83,24 @@ def _rate_limit_key(endpoint: str) -> str:
     return "reverse_geocode_last_request:v1:%s" % _provider_token(endpoint)
 
 
-def _cache_key(endpoint: str, latitude: float, longitude: float) -> str:
-    return "reverse_geocode_cache:v1:%s:%.*f:%.*f" % (
+def _cache_key(
+    endpoint: str,
+    latitude: float,
+    longitude: float,
+    accept_language: str = "",
+) -> str:
+    language = normalize_accept_language(accept_language)
+    if not language:
+        return "reverse_geocode_cache:v1:%s:%.*f:%.*f" % (
+            _provider_token(endpoint),
+            CACHE_COORDINATE_DECIMALS,
+            float(latitude),
+            CACHE_COORDINATE_DECIMALS,
+            float(longitude),
+        )
+    return "reverse_geocode_cache:v2:%s:%s:%.*f:%.*f" % (
         _provider_token(endpoint),
+        sha256_text(language.casefold())[:12],
         CACHE_COORDINATE_DECIMALS,
         float(latitude),
         CACHE_COORDINATE_DECIMALS,
@@ -94,10 +118,15 @@ def _bulk_cache_key(endpoint: str, latitude: float, longitude: float) -> str:
     )
 
 
-def reverse_geocoding_cache_key(endpoint: str, latitude: float, longitude: float) -> str:
+def reverse_geocoding_cache_key(
+    endpoint: str,
+    latitude: float,
+    longitude: float,
+    accept_language: str = "",
+) -> str:
     """Return the persistent exact provider-cache key without performing I/O."""
 
-    return _cache_key(endpoint, latitude, longitude)
+    return _cache_key(endpoint, latitude, longitude, accept_language)
 
 
 def bulk_reverse_geocoding_cache_key(endpoint: str, latitude: float, longitude: float) -> str:
@@ -122,6 +151,80 @@ def is_public_nominatim_endpoint(endpoint: str) -> bool:
 
 def enrichment_key(uri: str) -> str:
     return "location_enrichment:v1:%s" % sha256_text(str(uri or ""))
+
+
+def country_display_name_key(language: str, raw_country: str) -> str:
+    language = normalize_accept_language(language)
+    raw = str(raw_country or "").strip()
+    if not language or not raw:
+        return ""
+    return "country_display_name:v1:%s:%s" % (
+        sha256_text(language.casefold())[:12],
+        sha256_text(raw.casefold()),
+    )
+
+
+def load_country_display_name(catalog, language: str, raw_country: str) -> Optional[str]:
+    """Return a cached GUI-language display alias without performing network I/O."""
+
+    key = country_display_name_key(language, raw_country)
+    if not key:
+        return None
+    getter = getattr(catalog, "meta_value", None)
+    if not callable(getter):
+        return None
+    return _clean_text(getter(key))
+
+
+def load_country_display_names(
+    catalog,
+    language: str,
+    raw_countries: Iterable[str],
+) -> Dict[str, str]:
+    """Return cached country aliases, using one catalogue read when supported."""
+
+    key_by_raw = {}
+    for raw_country in raw_countries:
+        raw = str(raw_country or "").strip()
+        key = country_display_name_key(language, raw)
+        if raw and key:
+            key_by_raw[raw] = key
+    if not key_by_raw:
+        return {}
+
+    batch_getter = getattr(catalog, "meta_values", None)
+    if callable(batch_getter):
+        stored = batch_getter(key_by_raw.values())
+        aliases = {}
+        for raw, key in key_by_raw.items():
+            value = _clean_text(stored.get(key))
+            if value is not None:
+                aliases[raw] = value
+        return aliases
+
+    aliases = {}
+    for raw in key_by_raw:
+        value = load_country_display_name(catalog, language, raw)
+        if value is not None:
+            aliases[raw] = value
+    return aliases
+
+
+def save_country_display_name(
+    catalog,
+    language: str,
+    raw_country: str,
+    display_name: str,
+) -> bool:
+    """Persist a display-only country alias for one GUI language/raw value pair."""
+
+    key = country_display_name_key(language, raw_country)
+    value = _clean_text(display_name)
+    setter = getattr(catalog, "set_meta_value", None)
+    if not key or value is None or not callable(setter):
+        return False
+    setter(key, value)
+    return True
 
 
 def _parse_feature(payload: Mapping[str, Any]) -> Mapping[str, Any]:
@@ -317,7 +420,7 @@ def merge_location(
 
 
 class NominatimReverseGeocoder:
-    """Single-picture, user-triggered Nominatim reverse geocoder with local cache."""
+    """Explicit Nominatim reverse geocoder with a local provider/coordinate cache."""
 
     def __init__(
         self,
@@ -329,6 +432,7 @@ class NominatimReverseGeocoder:
         clock: Optional[Callable[[], float]] = None,
         sleeper: Optional[Callable[[float], None]] = None,
         min_request_interval_seconds: float = MIN_REQUEST_INTERVAL_SECONDS,
+        accept_language: str = "",
     ):
         self.catalog = catalog
         self.endpoint = normalize_nominatim_endpoint(endpoint)
@@ -338,9 +442,17 @@ class NominatimReverseGeocoder:
         self.clock = clock or time.time
         self.sleeper = sleeper or time.sleep
         self.min_request_interval_seconds = max(0.0, float(min_request_interval_seconds))
+        self.accept_language = normalize_accept_language(accept_language)
 
     def _cached(self, latitude: float, longitude: float) -> Optional[ResolvedLocation]:
-        raw = self.catalog.meta_value(_cache_key(self.endpoint, latitude, longitude))
+        raw = self.catalog.meta_value(
+            _cache_key(
+                self.endpoint,
+                latitude,
+                longitude,
+                self.accept_language,
+            )
+        )
         if not raw:
             return None
         return _result_from_json(raw)
@@ -380,15 +492,16 @@ class NominatimReverseGeocoder:
 
         self._respect_rate_limit()
 
-        query = urlencode(
-            {
-                "format": "geocodejson",
-                "lat": "%.7f" % latitude,
-                "lon": "%.7f" % longitude,
-                "addressdetails": "1",
-                "layer": "address",
-            }
-        )
+        query_params = {
+            "format": "geocodejson",
+            "lat": "%.7f" % latitude,
+            "lon": "%.7f" % longitude,
+            "addressdetails": "1",
+            "layer": "address",
+        }
+        if self.accept_language:
+            query_params["accept-language"] = self.accept_language
+        query = urlencode(query_params)
         request = Request(
             "%s/reverse?%s" % (self.endpoint, query),
             headers={
@@ -415,5 +528,13 @@ class NominatimReverseGeocoder:
         if not isinstance(payload, dict):
             raise ReverseGeocodingError("Reverse geocoding returned an invalid response")
         result = parse_nominatim_geocodejson(payload)
-        self.catalog.set_meta_value(_cache_key(self.endpoint, latitude, longitude), _result_to_json(result))
+        self.catalog.set_meta_value(
+            _cache_key(
+                self.endpoint,
+                latitude,
+                longitude,
+                self.accept_language,
+            ),
+            _result_to_json(result),
+        )
         return result
