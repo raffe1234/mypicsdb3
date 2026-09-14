@@ -10,7 +10,7 @@ MAPPING_VERSION = 1
 # Bump whenever code-level extraction semantics change in a way that can alter
 # normalized picture metadata without any corresponding settings/mapping change.
 # This deliberately invalidates metadata_index_hash for unchanged source files.
-METADATA_EXTRACTOR_REVISION = 1
+METADATA_EXTRACTOR_REVISION = 2
 SOURCE_TYPES = ("exif", "xmp", "iptc")
 TARGET_FIELDS = (
     "taken_at",
@@ -125,7 +125,6 @@ BUILTIN_MAPPING_RULES: Tuple[MetadataMappingRule, ...] = (
     _rule("xmp", "Sublocation", "sublocation", 21),
     _rule("iptc", "caption/abstract", "caption", 10),
     _rule("xmp", "description", "caption", 20),
-    _rule("xmp", "Description", "caption", 21),
 )
 
 

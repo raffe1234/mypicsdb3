@@ -368,6 +368,23 @@ blindly. A bounded marker walk reads APP1/SOF payloads and seeks over unrelated 
 through Start Of Scan. Scanner ordering, checkpointing, cancellation and database
 writes remain serial and unchanged.
 
+### XMP description caption handling (0.8.35)
+
+XMP stores metadata properties inside an RDF `Description` container. Earlier
+local-name matching could treat that structural wrapper as a metadata property named
+`Description`. Because metadata mapping keys are case-insensitive, the duplicate
+built-in `Description` caption rule could also replace the intended `description`
+rule and cause unrelated values inside the RDF container to be combined into the
+canonical caption.
+
+Version 0.8.35 removes that duplicate built-in rule and makes XMP description lookup
+ignore RDF structural elements by namespace rather than by a hard-coded prefix.
+Custom mappings that intentionally use an uppercase `Description` property still work
+for non-RDF namespaces. The metadata extractor revision is bumped so unchanged files
+receive a new metadata-index fingerprint and can be corrected by the next normal scan
+or an explicit metadata refresh. IPTC `caption/abstract` keeps its established higher
+priority when optional IPTC extraction is available.
+
 ### Reverse geocoding remains outside scanning (0.8.28, 0.8.32)
 
 The scanner never calls a network geocoder. Online location enrichment is disabled by

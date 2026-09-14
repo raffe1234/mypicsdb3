@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.34. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.35. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -72,6 +72,8 @@ or control missing-record detection. No preliminary NAS file-counting pass is ad
   date, camera, dimensions, rating, keywords, caption and stored location. Built-in
   normalization preserves the established precedence, while database-global custom
   mappings can redirect, combine or suppress allowlisted EXIF/XMP/IPTC tag sources.
+  Version 0.8.35 fixes XMP description handling so the structural RDF
+  `Description` container is never mistaken for the picture description itself.
 - Optionally index common home-video formats in the same catalogue without a
   separate video scraper.
 
@@ -706,7 +708,11 @@ presence and any matching XMP location/GPS properties. Version 0.8.26 fixes the 
 VFS boundary so JPEG/EXIF data is read as bytes. Version 0.8.27 additionally accepts
 common XMP GPS latitude/longitude plus IPTC Extension `LocationShown*` /
 `LocationCreated*` aliases when the equivalent EXIF/canonical field is absent, and
-shows whether the final coordinate pair came from EXIF or XMP.
+shows whether the final coordinate pair came from EXIF or XMP. Version 0.8.35 also
+fixes XMP caption extraction so an RDF `Description` wrapper cannot be confused with
+the actual XMP description property. The metadata extractor revision is bumped, so a
+normal scan or **Refresh all picture metadata** can re-read unchanged pictures with
+the corrected semantics.
 
 For JPEGs, 0.8.27 also walks metadata marker headers and buffers only relevant APP1
 (EXIF/XMP) and SOF segments instead of reading several megabytes of compressed image

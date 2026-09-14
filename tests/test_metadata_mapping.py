@@ -68,6 +68,47 @@ def test_builtin_mapping_preserves_canonical_xmp_fields(monkeypatch) -> None:
     assert result.keywords == ["Family"]
 
 
+def test_xmp_description_does_not_match_rdf_description_container(monkeypatch) -> None:
+    monkeypatch.setattr(metadata, "exifread", None)
+    data = b'''<x:xmpmeta xmlns:x="adobe:ns:meta/">
+      <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+               xmlns:dc="http://purl.org/dc/elements/1.1/"
+               xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/">
+        <rdf:Description photoshop:Category="building" photoshop:Country="Thedas">
+          <dc:description><rdf:Alt><rdf:li>Full description text</rdf:li></rdf:Alt></dc:description>
+        </rdf:Description>
+      </rdf:RDF>
+    </x:xmpmeta>'''
+
+    result = extract_metadata("picture.jpg", XmpFilesystem(data), settings(), 100)
+
+    assert result.caption == "Full description text"
+
+
+def test_custom_uppercase_xmp_description_ignores_rdf_container(monkeypatch) -> None:
+    monkeypatch.setattr(metadata, "exifread", None)
+    data = b'''<x:xmpmeta xmlns:x="adobe:ns:meta/">
+      <r:RDF xmlns:r="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+             xmlns:custom="urn:example:custom"
+             xmlns:photoshop="http://ns.adobe.com/photoshop/1.0/">
+        <r:Description photoshop:Category="portrait" photoshop:Country="Thedas">
+          <custom:Description>Custom description text</custom:Description>
+        </r:Description>
+      </r:RDF>
+    </x:xmpmeta>'''
+    overrides = (MetadataMappingRule("xmp", "Description", "caption", 1),)
+
+    result = extract_metadata(
+        "picture.jpg",
+        XmpFilesystem(data),
+        settings(),
+        100,
+        mapping_rules=overrides,
+    )
+
+    assert result.caption == "Custom description text"
+
+
 def test_custom_mapping_can_redirect_and_suppress_builtin_xmp_tags(monkeypatch) -> None:
     monkeypatch.setattr(metadata, "exifread", None)
     overrides = (

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.35 - 2026-09-14
+
+- Fix XMP caption extraction so structural RDF `Description` containers are not
+  mistaken for metadata properties. `dc:description` and equivalent mapped
+  description fields now populate the canonical picture caption as intended.
+- Remove the duplicate built-in XMP `Description` caption rule that could override
+  the canonical `description` mapping under case-insensitive rule matching.
+- Bump the metadata extractor revision so unchanged pictures can be re-read with
+  the corrected extraction semantics on the next scan or explicit metadata refresh.
+- Add regression coverage for standard `dc:description` and custom uppercase
+  `Description` mappings with prefix-independent RDF containers.
+
 ## 0.8.34 - 2026-09-10
 
 - Display cached country aliases in Kodi's active GUI language while keeping the

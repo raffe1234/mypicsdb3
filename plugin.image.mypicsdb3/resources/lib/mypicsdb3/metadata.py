@@ -520,10 +520,65 @@ def _xmp_fragment(data: bytes) -> str:
     return data[start:end + marker_length].decode("utf-8", "ignore")
 
 
+def _xmp_rdf_prefixes(xml: str) -> set[str]:
+    """Return namespace prefixes bound to RDF in this XMP fragment.
+
+    XMP metadata properties live inside ``rdf:Description`` containers. A
+    generic local-name lookup must not treat that structural RDF element as a
+    metadata property named ``Description``. Producers are free to choose a
+    different prefix, so detect the binding instead of hard-coding ``rdf``.
+    """
+    rdf_uri = "http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    prefixes = {
+        prefix.casefold()
+        for prefix, uri in re.findall(
+            r"xmlns:([\w.-]+)\s*=\s*[\"']([^\"']+)[\"']",
+            xml,
+            flags=re.IGNORECASE,
+        )
+        if html.unescape(uri).strip() == rdf_uri
+    }
+    default_match = re.search(
+        r"\bxmlns\s*=\s*[\"']([^\"']+)[\"']",
+        xml,
+        flags=re.IGNORECASE,
+    )
+    if default_match and html.unescape(default_match.group(1)).strip() == rdf_uri:
+        prefixes.add("")
+    return prefixes
+
+
 def _xmp_blocks(xml: str, local_name: str) -> List[str]:
     escaped = re.escape(local_name)
-    pattern = rf"<(?:[\w.-]+:)?{escaped}(?:\s[^>]*)?>(.*?)</(?:[\w.-]+:)?{escaped}\s*>"
-    return re.findall(pattern, xml, flags=re.DOTALL)
+    rdf_prefixes = _xmp_rdf_prefixes(xml)
+
+    # Strip only the structural RDF wrapper tags with this local name while
+    # keeping their contents. This avoids a greedy outer ``rdf:Description``
+    # match swallowing a nested metadata property such as
+    # ``custom:Description`` before we can inspect it.
+    searchable = xml
+    for prefix in sorted((item for item in rdf_prefixes if item), key=len, reverse=True):
+        prefixed = re.escape(prefix)
+        searchable = re.sub(
+            rf"</?{prefixed}:{escaped}(?:\s[^>]*)?>",
+            "",
+            searchable,
+            flags=re.IGNORECASE,
+        )
+    if "" in rdf_prefixes:
+        searchable = re.sub(
+            rf"</?{escaped}(?:\s[^>]*)?>",
+            "",
+            searchable,
+            flags=re.IGNORECASE,
+        )
+
+    pattern = rf"<(?:(?P<prefix>[\w.-]+):)?{escaped}(?:\s[^>]*)?>(?P<body>.*?)</(?:[\w.-]+:)?{escaped}\s*>"
+    return [
+        match.group("body")
+        for match in re.finditer(pattern, searchable, flags=re.DOTALL)
+        if (match.group("prefix") or "").casefold() not in rdf_prefixes
+    ]
 
 
 def _xmp_values(xml: str, local_name: str) -> List[str]:
@@ -534,10 +589,12 @@ def _xmp_values(xml: str, local_name: str) -> List[str]:
         value = html.unescape(re.sub(r"\s+", " ", value).strip())
         if value:
             results.append(value)
-    attribute_pattern = rf"\b(?:[\w.-]+:)?{escaped}\s*=\s*[\"']([^\"']+)[\"']"
+    rdf_prefixes = _xmp_rdf_prefixes(xml)
+    attribute_pattern = rf"\b(?:(?P<prefix>[\w.-]+):)?{escaped}\s*=\s*[\"'](?P<value>[^\"']+)[\"']"
     results.extend(
-        html.unescape(value)
-        for value in re.findall(attribute_pattern, xml, flags=re.IGNORECASE | re.DOTALL)
+        html.unescape(match.group("value"))
+        for match in re.finditer(attribute_pattern, xml, flags=re.IGNORECASE | re.DOTALL)
+        if (match.group("prefix") or "").casefold() not in rdf_prefixes
     )
     return unique_strings(results)
 
