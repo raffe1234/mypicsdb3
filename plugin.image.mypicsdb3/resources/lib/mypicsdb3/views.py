@@ -1308,12 +1308,9 @@ class PluginUI:
             }
             if row.get("width") and row.get("height"):
                 info["resolution"] = "%sx%s" % (row["width"], row["height"])
-            if row.get("camera_make"):
-                info["cameramake"] = row["camera_make"]
-            if row.get("camera_model"):
-                info["cameramodel"] = row["camera_model"]
-            if row.get("caption"):
-                info["exifcomment"] = row["caption"]
+            # Kodi 20+ only accepts resolution/date through the public picture
+            # metadata setters. Keep MyPicsDB-specific values on stable list-item
+            # properties instead of feeding unsupported picture-info keys to Kodi.
             try:
                 self._set_picture_info(
                     item, info, date_text, row.get("width"), row.get("height")
@@ -1322,6 +1319,7 @@ class PluginUI:
                 pass
             item.setProperty("MyPicsDB3.MediaType", "picture")
             item.setProperty("MyPicsDB3.PictureId", str(row.get("id", "")))
+            item.setProperty("MyPicsDB3.Caption", str(row.get("caption") or ""))
             items.append((media_uri, item, False))
 
         self.kodi.log.debug(log_message, log_id, len(items))
@@ -1453,8 +1451,9 @@ class PluginUI:
                 tag.setResolution(int(width), int(height))
             if date_text and hasattr(tag, "setDateTimeTaken"):
                 tag.setDateTimeTaken(str(date_text))
-            # InfoTagPicture does not expose title, camera, comment or path
-            # setters yet, so keep only those compatibility fields here.
+            # InfoTagPicture does not expose title/path setters. Camera and
+            # caption are deliberately published as MyPicsDB3 properties by the
+            # caller because current Kodi rejects those legacy picture-info keys.
             compatibility = {
                 key: value
                 for key, value in info.items()
@@ -2276,38 +2275,39 @@ class PluginUI:
         )
 
     def _show_metadata_diagnostics(self, picture_id: int) -> None:
+        # Always keep the indexed half of diagnostics available. A fresh parser
+        # failure should not prevent the user from seeing what MyPicsDB3 already
+        # stored (notably Caption), and the error is still shown in the dialog.
+        row = self.catalog.picture_by_id(int(picture_id))
+        if not row or str(row.get("media_type") or "picture") != "picture":
+            self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
+            return
+
+        refresher = None
+        fresh = None
+        source: Dict[str, Any] = {}
+        inspection_error = ""
         try:
             refresher = self._metadata_refresher()
             inspection = refresher.inspect_picture(picture_id)
+            row = inspection.row
+            fresh = inspection.fresh
+            source = inspection.source_details
         except MetadataRefreshNotFound:
             self.kodi.notify(self.text(32987, "Picture was not found"), error=True)
             return
         except Exception as exc:
-            self.kodi.notify(
-                "%s: %s" % (self.text(32998, "Could not inspect metadata"), exc),
-                error=True,
-                milliseconds=7000,
+            inspection_error = "%s: %s" % (exc.__class__.__name__, str(exc))
+            self.kodi.log.warning(
+                "Metadata diagnostics fresh extraction failed for picture %s: %s",
+                picture_id,
+                inspection_error,
             )
-            return
 
-        row = inspection.row
-        fresh = inspection.fresh
-        source = inspection.source_details
-        store_gps = bool(getattr(refresher.settings, "store_gps", False))
+        settings = refresher.settings if refresher is not None else self.kodi.settings
+        store_gps = bool(getattr(settings, "store_gps", False))
         indexed_location = location_details_from_row(row, include_coordinates=store_gps)
-        fresh_location = location_details_from_row(
-            {
-                "country": (fresh.location or {}).get("country"),
-                "state": (fresh.location or {}).get("state"),
-                "city": (fresh.location or {}).get("city"),
-                "sublocation": (fresh.location or {}).get("sublocation"),
-                "gps_latitude": fresh.gps_latitude,
-                "gps_longitude": fresh.gps_longitude,
-            },
-            include_coordinates=store_gps,
-        )
         indexed_coordinates = format_coordinates(indexed_location)
-        fresh_coordinates = format_coordinates(fresh_location)
 
         yes = self.text(32994, "yes")
         no = self.text(32995, "no")
@@ -2315,6 +2315,7 @@ class PluginUI:
             "%s: %s" % (self.text(32999, "File"), self._diagnostic_value(row.get("filename"))),
             "",
             self.text(33000, "Indexed values"),
+            "%s: %s" % (self.text(32926, "Caption"), self._diagnostic_value(row.get("caption"))),
             "%s: %s" % (self.text(32922, "Camera make"), self._diagnostic_value(row.get("camera_make"))),
             "%s: %s" % (self.text(32923, "Camera model"), self._diagnostic_value(row.get("camera_model"))),
             "%s: %s" % (self.text(32983, "Coordinates"), self._diagnostic_value(indexed_coordinates)),
@@ -2322,94 +2323,131 @@ class PluginUI:
             "%s: %s" % (self.text(32876, "Country"), self._diagnostic_value(row.get("country"))),
             "",
             self.text(33001, "Fresh extraction"),
-            "%s: %s" % (self.text(32922, "Camera make"), self._diagnostic_value(fresh.camera_make)),
-            "%s: %s" % (self.text(32923, "Camera model"), self._diagnostic_value(fresh.camera_model)),
-            "%s: %s" % (self.text(32983, "Coordinates"), self._diagnostic_value(fresh_coordinates)),
-            "%s: %s" % (self.text(32878, "City"), self._diagnostic_value((fresh.location or {}).get("city"))),
-            "%s: %s" % (self.text(32876, "Country"), self._diagnostic_value((fresh.location or {}).get("country"))),
-            "",
-            self.text(33002, "Extractor details"),
-            "%s: %s" % (self.text(33003, "EXIF reader available"), yes if source.get("exifread_available") else no),
-            "%s: %s" % (self.text(33004, "EXIF tags found"), int(source.get("exif_tag_count") or 0)),
-            "%s: %s" % (self.text(33005, "Raw EXIF Make"), self._diagnostic_value(source.get("exif_make"))),
-            "%s: %s" % (self.text(33006, "Raw EXIF Model"), self._diagnostic_value(source.get("exif_model"))),
-            "%s: %s/%s" % (
-                self.text(33007, "EXIF GPS latitude/longitude tags"),
-                yes if source.get("gps_latitude_present") else no,
-                yes if source.get("gps_longitude_present") else no,
-            ),
-            "%s: %s" % (self.text(33008, "Embedded XMP found"), yes if source.get("xmp_present") else no),
-            "%s: %s" % (
-                self.text(33020, "XMP GPS latitude"),
-                self._diagnostic_value(source.get("xmp_gps_latitude_raw")),
-            ),
-            "%s: %s" % (
-                self.text(33021, "XMP GPS longitude"),
-                self._diagnostic_value(source.get("xmp_gps_longitude_raw")),
-            ),
-            "%s: %s" % (
-                self.text(33022, "GPS source"),
-                self._diagnostic_value(source.get("gps_source")),
-            ),
-            "%s: %s" % (self.text(33009, "IPTC loaded"), yes if source.get("iptc_loaded") else no),
-            "%s: %s" % (self.text(33010, "Store GPS coordinates"), yes if store_gps else no),
-            "%s: %s"
-            % (
-                self.text(33016, "Metadata header bytes buffered"),
-                int(source.get("prefix_bytes_read") or 0),
-            ),
-            "%s: %s"
-            % (
-                self.text(33017, "Embedded EXIF block found"),
-                yes if source.get("embedded_exif_found") else no,
-            ),
-            "%s: %s"
-            % (
-                self.text(33014, "Core EXIF fallback used"),
-                yes if source.get("exif_fallback_used") else no,
-            ),
         ]
-        xmp_location_fields = source.get("xmp_location_fields") or {}
-        if xmp_location_fields:
-            lines.append("")
-            lines.append(self.text(33023, "XMP location/GPS fields"))
-            for field_name in sorted(xmp_location_fields, key=lambda value: str(value).casefold())[:12]:
-                field_value = str(xmp_location_fields.get(field_name) or "").strip()
-                if len(field_value) > 160:
-                    field_value = field_value[:157] + "..."
-                lines.append("%s: %s" % (field_name, self._diagnostic_value(field_value)))
 
-        if source.get("exif_fallback_used"):
+        if fresh is None:
             lines.append(
                 "%s: %s"
                 % (
-                    self.text(33015, "Fallback EXIF tags found"),
-                    int(source.get("exif_fallback_tag_count") or 0),
+                    self.text(32998, "Could not inspect metadata"),
+                    self._diagnostic_value(inspection_error),
                 )
             )
-        if source.get("exif_error"):
-            lines.append(
-                "%s: %s"
-                % (self.text(33011, "EXIF reader error"), source.get("exif_error"))
+        else:
+            fresh_location = location_details_from_row(
+                {
+                    "country": (fresh.location or {}).get("country"),
+                    "state": (fresh.location or {}).get("state"),
+                    "city": (fresh.location or {}).get("city"),
+                    "sublocation": (fresh.location or {}).get("sublocation"),
+                    "gps_latitude": fresh.gps_latitude,
+                    "gps_longitude": fresh.gps_longitude,
+                },
+                include_coordinates=store_gps,
             )
-        if source.get("prefix_error"):
-            lines.append(
-                "%s: %s"
-                % (self.text(33018, "Metadata prefix read error"), source.get("prefix_error"))
+            fresh_coordinates = format_coordinates(fresh_location)
+            lines.extend(
+                [
+                    "%s: %s" % (self.text(32926, "Caption"), self._diagnostic_value(getattr(fresh, "caption", None))),
+                    "%s: %s" % (self.text(32922, "Camera make"), self._diagnostic_value(fresh.camera_make)),
+                    "%s: %s" % (self.text(32923, "Camera model"), self._diagnostic_value(fresh.camera_model)),
+                    "%s: %s" % (self.text(32983, "Coordinates"), self._diagnostic_value(fresh_coordinates)),
+                    "%s: %s" % (self.text(32878, "City"), self._diagnostic_value((fresh.location or {}).get("city"))),
+                    "%s: %s" % (self.text(32876, "Country"), self._diagnostic_value((fresh.location or {}).get("country"))),
+                    "",
+                    self.text(33002, "Extractor details"),
+                    "%s: %s" % (self.text(33003, "EXIF reader available"), yes if source.get("exifread_available") else no),
+                    "%s: %s" % (self.text(33004, "EXIF tags found"), int(source.get("exif_tag_count") or 0)),
+                    "%s: %s" % (self.text(33005, "Raw EXIF Make"), self._diagnostic_value(source.get("exif_make"))),
+                    "%s: %s" % (self.text(33006, "Raw EXIF Model"), self._diagnostic_value(source.get("exif_model"))),
+                    "%s: %s/%s"
+                    % (
+                        self.text(33007, "EXIF GPS latitude/longitude tags"),
+                        yes if source.get("gps_latitude_present") else no,
+                        yes if source.get("gps_longitude_present") else no,
+                    ),
+                    "%s: %s" % (self.text(33008, "Embedded XMP found"), yes if source.get("xmp_present") else no),
+                    "%s: %s"
+                    % (
+                        self.text(33020, "XMP GPS latitude"),
+                        self._diagnostic_value(source.get("xmp_gps_latitude_raw")),
+                    ),
+                    "%s: %s"
+                    % (
+                        self.text(33021, "XMP GPS longitude"),
+                        self._diagnostic_value(source.get("xmp_gps_longitude_raw")),
+                    ),
+                    "%s: %s"
+                    % (
+                        self.text(33022, "GPS source"),
+                        self._diagnostic_value(source.get("gps_source")),
+                    ),
+                    "%s: %s" % (self.text(33009, "IPTC loaded"), yes if source.get("iptc_loaded") else no),
+                    "%s: %s" % (self.text(33010, "Store GPS coordinates"), yes if store_gps else no),
+                    "%s: %s"
+                    % (
+                        self.text(33016, "Metadata header bytes buffered"),
+                        int(source.get("prefix_bytes_read") or 0),
+                    ),
+                    "%s: %s"
+                    % (
+                        self.text(33017, "Embedded EXIF block found"),
+                        yes if source.get("embedded_exif_found") else no,
+                    ),
+                    "%s: %s"
+                    % (
+                        self.text(33014, "Core EXIF fallback used"),
+                        yes if source.get("exif_fallback_used") else no,
+                    ),
+                ]
             )
-        if source.get("dimension_error"):
-            lines.append(
-                "%s: %s"
-                % (self.text(33019, "Image dimension probe error"), source.get("dimension_error"))
-            )
+
+            xmp_location_fields = source.get("xmp_location_fields") or {}
+            if xmp_location_fields:
+                lines.append("")
+                lines.append(self.text(33023, "XMP location/GPS fields"))
+                for field_name in sorted(
+                    xmp_location_fields, key=lambda value: str(value).casefold()
+                )[:12]:
+                    field_value = str(xmp_location_fields.get(field_name) or "").strip()
+                    if len(field_value) > 160:
+                        field_value = field_value[:157] + "..."
+                    lines.append(
+                        "%s: %s"
+                        % (field_name, self._diagnostic_value(field_value))
+                    )
+
+            if source.get("exif_fallback_used"):
+                lines.append(
+                    "%s: %s"
+                    % (
+                        self.text(33015, "Fallback EXIF tags found"),
+                        int(source.get("exif_fallback_tag_count") or 0),
+                    )
+                )
+            if source.get("exif_error"):
+                lines.append(
+                    "%s: %s"
+                    % (self.text(33011, "EXIF reader error"), source.get("exif_error"))
+                )
+            if source.get("prefix_error"):
+                lines.append(
+                    "%s: %s"
+                    % (self.text(33018, "Metadata prefix read error"), source.get("prefix_error"))
+                )
+            if source.get("dimension_error"):
+                lines.append(
+                    "%s: %s"
+                    % (self.text(33019, "Image dimension probe error"), source.get("dimension_error"))
+                )
+
         dialog = xbmcgui.Dialog()
-        heading = self.text(32989, "Metadata diagnostics")
         message = "\n".join(lines)
         textviewer = getattr(dialog, "textviewer", None)
         if callable(textviewer):
-            textviewer(heading, message)
+            textviewer(self.text(32989, "Metadata diagnostics"), message)
         else:
-            dialog.ok(heading, message)
+            dialog.ok(self.text(32989, "Metadata diagnostics"), message)
 
     def _show_metadata_refresh_busy(self) -> None:
         xbmcgui.Dialog().ok(
@@ -2762,12 +2800,9 @@ class PluginUI:
         info: Dict[str, Any] = {"title": label, "picturepath": media_uri, "date": date_text}
         if row.get("width") and row.get("height"):
             info["resolution"] = "%sx%s" % (row["width"], row["height"])
-        if row.get("camera_make"):
-            info["cameramake"] = row["camera_make"]
-        if row.get("camera_model"):
-            info["cameramodel"] = row["camera_model"]
-        if row.get("caption"):
-            info["exifcomment"] = row["caption"]
+        # Camera/caption values are exposed through MyPicsDB3 list-item
+        # properties below. Kodi's current Python picture tag only exposes
+        # resolution and date setters and rejects the old compatibility keys.
         try:
             if media_type == "video":
                 self._set_video_info(item, str(label), date_text)
@@ -2785,6 +2820,7 @@ class PluginUI:
         item.setProperty("MyPicsDB3.PictureId", str(row.get("id", "")))
         item.setProperty("MyPicsDB3.TakenAt", date_text)
         item.setProperty("MyPicsDB3.Camera", " ".join(filter(None, [row.get("camera_make"), row.get("camera_model")])))
+        item.setProperty("MyPicsDB3.Caption", str(row.get("caption") or ""))
         item.setProperty("MyPicsDB3.Folder", str(row.get("folder_name") or ""))
         item.setProperty("MyPicsDB3.Source", str(row.get("source_label") or ""))
         if row.get("rating") is not None:

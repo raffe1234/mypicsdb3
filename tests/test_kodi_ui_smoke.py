@@ -901,6 +901,7 @@ def test_metadata_diagnostics_compares_indexed_and_fresh_values(monkeypatch) -> 
                     **runtime.catalog.picture_by_id(1),
                     "camera_make": None,
                     "camera_model": None,
+                    "caption": "Indexed caption",
                     "gps_latitude": None,
                     "gps_longitude": None,
                     "city": None,
@@ -909,6 +910,7 @@ def test_metadata_diagnostics_compares_indexed_and_fresh_values(monkeypatch) -> 
                 fresh=types.SimpleNamespace(
                     camera_make="Samsung",
                     camera_model="SM-S921B",
+                    caption="Fresh caption",
                     gps_latitude=59.3293,
                     gps_longitude=18.0686,
                     location={"city": "Stockholm", "country": "Sweden"},
@@ -934,14 +936,48 @@ def test_metadata_diagnostics_compares_indexed_and_fresh_values(monkeypatch) -> 
     heading, message = views.xbmcgui.Dialog.textviewer_calls[-1]
     assert heading == "Metadata diagnostics"
     assert "Indexed values" in message
+    assert "Caption: Indexed caption" in message
     assert "Camera make: -" in message
     assert "Fresh extraction" in message
+    assert "Caption: Fresh caption" in message
     assert "Camera make: Samsung" in message
     assert "Camera model: SM-S921B" in message
     assert "Coordinates: 59.329300, 18.068600" in message
     assert "EXIF tags found: 48" in message
     assert "Raw EXIF Make: Samsung" in message
     assert "EXIF GPS latitude/longitude tags: yes/yes" in message
+
+
+def test_metadata_diagnostics_keeps_indexed_caption_when_fresh_extraction_fails(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    views.xbmcgui.Dialog.textviewer_calls = []
+
+    original_picture_by_id = runtime.catalog.picture_by_id
+
+    def picture_by_id(picture_id):
+        row = original_picture_by_id(picture_id)
+        return {**row, "caption": "Already indexed caption"} if row else None
+
+    class FakeRefresher:
+        settings = runtime.kodi.settings
+
+        def inspect_picture(self, picture_id):
+            assert picture_id == 1
+            raise TypeError("'NoneType' object is not callable")
+
+    monkeypatch.setattr(runtime.catalog, "picture_by_id", picture_by_id)
+    monkeypatch.setattr(ui, "_metadata_refresher", lambda: FakeRefresher())
+
+    ui.action("action/metadata-diagnostics", {"id": "1"})
+
+    heading, message = views.xbmcgui.Dialog.textviewer_calls[-1]
+    assert heading == "Metadata diagnostics"
+    assert "Indexed values" in message
+    assert "Caption: Already indexed caption" in message
+    assert "Fresh extraction" in message
+    assert "Could not inspect metadata: TypeError: 'NoneType' object is not callable" in message
 
 
 def test_gps_coverage_analysis_is_local_and_available_before_online_lookup(monkeypatch) -> None:
@@ -1557,7 +1593,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.35" in labels
+    assert "MyPicsDB 3 version: 0.8.36" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3085,6 +3121,31 @@ def test_picture_info_uses_picture_info_tag_when_available(monkeypatch) -> None:
     assert "resolution" not in item.info["pictures"]
 
 
+def test_picture_caption_is_published_as_stable_list_item_property(monkeypatch) -> None:
+    views, calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    row = {**runtime.catalog.picture_by_id(1), "caption": "A searchable caption"}
+
+    _url, item, is_folder = ui._media_item(row)
+
+    assert is_folder is False
+    assert item.properties["MyPicsDB3.Caption"] == "A searchable caption"
+    assert item.properties["MyPicsDB3.Camera"] == "Canon EOS R6"
+    picture_info = item.info.get("pictures", {})
+    assert "cameramake" not in picture_info
+    assert "cameramodel" not in picture_info
+    assert "exifcomment" not in picture_info
+
+    ui._finish_native_picture_directory(
+        [row],
+        "Native test picture directory: collection_id=%s items=%d",
+        1,
+    )
+    native_item = calls.items[0][1]
+    assert native_item.properties["MyPicsDB3.Caption"] == "A searchable caption"
+
+
 def test_home_slot_route_resolves_builtin_from_persistent_setting(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
@@ -3585,7 +3646,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.35"
+    assert captured["init"][2] == "0.8.36"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

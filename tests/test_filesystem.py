@@ -64,3 +64,18 @@ def test_kodi_file_adapter_read_all_uses_binary_vfs_read(monkeypatch) -> None:
 
     assert handle.byte_reads == 1
     assert handle.text_reads == 0
+
+
+def test_kodi_filesystem_ignores_noncallable_translate_path(monkeypatch, tmp_path) -> None:
+    picture = tmp_path / "picture.jpg"
+    picture.write_bytes(b"jpeg")
+    fake_vfs = SimpleNamespace(
+        translatePath=None,
+        exists=lambda _path: True,
+        mkdirs=lambda _path: True,
+    )
+    monkeypatch.setattr(filesystem, "xbmcvfs", fake_vfs)
+
+    adapter = filesystem.KodiFilesystem(str(tmp_path / "metadata"))
+    with adapter.materialized(str(picture)) as materialized:
+        assert materialized == str(picture)

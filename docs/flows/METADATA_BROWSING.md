@@ -94,6 +94,20 @@ and image-dimension probe errors. The recovery path also has a bounded fresh-VFS
 JPEG marker walker, so a valid EXIF APP1 block can still be found when the normal
 prefix path is unusable. These diagnostics do not write the catalogue; **Refresh
 metadata** remains the explicit write action.
+
+### Caption visibility and diagnostics resilience (0.8.36)
+
+Metadata diagnostics includes the canonical Caption in both **Indexed values** and
+**Fresh extraction**. Indexed values are rendered first and remain visible when the
+fresh extractor encounters an optional parser or VFS compatibility failure; the
+report appends that error instead of replacing the diagnostics view with a generic
+notification.
+
+Picture list items publish the stored caption as `MyPicsDB3.Caption` for skins and
+other add-ons. Current Kodi Python picture metadata setters do not provide a supported
+setter for IPTC Caption or camera make/model, so those catalogue values are not sent
+through legacy `setInfo("pictures", ...)` keys. `MyPicsDB3.Camera` remains the camera
+integration property.
 ### Kodi VFS byte-stream fix (0.8.26)
 
 If diagnostics in 0.8.25 show both `EXIF reader error: UnicodeDecodeError` and

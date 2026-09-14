@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.8.36 - 2026-09-14
+
+- Publish the canonical indexed picture caption as the stable list-item property
+  `MyPicsDB3.Caption` for normal picture rows and native slideshow rows. Keep camera
+  metadata on the existing `MyPicsDB3.Camera` property instead of sending legacy
+  picture-info keys that current Kodi rejects.
+- Show **Caption** in both Indexed values and Fresh extraction in **Metadata
+  diagnostics**, so the 0.8.35 XMP/IPTC caption result can be verified directly in
+  Kodi without a separate database query.
+- Keep Metadata diagnostics usable when fresh extraction fails: show the indexed
+  values plus the extraction error in the diagnostics dialog instead of aborting
+  with only a notification.
+- Treat optional Kodi `translatePath` hooks as callables rather than merely checking
+  for an attribute, avoiding a `NoneType` callable failure on incomplete/compatibility
+  VFS shims.
+- Keep database schema 9, Query Model 1, metadata extractor revision 2, repository
+  version 0.2.26, screensaver version 0.7.0 and source-file read-only behaviour
+  unchanged.
+
 ## 0.8.35 - 2026-09-14
 
 - Fix XMP caption extraction so structural RDF `Description` containers are not

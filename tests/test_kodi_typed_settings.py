@@ -69,3 +69,14 @@ def test_gui_language_tag_prefers_iso_639_1_with_region(monkeypatch):
     monkeypatch.setattr(kodi, "xbmc", module)
 
     assert context_for(LegacyAddon()).gui_language_tag() == "sv-SE"
+
+
+def test_translate_ignores_noncallable_vfs_hook_and_uses_legacy_fallback(monkeypatch):
+    monkeypatch.setattr(kodi, "xbmcvfs", types.SimpleNamespace(translatePath=None))
+    monkeypatch.setattr(
+        kodi,
+        "xbmc",
+        types.SimpleNamespace(translatePath=lambda path: "/translated/" + path),
+    )
+
+    assert kodi.KodiContext.translate("special://profile") == "/translated/special://profile"

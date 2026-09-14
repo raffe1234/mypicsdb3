@@ -142,10 +142,12 @@ class KodiContext:
 
     @staticmethod
     def translate(path: str) -> str:
-        if xbmcvfs is not None and hasattr(xbmcvfs, "translatePath"):
-            return xbmcvfs.translatePath(path)
-        if xbmc is not None and hasattr(xbmc, "translatePath"):
-            return xbmc.translatePath(path)
+        vfs_translate = getattr(xbmcvfs, "translatePath", None) if xbmcvfs is not None else None
+        if callable(vfs_translate):
+            return vfs_translate(path)
+        xbmc_translate = getattr(xbmc, "translatePath", None) if xbmc is not None else None
+        if callable(xbmc_translate):
+            return xbmc_translate(path)
         return path
 
     def _set_integer_setting(self, setting_id: str, value: int) -> bool:

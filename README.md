@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.35. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.36. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -99,7 +99,10 @@ or control missing-record detection. No preliminary NAS file-counting pass is ad
   re-read current EXIF/XMP/IPTC metadata without rebuilding the catalogue or modifying
   source files. The whole-library path is serial, cancellable and resumable from a
   local checkpoint. **Metadata diagnostics** compares one indexed row with a fresh
-  local extraction before you decide to refresh.
+  local extraction before you decide to refresh. It includes the canonical Caption
+  in both halves and still opens with indexed values if fresh extraction fails.
+  Picture list items also publish the stored caption as `MyPicsDB3.Caption` for skin
+  and add-on integrations.
 - Search Unicode-normalized filename, caption, keywords, paths, camera and
   location fields with AND matching.
 - Apply an optional global minimum-picture-rating policy with a temporary
@@ -712,7 +715,11 @@ shows whether the final coordinate pair came from EXIF or XMP. Version 0.8.35 al
 fixes XMP caption extraction so an RDF `Description` wrapper cannot be confused with
 the actual XMP description property. The metadata extractor revision is bumped, so a
 normal scan or **Refresh all picture metadata** can re-read unchanged pictures with
-the corrected semantics.
+the corrected semantics. Version 0.8.36 then makes Caption visible in **Metadata
+diagnostics** and publishes it as the `MyPicsDB3.Caption` list-item property. Current
+Kodi Python picture metadata setters expose resolution and capture date but not
+IPTC Caption/camera setters, so MyPicsDB 3 does not rely on unsupported legacy
+picture-info keys for those values.
 
 For JPEGs, 0.8.27 also walks metadata marker headers and buffers only relevant APP1
 (EXIF/XMP) and SOF segments instead of reading several megabytes of compressed image

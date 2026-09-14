@@ -250,7 +250,9 @@ continues to rely on normal TTL/lock semantics.
 **Metadata diagnostics** uses the same extractor for one picture but does not acquire
 a writer lock and does not update the catalogue. It is intended to answer whether a
 blank indexed field is stale or whether the current extractor also fails to see the
-metadata Kodi's native picture info may display.
+metadata Kodi's native picture info may display. From 0.8.36 it includes Caption in
+both Indexed values and Fresh extraction. If the fresh read raises unexpectedly, the
+dialog still opens with the indexed values and reports the fresh-extraction error.
 
 ### Whole-library metadata refresh (0.8.29)
 
@@ -384,6 +386,26 @@ for non-RDF namespaces. The metadata extractor revision is bumped so unchanged f
 receive a new metadata-index fingerprint and can be corrected by the next normal scan
 or an explicit metadata refresh. IPTC `caption/abstract` keeps its established higher
 priority when optional IPTC extraction is available.
+
+### Kodi caption exposure and resilient diagnostics (0.8.36)
+
+The canonical database caption remains the source of truth. Picture list items now
+publish it as `MyPicsDB3.Caption`, including rows returned to Kodi's native slideshow
+loader. This is a stable integration property for skins and other add-ons.
+
+Kodi's current Python `InfoTagPicture` API exposes setters for resolution and capture
+date, but not IPTC Caption, camera make/model or EXIF comment. Current Kodi also
+rejects those legacy values when passed through `ListItem.setInfo("pictures", ...)`.
+MyPicsDB 3 therefore no longer sends the unsupported compatibility keys; the existing
+`MyPicsDB3.Camera` and new `MyPicsDB3.Caption` properties carry those catalogue values
+without producing misleading Kodi log warnings.
+
+Metadata diagnostics now displays Caption in both Indexed values and Fresh extraction.
+The indexed half is built before the fresh read, so an optional parser/VFS compatibility
+error cannot make the whole diagnostics action disappear. Non-callable compatibility
+`translatePath` attributes are also treated as unavailable instead of being invoked.
+This is a presentation/compatibility change only: schema 9, Query Model 1 and metadata
+extractor revision 2 stay unchanged.
 
 ### Reverse geocoding remains outside scanning (0.8.28, 0.8.32)
 

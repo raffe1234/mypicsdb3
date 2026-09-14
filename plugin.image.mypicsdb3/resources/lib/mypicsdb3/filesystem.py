@@ -257,7 +257,8 @@ class KodiFilesystem(Filesystem):
 
     @contextlib.contextmanager
     def materialized(self, path: str, max_bytes: Optional[int] = None) -> Iterator[Optional[str]]:
-        translated = xbmcvfs.translatePath(path) if hasattr(xbmcvfs, "translatePath") else path
+        translate_path = getattr(xbmcvfs, "translatePath", None)
+        translated = translate_path(path) if callable(translate_path) else path
         if os.path.isfile(translated):
             yield translated
             return
