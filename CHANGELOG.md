@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.8.37 - 2026-09-15
+
+- Extend GUI-language display aliases from Country to State/region, City and
+  Sublocation. Browse metadata still filters and searches with the original indexed
+  values; localized aliases are presentation-only.
+- Extend the explicit **Browse metadata > Location** localization action so one
+  representative stored GPS coordinate can populate missing display aliases for all
+  four named-location fields. Preserve the 0.8.34 country-alias cache keys and the
+  existing action route for compatibility.
+- Harden fresh JPEG metadata inspection on Kodi/VFS compatibility layers where
+  optional `xbmcvfs.copy`, `delete` or `translatePath` hooks may be missing or
+  non-callable. Local materialization can fall back to a streamed copy.
+- Make optional IPTC materialization/reader failures non-fatal to the rest of fresh
+  EXIF/XMP extraction and expose the IPTC failure in Metadata diagnostics. This
+  specifically protects **Metadata diagnostics** and individual **Refresh metadata**
+  from the reported `NoneType object is not callable` failure class.
+- Keep database schema 9, Query Model 1, metadata extractor revision 2, repository
+  version 0.2.26, screensaver version 0.7.0 and source-file read-only behaviour
+  unchanged. No full-library rescan is required to test this release.
+
 ## 0.8.36 - 2026-09-14
 
 - Publish the canonical indexed picture caption as the stable list-item property

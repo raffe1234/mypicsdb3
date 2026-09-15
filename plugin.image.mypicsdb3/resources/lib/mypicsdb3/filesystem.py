@@ -55,15 +55,22 @@ class KodiFileAdapter:
 
     def size(self) -> int:
         try:
-            return int(self._file.size())
+            size_value = getattr(self._file, "size", None)
+            if callable(size_value):
+                return int(size_value())
+            if size_value is not None:
+                return int(size_value)
         except Exception:
-            current = self.tell()
-            end = self.seek(0, 2)
-            self.seek(current, 0)
-            return end
+            pass
+        current = self.tell()
+        end = self.seek(0, 2)
+        self.seek(current, 0)
+        return end
 
     def close(self) -> None:
-        self._file.close()
+        close = getattr(self._file, "close", None)
+        if callable(close):
+            close()
 
     def __enter__(self) -> "KodiFileAdapter":
         return self
@@ -259,7 +266,7 @@ class KodiFilesystem(Filesystem):
     def materialized(self, path: str, max_bytes: Optional[int] = None) -> Iterator[Optional[str]]:
         translate_path = getattr(xbmcvfs, "translatePath", None)
         translated = translate_path(path) if callable(translate_path) else path
-        if os.path.isfile(translated):
+        if isinstance(translated, str) and translated and os.path.isfile(translated):
             yield translated
             return
         try:
@@ -273,11 +280,44 @@ class KodiFilesystem(Filesystem):
         target = self.temp_dir + "/metadata-" + sha256_text(path)[:20] + "." + extension
         copied = False
         try:
-            copied = bool(xbmcvfs.copy(path, target))
+            copy_file = getattr(xbmcvfs, "copy", None)
+            if callable(copy_file):
+                try:
+                    copied = bool(copy_file(path, target))
+                except Exception:
+                    copied = False
+
+            # Some Kodi compatibility shims expose optional VFS functions as
+            # non-callable placeholders.  IPTCInfo3 needs a real local path, so
+            # fall back to a bounded stream copy instead of turning that API
+            # difference into a fatal metadata-refresh error.
+            if not copied:
+                try:
+                    with self.open_binary(path) as source, open(target, "wb") as destination:
+                        while True:
+                            chunk = source.read(1024 * 1024)
+                            if not chunk:
+                                break
+                            destination.write(chunk)
+                    copied = os.path.isfile(target)
+                except Exception:
+                    copied = False
+
             yield target if copied else None
         finally:
-            if copied and xbmcvfs.exists(target):
-                xbmcvfs.delete(target)
+            # Clean up even when a fallback stream copy failed part-way through.
+            # A partial temp file must not survive and be mistaken for a future
+            # successful materialization.
+            try:
+                if os.path.exists(target):
+                    os.remove(target)
+            except Exception:
+                delete_file = getattr(xbmcvfs, "delete", None)
+                if callable(delete_file):
+                    try:
+                        delete_file(target)
+                    except Exception:
+                        pass
 
 
 class LocalFilesystem(Filesystem):

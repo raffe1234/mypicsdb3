@@ -8,11 +8,14 @@ from mypicsdb3.geocoding import (
     ResolvedLocation,
     ReverseGeocodingError,
     load_country_display_name,
+    load_location_display_name,
+    load_location_display_names,
     load_location_enrichment,
     merge_location,
     normalize_nominatim_endpoint,
     parse_nominatim_geocodejson,
     save_country_display_name,
+    save_location_display_name,
     save_location_enrichment,
 )
 
@@ -147,6 +150,30 @@ def test_country_display_alias_is_language_specific_and_local_only() -> None:
     assert save_country_display_name(catalog, "en-GB", "España", "Spain") is True
     assert load_country_display_name(catalog, "en-GB", "España") == "Spain"
     assert load_country_display_name(catalog, "sv-SE", "España") is None
+
+
+def test_location_display_aliases_cover_all_location_facets_without_rewriting_raw_values() -> None:
+    catalog = FakeCatalog()
+
+    assert save_location_display_name(
+        catalog, "en-GB", "state", "Comunidad Valenciana", "Valencian Community"
+    ) is True
+    assert save_location_display_name(
+        catalog, "en-GB", "city", "München", "Munich"
+    ) is True
+    assert save_location_display_name(
+        catalog, "en-GB", "sublocation", "Altstadt", "Old Town"
+    ) is True
+
+    assert load_location_display_name(
+        catalog, "en-GB", "state", "Comunidad Valenciana"
+    ) == "Valencian Community"
+    assert load_location_display_names(
+        catalog, "en-GB", "city", ["München", "Missing"]
+    ) == {"München": "Munich"}
+    assert load_location_display_name(
+        catalog, "de-DE", "sublocation", "Altstadt"
+    ) is None
 
 
 def test_nominatim_cache_misses_respect_persistent_request_interval() -> None:

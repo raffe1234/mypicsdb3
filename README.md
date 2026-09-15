@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.36. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.37. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -90,10 +90,11 @@ or control missing-record detection. No preliminary NAS file-counting pass is ad
   **Browse metadata > Location**, **Analyze GPS coverage** first estimates the local
   workload without network I/O; **Resolve missing locations from GPS** can then enrich
   many already-indexed GPS pictures with stoppable/resumable serial lookups.
-  **Localize country names for GUI language** can explicitly build display-only aliases
-  from one representative stored coordinate per country value, so the Country browser
-  follows Kodi's current GUI language without rewriting indexed country metadata. Online
-  reverse geocoding remains disabled by default and is never started by scans or browsing.
+  **Localize location names for GUI language** can explicitly build display-only aliases
+  from representative stored coordinates for Country, State/region, City and Sublocation,
+  so those browsers follow Kodi's current GUI language without rewriting indexed location
+  metadata. Online reverse geocoding remains disabled by default and is never started by
+  scans or browsing.
 - Use **Refresh metadata** on one still picture, **Refresh metadata in this folder**
   on one indexed album, or **Browse metadata > Refresh all picture metadata** to
   re-read current EXIF/XMP/IPTC metadata without rebuilding the catalogue or modifying
@@ -683,14 +684,16 @@ for a local workload estimate and **Resolve missing locations from GPS** for an
 explicitly started background bulk job. The job is serial, stoppable and resumable;
 it uses stored GPS and caches to fill only missing location fields without opening
 source files. Scans and metadata refreshes never start online geocoding implicitly.
-Version 0.8.34 adds **Localize country names for GUI language**. The action asks
-Nominatim for country results in Kodi's current GUI language. It uses at most one
-representative stored GPS coordinate for each as-yet-unlocalized country value and
-stores only a display alias for the current GUI language. It does
-not rewrite the canonical country field used by search and filtering, and opening the
-Country browser itself never performs a network request. Country values without a
-usable stored coordinate or successful lookup keep their indexed text as the fallback.
-An **Open map** action remains deferred until requested by a user.
+Version 0.8.34 adds **Localize country names for GUI language** for Country. Version
+0.8.37 extends the same presentation-only model to **State/region**, **City** and
+**Sublocation** and renames the menu action to **Localize location names for GUI
+language**. The action asks Nominatim for results in Kodi's current GUI language and
+uses representative stored GPS coordinates only after explicit confirmation. It stores
+only display aliases; the canonical indexed values used by search and filtering are not
+rewritten, and merely opening a metadata browser never performs a network request. The
+0.8.34 country-alias cache remains compatible. Values without a usable stored coordinate
+or successful lookup keep their indexed text as the fallback. An **Open map** action
+remains deferred until requested by a user.
 
 The default endpoint is the public OpenStreetMap Nominatim service. Its usage policy
 requires an identifying User-Agent, attribution, caching and at most one request per
@@ -719,7 +722,11 @@ the corrected semantics. Version 0.8.36 then makes Caption visible in **Metadata
 diagnostics** and publishes it as the `MyPicsDB3.Caption` list-item property. Current
 Kodi Python picture metadata setters expose resolution and capture date but not
 IPTC Caption/camera setters, so MyPicsDB 3 does not rely on unsupported legacy
-picture-info keys for those values.
+picture-info keys for those values. Version 0.8.37 further hardens the forced fresh
+extraction used by Metadata diagnostics and individual metadata refresh: optional Kodi
+VFS copy/delete/translate hooks are treated defensively, local IPTC materialization can
+fall back to a streamed copy, and an IPTC materialization failure is reported without
+aborting otherwise usable EXIF/XMP extraction.
 
 For JPEGs, 0.8.27 also walks metadata marker headers and buffers only relevant APP1
 (EXIF/XMP) and SOF segments instead of reading several megabytes of compressed image

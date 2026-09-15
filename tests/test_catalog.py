@@ -122,6 +122,18 @@ def test_catalog_queries_and_favorites(tmp_path: Path) -> None:
             "gps_longitude": 18.0686,
         }
     ]
+    location_candidates = catalog.location_localization_candidates()
+    assert location_candidates == [
+        {
+            "id": picture_id,
+            "country": "Sweden",
+            "state": None,
+            "city": "Stockholm",
+            "sublocation": None,
+            "gps_latitude": 59.3293,
+            "gps_longitude": 18.0686,
+        }
+    ]
     catalog.set_meta_value("location_enrichment:v1:abc", "cached")
     catalog.set_meta_value("other:key", "ignored")
     assert catalog.meta_keys_with_prefix("location_enrichment:v1:") == [

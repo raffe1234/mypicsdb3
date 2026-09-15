@@ -475,3 +475,51 @@ def test_jpeg_metadata_header_skips_large_unrelated_app_payloads() -> None:
     assert image_dimensions(header) == (4032, 3024)
     assert len(header) < 2000
     assert stream.bytes_read < 2000
+
+
+class _FailingIPTCMaterializationFilesystem:
+    def __init__(self, prefix: bytes):
+        self.prefix = prefix
+
+    def read_prefix(self, _path: str, _max_bytes: int) -> bytes:
+        return self.prefix
+
+    def open_binary(self, _path: str):
+        # Force _metadata_prefix through read_prefix so the synthetic XMP blob
+        # does not need to be a structurally valid JPEG marker sequence.
+        return io.BytesIO(b"not-jpeg")
+
+    @contextlib.contextmanager
+    def materialized(self, _path: str, _max_bytes: int):
+        raise TypeError("'NoneType' object is not callable")
+        yield None
+
+
+def test_optional_iptc_materialization_failure_does_not_abort_xmp_extraction(monkeypatch) -> None:
+    prefix = b'''\xff\xd8\xffprefix<x:xmpmeta xmlns:x="adobe:ns:meta/">
+      <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+               xmlns:dc="http://purl.org/dc/elements/1.1/">
+        <rdf:Description>
+          <dc:description><rdf:Alt><rdf:li>Caption survives</rdf:li></rdf:Alt></dc:description>
+        </rdf:Description>
+      </rdf:RDF>
+    </x:xmpmeta>suffix'''
+    filesystem = _FailingIPTCMaterializationFilesystem(prefix)
+    settings = SimpleNamespace(
+        metadata_prefix_mb=1,
+        deep_metadata_max_mb=64,
+        store_gps=False,
+        read_xmp=True,
+        read_iptc=True,
+    )
+    monkeypatch.setattr(metadata, "exifread", None)
+    monkeypatch.setattr(metadata, "IPTCInfo", _IndexedOnlyIPTCInfo)
+    diagnostics = {}
+
+    result = extract_metadata(
+        "picture.jpg", filesystem, settings, file_size=len(prefix), diagnostics=diagnostics
+    )
+
+    assert result.caption == "Caption survives"
+    assert diagnostics["iptc_loaded"] is False
+    assert diagnostics["iptc_error"] == "TypeError: 'NoneType' object is not callable"

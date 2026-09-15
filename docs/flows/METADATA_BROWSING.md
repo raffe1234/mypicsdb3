@@ -95,6 +95,20 @@ JPEG marker walker, so a valid EXIF APP1 block can still be found when the norma
 prefix path is unusable. These diagnostics do not write the catalogue; **Refresh
 metadata** remains the explicit write action.
 
+### Location aliases and fresh-extraction VFS resilience (0.8.37)
+
+The GUI-language alias layer now covers `country`, `state`, `city` and `sublocation`.
+Aliases are display-only: facet result routes continue to carry the original indexed
+value, so filtering/search identity is unchanged. The explicit localization action uses
+one representative stored coordinate per location combination and never runs simply by
+browsing metadata. Existing 0.8.34 Country alias cache keys remain valid.
+
+Fresh metadata inspection also treats optional Kodi VFS materialization helpers as
+capabilities rather than assumptions. When a compatibility shim cannot provide a
+callable VFS copy operation, MyPicsDB 3 can stream the file into its temporary local
+materialization instead. Optional IPTC materialization/reader errors are retained in
+diagnostics and do not abort EXIF/XMP extraction.
+
 ### Caption visibility and diagnostics resilience (0.8.36)
 
 Metadata diagnostics includes the canonical Caption in both **Indexed values** and

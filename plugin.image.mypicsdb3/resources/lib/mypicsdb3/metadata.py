@@ -1029,6 +1029,7 @@ def extract_metadata(
         })
 
     iptc_info = None
+    iptc_error = ""
     if (
         settings.read_iptc
         and grouped_rules.get("iptc")
@@ -1036,15 +1037,28 @@ def extract_metadata(
         and (not file_size or file_size <= settings.deep_metadata_max_mb * 1024 * 1024)
         and IPTCInfo is not None
     ):
-        with filesystem.materialized(path, settings.deep_metadata_max_mb * 1024 * 1024) as local_path:
-            if local_path:
-                try:
-                    iptc_info = IPTCInfo(local_path, force=True)
-                except Exception:
-                    iptc_info = None
+        try:
+            with filesystem.materialized(
+                path, settings.deep_metadata_max_mb * 1024 * 1024
+            ) as local_path:
+                if local_path:
+                    try:
+                        iptc_info = IPTCInfo(local_path, force=True)
+                    except Exception as exc:
+                        iptc_error = "%s: %s" % (exc.__class__.__name__, str(exc))
+                        iptc_info = None
+                else:
+                    iptc_error = "Could not materialize image to a local path"
+        except Exception as exc:
+            # IPTC is an optional deep-metadata layer. A VFS compatibility
+            # problem while producing its local temporary file must not make
+            # EXIF/XMP diagnostics or a one-picture refresh collapse entirely.
+            iptc_error = "%s: %s" % (exc.__class__.__name__, str(exc))
+            iptc_info = None
 
     if diagnostics is not None:
         diagnostics["iptc_loaded"] = iptc_info is not None
+        diagnostics["iptc_error"] = iptc_error
 
     usable_rules = tuple(grouped_rules.get("exif", ()))
     if settings.read_xmp:

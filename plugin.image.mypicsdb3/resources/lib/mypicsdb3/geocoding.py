@@ -153,21 +153,43 @@ def enrichment_key(uri: str) -> str:
     return "location_enrichment:v1:%s" % sha256_text(str(uri or ""))
 
 
-def country_display_name_key(language: str, raw_country: str) -> str:
+LOCATION_DISPLAY_FIELDS = frozenset({"country", "state", "city", "sublocation"})
+
+
+def location_display_name_key(language: str, field: str, raw_value: str) -> str:
+    """Return the persistent cache key for one localized location display alias.
+
+    Country deliberately keeps the 0.8.34 key format so already-cached country
+    aliases continue to work after extending the same presentation-only mechanism
+    to state/region, city and sublocation.
+    """
+
     language = normalize_accept_language(language)
-    raw = str(raw_country or "").strip()
-    if not language or not raw:
+    field = str(field or "").strip().casefold()
+    raw = str(raw_value or "").strip()
+    if not language or field not in LOCATION_DISPLAY_FIELDS or not raw:
         return ""
-    return "country_display_name:v1:%s:%s" % (
-        sha256_text(language.casefold())[:12],
-        sha256_text(raw.casefold()),
+    language_token = sha256_text(language.casefold())[:12]
+    raw_token = sha256_text(raw.casefold())
+    if field == "country":
+        return "country_display_name:v1:%s:%s" % (language_token, raw_token)
+    return "location_display_name:v1:%s:%s:%s" % (
+        field,
+        language_token,
+        raw_token,
     )
 
 
-def load_country_display_name(catalog, language: str, raw_country: str) -> Optional[str]:
-    """Return a cached GUI-language display alias without performing network I/O."""
+def country_display_name_key(language: str, raw_country: str) -> str:
+    return location_display_name_key(language, "country", raw_country)
 
-    key = country_display_name_key(language, raw_country)
+
+def load_location_display_name(
+    catalog, language: str, field: str, raw_value: str
+) -> Optional[str]:
+    """Return one cached GUI-language alias without performing network I/O."""
+
+    key = location_display_name_key(language, field, raw_value)
     if not key:
         return None
     getter = getattr(catalog, "meta_value", None)
@@ -176,17 +198,18 @@ def load_country_display_name(catalog, language: str, raw_country: str) -> Optio
     return _clean_text(getter(key))
 
 
-def load_country_display_names(
+def load_location_display_names(
     catalog,
     language: str,
-    raw_countries: Iterable[str],
+    field: str,
+    raw_values: Iterable[str],
 ) -> Dict[str, str]:
-    """Return cached country aliases, using one catalogue read when supported."""
+    """Return cached aliases for one location facet using one catalogue read when supported."""
 
     key_by_raw = {}
-    for raw_country in raw_countries:
-        raw = str(raw_country or "").strip()
-        key = country_display_name_key(language, raw)
+    for raw_value in raw_values:
+        raw = str(raw_value or "").strip()
+        key = location_display_name_key(language, field, raw)
         if raw and key:
             key_by_raw[raw] = key
     if not key_by_raw:
@@ -204,10 +227,40 @@ def load_country_display_names(
 
     aliases = {}
     for raw in key_by_raw:
-        value = load_country_display_name(catalog, language, raw)
+        value = load_location_display_name(catalog, language, field, raw)
         if value is not None:
             aliases[raw] = value
     return aliases
+
+
+def save_location_display_name(
+    catalog,
+    language: str,
+    field: str,
+    raw_value: str,
+    display_name: str,
+) -> bool:
+    """Persist one presentation-only location alias without changing indexed metadata."""
+
+    key = location_display_name_key(language, field, raw_value)
+    value = _clean_text(display_name)
+    setter = getattr(catalog, "set_meta_value", None)
+    if not key or value is None or not callable(setter):
+        return False
+    setter(key, value)
+    return True
+
+
+def load_country_display_name(catalog, language: str, raw_country: str) -> Optional[str]:
+    return load_location_display_name(catalog, language, "country", raw_country)
+
+
+def load_country_display_names(
+    catalog,
+    language: str,
+    raw_countries: Iterable[str],
+) -> Dict[str, str]:
+    return load_location_display_names(catalog, language, "country", raw_countries)
 
 
 def save_country_display_name(
@@ -216,15 +269,9 @@ def save_country_display_name(
     raw_country: str,
     display_name: str,
 ) -> bool:
-    """Persist a display-only country alias for one GUI language/raw value pair."""
-
-    key = country_display_name_key(language, raw_country)
-    value = _clean_text(display_name)
-    setter = getattr(catalog, "set_meta_value", None)
-    if not key or value is None or not callable(setter):
-        return False
-    setter(key, value)
-    return True
+    return save_location_display_name(
+        catalog, language, "country", raw_country, display_name
+    )
 
 
 def _parse_feature(payload: Mapping[str, Any]) -> Mapping[str, Any]:

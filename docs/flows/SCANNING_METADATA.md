@@ -407,6 +407,16 @@ error cannot make the whole diagnostics action disappear. Non-callable compatibi
 This is a presentation/compatibility change only: schema 9, Query Model 1 and metadata
 extractor revision 2 stay unchanged.
 
+### Fresh metadata VFS/IPTC compatibility (0.8.37)
+
+Metadata diagnostics and explicit metadata refresh always perform a fresh extraction,
+while a normal scan may legitimately skip extraction for an unchanged row with a matching
+metadata fingerprint. Version 0.8.37 hardens that forced-read path: non-callable optional
+Kodi VFS helpers do not become function calls, materialization can stream-copy when the
+VFS copy helper is unavailable, and optional IPTC materialization failures are isolated
+from the EXIF/XMP result. No schema or extractor-revision bump is required because this
+is compatibility/error-isolation rather than a change to normalized metadata semantics.
+
 ### Reverse geocoding remains outside scanning (0.8.28, 0.8.32)
 
 The scanner never calls a network geocoder. Online location enrichment is disabled by

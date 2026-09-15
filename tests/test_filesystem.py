@@ -79,3 +79,29 @@ def test_kodi_filesystem_ignores_noncallable_translate_path(monkeypatch, tmp_pat
     adapter = filesystem.KodiFilesystem(str(tmp_path / "metadata"))
     with adapter.materialized(str(picture)) as materialized:
         assert materialized == str(picture)
+
+
+def test_kodi_filesystem_materializes_via_stream_when_vfs_copy_is_noncallable(monkeypatch, tmp_path) -> None:
+    data = b"\xff\xd8jpeg-with-iptc-data"
+    temp_dir = tmp_path / "metadata"
+    temp_dir.mkdir()
+
+    def file_factory(_path, _mode=""):
+        return _BinaryKodiFile(data)
+
+    fake_vfs = SimpleNamespace(
+        File=file_factory,
+        copy=None,
+        delete=None,
+        translatePath=None,
+        exists=lambda _path: True,
+        mkdirs=lambda _path: True,
+    )
+    monkeypatch.setattr(filesystem, "xbmcvfs", fake_vfs)
+
+    adapter = filesystem.KodiFilesystem(str(temp_dir))
+    with adapter.materialized("smb://nas/picture.jpg") as materialized:
+        assert materialized is not None
+        assert open(materialized, "rb").read() == data
+
+    assert list(temp_dir.iterdir()) == []

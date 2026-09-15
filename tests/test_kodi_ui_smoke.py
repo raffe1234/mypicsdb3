@@ -7,7 +7,12 @@ import types
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlsplit
 
-from mypicsdb3.geocoding import load_country_display_name, save_country_display_name
+from mypicsdb3.geocoding import (
+    load_country_display_name,
+    load_location_display_name,
+    save_country_display_name,
+    save_location_display_name,
+)
 
 
 class FakeListItem:
@@ -535,6 +540,19 @@ class FakeCatalog:
         return [
             {
                 "country": "Sweden",
+                "gps_latitude": 59.3293,
+                "gps_longitude": 18.0686,
+            }
+        ][:limit]
+
+    def location_localization_candidates(self, limit=5000):
+        return [
+            {
+                "id": 1,
+                "country": "Sweden",
+                "state": "Stockholm County",
+                "city": "Stockholm",
+                "sublocation": "Gamla stan",
                 "gps_latitude": 59.3293,
                 "gps_longitude": 18.0686,
             }
@@ -1362,7 +1380,7 @@ def test_metadata_browser_uses_curated_facets_and_query_model_results(monkeypatc
     assert [item.label for _url, item, _folder in calls.items] == [
         "Analyze GPS coverage",
         "Resolve missing locations from GPS",
-        "Localize country names for GUI language",
+        "Localize location names for GUI language",
         "Country", "State or region", "City", "Sublocation"
     ]
     assert calls.items[0][0].endswith("/action/analyse-gps-location-coverage")
@@ -1397,43 +1415,69 @@ def test_metadata_browser_uses_curated_facets_and_query_model_results(monkeypatc
     assert query.root.children[1].value.make == "Canon"
 
 
-def test_country_facet_uses_gui_language_alias_but_keeps_raw_query_value(monkeypatch) -> None:
+def test_location_facets_use_gui_language_aliases_but_keep_raw_query_values(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
     runtime.kodi.gui_language = "en-GB"
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
     original_query_facet_counts = runtime.catalog.query_facet_counts
 
+    facet_rows = {
+        "country": [{"value": "Sverige", "picture_count": 10}],
+        "state": [{"value": "Stockholms län", "picture_count": 8}],
+        "city": [{"value": "Göteborg", "picture_count": 5}],
+        "sublocation": [{"value": "Gamla stan", "picture_count": 3}],
+    }
+
     def query_facet_counts(query, field, limit=100, offset=0):
-        if field == "country":
-            return [
-                {"value": "Sverige", "picture_count": 10},
-                {"value": "España", "picture_count": 5},
-            ][offset:offset + limit]
+        if field in facet_rows:
+            return facet_rows[field][offset:offset + limit]
         return original_query_facet_counts(query, field, limit, offset)
 
     runtime.catalog.query_facet_counts = query_facet_counts
-    save_country_display_name(runtime.catalog, "en-GB", "Sverige", "Sweden")
-    save_country_display_name(runtime.catalog, "en-GB", "España", "Spain")
+    save_location_display_name(runtime.catalog, "en-GB", "country", "Sverige", "Sweden")
+    save_location_display_name(runtime.catalog, "en-GB", "state", "Stockholms län", "Stockholm County")
+    save_location_display_name(runtime.catalog, "en-GB", "city", "Göteborg", "Gothenburg")
+    save_location_display_name(runtime.catalog, "en-GB", "sublocation", "Gamla stan", "Old Town")
 
-    ui.dispatch(views.Request("metadata-values", {"field": "country"}))
+    expected = {
+        "country": ("Sweden  [COLOR=grey](10)[/COLOR]", "Sverige"),
+        "state": ("Stockholm County  [COLOR=grey](8)[/COLOR]", "Stockholms län"),
+        "city": ("Gothenburg  [COLOR=grey](5)[/COLOR]", "Göteborg"),
+        "sublocation": ("Old Town  [COLOR=grey](3)[/COLOR]", "Gamla stan"),
+    }
+    calls.items = []
+    for field, (label, raw) in expected.items():
+        calls.items.clear()
+        ui.dispatch(views.Request("metadata-values", {"field": field}))
+        assert [item.label for _url, item, _folder in calls.items] == [label]
+        assert parse_qs(urlsplit(calls.items[0][0]).query)["value"] == [raw]
 
-    assert [item.label for _url, item, _folder in calls.items] == [
-        "Sweden  [COLOR=grey](10)[/COLOR]",
-        "Spain  [COLOR=grey](5)[/COLOR]",
-    ]
-    assert parse_qs(urlsplit(calls.items[0][0]).query)["value"] == ["Sverige"]
-    assert parse_qs(urlsplit(calls.items[1][0]).query)["value"] == ["España"]
 
-
-def test_country_display_aliases_can_be_populated_explicitly_from_representative_gps(monkeypatch) -> None:
+def test_location_display_aliases_can_be_populated_explicitly_from_representative_gps(monkeypatch) -> None:
     views, calls = load_views(monkeypatch)
     runtime = FakeRuntime()
     runtime.kodi.gui_language = "en-GB"
     runtime.kodi.settings.reverse_geocoding_enabled = True
-    runtime.catalog.country_localization_candidates = lambda limit=500: [
-        {"country": "Sverige", "gps_latitude": 59.3293, "gps_longitude": 18.0686},
-        {"country": "España", "gps_latitude": 38.5367, "gps_longitude": -0.1334},
+    runtime.catalog.location_localization_candidates = lambda limit=5000: [
+        {
+            "id": 1,
+            "country": "Sverige",
+            "state": "Stockholms län",
+            "city": "Stockholm",
+            "sublocation": "Gamla stan",
+            "gps_latitude": 59.3293,
+            "gps_longitude": 18.0686,
+        },
+        {
+            "id": 2,
+            "country": "España",
+            "state": "Comunidad Valenciana",
+            "city": "Benidorm",
+            "sublocation": "Levante",
+            "gps_latitude": 38.5367,
+            "gps_longitude": -0.1334,
+        },
     ][:limit]
     ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
     views.xbmcgui.Dialog.responses = [True]
@@ -1446,8 +1490,19 @@ def test_country_display_aliases_can_be_populated_explicitly_from_representative
     class FakeGeocoder:
         def resolve(self, latitude, longitude):
             lookup_calls.append((latitude, longitude))
-            country = "Sweden" if latitude > 50 else "Spain"
-            return types.SimpleNamespace(country=country)
+            if latitude > 50:
+                return types.SimpleNamespace(
+                    country="Sweden",
+                    state="Stockholm County",
+                    city="Stockholm",
+                    sublocation="Old Town",
+                )
+            return types.SimpleNamespace(
+                country="Spain",
+                state="Valencian Community",
+                city="Benidorm",
+                sublocation="Levante",
+            )
 
     requested_languages = []
 
@@ -1463,9 +1518,12 @@ def test_country_display_aliases_can_be_populated_explicitly_from_representative
     assert lookup_calls == [(59.3293, 18.0686), (38.5367, -0.1334)]
     assert load_country_display_name(runtime.catalog, "en-GB", "Sverige") == "Sweden"
     assert load_country_display_name(runtime.catalog, "en-GB", "España") == "Spain"
+    assert load_location_display_name(runtime.catalog, "en-GB", "state", "Stockholms län") == "Stockholm County"
+    assert load_location_display_name(runtime.catalog, "en-GB", "city", "Benidorm") == "Benidorm"
+    assert load_location_display_name(runtime.catalog, "en-GB", "sublocation", "Gamla stan") == "Old Town"
     assert runtime.catalog.location_updates == []
     assert any(
-        message == "Country localization complete: 2 saved, 0 failed"
+        message == "Location localization complete: 8 names saved, 0 lookups failed"
         for message, _error in runtime.kodi.notifications
     )
     assert views.xbmcgui.DialogProgress.closed is True
@@ -1593,7 +1651,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.36" in labels
+    assert "MyPicsDB 3 version: 0.8.37" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3646,7 +3704,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.36"
+    assert captured["init"][2] == "0.8.37"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

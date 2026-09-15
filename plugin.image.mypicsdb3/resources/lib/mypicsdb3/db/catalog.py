@@ -1584,6 +1584,38 @@ class Catalog:
         with self.engine.transaction() as connection:
             return self.engine.fetchall(connection, query, (limit,))
 
+    def location_localization_candidates(self, limit: int = 5000) -> List[Dict[str, Any]]:
+        """Return representative GPS rows for distinct stored location tuples.
+
+        Display aliases are presentation state only.  One representative point per
+        distinct canonical location tuple lets a single Nominatim response populate
+        country, state/region, city and sublocation aliases without rewriting any
+        indexed values.  The generous read limit is local-only; the UI still caps
+        each explicit network run to a much smaller batch and can be run again.
+        """
+
+        if type(limit) is not int:
+            raise ValueError("Location-localization limit must be an integer")
+        if limit < 1 or limit > 10000:
+            raise ValueError("Location-localization limit must be between 1 and 10000")
+        where = (
+            "is_missing=0 AND media_type='picture' "
+            "AND gps_latitude IS NOT NULL AND gps_longitude IS NOT NULL "
+            "AND (TRIM(COALESCE(country, ''))<>'' OR TRIM(COALESCE(state, ''))<>'' "
+            "OR TRIM(COALESCE(city, ''))<>'' OR TRIM(COALESCE(sublocation, ''))<>'')"
+        )
+        query = (
+            "SELECT p.id, p.country, p.state, p.city, p.sublocation, "
+            "p.gps_latitude, p.gps_longitude FROM pictures p "
+            "JOIN (SELECT MIN(id) AS id FROM pictures WHERE %s "
+            "GROUP BY country, state, city, sublocation) c ON c.id=p.id "
+            "ORDER BY LOWER(COALESCE(p.country, '')), LOWER(COALESCE(p.state, '')), "
+            "LOWER(COALESCE(p.city, '')), LOWER(COALESCE(p.sublocation, '')), p.id LIMIT ?"
+            % where
+        )
+        with self.engine.transaction() as connection:
+            return self.engine.fetchall(connection, query, (limit,))
+
     def location_enrichment_picture_horizon(
         self, max_picture_id: Optional[int] = None
     ) -> Tuple[int, int]:
