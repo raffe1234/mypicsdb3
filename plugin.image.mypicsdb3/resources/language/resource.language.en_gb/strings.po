@@ -2489,3 +2489,23 @@ msgstr "Location localization complete: %d names saved, %d lookups failed"
 msgctxt "#33119"
 msgid "IPTC reader/materialization error"
 msgstr "IPTC reader/materialization error"
+
+msgctxt "#33120"
+msgid "Export MyPicsDB 3 log"
+msgstr "Export MyPicsDB 3 log"
+
+msgctxt "#33121"
+msgid "Choose log export destination"
+msgstr "Choose log export destination"
+
+msgctxt "#33122"
+msgid "MyPicsDB 3 log saved: %s"
+msgstr "MyPicsDB 3 log saved: %s"
+
+msgctxt "#33123"
+msgid "Could not export MyPicsDB 3 log"
+msgstr "Could not export MyPicsDB 3 log"
+
+msgctxt "#33124"
+msgid "Review the text file before sharing; add-on log messages may contain filenames or source information."
+msgstr "Review the text file before sharing; add-on log messages may contain filenames or source information."

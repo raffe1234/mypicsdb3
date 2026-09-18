@@ -16,7 +16,11 @@ import xbmcplugin  # type: ignore
 
 from .album_view import save_current_album_view
 from .attention import ATTENTION_PRESETS, attention_preset
-from .diagnostics import collect_diagnostics, write_support_bundle
+from .diagnostics import (
+    collect_diagnostics,
+    write_mypicsdb3_log_export,
+    write_support_bundle,
+)
 from .db.locks import LOCATION_ENRICHMENT_LOCK_NAME
 from .exporter import ExportError, SafeExporter, normalize_export_name
 from .geocoding import (
@@ -108,6 +112,7 @@ from .slideshow import (
     stop_active_media_players,
 )
 from .utils import (
+    basename_uri,
     duration_seconds,
     extension_of,
     format_duration,
@@ -4505,6 +4510,12 @@ class PluginUI:
         )
         items.append(
             self.add_action(
+                self.text(33120, "Export MyPicsDB 3 log"),
+                "action/export-mypicsdb3-log",
+            )
+        )
+        items.append(
+            self.add_action(
                 self.text(32858, "Export support bundle"),
                 "action/export-support-bundle",
             )
@@ -4624,6 +4635,51 @@ class PluginUI:
         self.finish(items, content="files", category=self.text(30014, "Scan status"))
 
     def action(self, route: str, params: Dict[str, str]):
+        if route == "action/export-mypicsdb3-log":
+            dialog = xbmcgui.Dialog()
+            destination = dialog.browseSingle(
+                3,
+                self.text(33121, "Choose log export destination"),
+                "",
+                "",
+                False,
+                False,
+                "",
+            )
+            destination = str(destination or "").strip()
+            if not destination:
+                return
+            self.kodi.log.info("Diagnostic log export requested")
+            try:
+                export_path, line_count = write_mypicsdb3_log_export(
+                    self.runtime, destination
+                )
+            except Exception as exc:
+                self.kodi.log.warning("Could not export MyPicsDB 3 log: %s", exc)
+                self.kodi.notify(
+                    "%s: %s"
+                    % (self.text(33123, "Could not export MyPicsDB 3 log"), exc),
+                    error=True,
+                )
+                return
+            filename = basename_uri(str(export_path or ""))
+            self.kodi.log.info(
+                "Filtered MyPicsDB 3 log exported: %s (%d lines)",
+                filename,
+                int(line_count),
+            )
+            self.kodi.notify(
+                "%s\n%s"
+                % (
+                    self.text(33122, "MyPicsDB 3 log saved: %s") % filename,
+                    self.text(
+                        33124,
+                        "Review the text file before sharing; add-on log messages may contain filenames or source information.",
+                    ),
+                ),
+                milliseconds=8000,
+            )
+            return
         if route == "action/export-support-bundle":
             try:
                 bundle_path = write_support_bundle(self.runtime)

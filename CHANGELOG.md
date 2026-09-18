@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+- Add phase, exception-type and source-site diagnostics for unexpected individual
+  **Refresh metadata** failures without logging filenames, source URIs or embedded
+  metadata.
+- Add **Diagnostics > Export MyPicsDB 3 log**. The user chooses a writable
+  destination and the add-on exports only `[MyPicsDB 3]` rows from the current and
+  previous Kodi session logs to a timestamped text file, with a reminder to review
+  it before sharing.
+
 ## 0.8.37 - 2026-09-15
 
 - Extend GUI-language display aliases from Country to State/region, City and

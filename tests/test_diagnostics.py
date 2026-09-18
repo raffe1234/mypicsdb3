@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import io
 import json
 import zipfile
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
-from mypicsdb3.diagnostics import collect_diagnostics, write_support_bundle
+from mypicsdb3.diagnostics import (
+    collect_diagnostics,
+    write_mypicsdb3_log_export,
+    write_support_bundle,
+)
 
 
 class Catalog:
@@ -164,3 +169,78 @@ def test_support_bundle_contains_only_sanitized_diagnostics(tmp_path) -> None:
     ):
         assert secret not in exported
     assert "does not include" in readme
+
+class LogFilesystem:
+    def __init__(self, files):
+        self.files = {path: data.encode("utf-8") for path, data in files.items()}
+        self.writes = {}
+
+    def exists(self, path):
+        return path in self.files
+
+    def stat(self, path):
+        return SimpleNamespace(size=len(self.files[path]))
+
+    def open_binary(self, path):
+        return io.BytesIO(self.files[path])
+
+    def write_text(self, path, text):
+        self.writes[path] = text
+
+
+def test_log_export_filters_current_and_previous_kodi_logs() -> None:
+    filesystem = LogFilesystem(
+        {
+            "special://logpath/kodi.old.log": (
+                "2026-09-18 INFO <general>: [Other add-on] ignore me\n"
+                "2026-09-18 ERROR <general>: [MyPicsDB 3] old metadata error\n"
+            ),
+            "special://logpath/kodi.log": (
+                "2026-09-18 INFO <general>: [MyPicsDB 3] Diagnostic log export requested\n"
+                "2026-09-18 ERROR <general>: [MyPicsDB 3] Metadata refresh failed: "
+                "picture_id=7 phase=catalogue-write error=TypeError "
+                "site=metadata_refresh.py:123:_refresh_phase\n"
+                "2026-09-18 INFO <general>: unrelated private/source/path.jpg\n"
+            ),
+        }
+    )
+    runtime = SimpleNamespace(filesystem=filesystem)
+    generated_at = datetime(2026, 9, 18, 10, 30, 45, tzinfo=timezone.utc)
+
+    path, line_count = write_mypicsdb3_log_export(
+        runtime,
+        "smb://server/support/",
+        generated_at=generated_at,
+    )
+
+    assert path == "smb://server/support/mypicsdb3-log-20260918-103045Z.txt"
+    assert line_count == 3
+    exported = filesystem.writes[path]
+    assert "--- kodi.old.log ---" in exported
+    assert "--- kodi.log ---" in exported
+    assert "old metadata error" in exported
+    assert "phase=catalogue-write" in exported
+    assert "[Other add-on]" not in exported
+    assert "unrelated private/source/path.jpg" not in exported
+    assert "Review this file before sharing" in exported
+
+
+def test_log_export_handles_missing_previous_log() -> None:
+    filesystem = LogFilesystem(
+        {
+            "special://logpath/kodi.log": (
+                "2026-09-18 INFO <general>: [MyPicsDB 3] one current line\n"
+            )
+        }
+    )
+    runtime = SimpleNamespace(filesystem=filesystem)
+
+    path, line_count = write_mypicsdb3_log_export(
+        runtime,
+        "/tmp",
+        generated_at=datetime(2026, 9, 18, 11, 0, tzinfo=timezone.utc),
+    )
+
+    assert path.endswith("/mypicsdb3-log-20260918-110000Z.txt")
+    assert line_count == 1
+    assert "kodi.old.log" not in filesystem.writes[path]

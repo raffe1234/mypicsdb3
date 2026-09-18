@@ -5,15 +5,110 @@ import os
 import time
 import zipfile
 from datetime import datetime, timezone
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from . import SCHEMA_VERSION, VERSION
 from .query_model import QUERY_MODEL_VERSION
-from .utils import duration_seconds
+from .utils import duration_seconds, join_uri
 
 
 SCREENSAVER_ADDON_ID = "screensaver.mypicsdb3"
 REPOSITORY_ADDON_ID = "repository.mypicsdb3"
+
+
+MYPICSDB3_LOG_MARKER = "[MyPicsDB 3]"
+KODI_LOG_EXPORT_SOURCES = (
+    ("kodi.old.log", "special://logpath/kodi.old.log"),
+    ("kodi.log", "special://logpath/kodi.log"),
+)
+LOG_EXPORT_MAX_BYTES_PER_FILE = 16 * 1024 * 1024
+
+
+def _mypicsdb3_log_lines(
+    filesystem, path: str, *, max_bytes: int = LOG_EXPORT_MAX_BYTES_PER_FILE
+) -> Tuple[List[str], bool]:
+    """Return MyPicsDB 3 lines from the tail of one Kodi session log."""
+
+    if not filesystem.exists(path):
+        return [], False
+
+    start = 0
+    try:
+        size = max(0, int(filesystem.stat(path).size))
+        start = max(0, size - max(1, int(max_bytes)))
+    except Exception:
+        # Reading the complete file is still useful when a compatibility VFS
+        # cannot provide a reliable stat result.
+        start = 0
+
+    with filesystem.open_binary(path) as stream:
+        if start:
+            stream.seek(start, 0)
+        data = stream.read()
+
+    if isinstance(data, bytes):
+        text = data.decode("utf-8", "replace")
+    else:
+        text = str(data or "")
+
+    truncated = bool(start)
+    if truncated:
+        # The bounded tail can start in the middle of a log line. Do not export
+        # that incomplete fragment as though it were a complete diagnostic.
+        newline = text.find("\n")
+        text = text[newline + 1 :] if newline >= 0 else ""
+
+    return [line for line in text.splitlines() if MYPICSDB3_LOG_MARKER in line], truncated
+
+
+def write_mypicsdb3_log_export(
+    runtime,
+    output_dir: str,
+    *,
+    generated_at: Optional[datetime] = None,
+) -> Tuple[str, int]:
+    """Export filtered MyPicsDB 3 rows from current and previous Kodi logs."""
+
+    timestamp = generated_at or datetime.now(timezone.utc)
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    timestamp = timestamp.astimezone(timezone.utc)
+
+    sections = []
+    unreadable = []
+    total_lines = 0
+    for label, source_path in KODI_LOG_EXPORT_SOURCES:
+        try:
+            lines, truncated = _mypicsdb3_log_lines(runtime.filesystem, source_path)
+        except Exception:
+            unreadable.append(label)
+            continue
+        if not lines:
+            continue
+        total_lines += len(lines)
+        heading = "--- %s%s ---" % (
+            label,
+            " (last 16 MiB only)" if truncated else "",
+        )
+        sections.append("%s\n%s" % (heading, "\n".join(lines)))
+
+    generated = timestamp.isoformat().replace("+00:00", "Z")
+    header = [
+        "MyPicsDB 3 filtered Kodi log",
+        "Generated: %s" % generated,
+        "Only lines containing %s are included." % MYPICSDB3_LOG_MARKER,
+        "Review this file before sharing; add-on log messages may contain filenames or source information.",
+    ]
+    if unreadable:
+        header.append("Could not read: %s" % ", ".join(unreadable))
+    if not sections:
+        sections.append("No MyPicsDB 3 log entries were found.")
+
+    content = "\n".join(header) + "\n\n" + "\n\n".join(sections) + "\n"
+    filename = "mypicsdb3-log-%s.txt" % timestamp.strftime("%Y%m%d-%H%M%SZ")
+    destination = join_uri(str(output_dir or ""), filename)
+    runtime.filesystem.write_text(destination, content)
+    return destination, total_lines
 
 
 def _optional_addon_version(kodi, addon_id: str) -> str:

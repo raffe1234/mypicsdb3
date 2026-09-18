@@ -1677,13 +1677,62 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     assert "Private photos" not in joined
     assert "private-ui-token" not in joined
     assert "private-ui-fingerprint" not in joined
-    for url, item, is_folder in calls.items[:-2]:
+    for url, item, is_folder in calls.items[:-3]:
         assert url == ""
         assert item.properties["IsPlayable"] == "false"
         assert item.properties["MyPicsDB3.MediaType"] == "info"
         assert is_folder is False
-    assert calls.items[-2][0].endswith("/action/log-diagnostic")
+    assert calls.items[-3][0].endswith("/action/log-diagnostic")
+    assert calls.items[-2][0].endswith("/action/export-mypicsdb3-log")
     assert calls.items[-1][0].endswith("/action/export-support-bundle")
+
+
+def test_export_mypicsdb3_log_action_prompts_for_writable_destination(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    FakeDialog.browse_responses = ["smb://server/support/"]
+    FakeDialog.browse_calls = []
+    exported = []
+
+    def fake_export(_runtime, destination):
+        exported.append(destination)
+        return "smb://server/support/mypicsdb3-log-test.txt", 4
+
+    monkeypatch.setattr(views, "write_mypicsdb3_log_export", fake_export)
+
+    ui.dispatch(views.Request("action/export-mypicsdb3-log", {}))
+
+    assert FakeDialog.browse_calls == [
+        (3, "Choose log export destination", "", "", False, False, "")
+    ]
+    assert exported == ["smb://server/support/"]
+    assert runtime.kodi.notifications[-1] == (
+        "MyPicsDB 3 log saved: mypicsdb3-log-test.txt\n"
+        "Review the text file before sharing; add-on log messages may contain "
+        "filenames or source information.",
+        False,
+    )
+    assert "Diagnostic log export requested" in runtime.kodi.info_messages
+    assert runtime.kodi.info_messages[-1] == (
+        "Filtered MyPicsDB 3 log exported: mypicsdb3-log-test.txt (4 lines)"
+    )
+
+
+def test_export_mypicsdb3_log_action_can_be_cancelled(monkeypatch) -> None:
+    views, _calls = load_views(monkeypatch)
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    FakeDialog.browse_responses = [""]
+
+    def should_not_export(*_args, **_kwargs):
+        raise AssertionError("cancelled export must not write a file")
+
+    monkeypatch.setattr(views, "write_mypicsdb3_log_export", should_not_export)
+
+    ui.dispatch(views.Request("action/export-mypicsdb3-log", {}))
+
+    assert runtime.kodi.notifications == []
 
 
 def test_export_support_bundle_action_reports_generated_filename(monkeypatch) -> None:
