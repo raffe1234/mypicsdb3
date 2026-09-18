@@ -109,6 +109,19 @@ callable VFS copy operation, MyPicsDB 3 can stream the file into its temporary l
 materialization instead. Optional IPTC materialization/reader errors are retained in
 diagnostics and do not abort EXIF/XMP extraction.
 
+### Refresh-failure tracing and filtered log export (0.8.38)
+
+One-picture **Refresh metadata** now tracks its current phase and records that phase,
+the exception type and a source-code site when an unexpected error escapes. The log
+record omits filenames, source URIs, GPS values and embedded metadata. This change is
+diagnostic only and does not alter extraction or catalogue semantics.
+
+The top-level **Diagnostics** view also exposes **Export MyPicsDB 3 log**. It writes
+only `[MyPicsDB 3]` rows from the current and previous Kodi session logs to a
+user-selected text file. This export is separate from the privacy-safe support bundle
+and should still be reviewed before sharing because older add-on log messages may
+contain filenames or source information.
+
 ### Caption visibility and diagnostics resilience (0.8.36)
 
 Metadata diagnostics includes the canonical Caption in both **Indexed values** and

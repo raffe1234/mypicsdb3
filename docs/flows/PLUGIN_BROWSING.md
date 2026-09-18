@@ -97,7 +97,8 @@ carry only the indexed picture ID. `views.py` resolves the row locally and deleg
 filesystem/extractor work to `MetadataRefresher`; raw paths, GPS coordinates and EXIF
 values are not embedded in plug-in URLs. Diagnostics are read-only. Refresh confirms
 the write, coordinates with scan/migration locks, updates only the catalogue and then
-refreshes the current container.
+refreshes the current container. Since 0.8.38, unexpected one-picture refresh failures
+also log a privacy-bounded phase/type/site record so the failing stage can be identified.
 
 Indexed album rows expose **Refresh metadata in this folder**. The action confirms the
 number of direct still pictures, uses a cancellable progress dialog and deliberately

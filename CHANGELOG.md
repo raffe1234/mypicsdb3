@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.8.38 - 2026-09-18
 
 - Add phase, exception-type and source-site diagnostics for unexpected individual
   **Refresh metadata** failures without logging filenames, source URIs or embedded
@@ -9,6 +9,9 @@
   destination and the add-on exports only `[MyPicsDB 3]` rows from the current and
   previous Kodi session logs to a timestamped text file, with a reminder to review
   it before sharing.
+- Keep schema 9, Query Model 1, metadata extractor revision 2, repository version
+  0.2.26 and screensaver version 0.7.0 unchanged. The release is diagnostic only;
+  no full-library rescan is required.
 
 ## 0.8.37 - 2026-09-15
 

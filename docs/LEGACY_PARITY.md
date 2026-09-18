@@ -183,6 +183,7 @@ reviving CommonCache-era behavior.
 13. 0.8.30 — completed: correct the foreground metadata-refresh progress API for modern Kodi.
 14. 0.8.31 — completed: background whole-library metadata refresh with progress, stop requests and playback pause/resume.
 15. 0.8.32 — implemented: local GPS coverage/workload analysis, explicit resumable bulk location enrichment, metadata extractor revision in the index fingerprint and dynamic Estuary release-pin checks. Implementation status does not imply that every real-device acceptance check is complete.
+16. 0.8.38 — completed: privacy-bounded phase diagnostics for unexpected one-picture metadata-refresh failures plus user-selected export of filtered `[MyPicsDB 3]` rows from current/previous Kodi logs; no metadata-semantic or schema change.
 
 ## Maintenance priorities and deferred features
 

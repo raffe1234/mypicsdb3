@@ -174,7 +174,15 @@ new files, marks media missing or recursively traverses subfolders.
 Refresh holds the dedicated `metadata-refresh` catalogue lock, which conflicts with
 scanner and migration writers. Diagnostics use the same extractor but remain
 read-only and return bounded source details to the local Kodi dialog. No raw EXIF
-payload is persisted as a diagnostic store.
+payload is persisted as a diagnostic store. Since 0.8.38, unexpected one-picture
+refresh failures also record a bounded phase/type/source-site diagnostic that omits
+filenames, source URIs and embedded metadata.
+
+`diagnostics.py` also owns the explicit filtered-log export used from the Diagnostics
+menu. It reads bounded tails of the current and previous Kodi logs, keeps only rows
+with the `[MyPicsDB 3]` marker and writes the result to a user-selected destination.
+This export is separate from the privacy-safe support bundle because historical
+add-on log messages may still contain filenames or source information.
 
 ### `db/engine.py`: backend abstraction
 

@@ -417,6 +417,17 @@ VFS copy helper is unavailable, and optional IPTC materialization failures are i
 from the EXIF/XMP result. No schema or extractor-revision bump is required because this
 is compatibility/error-isolation rather than a change to normalized metadata semantics.
 
+### Refresh-failure phase diagnostics (0.8.38)
+
+The explicit one-picture refresh path now annotates unexpected failures with the
+active refresh phase, exception type and source site. This distinguishes failures in
+locking, source stat, extraction, location-cache access, catalogue writing and folder
+summary work without logging the source filename/URI or embedded metadata.
+
+The companion **Diagnostics > Export MyPicsDB 3 log** action filters the current and
+previous Kodi logs to `[MyPicsDB 3]` rows and writes the result to a user-selected
+text file. It changes neither scanner cadence nor normalized metadata semantics.
+
 ### Reverse geocoding remains outside scanning (0.8.28, 0.8.32)
 
 The scanner never calls a network geocoder. Online location enrichment is disabled by

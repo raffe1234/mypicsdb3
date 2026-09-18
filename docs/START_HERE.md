@@ -300,6 +300,14 @@ refresh dialog are in `views.py`; refresh locking remains in `metadata_refresh.p
 `db/locks.py`. Regression coverage lives in `tests/test_metadata.py` and
 `tests/test_kodi_ui_smoke.py`. No schema, Query Model or Estuary change is involved.
 
+## 0.8.38 refresh-failure diagnostics touchpoints
+
+For one-picture refresh phase tracing, start in `metadata_refresh.py` and `views.py`.
+The filtered Kodi-log reader/writer lives in `diagnostics.py`, while the Diagnostics
+menu and writable-destination picker are in `views.py`. Regression coverage lives in
+`tests/test_diagnostics.py` and `tests/test_kodi_ui_smoke.py`. The feature is diagnostic
+only: it does not change schema, Query Model, extractor revision or source files.
+
 ## 0.8.28 online location-enrichment touchpoints
 
 Start in `resources/lib/mypicsdb3/geocoding.py` for the configurable Nominatim client,
