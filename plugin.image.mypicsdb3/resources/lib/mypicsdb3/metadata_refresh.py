@@ -228,16 +228,54 @@ class MetadataRefresher:
         )
         return MetadataInspection(dict(row), fresh, source_details)
 
+    def _refresh_phase(
+        self, picture_id: int, phase: str, operation, *args, **kwargs
+    ):
+        try:
+            return operation(*args, **kwargs)
+        except (MetadataRefreshBusy, MetadataRefreshNotFound):
+            raise
+        except Exception as exc:
+            if self.logger:
+                # Keep diagnostics safe to attach publicly: do not include source
+                # URIs, filenames, embedded metadata or exception messages.
+                traceback = exc.__traceback__
+                while traceback is not None and traceback.tb_next is not None:
+                    traceback = traceback.tb_next
+                site = "unknown"
+                if traceback is not None:
+                    code = traceback.tb_frame.f_code
+                    site = "%s:%d:%s" % (
+                        os.path.basename(code.co_filename),
+                        traceback.tb_lineno,
+                        code.co_name,
+                    )
+                self.logger.error(
+                    "Metadata refresh failed: picture_id=%d phase=%s error=%s site=%s",
+                    int(picture_id),
+                    phase,
+                    exc.__class__.__name__,
+                    site,
+                )
+            raise
+
     def _refresh_one(self, picture_id: int) -> MetadataInspection:
-        self._refresh_lock_if_due()
-        row = self.catalog.picture_by_id(int(picture_id))
+        self._refresh_phase(picture_id, "lock-refresh", self._refresh_lock_if_due)
+        row = self._refresh_phase(
+            picture_id, "catalogue-read", self.catalog.picture_by_id, int(picture_id)
+        )
         if not row or str(row.get("media_type") or "picture") != "picture":
             raise MetadataRefreshNotFound("Picture was not found")
 
         uri = str(row.get("uri") or "")
-        file_stat = self.filesystem.stat(uri)
+        file_stat = self._refresh_phase(
+            picture_id, "source-stat", self.filesystem.stat, uri
+        )
         source_details: Dict[str, Any] = {}
-        metadata = extract_metadata(
+        metadata = self._refresh_phase(
+            picture_id,
+            "metadata-extraction",
+            extract_metadata,
             uri,
             self.filesystem,
             self.settings,
@@ -248,13 +286,22 @@ class MetadataRefresher:
         if not metadata.taken_at:
             metadata.taken_at = local_datetime_from_timestamp(file_stat.mtime)
             metadata.taken_source = "File mtime fallback"
-        enrichment = load_location_enrichment(self.catalog, uri)
+        enrichment = self._refresh_phase(
+            picture_id,
+            "location-cache-read",
+            load_location_enrichment,
+            self.catalog,
+            uri,
+        )
         if (
             enrichment is None
             and metadata.gps_latitude is not None
             and metadata.gps_longitude is not None
         ):
-            enrichment = load_cached_reverse_geocoding(
+            enrichment = self._refresh_phase(
+                picture_id,
+                "location-coordinate-cache-read",
+                load_cached_reverse_geocoding,
                 self.catalog,
                 str(
                     getattr(
@@ -269,7 +316,14 @@ class MetadataRefresher:
             )
             if enrichment is not None:
                 # This is cache reuse only; no network request occurs here.
-                save_location_enrichment(self.catalog, uri, enrichment)
+                self._refresh_phase(
+                    picture_id,
+                    "location-cache-write",
+                    save_location_enrichment,
+                    self.catalog,
+                    uri,
+                    enrichment,
+                )
         location = merge_location(metadata.location or {}, enrichment)
         record: Dict[str, Any] = {
             "source_id": int(row["source_id"]),
@@ -303,20 +357,30 @@ class MetadataRefresher:
             "metadata_index_hash": self._metadata_index_hash,
             "thumb_uri": row.get("thumb_uri") or uri,
         }
-        if not self.catalog.refresh_picture_record(
-            int(row["id"]), record, metadata.keywords
+        if not self._refresh_phase(
+            picture_id,
+            "catalogue-write",
+            self.catalog.refresh_picture_record,
+            int(row["id"]),
+            record,
+            metadata.keywords,
         ):
             raise MetadataRefreshNotFound("Picture was not found")
         return MetadataInspection(dict(row), metadata, source_details)
 
     def refresh_picture(self, picture_id: int) -> MetadataInspection:
-        self._acquire()
+        self._refresh_phase(picture_id, "lock-acquire", self._acquire)
         try:
             inspection = self._refresh_one(int(picture_id))
-            self.catalog.refresh_folder_summary(int(inspection.row["folder_id"]))
+            self._refresh_phase(
+                picture_id,
+                "folder-summary",
+                self.catalog.refresh_folder_summary,
+                int(inspection.row["folder_id"]),
+            )
             return inspection
         finally:
-            self._release()
+            self._refresh_phase(picture_id, "lock-release", self._release)
 
     def refresh_all(
         self,

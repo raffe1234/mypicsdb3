@@ -18,6 +18,14 @@ class FakeFilesystem:
         return FileStat(size=456, mtime=1720000000.0)
 
 
+class FakeLogger:
+    def __init__(self):
+        self.errors = []
+
+    def error(self, message, *args):
+        self.errors.append(message % args if args else message)
+
+
 class FakeCatalog:
     def __init__(self):
         self.locked = False
@@ -176,6 +184,34 @@ def test_inspect_picture_reads_fresh_metadata_without_writing(monkeypatch) -> No
     assert inspection.fresh.camera_make == "Samsung"
     assert inspection.source_details["exif_tag_count"] == 42
     assert catalog.refreshed == []
+    assert catalog.locked is False
+
+
+def test_refresh_picture_logs_safe_phase_and_site_when_refresh_operation_fails(
+    monkeypatch,
+) -> None:
+    catalog = FakeCatalog()
+    logger = FakeLogger()
+
+    monkeypatch.setattr(
+        metadata_refresh,
+        "extract_metadata",
+        lambda path, filesystem, cfg, file_size, mapping_rules=(), diagnostics=None: fresh_result(),
+    )
+    catalog.refresh_picture_record = None
+
+    with pytest.raises(TypeError, match="NoneType.*not callable"):
+        MetadataRefresher(
+            catalog, FakeFilesystem(), settings(), logger=logger
+        ).refresh_picture(1)
+
+    assert len(logger.errors) == 1
+    assert "picture_id=1" in logger.errors[0]
+    assert "phase=catalogue-write" in logger.errors[0]
+    assert "error=TypeError" in logger.errors[0]
+    assert "site=metadata_refresh.py:" in logger.errors[0]
+    assert "smb://" not in logger.errors[0]
+    assert "one.jpg" not in logger.errors[0]
     assert catalog.locked is False
 
 
