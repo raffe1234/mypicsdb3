@@ -5,7 +5,7 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.38. The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.39. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
@@ -734,7 +734,11 @@ aborting otherwise usable EXIF/XMP extraction. Version 0.8.38 adds phase-aware l
 for unexpected one-picture refresh failures and **Diagnostics > Export MyPicsDB 3 log**,
 which exports only `[MyPicsDB 3]` rows from `kodi.log` and `kodi.old.log` to a chosen
 text file. The refresh failure record deliberately omits filenames, source URIs and
-embedded metadata.
+embedded metadata. Version 0.8.39 fixes the reproduced diagnostics-only EXIF failure
+path behind issue #20: diagnostic Make/Model/GPS-reference display values are derived
+from the same raw ExifRead tag values used by normal metadata mapping rather than by
+stringifying the tag wrapper. Diagnostics and individual refresh therefore cannot fail
+only because an otherwise usable ExifRead tag has broken printable/string behaviour.
 
 For JPEGs, 0.8.27 also walks metadata marker headers and buffers only relevant APP1
 (EXIF/XMP) and SOF segments instead of reading several megabytes of compressed image

@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.8.39 - 2026-09-26
+
+- Fix an issue #20 failure path where Metadata diagnostics and individual **Refresh
+  metadata** could turn an otherwise successful ExifRead result into
+  `TypeError: 'NoneType' object is not callable`. Diagnostic EXIF text now uses the
+  raw tag values already consumed by normal metadata mapping instead of stringifying
+  the ExifRead tag wrapper itself.
+- Add a regression test that proves ordinary scanner-style extraction and the forced
+  diagnostic/refresh extraction return the same camera metadata even when a tag
+  wrapper cannot be stringified. Diagnostics remain observational and must not change
+  extraction success.
+- Keep database schema 9, Query Model 1, metadata extractor revision 2, repository
+  version 0.2.26 and screensaver version 0.7.0 unchanged. No full-library rescan is
+  required.
+
 ## 0.8.38 - 2026-09-18
 
 - Add phase, exception-type and source-site diagnostics for unexpected individual

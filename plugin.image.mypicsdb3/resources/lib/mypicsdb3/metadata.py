@@ -390,11 +390,22 @@ def _tag_value(tags: Dict[str, Any], *names: str) -> Any:
 
 def _tag_text(tags: Dict[str, Any], *names: str) -> str:
     for name in names:
-        tag = tags.get(name)
-        if tag is not None:
-            text = decode_text(tag)
-            if text:
-                return text
+        value = _tag_value(tags, name)
+        if value is None:
+            continue
+        if isinstance(value, (list, tuple)):
+            value = value[0] if value else None
+        if value is None:
+            continue
+        try:
+            text = decode_text(value)
+        except Exception:
+            # Diagnostic formatting must not make an otherwise readable EXIF
+            # result fail. ExifRead tag wrappers can have brittle __str__ /
+            # printable behaviour while their raw ``values`` remain usable.
+            continue
+        if text:
+            return text
     return ""
 
 

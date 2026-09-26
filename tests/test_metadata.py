@@ -150,6 +150,51 @@ class _ExifFilesystem:
         yield None
 
 
+class _BrokenPrintableTag:
+    def __init__(self, value):
+        self.values = [value]
+
+    def __str__(self):
+        raise TypeError("'NoneType' object is not callable")
+
+
+class _BrokenPrintableExifReader:
+    @staticmethod
+    def process_file(_stream, details=False, strict=False):
+        assert details is False
+        assert strict is False
+        return {
+            "Image Make": _BrokenPrintableTag("Samsung"),
+            "Image Model": _BrokenPrintableTag("SM-S921B"),
+        }
+
+
+def test_diagnostics_does_not_change_successful_exif_extraction(monkeypatch) -> None:
+    filesystem = _ExifFilesystem()
+    settings = SimpleNamespace(
+        metadata_prefix_mb=1,
+        deep_metadata_max_mb=64,
+        store_gps=False,
+        read_xmp=False,
+        read_iptc=False,
+    )
+    monkeypatch.setattr(metadata, "exifread", _BrokenPrintableExifReader())
+
+    normal = extract_metadata("picture.jpg", filesystem, settings, file_size=100)
+    assert normal.camera_make == "Samsung"
+    assert normal.camera_model == "SM-S921B"
+
+    diagnostics = {}
+    inspected = extract_metadata(
+        "picture.jpg", filesystem, settings, file_size=100, diagnostics=diagnostics
+    )
+
+    assert inspected.camera_make == "Samsung"
+    assert inspected.camera_model == "SM-S921B"
+    assert diagnostics["exif_make"] == "Samsung"
+    assert diagnostics["exif_model"] == "SM-S921B"
+
+
 def test_extract_metadata_can_report_privacy_local_extractor_diagnostics(monkeypatch) -> None:
     filesystem = _ExifFilesystem()
     settings = SimpleNamespace(

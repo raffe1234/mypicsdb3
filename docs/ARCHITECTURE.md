@@ -529,6 +529,13 @@ uses `readBytes()` for metadata streams and normalizes its bytearray result to
 `bytes`. This keeps SMB/VFS access inside Kodi while ensuring JPEG/EXIF marker bytes
 are never subjected to UTF-8 decoding before ExifRead or the bounded fallback.
 
+0.8.39 makes fresh-extraction diagnostics observational at the ExifRead tag boundary.
+Diagnostic text for Make, Model and GPS references is derived from the tag's raw
+`values`, which is also what normal metadata mapping consumes, instead of invoking the
+tag wrapper's printable/string representation. A malformed or compatibility-specific
+`__str__` implementation must therefore not make Metadata diagnostics or individual
+Refresh metadata fail when normal extraction can already use the raw value.
+
 0.8.27 keeps that byte-stream boundary but avoids treating the configured JPEG
 metadata prefix as a request to transfer compressed pixels. A bounded marker walker
 reads JPEG segment headers through Start Of Scan, keeps only APP1 (EXIF/XMP) and SOF
