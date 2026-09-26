@@ -176,7 +176,12 @@ scanner and migration writers. Diagnostics use the same extractor but remain
 read-only and return bounded source details to the local Kodi dialog. No raw EXIF
 payload is persisted as a diagnostic store. Since 0.8.38, unexpected one-picture
 refresh failures also record a bounded phase/type/source-site diagnostic that omits
-filenames, source URIs and embedded metadata.
+filenames, source URIs and embedded metadata. In 0.8.39 the diagnostics dictionary
+also carries a transient extractor `stage` marker. It is not catalogue data: it exists
+only for the current fresh read so an escaping failure can be correlated with prefix,
+EXIF, XMP, IPTC, mapping, GPS-finalization or hash work. With add-on Debug logging
+enabled, successful fresh reads emit structural parser/fallback counters only; metadata
+values remain local to the diagnostics viewer.
 
 `diagnostics.py` also owns the explicit filtered-log export used from the Diagnostics
 menu. It reads bounded tails of the current and previous Kodi logs, keeps only rows
@@ -221,8 +226,11 @@ catalogue/checkpoint commit boundary; it must not be introduced as an unbounded
 thread-per-file optimization. Version 0.8.19 deliberately measures before
 optimizing: scan statistics include metadata-read counts plus aggregate directory
 listing, file-stat and metadata-inspection wall time, and the scanner emits one
-privacy-safe end-of-scan summary with wall-clock files/second. The instrumentation
-does not add media I/O or change traversal/write ordering.
+privacy-safe end-of-scan summary with wall-clock files/second. When add-on Debug
+logging is enabled, 0.8.39 additionally records the scan configuration/plan and one
+privacy-safe summary per source; media failures get a source ID, media kind, processing
+phase and exception type without adding a success line for every media item. The
+instrumentation does not add media I/O or change traversal/write ordering.
 
 ### `filesystem.py`: local and Kodi VFS adapters
 

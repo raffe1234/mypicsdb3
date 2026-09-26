@@ -2339,9 +2339,9 @@ class PluginUI:
         except Exception as exc:
             inspection_error = "%s: %s" % (exc.__class__.__name__, str(exc))
             self.kodi.log.warning(
-                "Metadata diagnostics fresh extraction failed for picture %s: %s",
+                "Metadata diagnostics UI caught failure: picture_id=%s error=%s",
                 picture_id,
-                inspection_error,
+                exc.__class__.__name__,
             )
 
         settings = refresher.settings if refresher is not None else self.kodi.settings

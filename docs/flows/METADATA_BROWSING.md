@@ -120,7 +120,10 @@ The top-level **Diagnostics** view also exposes **Export MyPicsDB 3 log**. It wr
 only `[MyPicsDB 3]` rows from the current and previous Kodi session logs to a
 user-selected text file. This export is separate from the privacy-safe support bundle
 and should still be reviewed before sharing because older add-on log messages may
-contain filenames or source information.
+contain filenames or source information. When add-on Debug logging is enabled, current
+metadata diagnostics/refresh traces are intentionally value-free: they report operation
+phase, extractor stage, exception type/site and structural parser/fallback counters, not
+filenames, source URIs, GPS values or embedded metadata values.
 
 ### Caption visibility and diagnostics resilience (0.8.36)
 

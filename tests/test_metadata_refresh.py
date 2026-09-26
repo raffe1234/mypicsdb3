@@ -20,7 +20,15 @@ class FakeFilesystem:
 
 class FakeLogger:
     def __init__(self):
+        self.debugs = []
+        self.warnings = []
         self.errors = []
+
+    def debug(self, message, *args):
+        self.debugs.append(message % args if args else message)
+
+    def warning(self, message, *args):
+        self.warnings.append(message % args if args else message)
 
     def error(self, message, *args):
         self.errors.append(message % args if args else message)
@@ -214,6 +222,72 @@ def test_refresh_picture_logs_safe_phase_and_site_when_refresh_operation_fails(
     assert "one.jpg" not in logger.errors[0]
     assert catalog.locked is False
 
+
+
+def test_refresh_picture_logs_extractor_stage_without_private_values_on_failure(monkeypatch) -> None:
+    catalog = FakeCatalog()
+    logger = FakeLogger()
+
+    def failing_extract(path, filesystem, cfg, file_size, mapping_rules=(), diagnostics=None):
+        diagnostics.update({"stage": "mapping", "exif_make": "PRIVATE-CAMERA-VALUE"})
+        raise TypeError("PRIVATE source path smb://server/photos/one.jpg")
+
+    monkeypatch.setattr(metadata_refresh, "extract_metadata", failing_extract)
+
+    with pytest.raises(TypeError):
+        MetadataRefresher(
+            catalog, FakeFilesystem(), settings(), logger=logger
+        ).refresh_picture(1)
+
+    assert any(
+        "phase=metadata-extraction" in line
+        and "extract_stage=mapping" in line
+        and "error=TypeError" in line
+        for line in logger.errors
+    )
+    joined = "\n".join(logger.errors + logger.debugs + logger.warnings)
+    assert "PRIVATE-CAMERA-VALUE" not in joined
+    assert "smb://server/photos/one.jpg" not in joined
+
+
+def test_metadata_diagnostics_debug_summary_is_structural_and_privacy_safe(monkeypatch) -> None:
+    catalog = FakeCatalog()
+    logger = FakeLogger()
+
+    def fake_extract(path, filesystem, cfg, file_size, mapping_rules=(), diagnostics=None):
+        diagnostics.update({
+            "stage": "complete",
+            "exifread_available": True,
+            "exif_tag_count": 42,
+            "exif_error": "",
+            "exif_fallback_used": False,
+            "exif_fallback_tag_count": 0,
+            "prefix_bytes_read": 1234,
+            "prefix_error": "",
+            "dimension_error": "",
+            "xmp_present": True,
+            "iptc_loaded": False,
+            "iptc_error": "TypeError: PRIVATE IPTC detail",
+            "gps_source": "EXIF",
+            "exif_make": "PRIVATE-CAMERA-VALUE",
+        })
+        return fresh_result()
+
+    monkeypatch.setattr(metadata_refresh, "extract_metadata", fake_extract)
+    MetadataRefresher(
+        catalog, FakeFilesystem(), settings(), logger=logger
+    ).inspect_picture(1)
+
+    joined = "\n".join(logger.debugs)
+    assert "Metadata diagnostics start: picture_id=1" in joined
+    assert "stage=complete" in joined
+    assert "exif_tags=42" in joined
+    assert "prefix_bytes=1234" in joined
+    assert "iptc_error=TypeError" in joined
+    assert "gps_source=EXIF" in joined
+    assert "PRIVATE-CAMERA-VALUE" not in joined
+    assert "PRIVATE IPTC detail" not in joined
+    assert "one.jpg" not in joined
 
 def test_refresh_picture_replaces_catalogue_metadata_and_preserves_scan_seen_time(monkeypatch) -> None:
     catalog = FakeCatalog()

@@ -165,7 +165,13 @@ or control missing-record detection. No preliminary NAS file-counting pass is ad
   problem needs log evidence, **Export MyPicsDB 3 log** writes only `[MyPicsDB 3]`
   rows from the current and previous Kodi logs to a user-selected text file; review
   that file before sharing because older add-on log messages can contain filenames
-  or source information.
+  or source information. With **Settings > Maintenance > Debug logging** enabled,
+  MyPicsDB 3 also writes high-signal add-on diagnostics at Kodi INFO level so Kodi's
+  global debug mode is not required. These opt-in lines include a safe runtime
+  environment summary, scan plans/source summaries, metadata operation start/end
+  state, parser/fallback counters and failure phase/stage/type/site. New diagnostics
+  deliberately omit filenames, source URIs, credentials, GPS coordinates and embedded
+  metadata values; successful scans are not logged once per file.
 
 ### Development and delivery
 
@@ -739,6 +745,9 @@ path behind issue #20: diagnostic Make/Model/GPS-reference display values are de
 from the same raw ExifRead tag values used by normal metadata mapping rather than by
 stringifying the tag wrapper. Diagnostics and individual refresh therefore cannot fail
 only because an otherwise usable ExifRead tag has broken printable/string behaviour.
+The same release also extends opt-in debug tracing: a failed fresh extraction records
+the outer refresh/diagnostics phase, the last extractor stage, exception type and code
+site, while successful reads log structural parser/fallback signals only.
 
 For JPEGs, 0.8.27 also walks metadata marker headers and buffers only relevant APP1
 (EXIF/XMP) and SOF segments instead of reading several megabytes of compressed image

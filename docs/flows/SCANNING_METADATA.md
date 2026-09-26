@@ -428,6 +428,20 @@ The companion **Diagnostics > Export MyPicsDB 3 log** action filters the current
 previous Kodi logs to `[MyPicsDB 3]` rows and writes the result to a user-selected
 text file. It changes neither scanner cadence nor normalized metadata semantics.
 
+### Debug-stage tracing (0.8.39)
+
+With MyPicsDB 3 **Debug logging** enabled, fresh metadata diagnostics and refreshes
+write a privacy-safe start line and one structural extraction summary. Unexpected
+failures include the outer operation phase plus the last extractor stage, exception
+type and source-code site. Extractor stages cover prefix I/O, dimension probing, EXIF,
+diagnostics-only EXIF fields, XMP, IPTC, mapping, GPS finalization and hashing.
+
+The scan path adds a debug start/plan line and one completion summary per source. A
+failed media item also records source ID, media type, processing phase and exception
+type. These records deliberately exclude media paths, filenames, metadata values, GPS
+coordinates and credentials. Successful per-file scan logging remains disabled to keep
+large-library logs bounded.
+
 ### Reverse geocoding remains outside scanning (0.8.28, 0.8.32)
 
 The scanner never calls a network geocoder. Online location enrichment is disabled by

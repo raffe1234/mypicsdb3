@@ -11,6 +11,14 @@
   diagnostic/refresh extraction return the same camera metadata even when a tag
   wrapper cannot be stringified. Diagnostics remain observational and must not change
   extraction success.
+- Strengthen opt-in **Debug logging** with privacy-safe runtime, scan and metadata
+  traces. Metadata failures now retain both the outer operation phase and the last
+  extractor stage, while successful fresh reads summarize parser/fallback state,
+  header-byte counts and XMP/IPTC/GPS-source signals without logging filenames,
+  source URIs, GPS values or embedded metadata values.
+- Add privacy-safe scan start/plan/source-completion diagnostics and per-media failure
+  phase/type lines so future VFS, metadata and catalogue-write problems can be
+  separated without verbose per-file success logging.
 - Keep database schema 9, Query Model 1, metadata extractor revision 2, repository
   version 0.2.26 and screensaver version 0.7.0 unchanged. No full-library rescan is
   required.

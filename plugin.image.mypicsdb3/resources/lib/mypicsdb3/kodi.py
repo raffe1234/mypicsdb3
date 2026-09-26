@@ -3,10 +3,12 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import time
 import uuid
 from typing import Any, Dict, List, Optional
 
+from . import SCHEMA_VERSION, VERSION
 from .config import Settings, from_getter, resolve_home_widget_limit
 from .log import Logger
 from .utils import is_indexable_picture_source_uri, normalize_uri, parse_bool
@@ -127,6 +129,32 @@ class KodiContext:
         migration = self._migrate_home_widget_limit_setting()
         self.settings = self.load_settings()
         self.log = Logger(self.name, self.settings.debug_logging, xbmc)
+        build_getter = getattr(xbmc, "getInfoLabel", None) if xbmc is not None else None
+        kodi_build = "unknown"
+        if callable(build_getter):
+            try:
+                kodi_build = str(build_getter("System.BuildVersion") or "unknown").strip()
+            except Exception:
+                kodi_build = "unknown"
+        self.log.debug(
+            "Debug environment: version=%s schema=%d kodi=%s python=%d.%d.%d "
+            "backend=%s xmp=%s iptc=%s store_gps=%s videos=%s batch=%d "
+            "metadata_prefix_mb=%d deep_metadata_max_mb=%d",
+            VERSION,
+            SCHEMA_VERSION,
+            kodi_build,
+            sys.version_info.major,
+            sys.version_info.minor,
+            sys.version_info.micro,
+            str(self.settings.database_backend),
+            str(bool(self.settings.read_xmp)).lower(),
+            str(bool(self.settings.read_iptc)).lower(),
+            str(bool(self.settings.store_gps)).lower(),
+            str(bool(self.settings.include_videos)).lower(),
+            int(self.settings.batch_size),
+            int(self.settings.metadata_prefix_mb),
+            int(self.settings.deep_metadata_max_mb),
+        )
         if migration is not None:
             old_widget, old_home, effective, saved = migration
             self.log.info(

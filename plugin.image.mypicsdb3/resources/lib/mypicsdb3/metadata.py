@@ -902,14 +902,21 @@ def extract_metadata(
     diagnostics: Optional[Dict[str, Any]] = None,
 ) -> MetadataResult:
     result = MetadataResult(mime_type=mimetypes.guess_type(path)[0] or "image/unknown")
+    if diagnostics is not None:
+        diagnostics.clear()
+        diagnostics["stage"] = "start"
     prefix = b""
     prefix_error = ""
     dimension_error = ""
+    if diagnostics is not None:
+        diagnostics["stage"] = "prefix-read"
     try:
         prefix = _metadata_prefix(path, filesystem, settings.metadata_prefix_mb * 1024 * 1024)
     except Exception as exc:
         prefix_error = "%s: %s" % (exc.__class__.__name__, str(exc))
         prefix = b""
+    if diagnostics is not None:
+        diagnostics["stage"] = "dimension-probe"
     try:
         result.width, result.height = image_dimensions(prefix)
     except Exception as exc:
@@ -919,6 +926,8 @@ def extract_metadata(
         # unrelated malformed text tag.
         dimension_error = "%s: %s" % (exc.__class__.__name__, str(exc))
 
+    if diagnostics is not None:
+        diagnostics["stage"] = "exif-read"
     tags: Dict[str, Any] = {}
     exif_error = ""
     exif_fallback_used = False
@@ -967,7 +976,7 @@ def extract_metadata(
         exif_fallback_tag_count = len(tags)
 
     if diagnostics is not None:
-        diagnostics.clear()
+        diagnostics["stage"] = "diagnostic-exif-fields"
         diagnostics.update({
             "exifread_available": exifread is not None,
             "exif_error": exif_error,
@@ -1014,8 +1023,12 @@ def extract_metadata(
         result.gps_latitude = _gps_coordinate(lat, lat_ref)
         result.gps_longitude = _gps_coordinate(lon, lon_ref)
 
+    if diagnostics is not None:
+        diagnostics["stage"] = "mapping-prepare"
     effective_rules = effective_mapping_rules(mapping_rules or ())
     grouped_rules = mapping_rules_by_source(effective_rules)
+    if diagnostics is not None:
+        diagnostics["stage"] = "xmp-read"
     xmp_xml = _xmp_fragment(prefix) if settings.read_xmp and prefix else ""
     xmp_location = _xmp_location_data(xmp_xml) if xmp_xml else {
         "location": {},
@@ -1039,6 +1052,8 @@ def extract_metadata(
             "iptc_available": IPTCInfo is not None,
         })
 
+    if diagnostics is not None:
+        diagnostics["stage"] = "iptc-read"
     iptc_info = None
     iptc_error = ""
     if (
@@ -1071,6 +1086,8 @@ def extract_metadata(
         diagnostics["iptc_loaded"] = iptc_info is not None
         diagnostics["iptc_error"] = iptc_error
 
+    if diagnostics is not None:
+        diagnostics["stage"] = "mapping"
     usable_rules = tuple(grouped_rules.get("exif", ()))
     if settings.read_xmp:
         usable_rules += tuple(grouped_rules.get("xmp", ()))
@@ -1107,6 +1124,7 @@ def extract_metadata(
             result.gps_longitude = xmp_location.get("gps_longitude")
 
     if diagnostics is not None:
+        diagnostics["stage"] = "gps-finalize"
         diagnostics["store_gps"] = bool(settings.store_gps)
         if result.gps_latitude is not None and result.gps_longitude is not None:
             if (
@@ -1124,6 +1142,8 @@ def extract_metadata(
     if not settings.store_gps:
         result.gps_latitude = None
         result.gps_longitude = None
+    if diagnostics is not None:
+        diagnostics["stage"] = "metadata-hash"
     result.metadata_hash = stable_json_hash({
         "taken_at": result.taken_at,
         "taken_source": result.taken_source,
@@ -1140,4 +1160,6 @@ def extract_metadata(
         "location": result.location,
         "caption": result.caption,
     })
+    if diagnostics is not None:
+        diagnostics["stage"] = "complete"
     return result

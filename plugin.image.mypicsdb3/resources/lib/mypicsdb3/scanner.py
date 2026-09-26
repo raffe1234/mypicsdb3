@@ -75,6 +75,11 @@ class Scanner:
         self._metadata_index_hash = metadata_index_signature(self.settings, ())
         self.filesystem = CancellationAwareFilesystem(filesystem, self._check_cancelled)
 
+    def _debug(self, message: str, *args) -> None:
+        logger = getattr(self.logger, "debug", None) if self.logger else None
+        if callable(logger):
+            logger(message, *args)
+
     def _progress_stats(self, current=None):
         snapshot = ScanStats(estimated_total=self._estimated_total)
         # UI snapshots only need counters. Do not copy a potentially large
@@ -152,6 +157,18 @@ class Scanner:
         if source_ids is not None:
             wanted = {int(value) for value in source_ids}
             sources = [source for source in sources if source.id in wanted]
+        self._debug(
+            "Media scan start: sources=%d selected=%s backend=%s xmp=%s iptc=%s "
+            "store_gps=%s videos=%s batch=%d",
+            len(sources),
+            "all" if source_ids is None else str(len({int(value) for value in source_ids})),
+            str(getattr(self.settings, "database_backend", "unknown")),
+            str(bool(getattr(self.settings, "read_xmp", False))).lower(),
+            str(bool(getattr(self.settings, "read_iptc", False))).lower(),
+            str(bool(getattr(self.settings, "store_gps", False))).lower(),
+            str(bool(getattr(self.settings, "include_videos", False))).lower(),
+            int(getattr(self.settings, "batch_size", 0) or 0),
+        )
         if not sources:
             overall.finished_at = utc_now()
             overall.duration_seconds = time.monotonic() - started_monotonic
@@ -203,6 +220,14 @@ class Scanner:
                       for source in sources]
             self._estimated_total = (
                 sum(counts) if all(count is not None for count in counts) else None
+            )
+            self._debug(
+                "Media scan plan: sources=%d completed_sources=%d estimated_total=%s "
+                "mapping_overrides=%d",
+                len(sources),
+                len(completed_sources),
+                str(self._estimated_total) if self._estimated_total is not None else "unknown",
+                len(self._metadata_mapping_overrides),
             )
             self._progress_overall = overall
             if self.started:
@@ -300,7 +325,17 @@ class Scanner:
                     len(stack),
                 )
         stats.scan_id = scan_id
+        self._debug(
+            "Source scan start: source_id=%d resumed=%s pending_folders=%d",
+            int(source.id),
+            str(restored is not None).lower(),
+            len(stack),
+        )
         if not self.filesystem.exists(root):
+            self._debug(
+                "Source scan unavailable: source_id=%d phase=source-exists",
+                int(source.id),
+            )
             stats.sources_unavailable = 1
             stats.errors += 1
             message = "Source unavailable: %s" % root
@@ -373,6 +408,11 @@ class Scanner:
                     stats.error_messages.append("Cannot list %s: %s" % (folder_uri, exc))
                     if self.logger:
                         self.logger.warning("Cannot list %s: %s", folder_uri, exc)
+                    self._debug(
+                        "Source scan failure: source_id=%d phase=directory-list error=%s",
+                        int(source.id),
+                        exc.__class__.__name__,
+                    )
                     save_folder_checkpoint()
                     continue
 
@@ -396,6 +436,7 @@ class Scanner:
                         continue
                     stats.pictures_seen += 1
                     existing = self.catalog.find_picture(connection, picture_uri)
+                    media_phase = "source-stat"
                     try:
                         stat_started = time.monotonic()
                         try:
@@ -410,10 +451,12 @@ class Scanner:
                             and str(existing.get("metadata_index_hash") or "")
                             == self._metadata_index_hash
                         ):
+                            media_phase = "catalogue-touch"
                             self.catalog.touch_picture(connection, int(existing["id"]), folder_id, source.id, scan_started_at)
                             stats.pictures_unchanged += 1
                         else:
                             if media_type == "picture":
+                                media_phase = "metadata-extraction"
                                 stats.metadata_reads += 1
                                 metadata_started = time.monotonic()
                                 try:
@@ -462,6 +505,7 @@ class Scanner:
                                 not location.get(field)
                                 for field in ("country", "state", "city", "sublocation")
                             ):
+                                media_phase = "location-cache-read"
                                 enrichment = load_location_enrichment(
                                     self.catalog, picture_uri, connection=connection
                                 )
@@ -501,6 +545,7 @@ class Scanner:
                                 # native ``image://video@...`` generated-frame loader.
                                 "thumb_uri": picture_uri if media_type == "picture" else None,
                             }
+                            media_phase = "catalogue-write"
                             if existing:
                                 self.catalog.update_picture(connection, int(existing["id"]), record, metadata.keywords)
                                 stats.pictures_updated += 1
@@ -532,6 +577,13 @@ class Scanner:
                         stats.error_messages.append(message)
                         if self.logger:
                             self.logger.warning("Media scan error for %s: %s", picture_uri, exc)
+                        self._debug(
+                            "Media scan failure: source_id=%d media_type=%s phase=%s error=%s",
+                            int(source.id),
+                            media_type,
+                            media_phase,
+                            exc.__class__.__name__,
+                        )
 
                     # Report after processing, including unchanged files and errors,
                     # so the new-file counter and current-session rate are current.
@@ -581,6 +633,11 @@ class Scanner:
             self.catalog.finish_scan_run(scan_id, "failed", stats, str(exc))
             if self.logger:
                 self.logger.error("Source scan lost its lock for %s: %s", root, exc)
+            self._debug(
+                "Source scan failure: source_id=%d phase=scan-lock error=%s",
+                int(source.id),
+                exc.__class__.__name__,
+            )
             raise
         except Exception as exc:
             connection.rollback()
@@ -590,6 +647,11 @@ class Scanner:
             self.catalog.finish_scan_run(scan_id, "failed", stats, str(exc))
             if self.logger:
                 self.logger.error("Source scan failed for %s: %s", root, exc)
+            self._debug(
+                "Source scan failure: source_id=%d phase=source-run error=%s",
+                int(source.id),
+                exc.__class__.__name__,
+            )
         finally:
             self._scan_connection = None
             connection.close()
@@ -597,4 +659,22 @@ class Scanner:
             stats.duration_seconds = time.monotonic() - started_monotonic
         if status == "completed":
             self._count_history.save(source, policy, stats)
+        self._debug(
+            "Source scan complete: source_id=%d status=%s discovered=%d unchanged=%d "
+            "metadata_reads=%d added=%d updated=%d missing=%d errors=%d duration=%.1fs "
+            "list_io=%.1fs stat_io=%.1fs metadata=%.1fs",
+            int(source.id),
+            str(status or ("cancelled" if stats.cancelled else "unknown")),
+            stats.pictures_seen,
+            stats.pictures_unchanged,
+            stats.metadata_reads,
+            stats.pictures_added,
+            stats.pictures_updated,
+            stats.missing_marked,
+            stats.errors,
+            stats.duration_seconds,
+            stats.directory_list_seconds,
+            stats.file_stat_seconds,
+            stats.metadata_read_seconds,
+        )
         return stats

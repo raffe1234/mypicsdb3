@@ -81,6 +81,56 @@ class MetadataRefresher:
         self._mapping_overrides: Sequence[MetadataMappingRule] = ()
         self._metadata_index_hash = ""
 
+    def _debug(self, message: str, *args: Any) -> None:
+        logger = getattr(self.logger, "debug", None) if self.logger else None
+        if callable(logger):
+            logger(message, *args)
+
+    @staticmethod
+    def _exception_site(exc: Exception) -> str:
+        traceback = exc.__traceback__
+        while traceback is not None and traceback.tb_next is not None:
+            traceback = traceback.tb_next
+        if traceback is None:
+            return "unknown"
+        code = traceback.tb_frame.f_code
+        return "%s:%d:%s" % (
+            os.path.basename(code.co_filename),
+            traceback.tb_lineno,
+            code.co_name,
+        )
+
+    @staticmethod
+    def _detail_error_type(value: Any) -> str:
+        text = str(value or "").strip()
+        return text.split(":", 1)[0].strip() if text else "none"
+
+    def _debug_extraction_summary(
+        self, action: str, picture_id: int, details: Dict[str, Any]
+    ) -> None:
+        self._debug(
+            "%s extraction: picture_id=%d stage=%s overrides=%d exifread=%s "
+            "exif_tags=%d exif_error=%s exif_fallback=%s fallback_tags=%d "
+            "prefix_bytes=%d prefix_error=%s dimension_error=%s xmp=%s "
+            "iptc=%s iptc_error=%s gps_source=%s",
+            action,
+            int(picture_id),
+            str(details.get("stage") or "unknown"),
+            len(self._mapping_overrides),
+            str(bool(details.get("exifread_available"))).lower(),
+            int(details.get("exif_tag_count") or 0),
+            self._detail_error_type(details.get("exif_error")),
+            str(bool(details.get("exif_fallback_used"))).lower(),
+            int(details.get("exif_fallback_tag_count") or 0),
+            int(details.get("prefix_bytes_read") or 0),
+            self._detail_error_type(details.get("prefix_error")),
+            self._detail_error_type(details.get("dimension_error")),
+            str(bool(details.get("xmp_present"))).lower(),
+            str(bool(details.get("iptc_loaded"))).lower(),
+            self._detail_error_type(details.get("iptc_error")),
+            str(details.get("gps_source") or "none"),
+        )
+
     def _prepare(self) -> None:
         self._mapping_overrides = tuple(self.catalog.list_metadata_mapping_overrides())
         self._metadata_index_hash = metadata_index_signature(
@@ -211,21 +261,49 @@ class MetadataRefresher:
 
     def inspect_picture(self, picture_id: int) -> MetadataInspection:
         """Read current metadata without changing the catalogue."""
-        row = self.catalog.picture_by_id(int(picture_id))
-        if not row or str(row.get("media_type") or "picture") != "picture":
-            raise MetadataRefreshNotFound("Picture was not found")
-        self._prepare()
-        uri = str(row.get("uri") or "")
-        file_stat = self.filesystem.stat(uri)
+        picture_id = int(picture_id)
+        phase = "catalogue-read"
         source_details: Dict[str, Any] = {}
-        fresh = extract_metadata(
-            uri,
-            self.filesystem,
-            self.settings,
-            file_stat.size,
-            mapping_rules=self._mapping_overrides,
-            diagnostics=source_details,
+        self._debug(
+            "Metadata diagnostics start: picture_id=%d xmp=%s iptc=%s store_gps=%s",
+            picture_id,
+            str(bool(getattr(self.settings, "read_xmp", False))).lower(),
+            str(bool(getattr(self.settings, "read_iptc", False))).lower(),
+            str(bool(getattr(self.settings, "store_gps", False))).lower(),
         )
+        try:
+            row = self.catalog.picture_by_id(picture_id)
+            if not row or str(row.get("media_type") or "picture") != "picture":
+                raise MetadataRefreshNotFound("Picture was not found")
+            phase = "mapping-prepare"
+            self._prepare()
+            phase = "source-stat"
+            uri = str(row.get("uri") or "")
+            file_stat = self.filesystem.stat(uri)
+            phase = "metadata-extraction"
+            fresh = extract_metadata(
+                uri,
+                self.filesystem,
+                self.settings,
+                file_stat.size,
+                mapping_rules=self._mapping_overrides,
+                diagnostics=source_details,
+            )
+        except MetadataRefreshNotFound:
+            raise
+        except Exception as exc:
+            if self.logger:
+                self.logger.error(
+                    "Metadata diagnostics failed: picture_id=%d phase=%s "
+                    "extract_stage=%s error=%s site=%s",
+                    picture_id,
+                    phase,
+                    str(source_details.get("stage") or "none"),
+                    exc.__class__.__name__,
+                    self._exception_site(exc),
+                )
+            raise
+        self._debug_extraction_summary("Metadata diagnostics", picture_id, source_details)
         return MetadataInspection(dict(row), fresh, source_details)
 
     def _refresh_phase(
@@ -239,23 +317,20 @@ class MetadataRefresher:
             if self.logger:
                 # Keep diagnostics safe to attach publicly: do not include source
                 # URIs, filenames, embedded metadata or exception messages.
-                traceback = exc.__traceback__
-                while traceback is not None and traceback.tb_next is not None:
-                    traceback = traceback.tb_next
-                site = "unknown"
-                if traceback is not None:
-                    code = traceback.tb_frame.f_code
-                    site = "%s:%d:%s" % (
-                        os.path.basename(code.co_filename),
-                        traceback.tb_lineno,
-                        code.co_name,
-                    )
+                details = kwargs.get("diagnostics")
+                extract_stage = (
+                    str(details.get("stage") or "none")
+                    if isinstance(details, dict)
+                    else "none"
+                )
                 self.logger.error(
-                    "Metadata refresh failed: picture_id=%d phase=%s error=%s site=%s",
+                    "Metadata refresh failed: picture_id=%d phase=%s "
+                    "extract_stage=%s error=%s site=%s",
                     int(picture_id),
                     phase,
+                    extract_stage,
                     exc.__class__.__name__,
-                    site,
+                    self._exception_site(exc),
                 )
             raise
 
@@ -369,15 +444,27 @@ class MetadataRefresher:
         return MetadataInspection(dict(row), metadata, source_details)
 
     def refresh_picture(self, picture_id: int) -> MetadataInspection:
+        picture_id = int(picture_id)
+        self._debug(
+            "Metadata refresh start: picture_id=%d xmp=%s iptc=%s store_gps=%s",
+            picture_id,
+            str(bool(getattr(self.settings, "read_xmp", False))).lower(),
+            str(bool(getattr(self.settings, "read_iptc", False))).lower(),
+            str(bool(getattr(self.settings, "store_gps", False))).lower(),
+        )
         self._refresh_phase(picture_id, "lock-acquire", self._acquire)
         try:
-            inspection = self._refresh_one(int(picture_id))
+            inspection = self._refresh_one(picture_id)
+            self._debug_extraction_summary(
+                "Metadata refresh", picture_id, inspection.source_details
+            )
             self._refresh_phase(
                 picture_id,
                 "folder-summary",
                 self.catalog.refresh_folder_summary,
                 int(inspection.row["folder_id"]),
             )
+            self._debug("Metadata refresh complete: picture_id=%d", picture_id)
             return inspection
         finally:
             self._refresh_phase(picture_id, "lock-release", self._release)
@@ -433,9 +520,21 @@ class MetadataRefresher:
                 resumed=resumed,
                 last_picture_id=int(state.get("last_picture_id") or 0),
             )
+            self._debug(
+                "Whole-library metadata refresh start: total=%d processed=%d "
+                "resumed=%s restart=%s",
+                stats.requested,
+                stats.processed,
+                str(bool(resumed)).lower(),
+                str(bool(restart)).lower(),
+            )
             if stats.requested <= 0 or max_picture_id <= 0:
                 stats.completed = True
                 self.discard_all_refresh_checkpoint()
+                self._debug(
+                    "Whole-library metadata refresh complete: processed=%d refreshed=%d failed=%d",
+                    stats.processed, stats.refreshed, stats.failed,
+                )
                 return stats
 
             batch_size = max(
@@ -449,6 +548,10 @@ class MetadataRefresher:
                 if not picture_ids:
                     stats.completed = True
                     self.discard_all_refresh_checkpoint()
+                    self._debug(
+                        "Whole-library metadata refresh complete: processed=%d refreshed=%d failed=%d",
+                        stats.processed, stats.refreshed, stats.failed,
+                    )
                     return stats
 
                 touched_folders = set()
@@ -465,6 +568,10 @@ class MetadataRefresher:
                             }
                         )
                         self._write_all_checkpoint(state)
+                        self._debug(
+                            "Whole-library metadata refresh paused: processed=%d refreshed=%d failed=%d",
+                            stats.processed, stats.refreshed, stats.failed,
+                        )
                         return stats
                     filename = ""
                     try:
@@ -482,9 +589,11 @@ class MetadataRefresher:
                         )
                         if self.logger:
                             self.logger.warning(
-                                "Whole-library metadata refresh failed for picture id %s: %s",
+                                "Whole-library metadata refresh item failed: "
+                                "picture_id=%s error=%s site=%s",
                                 picture_id,
-                                exc,
+                                exc.__class__.__name__,
+                                self._exception_site(exc),
                             )
                     stats.processed += 1
                     stats.last_picture_id = int(picture_id)
@@ -514,6 +623,11 @@ class MetadataRefresher:
     ) -> MetadataRefreshStats:
         picture_ids = self.catalog.picture_ids_in_folder(int(folder_id))
         stats = MetadataRefreshStats(requested=len(picture_ids))
+        self._debug(
+            "Folder metadata refresh start: folder_id=%d total=%d",
+            int(folder_id),
+            stats.requested,
+        )
         self._acquire()
         try:
             total = len(picture_ids)
@@ -534,14 +648,22 @@ class MetadataRefresher:
                     stats.errors.append("%s: %s" % (exc.__class__.__name__, str(exc)))
                     if self.logger:
                         self.logger.warning(
-                            "Metadata refresh failed for picture id %s: %s",
+                            "Folder metadata refresh item failed: "
+                            "picture_id=%s error=%s site=%s",
                             picture_id,
-                            exc,
+                            exc.__class__.__name__,
+                            self._exception_site(exc),
                         )
                 if progress:
                     progress(index, total, filename)
             if stats.refreshed:
                 self.catalog.refresh_folder_summary(int(folder_id))
+            self._debug(
+                "Folder metadata refresh complete: folder_id=%d refreshed=%d failed=%d",
+                int(folder_id),
+                stats.refreshed,
+                stats.failed,
+            )
             return stats
         finally:
             self._release()

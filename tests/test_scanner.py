@@ -610,7 +610,11 @@ def test_scan_observability_counts_metadata_reads_and_logs_summary(tmp_path: Pat
 
     class Log:
         def __init__(self):
+            self.debugs = []
             self.infos = []
+
+        def debug(self, message, *args):
+            self.debugs.append(message % args if args else message)
 
         def info(self, message, *args):
             self.infos.append(message % args if args else message)
@@ -644,8 +648,21 @@ def test_scan_observability_counts_metadata_reads_and_logs_summary(tmp_path: Pat
         and "metadata=" in line
         for line in log.infos
     )
+    assert any("Media scan start: sources=1" in line for line in log.debugs)
+    assert any("Media scan plan: sources=1" in line for line in log.debugs)
+    assert any(
+        "Source scan complete:" in line
+        and "discovered=2" in line
+        and "metadata_reads=2" in line
+        for line in log.debugs
+    )
+    debug_text = "\n".join(log.debugs)
+    assert str(root) not in debug_text
+    assert "a.jpg" not in debug_text
+    assert "b.jpg" not in debug_text
 
     log.infos.clear()
+    log.debugs.clear()
     second = Scanner(
         catalog,
         LocalFilesystem(),
