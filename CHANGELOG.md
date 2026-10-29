@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.8.41 - proposed (2026-10-29)
+
+- Distribute large random picture selections over several bounded random-key
+  windows rather than a single contiguous run. Home generations remain seeded
+  and repeatable, while small catalogue queries keep their old behaviour.
+  Screensaver random lookups use the indexed non-null `random_key` column
+  directly instead of an index-blocking `COALESCE` expression.
+- Screensaver 0.7.1 reads a new random batch after finishing its current one;
+  failure to refresh falls back to the existing shuffled batch. Non-random
+  collection order is unchanged.
+- Retain the existing Kodi 22 Piers RC1 Estuary pin and xbmc.gui 5.17 ABI
+  compatibility setting; do not alter the already-working 0.8.40 date fix.
+- No schema change, source-media writes, catalogue scan or metadata reindex.
+
 ## 0.8.40 - 2026-10-29
 
 - Preserve picture times of day in Kodi 21/22 by converting the catalogue timestamp

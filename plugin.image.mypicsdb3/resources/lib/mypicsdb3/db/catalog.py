@@ -30,6 +30,7 @@ from ..music_playlists import (
     normalize_music_playlist_uri,
     normalize_music_target_type,
 )
+from ..random_sampling import random_window_plan
 from ..rating_policy import RATING_POLICY_ALL, normalize_rating_policy, rating_sql_predicate
 from ..saved_searches import (
     SavedSearch,
@@ -2019,14 +2020,40 @@ class Catalog:
     def random_pictures(
         self, limit: int, seed: Optional[float] = None
     ) -> List[Dict[str, Any]]:
-        pivot = self._random_pivot(seed)
-        first = self._pictures("p.random_key>=?", (pivot,), "p.random_key", limit, 0)
-        if len(first) < limit:
-            second = self._pictures(
-                "p.random_key<?", (pivot,), "p.random_key", limit - len(first), 0
+        def window(pivot: float, size: int) -> List[Dict[str, Any]]:
+            first = self._pictures(
+                "p.random_key>=?", (pivot,), "p.random_key", size, 0
             )
-            first.extend(second)
-        return first
+            if len(first) < size:
+                first.extend(
+                    self._pictures(
+                        "p.random_key<?", (pivot,), "p.random_key",
+                        size - len(first), 0,
+                    )
+                )
+            return first
+
+        plan = random_window_plan(limit, seed)
+        if not plan:
+            return window(self._random_pivot(seed), limit)
+
+        rows: List[Dict[str, Any]] = []
+        seen = set()
+        for pivot, size in plan:
+            for row in window(pivot, size):
+                if row["id"] not in seen:
+                    seen.add(row["id"])
+                    rows.append(row)
+        # When a source has relatively few images, several windows can
+        # overlap.  Complete the selection with the existing bounded query.
+        if len(rows) < limit:
+            for row in window(plan[0][0], limit):
+                if row["id"] not in seen:
+                    seen.add(row["id"])
+                    rows.append(row)
+                    if len(rows) >= limit:
+                        break
+        return rows
 
     def _folder_rows(self, where: str, params: Sequence[Any], order: str, limit: int, offset: int = 0) -> List[Dict[str, Any]]:
         count_predicate, count_params = self._rating_predicate("pc.rating", "pc.media_type")

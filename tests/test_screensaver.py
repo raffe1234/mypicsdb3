@@ -259,3 +259,42 @@ def test_screensaver_logs_selected_source_name_for_runtime_diagnostics():
     assert "Selected source stored source_type=%s source_id=%s source_name=%r" in source
     assert "Started source_type=%s source_id=%s source_name=%r pictures=%d" in source
     assert "Selected source returned no pictures" in source
+
+
+def test_random_screensaver_large_batch_spans_indexed_key_ranges(
+    tmp_path: Path, monkeypatch
+):
+    engine = _engine(tmp_path)
+    now = utc_now()
+    connection = engine.connect()
+    try:
+        connection.execute("INSERT INTO collections VALUES (1, 'Large', ?, ?)", (now, now))
+        for picture_id in range(1, 161):
+            _insert_picture(
+                connection, picture_id, "smb://photos/%03d.jpg" % picture_id,
+                random_key=picture_id / 161.0,
+            )
+            connection.execute(
+                "INSERT INTO collection_items VALUES (1, ?, ?, ?)",
+                (picture_id, picture_id - 1, now),
+            )
+        connection.commit()
+    finally:
+        connection.close()
+
+    queries = []
+    original_fetchall = engine.fetchall
+
+    def record_query(connection, statement, params=()):
+        if "ORDER BY p.random_key" in statement:
+            queries.append(statement)
+        return original_fetchall(connection, statement, params)
+
+    monkeypatch.setattr(engine, "fetchall", record_query)
+    provider = ScreensaverReadOnlyProvider(engine.settings, engine=engine)
+    first = provider.pictures(SCREEN_SOURCE_MANUAL, 1, limit=80, seed=0.31)
+    assert queries and all("COALESCE(p.random_key" not in q for q in queries)
+    assert first == provider.pictures(SCREEN_SOURCE_MANUAL, 1, limit=80, seed=0.31)
+    assert len(first) == len({picture.id for picture in first}) == 80
+    assert {picture.id // 41 for picture in first} == {0, 1, 2, 3}
+    assert first != provider.pictures(SCREEN_SOURCE_MANUAL, 1, limit=80, seed=0.71)

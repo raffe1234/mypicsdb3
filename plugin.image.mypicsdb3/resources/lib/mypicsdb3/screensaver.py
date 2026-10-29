@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from .config import Settings, from_getter
 from .db.engine import DatabaseEngine
 from .query_model import compile_picture_query
+from .random_sampling import random_window_plan
 from .rating_policy import RATING_POLICY_ALL, normalize_rating_policy, rating_sql_predicate
 from .saved_searches import parse_stored_saved_search
 
@@ -192,35 +193,56 @@ class ScreensaverReadOnlyProvider:
         limit: int,
         seed: Optional[float],
     ) -> List[Dict[str, Any]]:
-        if seed is None:
-            pivot = random.random()
-            rng = random.Random()
-        else:
-            try:
-                pivot = float(seed) % 1.0
-            except (TypeError, ValueError):
-                pivot = 0.0
-            rng = random.Random(pivot)
-
-        select = "SELECT p.id, p.uri, p.filename, p.random_key " + from_sql
-        first = self.engine.fetchall(
-            connection,
-            select
-            + " WHERE (%s) AND COALESCE(p.random_key,0)>=? " % where_sql
-            + "ORDER BY COALESCE(p.random_key,0), p.id LIMIT ?",
-            (*params, pivot, limit),
-        )
-        if len(first) < limit:
-            second = self.engine.fetchall(
+        def window(pivot: float, size: int) -> List[Dict[str, Any]]:
+            select = "SELECT p.id, p.uri, p.filename, p.random_key " + from_sql
+            first = self.engine.fetchall(
                 connection,
                 select
-                + " WHERE (%s) AND COALESCE(p.random_key,0)<? " % where_sql
-                + "ORDER BY COALESCE(p.random_key,0), p.id LIMIT ?",
-                (*params, pivot, limit - len(first)),
+                + " WHERE (%s) AND p.random_key>=? " % where_sql
+                + "ORDER BY p.random_key, p.id LIMIT ?",
+                (*params, pivot, size),
             )
-            first.extend(second)
-        rng.shuffle(first)
-        return first
+            if len(first) < size:
+                first.extend(
+                    self.engine.fetchall(
+                        connection,
+                        select
+                        + " WHERE (%s) AND p.random_key<? " % where_sql
+                        + "ORDER BY p.random_key, p.id LIMIT ?",
+                        (*params, pivot, size - len(first)),
+                    )
+                )
+            return first
+
+        pivot = random.random() if seed is None else self._pivot(seed)
+        plan = random_window_plan(limit, seed)
+        if not plan:
+            rows = window(pivot, limit)
+        else:
+            rows = []
+            seen = set()
+            for candidate, size in plan:
+                for row in window(candidate, size):
+                    if row["id"] not in seen:
+                        rows.append(row)
+                        seen.add(row["id"])
+            if len(rows) < limit:
+                for row in window(plan[0][0], limit):
+                    if row["id"] not in seen:
+                        rows.append(row)
+                        seen.add(row["id"])
+                        if len(rows) >= limit:
+                            break
+        rng = random.Random(pivot) if seed is not None else random.Random()
+        rng.shuffle(rows)
+        return rows
+
+    @staticmethod
+    def _pivot(seed: float) -> float:
+        try:
+            return float(seed) % 1.0
+        except (TypeError, ValueError):
+            return 0.0
 
     def _manual_rows(
         self,

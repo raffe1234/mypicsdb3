@@ -220,7 +220,8 @@ def _run_screensaver(core, addon) -> None:
     }
 
     try:
-        pictures = _provider(core).pictures(
+        provider = _provider(core)
+        pictures = provider.pictures(
             source_type,
             int(source_id),
             limit=limit,
@@ -297,8 +298,32 @@ def _run_screensaver(core, addon) -> None:
             index += 1
             if index >= len(pictures):
                 index = 0
-                if randomize and len(pictures) > 1:
-                    random.shuffle(pictures)
+                if randomize:
+                    # A new read-only batch after every full pass prevents a
+                    # 150,000-picture collection from looping the same 250.
+                    try:
+                        fresh = provider.pictures(
+                            source_type,
+                            int(source_id),
+                            limit=limit,
+                            randomize=True,
+                        )
+                        if fresh:
+                            # Avoid an immediate repeat on the batch boundary.
+                            if (
+                                len(fresh) > 1
+                                and fresh[0].id == pictures[-1].id
+                            ):
+                                fresh[0], fresh[1] = fresh[1], fresh[0]
+                            pictures = fresh
+                        else:
+                            random.shuffle(pictures)
+                    except (ValueError, core["error"]) as exc:
+                        _logger(
+                            "Random batch refresh failed: %s" % exc,
+                            xbmc.LOGWARNING,
+                        )
+                        random.shuffle(pictures)
     finally:
         window.close()
         _logger("Stopped")

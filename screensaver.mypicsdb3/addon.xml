@@ -1,8 +1,8 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<addon id="screensaver.mypicsdb3" name="MyPicsDB 3 Screensaver" version="0.7.0" provider-name="MyPicsDB 3 contributors">
+<addon id="screensaver.mypicsdb3" name="MyPicsDB 3 Screensaver" version="0.7.1" provider-name="MyPicsDB 3 contributors">
   <requires>
     <import addon="xbmc.python" version="3.0.1" />
-    <import addon="plugin.image.mypicsdb3" version="0.7.0" />
+    <import addon="plugin.image.mypicsdb3" version="0.8.41" />
   </requires>
   <extension point="xbmc.ui.screensaver" library="default.py" />
   <extension point="xbmc.addon.metadata">
@@ -17,6 +17,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Initial MyPicsDB-aware screensaver with explicit manual/smart collection selection, bounded read-only queries and graceful database/source fallback.</news>
+    <news>Random screensaver mode now draws a new bounded batch after finishing the previous selection; manual/smart collections remain read-only.</news>
   </extension>
 </addon>
