@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.8.40 - 2026-10-29
+
+- Preserve picture times of day in Kodi 21/22 by converting the catalogue timestamp
+  separator to W3C `T` at the InfoTagPicture boundary. Kodi otherwise reads the
+  date but silently defaults the time to midnight. Applies to browser listings
+  and native slideshow directories, including discovery-date fallback.
+- Strengthen picture InfoTag tests for both entry paths, stored fractional seconds,
+  existing W3C timestamps, explicit offsets, date-only values and missing dates.
+- Keep schema 9, Query Model 1, metadata extractor revision 2, repository 0.2.26
+  and screensaver 0.7.0 unchanged. No reindex or database migration is required.
+
 ## 0.8.39 - 2026-09-26
 
 - Fix an issue #20 failure path where Metadata diagnostics and individual **Refresh

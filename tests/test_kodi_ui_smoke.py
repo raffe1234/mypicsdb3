@@ -7,6 +7,8 @@ import types
 from dataclasses import dataclass, field
 from urllib.parse import parse_qs, urlsplit
 
+import pytest
+
 from mypicsdb3.geocoding import (
     load_country_display_name,
     load_location_display_name,
@@ -1651,7 +1653,7 @@ def test_diagnostics_view_is_privacy_safe_and_read_only(monkeypatch) -> None:
     joined = "\n".join(labels)
     assert calls.category == "Diagnostics"
     assert calls.content == "files"
-    assert "MyPicsDB 3 version: 0.8.39" in labels
+    assert "MyPicsDB 3 version: 0.8.40" in labels
     assert "Screensaver version: 0.7.0" in labels
     assert "Repository version: 0.2.26" in labels
     assert "Current skin: skin.estuary.mypicsdb3 21.3.16" in labels
@@ -3193,7 +3195,22 @@ def test_home_widget_ignores_stale_url_limit_and_uses_typed_setting(monkeypatch)
     ) == 39
 
 
-def test_picture_info_uses_picture_info_tag_when_available(monkeypatch) -> None:
+@pytest.mark.parametrize("date_field", ["taken_at", "discovered_at"])
+@pytest.mark.parametrize("native_directory", [False, True])
+@pytest.mark.parametrize(
+    "stored_date, expected_date",
+    [
+        ("2020-07-17 12:34:56", "2020-07-17T12:34:56"),
+        ("2020-07-17 12:34:56.123456", "2020-07-17T12:34:56.123456"),
+        ("2020-07-17T12:34:56Z", "2020-07-17T12:34:56Z"),
+        ("2020-07-17T12:34:56+02:00", "2020-07-17T12:34:56+02:00"),
+        ("2020-07-17", "2020-07-17"),
+        ("", None),
+    ],
+)
+def test_picture_info_uses_picture_info_tag_when_available(
+    monkeypatch, native_directory, stored_date, expected_date, date_field
+) -> None:
     views, calls = load_views(monkeypatch)
 
     class PictureTag:
@@ -3205,6 +3222,8 @@ def test_picture_info_uses_picture_info_tag_when_available(monkeypatch) -> None:
             self.resolution = (width, height)
 
         def setDateTimeTaken(self, value):
+            # Kodi's W3C parser only reads the time after a T separator.
+            assert " " not in value
             self.date = value
 
     original = views.xbmcgui.ListItem
@@ -3218,12 +3237,24 @@ def test_picture_info_uses_picture_info_tag_when_available(monkeypatch) -> None:
             return self.picture_tag
 
     views.xbmcgui.ListItem = TaggedListItem
-    ui = views.PluginUI(FakeRuntime(), "plugin://plugin.image.mypicsdb3", 7)
-    ui.dispatch(views.Request("recent-taken", {}))
+    runtime = FakeRuntime()
+    ui = views.PluginUI(runtime, "plugin://plugin.image.mypicsdb3", 7)
+    row = {
+        **runtime.catalog.picture_by_id(1),
+        "taken_at": "",
+        "discovered_at": "",
+        date_field: stored_date,
+    }
+    if native_directory:
+        ui._finish_native_picture_directory([row], "Test picture directory: id=%d items=%d", 1)
+        item = calls.items[0][1]
+    else:
+        _url, item, _is_folder = ui._media_item(row)
+        # The database/skin contract keeps its original representation.
+        assert item.properties["MyPicsDB3.TakenAt"] == stored_date
 
-    item = calls.items[0][1]
     assert item.picture_tag.resolution == (1920, 1080)
-    assert item.picture_tag.date == "2020-07-17 12:00:00"
+    assert item.picture_tag.date == expected_date
     assert item.info["pictures"]["title"] == "image.jpg"
     assert "resolution" not in item.info["pictures"]
 
@@ -3753,7 +3784,7 @@ def test_query_result_can_be_exported_with_writable_destination_and_progress(
     assert captured["export"] == (
         [1], "smb://server/export/", "Summer export", "Search - summer"
     )
-    assert captured["init"][2] == "0.8.39"
+    assert captured["init"][2] == "0.8.40"
     assert FakeDialog.browse_calls[-1][0] == 3
     assert runtime.kodi.notifications[-1] == (
         "Export complete: 1 copied, 0 missing, 0 failed", False

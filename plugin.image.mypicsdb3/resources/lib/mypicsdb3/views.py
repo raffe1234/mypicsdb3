@@ -1456,7 +1456,9 @@ class PluginUI:
             if width and height and hasattr(tag, "setResolution"):
                 tag.setResolution(int(width), int(height))
             if date_text and hasattr(tag, "setDateTimeTaken"):
-                tag.setDateTimeTaken(str(date_text))
+                # Catalogue timestamps use a space. Kodi's W3C parser only
+                # reads the time after T; a space silently becomes midnight.
+                tag.setDateTimeTaken(str(date_text).replace(" ", "T", 1))
             # InfoTagPicture does not expose title/path setters. Camera and
             # caption are deliberately published as MyPicsDB3 properties by the
             # caller because current Kodi rejects those legacy picture-info keys.
