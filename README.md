@@ -5,28 +5,11 @@ MyPicsDB and MyPicsDB2. It provides a searchable picture and optional
 home-video catalogue, background indexing, mixed slideshows and fast home-screen
 widgets for Kodi 21 Omega and Kodi 22 Piers.
 
-> Status: 0.8.41 (proposed patch). The catalogue, scanner, collections, collection music playback,
+> Status: 0.8.41. The catalogue, scanner, collections, collection music playback,
 > Estuary Home integration and MyPicsDB 3 Screensaver are covered by automated
 > tests and have been exercised on Kodi 21. Shared MySQL/MariaDB deployments,
 > backup/restore and very large-library performance still need broader real-device
 > validation before calling the project production-stable.
-
-## Random pictures (proposed 0.8.41)
-
-For large random picture sets, Home Random memories and the separate screensaver
-now select from several indexed random-key ranges instead of a single adjacent
-range. Home widget results are still stable during the same refresh generation.
-In random screensaver mode, a fresh selection is fetched after the current batch
-has played; ordered screensaver mode keeps its previous collection order.
-Small collections can still repeat once their available pictures are exhausted.
-No rescan, database migration, or write to original photos is required.
-
-## Picture capture times (0.8.40)
-
-Picture metadata now preserves the time of day when passed to Kodi's picture
-InfoTag in browser listings and native slideshow directories. Stored timestamps
-and skin properties are unchanged; no rescan is needed. See the
-[compatibility review](docs/KODI_COMPATIBILITY_REVIEW.md).
 
 ## Want to help develop MyPicsDB 3?
 

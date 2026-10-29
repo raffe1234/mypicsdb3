@@ -34,6 +34,6 @@
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
     </assets>
-    <news>Preserve picture capture times in Kodi by passing W3C timestamps to InfoTagPicture in browser listings and native slideshow directories.</news>
+    <news>Improve random picture diversity in Home widgets and screensaver; the screensaver now fetches a new random batch after each cycle.</news>
   </extension>
 </addon>

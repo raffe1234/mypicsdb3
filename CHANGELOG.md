@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.8.41 - proposed (2026-10-29)
+## 0.8.41 - 2026-10-29
 
 - Distribute large random picture selections over several bounded random-key
   windows rather than a single contiguous run. Home generations remain seeded
